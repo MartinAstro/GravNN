@@ -4,3 +4,5 @@ Files/*
 .idea/*
 C_Algorithms/.vscode/*
 **/__pycache__/
+**/__init__.py
+*.code-workspace
