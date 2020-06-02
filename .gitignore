@@ -1,0 +1,6 @@
+build/*
+Files/*
+.vscode/*
+.idea/*
+C_Algorithms/.vscode/*
+**/__pycache__/
