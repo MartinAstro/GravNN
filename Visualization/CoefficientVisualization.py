@@ -33,6 +33,18 @@ class CoefficientVisualization(VisualizationBase):
         self.full_SH = pyshtools.SHGravCoeffs.from_file(coef_file, errors=False, header_units='m')
         return
 
+    def get_positions(self, radius):
+        lats = self.full_SH.expand().lats()
+        lons = self.full_SH.expand().lons()
+        positions = np.ones((len(lats)*len(lons),3))*radius
+        i = 0
+        for lat in lats:
+            for lon in lons:
+                posCart = sphere2cart([[radius,lon,lat]])
+                position[i,:] = posCart[0,:]
+
+        return positions
+
     def computeError(self, x_truth, x_recreated):
         error = 0.0
         for i in range(len(x_truth)):
@@ -86,6 +98,7 @@ class CoefficientVisualization(VisualizationBase):
         full_grid.plot_total()
         return plt.gcf()
     
+
         
 
 
@@ -96,8 +109,10 @@ def main():
     full_SH = pyshtools.SHGravCoeffs.from_file(file_name, errors=False, header_units='m')
 
     '''
+    planet = Earth()
     positions = SHGridInterface.getPositions(sh_grid, radius)
-    accelerations = SH_Acceleration(positions) #TODO: This will become a swig wrapper of the C++ algorithm 
+    pines = PinesAlgorithm.PinesAlgorithm(planet.geometry.radius, planet.grav_info.mu, degree)
+    accelerations = pines.compute_acc(positions, planet.grav_info.SH.C_lm, planet.grav_info.SH.S_lm)
     SHGridInterface.assignAcceleration(sh_grid, accelerations)
     '''
 

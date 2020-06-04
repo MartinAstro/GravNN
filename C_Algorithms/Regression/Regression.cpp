@@ -1,5 +1,11 @@
 #include "Regression.h"
 #include <iostream>
+#include <cmath>
+#include "Eigen/Sparse"
+#include "Eigen/SparseCore"
+#include "Eigen/SparseQR"
+#include "Eigen/OrderingMethods"
+
 
 Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, int degree, double r0, double muBdy)
 {
@@ -17,14 +23,14 @@ Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, i
 
     r.resize(N+2, 0);
     i.resize(N+2,0);
-    rho.resize(N+2, 0);
+    rho.resize(N+3, 0);
     coeff = Eigen::VectorXd::Zero(N*(N+1));
     A.resize(N+2, doubleFiller);
 
     for(unsigned int i = 0; i < N + 2; i++)
     {
-        std::vector<double> aRow, n1Row, n2Row;
-        aRow.resize(i+1, 0.0);
+        std::vector<double> n1Row, n2Row;
+
         // Diagonal elements of A_bar
         if (i == 0)
         {
@@ -62,16 +68,14 @@ void Regression::populate_variables(double x, double y, double z)
     u = z/rMag;
 
     //Eq 23
-    A[0][0] = 1;
     for (int n = 1; n < A.size(); n++)
     {
          A[n][n-1] = sqrt(double((2*n)*getK(n-1))/getK(n)) * A[n][n] * u;
     }
 
-    for (int n = 2; n < A.size(); n++)
+    for (unsigned int m = 0; m < A.size(); m++)
     {
-        //Eq 21
-        for (int m = 0; m < A.size(); m++)
+        for(unsigned int n = m + 2; n < A.size(); n++)
         {
             A[n][m] = u * n1[n][m] * A[n-1][m] - n2[n][m] * A[n-2][m];
         }
@@ -98,7 +102,8 @@ void Regression::populate_variables(double x, double y, double z)
 
 void Regression::perform_regression()
 {
-    Eigen::MatrixXd M(P, N*(N+1));
+    int Q = N + 1; // Total Indicies Needed to store all coefficients
+    Eigen::MatrixXd M(P, Q*(Q+1));
 
     double f_Cnm_1, f_Cnm_2, f_Cnm_3;
     double f_Snm_1, f_Snm_2, f_Snm_3;
@@ -107,17 +112,25 @@ void Regression::perform_regression()
     int delta_m, delta_m_p1;
     double c1, c2;
     double rTerm, iTerm;
+    double x, y, z;
+    Eigen::SparseMatrix<double> AMat(P, Q*(Q+1));
+    int idx;
+    int degIdx;
     for (int p = 0; p < P/3; p++)
     {  
-        populate_variables(positions(3*p), positions(3*p + 1), positions(3*p + 2));
-        for (int n = 0; n < N; n++)
+        x = positions(3*p);
+        y = positions(3*p + 1);
+        z = positions(3*p + 2);
+        populate_variables(x, y, z);
+        // NOTE: NO ESTIMATION OF C00, C10, C11 -- THESE ARE DETERMINED ALREADY
+        for (int n = 0; n <= N; n++)
         {
-            for (int m = 0; m < n; m++)
+            for (int m = 0; m <= n; m++)
             {
                 delta_m = (m == 0) ? 1 : 0;
                 delta_m_p1 = (m+1 == 0) ? 1: 0;
-                n_lm_n_lm_p1 = sqrt((n-m)*(2-delta_m)*(n+m+1)/(2-delta_m_p1));
-                n_lm_n_l_p1_m_p1 = sqrt((n+m+2)*(n+m+1)*(2*n+1)*(2-delta_m)/((2*n+3)*(2-delta_m_p1)));
+                n_lm_n_lm_p1 = sqrt((n-m)*(2.0-delta_m)*(n+m+1)/(2-delta_m_p1));
+                n_lm_n_l_p1_m_p1 = sqrt((n+m+2.0)*(n+m+1)*(2*n+1)*(2-delta_m)/((2*n+3)*(2-delta_m_p1)));
 
                 c1 = n_lm_n_lm_p1;
                 c2 = n_lm_n_l_p1_m_p1;
@@ -140,20 +153,36 @@ void Regression::perform_regression()
                 f_Snm_2 = (rho[n+2]/a)*(m*A[n][m]*iTerm - t*c2*A[n+1][m+1]*i[m]);
                 f_Snm_3 = (rho[n+2]/a)*(c1*A[n][m+1] - u*c2*A[n+1][m+1])*i[m];
                 
-                
-                M(3*p + 0, n*(n+1) + 2*m + 0) = f_Cnm_1; // X direction
-                M(3*p + 0, n*(n+1) + 2*m + 1) = f_Snm_1;
-                M(3*p + 1, n*(n+1) + 2*m + 0) = f_Cnm_2; // Y direction
-                M(3*p + 1, n*(n+1) + 2*m + 1) = f_Snm_2;
-                M(3*p + 2, n*(n+1) + 2*m + 0) = f_Cnm_3; // Z direction
-                M(3*p + 2, n*(n+1) + 2*m + 1) = f_Snm_3;
+                idx = n - 2; // The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
+                idx = n;
+                degIdx = n*(n+1);
+                M(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
+                M(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
+                M(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
+                M(3*p + 1, degIdx + 2*m + 1) = f_Snm_2;
+                M(3*p + 2, degIdx + 2*m + 0) = f_Cnm_3; // Z direction
+                M(3*p + 2, degIdx + 2*m + 1) = f_Snm_3;
+
+                AMat.insert(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
+                AMat.insert(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
+                AMat.insert(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
+                AMat.insert(3*p + 1, degIdx + 2*m + 1) = f_Snm_2;
+                AMat.insert(3*p + 2, degIdx + 2*m + 0) = f_Cnm_3; // Z direction
+                AMat.insert(3*p + 2, degIdx + 2*m + 1) = f_Snm_3;
             }
         }
     }
-
+    //std::cout << Eigen::MatrixXd(A) << std::endl;
+    std::cout << accelerations << std::endl;
+    std::cout << M << std::endl;
     //std::cout << "The solution using the QR decomposition is:\n" << M.colPivHouseholderQr().solve(accelerations) << std::endl;
-    std::cout << "The solution using the QR decomposition is:\n" << M.fullPivHouseholderQr().solve(accelerations) << std::endl;
-    std::cout << "The least-squares solution is:\n"<< M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(accelerations) << std::endl;
+    std::cout << "The QR decomposition solution is:\n" << M.fullPivHouseholderQr().solve(accelerations) << std::endl;
+    std::cout << "The SVD Solution is:\n"<< M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(accelerations) << std::endl;
+
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > solver;
+    AMat.makeCompressed();
+    solver.compute(AMat);
+    std::cout << "The sparse solution is:\n"<<     solver.solve(accelerations)<< std::endl;
 
 }
 
