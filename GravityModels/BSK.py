@@ -35,16 +35,15 @@ import os
 from Basilisk.simulation.gravityEffector import loadGravFromFileToList
 from Basilisk.utilities import simIncludeGravBody
 
-from AccelerationAlgs.AccelerationBase import AccelerationBase
+from GravityModels.AccelerationBase import AccelerationBase
 
 class BSK(AccelerationBase):    
-    def __init__(self, body, trajectory, errors):
-        self.body = body
-        self.trajectory = trajectory
-        self.errors = errors
-        self.file_directory = trajectory.file_directory 
-
+    def __init__(self, body, errors, trajectory=None):
         super().__init__()
+        self.body = body
+        self.errors = errors
+        self.configure(trajectory)
+        self.load()
         pass
 
     def generate_full_file_directory(self):

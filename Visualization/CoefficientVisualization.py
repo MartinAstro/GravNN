@@ -109,7 +109,8 @@ def main():
     full_SH = pyshtools.SHGravCoeffs.from_file(file_name, errors=False, header_units='m')
 
     '''
-    planet = Earth()
+    gravityModel = SphericalHarmonics(os.path.dirname(os.path.realpath(__file__))  + "/../Files/GravityModels/GGM03S.txt", 10)
+    planet = Earth(gravityModel)
     positions = SHGridInterface.getPositions(sh_grid, radius)
     pines = PinesAlgorithm.PinesAlgorithm(planet.geometry.radius, planet.grav_info.mu, degree)
     accelerations = pines.compute_acc(positions, planet.grav_info.SH.C_lm, planet.grav_info.SH.S_lm)

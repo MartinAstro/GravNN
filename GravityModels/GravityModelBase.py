@@ -1,16 +1,22 @@
 import os, sys
 import pickle
 from abc import ABC, abstractmethod
-class AccelerationBase(ABC):
-    body = None 
-    trajectory = None
-    accelerations = None
-    file_directory = None
+class GravityModelBase(ABC):
     def __init__(self):
-        self.file_directory  = self.trajectory.file_directory
-        self.generate_full_file_directory()
-        self.load()
+        self.trajectory = None
+        self.accelerations = None
+        self.file_directory  = None
         return
+    
+    def configure(self, trajectory):
+        if trajectory is not None:
+            # If a trajectory is defined, save all corresponding data within that trajectory's directory
+            self.file_directory = trajectory.file_directory 
+            self.trajectory = trajectory
+            self.positions = trajectory.positions
+        else:
+            self.file_directory = os.path.splitext(__file__)[0]  + "/../../Files/Trajectories/Custom/" 
+        self.generate_full_file_directory()
 
     def save(self):
         # Create the directory/file and dump the acceleration
@@ -20,9 +26,9 @@ class AccelerationBase(ABC):
             pickle.dump(self.accelerations, f)
         return
 
-    def load(self):
+    def load(self, override=False):
         # Check if the file exists and either load the positions or generate the acceleration
-        if os.path.exists(self.file_directory + "acceleration.data"):
+        if os.path.exists(self.file_directory + "acceleration.data") and override == False:
             with open(self.file_directory+"acceleration.data", 'rb') as f:
                 self.accelerations = pickle.load(f)
                 return self.accelerations

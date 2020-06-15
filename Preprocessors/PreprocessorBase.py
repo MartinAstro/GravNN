@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from support.transformations import sphere2cart, cart2sph
 from sklearn.model_selection import train_test_split
 class PreprocessorBase:
     input_train = None
@@ -18,21 +19,27 @@ class PreprocessorBase:
 
         return   self.input_train, self.input_test, self.output_train, self.output_test
     
+    def fit_transform(self):
+        return
+
+
+    def format_data(self, data):
+        if data is None:
+            exit("Data Error: Need to specify training data before pre-processing!")
+        data = data.reshape((len(data), 1, 3))
+        return data
+
+    def unformat_data(self, data):
+        if data is None:
+            exit("Data Error: Need to specify training data before pre-processing!")
+        data = data.reshape((len(data), 3))
+        return data
 
     def apply_transform(self):
-        if self.input_train is None or self.output_train is None:
-            exit("Data Error: Need to specify training data before pre-processing!")
         if self.preprocessed:
-            exit("Data Error: The data is already pre-processed!")
-
-        self.input_train = self.input_train.reshape(len(self.input_train), int(len(self.input_train[0]) / 3), 3)
-        self.input_test = self.input_test.reshape(len(self.input_test), int(len(self.input_test[0]) / 3), 3)
-
-        self.output_train = self.output_train.reshape(len(self.output_train), int(len(self.output_train[0]) / 3), 3)
-        self.output_test = self.output_test.reshape(len(self.output_test), int(len(self.output_test[0]) / 3), 3)
-
+            exit("Data is already pre-processed!")
         self.preprocessed = True
-        return 
+        return
 
     def invert_transform(self):
         '''
@@ -46,3 +53,5 @@ class PreprocessorBase:
 
         self.preprocessed = False
         return 
+    
+

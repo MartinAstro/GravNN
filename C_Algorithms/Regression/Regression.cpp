@@ -103,7 +103,7 @@ void Regression::populate_variables(double x, double y, double z)
 void Regression::perform_regression()
 {
     int Q = N + 1; // Total Indicies Needed to store all coefficients
-    Eigen::MatrixXd M(P, Q*(Q+1));
+    Eigen::MatrixXd M(P, Q*(Q+1) - (2*(2+1)));
 
     double f_Cnm_1, f_Cnm_2, f_Cnm_3;
     double f_Snm_1, f_Snm_2, f_Snm_3;
@@ -113,7 +113,7 @@ void Regression::perform_regression()
     double c1, c2;
     double rTerm, iTerm;
     double x, y, z;
-    Eigen::SparseMatrix<double> AMat(P, Q*(Q+1));
+    Eigen::SparseMatrix<double> AMat(P, Q*(Q+1) - 2*(2+1));
     int idx;
     int degIdx;
     for (int p = 0; p < P/3; p++)
@@ -123,7 +123,7 @@ void Regression::perform_regression()
         z = positions(3*p + 2);
         populate_variables(x, y, z);
         // NOTE: NO ESTIMATION OF C00, C10, C11 -- THESE ARE DETERMINED ALREADY
-        for (int n = 0; n <= N; n++)
+        for (int n = 2; n <= N; n++)
         {
             for (int m = 0; m <= n; m++)
             {
@@ -155,7 +155,7 @@ void Regression::perform_regression()
                 
                 idx = n - 2; // The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
                 idx = n;
-                degIdx = n*(n+1);
+                degIdx = n*(n+1) - (2*(2+1));
                 M(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
                 M(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
                 M(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
@@ -173,8 +173,8 @@ void Regression::perform_regression()
         }
     }
     //std::cout << Eigen::MatrixXd(A) << std::endl;
-    std::cout << accelerations << std::endl;
-    std::cout << M << std::endl;
+    //std::cout << accelerations << std::endl;
+    //std::cout << M << std::endl;
     //std::cout << "The solution using the QR decomposition is:\n" << M.colPivHouseholderQr().solve(accelerations) << std::endl;
     std::cout << "The QR decomposition solution is:\n" << M.fullPivHouseholderQr().solve(accelerations) << std::endl;
     std::cout << "The SVD Solution is:\n"<< M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(accelerations) << std::endl;

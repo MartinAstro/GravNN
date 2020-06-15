@@ -2,11 +2,10 @@ import os, sys
 import pickle
 from abc import ABC, abstractmethod
 class TrajectoryBase(ABC):
-    celestial_body = None # Celestial Body
-    file_directory = os.path.splitext(__file__)[0]  + "/../../Files/Trajectories/" 
 
-    positions = None
     def __init__(self, celestial_body):
+        #positions
+        self.file_directory = os.path.splitext(__file__)[0]  + "/../../Files/Trajectories/" 
         self.celestial_body = celestial_body
         self.generate_full_file_directory()
         self.load()

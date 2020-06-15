@@ -17,10 +17,11 @@ class RandomDist(TrajectoryBase):
         pass
 
     def generate_full_file_directory(self):
-        self.file_directory  += os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
+        self.trajectory_name =  os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
                                                 self.celestial_body.body_name + \
                                                 "N_" + str(self.points) + \
-                                                "_RadBounds" + str(self.radiusBounds) + "/"
+                                                "_RadBounds" + str(self.radiusBounds)
+        self.file_directory  += self.trajectory_name +  "/"
         pass
     
     def generate(self):

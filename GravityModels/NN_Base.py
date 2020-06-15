@@ -11,16 +11,37 @@ from sklearn.utils import class_weight
 from keras.regularizers import l1
 from keras.callbacks import EarlyStopping
 from keras.models import load_model
+from GravityModels.GravityModelBase import GravityModelBase
+from Trajectories.TrajectoryBase import TrajectoryBase
 
 import sigfig
 import pickle
 
+import os, sys
+sys.path.append(os.path.dirname(__file__) + "/../")
+from support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
+import inspect
 import keras.backend as K
 
-class NN_Base:
-    def __init__(self, trajectory, accResults, preprocessor):
-        self.x_train, self.x_test, self.y_train, self.y_test = preprocessor.split(trajectory.positions, accResults.accelerations)
-        self.x_train, self.x_test, self.y_train, self.y_test = preprocessor.apply_transform()
+class NN_Base(GravityModelBase):
+    def __setattr__(self, name, value):
+        if name is "trajectory" and issubclass(value.__class__, TrajectoryBase):
+            self.file_directory += value.trajectory_name
+        super(NN_Base, self).__setattr__(name, value)
+
+
+    def __init__(self, train_trajectory, train_gravity_model, preprocessor):
+        super().__init__()
+        self.file_directory = train_gravity_model.file_directory
+
+        # preprocess the data
+        train_trajectory.positions = cart2sph(train_trajectory.positions)
+        train_gravity_model.accelerations = project_acceleration(train_trajectory.positions, train_gravity_model.accelerations)
+
+        self.preprocessor = preprocessor
+        self.preprocessor.split(train_trajectory.positions, train_gravity_model.accelerations)
+        self.preprocessor.fit()
+        self.x_train, self.x_test, self.y_train, self.y_test = self.preprocessor.apply_transform()
 
         self.epochs = None
         self.batch_size = None
@@ -30,12 +51,10 @@ class NN_Base:
         self.model_func = None
         self.forceNewNN = False
 
-        self.file_directory = accResults.file_directory 
-
         self.verbose = 1
         return
 
-    def set_NN_path(self):
+    def generate_full_file_directory(self):
         self.file_directory += \
                  self.model_func.__name__ + "/" + \
                  "Epochs_" + str(self.epochs) + \
@@ -45,14 +64,14 @@ class NN_Base:
                  "_loss_" + str(self.loss)  + "/"
 
     
-    def load(self):
+    def importNN(self):
         try:
             self.model = load_model(self.file_directory + "model.h5")
             self.fit = pickle.load(open(self.file_directory + "fit.data", 'rb'))
         except:
             print("Unable to load " + self.file_directory + "model.h5")
 
-    def save(self):
+    def saveNN(self):
         try:
             self.model.save(self.file_directory + "model.h5")
             pickle.dump(self.fit, open(self.file_directory + "fit.data", 'wb'))
@@ -61,9 +80,9 @@ class NN_Base:
             pass
 
     def trainNN(self):
-        self.set_NN_path()
+        self.generate_full_file_directory()
         if not self.forceNewNN and os.path.exists(self.file_directory):
-            self.load()
+            self.importNN()
         else:
             if not os.path.exists(self.file_directory):
                 os.makedirs(self.file_directory)
@@ -81,7 +100,7 @@ class NN_Base:
                         validation_split=0.2,
                         callbacks=[earlyStop])
 
-            self.save()
+            self.saveNN()
         return
 
 
@@ -100,28 +119,69 @@ class NN_Base:
         plt.savefig(self.file_directory + 'loss.png')
         return
 
-    def computePercentError(self,):
-        error = np.zeros((len(self.y_test[0]),))
+    def compute_percent_error(self,predicted=None, truth=None):
+        if predicted is None and truth is None:
+            predicted = self.model.predict(np.array(self.x_test).reshape((len(self.x_test),3)))
+            truth = self.y_test
+        else:
+            predicted = predicted.reshape(len(truth),3)
+            truth = truth.reshape(len(truth),3)
+
+        error = np.zeros((3,))
         cumulativeSum = 0.0
         zeros = np.zeros((3,))
-        # Compute the percent error in each coefficient averaged across all test data
-        for i in range(len(self.x_test)):
-            y_pred = self.model.predict(np.array([self.x_test[i]]))
-            for k in range(len(y_pred[0])):
-                if np.abs(self.y_test[i][k]) < 1E-12:
+
+        for i in range(len(truth)):
+            for k in range(len(truth[0])):
+                if np.abs(truth[i][k]) < 1E-12:
                     zeros[k] += 1
                 else:
-                    error[k] += np.abs(y_pred[0][k] - self.y_test[i][k]) / (np.abs(self.y_test[i][k]))
+                    error[k] += np.abs(predicted[i][k] - truth[i][k]) / (np.abs(truth[i][k]))
 
-        error[0] /= (len(self.x_test) - zeros[0])
-        error[1] /= (len(self.x_test) - zeros[1])
-        error[2] /= (len(self.x_test) - zeros[2])
+        error[0] /= (len(truth) - zeros[0])
+        error[1] /= (len(truth) - zeros[1])
+        error[2] /= (len(truth) - zeros[2])
         error *= 100
 
         cumulativeSum = np.sum(error)
-        cumulativeSum /= len(self.x_test[0])
+        cumulativeSum /= len(error)
 
         print("\n\n\n")
         print("Average Total Error: " + str(cumulativeSum) + "\n")
         print("Component Error")
         print(error)
+        return 
+
+    def predict(self, x):
+        y_pred = self.model.predict(np.array(x).reshape((len(x),3)))
+        return y_pred.reshape((len(x),1, 3))
+
+    def compute_acc(self, positions=None):
+        """Compute the accelerations via NN
+
+        Args:
+            positions (np.array): position in cartesian coordinates
+
+        Returns:
+            np.array: acceleration array in cartesian coordinates
+        """
+        if positions is None:
+            positions = self.trajectory.positions
+        
+        positions = cart2sph(positions)
+        positions = self.preprocessor.apply_transform(x=positions)[0]
+        pred_accelerations_encode = self.predict(positions)
+        positions, pred_accelerations_decode = self.preprocessor.invert_transform(x=positions, y=pred_accelerations_encode)
+
+        pred_accelerations_decode = invert_projection(positions, pred_accelerations_decode)
+
+        # If the NN has been asked to compute an acceleration for a trajectory, save the acceleration within NN_dir/Trajectory/Acceleration
+        self.accelerations = pred_accelerations_decode
+
+        return pred_accelerations_decode
+
+
+
+
+
+
