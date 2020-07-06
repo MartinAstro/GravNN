@@ -10,7 +10,8 @@ class UniformDist(TrajectoryBase):
     def __init__(self, celestial_body, radius, points):
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
-            exit()
+            points = int(np.sqrt(points))**2
+            print("The total number of points changed to " + str(points))
         self.radius = radius
         self.points = points
         super().__init__(celestial_body)
@@ -37,9 +38,9 @@ class UniformDist(TrajectoryBase):
         Z.extend(np.zeros((self.points,)).tolist())
 
         N = int(np.sqrt(self.points))
-        phi = np.linspace(0, np.pi, N, endpoint=False)
+        phi = np.linspace(0, np.pi, N, endpoint=True)
         #phi = np.linspace(-np.pi/2, np.pi/2, numPoints, endpoint=False)
-        theta = np.linspace(0, 2*np.pi, N, endpoint=False)
+        theta = np.linspace(0, 2*np.pi, N, endpoint=True)
         for i in range(0,N): #Theta Loop
             for j in range(0, N):
                 X[idx] = (radTrue)*np.sin(phi[i])*np.cos(theta[j])

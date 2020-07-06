@@ -32,8 +32,8 @@ class DHGridDist(TrajectoryBase):
         Y.extend(np.zeros((self.N_lat*self.N_lon,)).tolist())
         Z.extend(np.zeros((self.N_lat*self.N_lon,)).tolist())
 
-        phi = np.linspace(0, np.pi, self.N_lat, endpoint=False)
-        theta = np.linspace(0, 2*np.pi, self.N_lon, endpoint=False)
+        phi = np.linspace(0, np.pi, self.N_lat, endpoint=True)
+        theta = np.linspace(0, 2*np.pi, self.N_lon, endpoint=True)
         for i in range(0, self.N_lon): #Theta Loop
             for j in range(0,self.N_lat):
                 X[idx] = (radTrue)*np.sin(phi[j])*np.cos(theta[i])

@@ -13,7 +13,7 @@ from Trajectories.DHGridDist import DHGridDist
 from CelestialBodies.Planets import Earth
 from GravityModels.SphericalHarmonics import SphericalHarmonics
 from Preprocessors.MinMaxTransform import MinMaxTransform
-from support.transformations import sphere2cart, cart2sph, project_acceleration
+from Support.transformations import sphere2cart, cart2sph, project_acceleration
 
 from GravityModels.NN_Base import NN_Base
 from GravityModels.NNSupport.NN_DeepLayers import *
