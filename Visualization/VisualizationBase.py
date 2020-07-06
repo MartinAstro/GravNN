@@ -6,11 +6,11 @@ class VisualizationBase(ABC):
     trajectory = None
     accelerations = None
     def __init__(self):
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         return
 
     def new3DFig(self):
-        plt.rc('text', usetex=True)
-        plt.rc('font', family='serif')
         fig = plt.figure(num=None, figsize=(5, 3.5), dpi=200)
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel(r'$x$ (m)', fontsize=10)
@@ -26,18 +26,27 @@ class VisualizationBase(ABC):
         return fig, ax
 
     def newFig(self):
-        plt.rc('text', usetex=True)
-        plt.rc('font', family='serif')
         fig = plt.figure(num=None, figsize=(5, 3.5), dpi=200)
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=8)
-        ax.legend(prop={'size': 10})
+        #ax.legend(prop={'size': 10})
         ax.grid(linestyle="--", linewidth=0.1, color='.25', zorder=-10)
         return fig, ax
 
     def save(self, fig, name):
+        #If the name is an absolute path -- save to the path
+        if os.path.isabs(name):
+            try:
+                plt.savefig(name, bbox_inches='tight')
+            except:
+                print("Couldn't save " + name)
+            return    
+        
+        # If not absolute, create a directory and save the plot
         if not os.path.exists(self.file_directory):
             os.makedirs(self.file_directory)
-        plt.figure(fig.number)
-        plt.savefig(self.file_directory + name, bbox_inches='tight')
+        try:
+            plt.savefig(self.file_directory + name, bbox_inches='tight')
+        except:
+            print("Couldn't save " + name)
 

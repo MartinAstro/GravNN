@@ -5,16 +5,16 @@ import pickle as pickle
 import gc
 
 path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-from support.GravBodyInterface import GravBodyInterface
+from Support.GravBodyInterface import GravBodyInterface
 from Trajectories.UniformDist import UniformDist
-import support.transformations as transformations
-# import general simulation support files
+import Support.transformations as transformations
+# import general simulation Support files
 from Basilisk.utilities import SimulationBaseClass
-from Basilisk.utilities import unitTestSupport  # general support file with common unit test functions
+from Basilisk.utilities import unitTestSupport  # general Support file with common unit test functions
 from Basilisk.utilities import macros
 from Basilisk.utilities import orbitalMotion
 
-# import simulation related support
+# import simulation related Support
 from Basilisk.simulation import spacecraftPlus, spice_interface
 from Basilisk.utilities import simIncludeGravBody
 from Basilisk.topLevelModules import pyswice

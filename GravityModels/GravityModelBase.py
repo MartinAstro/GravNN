@@ -2,6 +2,7 @@ import os, sys
 import pickle
 from abc import ABC, abstractmethod
 class GravityModelBase(ABC):
+    verbose = True
     def __init__(self):
         self.trajectory = None
         self.accelerations = None
@@ -29,10 +30,14 @@ class GravityModelBase(ABC):
     def load(self, override=False):
         # Check if the file exists and either load the positions or generate the acceleration
         if os.path.exists(self.file_directory + "acceleration.data") and override == False:
+            if self.verbose:
+                print("Found existing acceleration.data at " + self.file_directory)
             with open(self.file_directory+"acceleration.data", 'rb') as f:
                 self.accelerations = pickle.load(f)
                 return self.accelerations
         else:
+            if self.verbose:
+                print("Generating acceleration at " + self.file_directory)
             self.compute_acc()
             self.save()
             return self.accelerations

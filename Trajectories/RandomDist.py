@@ -1,5 +1,5 @@
 import os
-from TrajectoryBase import TrajectoryBase
+from Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 
@@ -10,10 +10,12 @@ class RandomDist(TrajectoryBase):
     def __init__(self, celestial_body, radiusBounds, points):
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
-            exit()
-        super().__init__(celestial_body)
+            points = int(np.sqrt(points))**2
+            print("The total number of points changed to " + str(points))
         self.radiusBounds = radiusBounds
         self.points = points
+        super().__init__(celestial_body)
+
         pass
 
     def generate_full_file_directory(self):
@@ -30,8 +32,6 @@ class RandomDist(TrajectoryBase):
         Y = []
         Z = []
         idx = 0
-        eps = 1E-2
-        radTrue = self.radius
         X.extend(np.zeros((self.points,)).tolist())
         Y.extend(np.zeros((self.points,)).tolist())
         Z.extend(np.zeros((self.points,)).tolist())
@@ -44,4 +44,5 @@ class RandomDist(TrajectoryBase):
             Y[idx] = r*np.sin(phi)*np.sin(theta)
             Z[idx] = r*np.cos(phi)
             idx += 1
+        self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))

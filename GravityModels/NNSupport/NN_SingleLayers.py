@@ -49,6 +49,22 @@ def Single_1000_tanh(x_train, y_train):
     return model
 
 # Base 2 Layers
+def Single_32_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=32, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Single_64_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=64, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
 def Single_128_LReLU(x_train, y_train):
     activityReg = 0.00
     model = Sequential()
@@ -56,3 +72,41 @@ def Single_128_LReLU(x_train, y_train):
     model.add(LeakyReLU(0.3))
     model.add(Dense(units=len(y_train[0]), activation='linear'))
     return model
+
+def Single_256_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=256, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+# tanh
+def Single_32_tanh(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=32, activation='tanh', activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Single_64_tanh(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=64, activation='tanh', activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Single_128_tanh(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=128, activation='tanh', activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Single_256_tanh(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=256, activation='tanh', activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+

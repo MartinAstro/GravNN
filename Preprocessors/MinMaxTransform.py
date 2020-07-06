@@ -4,13 +4,15 @@ from sklearn.preprocessing import MinMaxScaler
 from Preprocessors.PreprocessorBase import PreprocessorBase
 
 class MinMaxTransform(PreprocessorBase):
-    r_scaler = MinMaxScaler(feature_range=(0,1))#(0, 1)) # If the data is transformed from r -> 1/r^2 the bounds become [0 (infinity), 1(max)] for body
-    theta_scaler = MinMaxScaler(feature_range=(0, 1)) # discrete range of values so min max makes sense
-    phi_scaler = MinMaxScaler(feature_range=(0, 1)) # discrete range of values so min max makes sense
+    def __init__(self, val_range=(0,1)):
+        super().__init__()
+        self.r_scaler = MinMaxScaler(feature_range=val_range)#(0, 1)) # If the data is transformed from r -> 1/r^2 the bounds become [0 (infinity), 1(max)] for body
+        self.theta_scaler = MinMaxScaler(feature_range=val_range) # discrete range of values so min max makes sense
+        self.phi_scaler = MinMaxScaler(feature_range=val_range) # discrete range of values so min max makes sense
 
-    a_r_scaler = MinMaxScaler(feature_range=(0, 1)) # Can't have acceleration in negative radial direction
-    a_theta_scaler = MinMaxScaler(feature_range=(0, 1))
-    a_phi_scaler = MinMaxScaler(feature_range=(0, 1))
+        self.a_r_scaler = MinMaxScaler(feature_range=val_range) # Can't have acceleration in negative radial direction
+        self.a_theta_scaler = MinMaxScaler(feature_range=val_range)
+        self.a_phi_scaler = MinMaxScaler(feature_range=val_range)
 
     def fit(self):
         #Formats data and checks if data has already been processed

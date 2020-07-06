@@ -16,6 +16,57 @@ def Deep_128x3_tanh(x_train, y_train):
     model.add(Dense(units=len(y_train[0]), activation='linear'))
     return model
 
+
+
+def Deep_8x3_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=8, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=8))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=8))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+
+def Deep_16x3_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=16, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=16))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=16))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Deep_32x3_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=32, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=32))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=32))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
+def Deep_64x3_LReLU(x_train, y_train):
+    activityReg = 0.00
+    model = Sequential()
+    model.add(Dense(units=64, activity_regularizer=l2(activityReg), input_shape=(len(x_train[0]),)))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=64))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=64))
+    model.add(LeakyReLU(0.3))
+    model.add(Dense(units=len(y_train[0]), activation='linear'))
+    return model
+
 def Deep_128x3_LReLU(x_train, y_train):
     activityReg = 0.00
     model = Sequential()

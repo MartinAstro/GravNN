@@ -19,14 +19,14 @@ import pickle
 
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/../")
-from support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
+from Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 import inspect
 import keras.backend as K
 
 class NN_Base(GravityModelBase):
     def __setattr__(self, name, value):
         if name is "trajectory" and issubclass(value.__class__, TrajectoryBase):
-            self.file_directory += value.trajectory_name
+            self.file_directory += value.trajectory_name + "/"
         super(NN_Base, self).__setattr__(name, value)
 
 
@@ -35,11 +35,11 @@ class NN_Base(GravityModelBase):
         self.file_directory = train_gravity_model.file_directory
 
         # preprocess the data
-        train_trajectory.positions = cart2sph(train_trajectory.positions)
-        train_gravity_model.accelerations = project_acceleration(train_trajectory.positions, train_gravity_model.accelerations)
+        pos_sphere = cart2sph(train_trajectory.positions)
+        acc_proj = project_acceleration(pos_sphere, train_gravity_model.accelerations)
 
         self.preprocessor = preprocessor
-        self.preprocessor.split(train_trajectory.positions, train_gravity_model.accelerations)
+        self.preprocessor.split(pos_sphere, acc_proj)
         self.preprocessor.fit()
         self.x_train, self.x_test, self.y_train, self.y_test = self.preprocessor.apply_transform()
 
@@ -48,10 +48,11 @@ class NN_Base(GravityModelBase):
         self.lr = None
         self.loss = 'mean_squared_error' # 'mean_absolute_error', 'mean_squared_logarithmic_error',
         self.opt = None
+        self.patience = None
         self.model_func = None
         self.forceNewNN = False
 
-        self.verbose = 1
+        self.nn_verbose = 1
         return
 
     def generate_full_file_directory(self):
@@ -61,7 +62,8 @@ class NN_Base(GravityModelBase):
                  "_opt_" + str(self.opt.__class__.__name__) + \
                  "_bs_" + str(self.batch_size) + \
                  "_lr_" + str(self.lr) + \
-                 "_loss_" + str(self.loss)  + "/"
+                 "_loss_" + str(self.loss)  +  \
+                 "_patience_" + str(self.patience) + "/"
 
     
     def importNN(self):
@@ -91,12 +93,12 @@ class NN_Base(GravityModelBase):
                             loss=self.loss,
                             optimizer=self.opt,
                             metrics=['mae'])
-            earlyStop = EarlyStopping(monitor='loss', min_delta=1E-4, patience=10, verbose=1, mode='auto',
+            earlyStop = EarlyStopping(monitor='loss', min_delta=1E-4, patience=self.patience, verbose=1, mode='auto',
                                                     baseline=None, restore_best_weights=False)
             self.fit = self.model.fit(self.x_train, self.y_train,
                         epochs=self.epochs,
                         batch_size=self.batch_size,
-                        verbose=self.verbose,
+                        verbose=self.nn_verbose,
                         validation_split=0.2,
                         callbacks=[earlyStop])
 
@@ -116,7 +118,9 @@ class NN_Base(GravityModelBase):
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.legend()
-        plt.savefig(self.file_directory + 'loss.png')
+        if not os.path.exists(self.file_directory):
+            os.makedirs(self.file_directory)
+        plt.savefig(self.file_directory + 'loss.pdf', bbox_inches='tight')
         return
 
     def compute_percent_error(self,predicted=None, truth=None):
@@ -127,29 +131,30 @@ class NN_Base(GravityModelBase):
             predicted = predicted.reshape(len(truth),3)
             truth = truth.reshape(len(truth),3)
 
-        error = np.zeros((3,))
+        error = np.zeros((4,))
         cumulativeSum = 0.0
-        zeros = np.zeros((3,))
+        zeros = np.zeros((4,))
 
-        for i in range(len(truth)):
-            for k in range(len(truth[0])):
-                if np.abs(truth[i][k]) < 1E-12:
-                    zeros[k] += 1
-                else:
-                    error[k] += np.abs(predicted[i][k] - truth[i][k]) / (np.abs(truth[i][k]))
+        # for i in range(len(truth)):
+        #     for k in range(len(truth[0])):
+        #         if np.abs(truth[i][k]) < 1E-12:
+        #             zeros[k] += 1
+        #         else:
+        #             error[k] += np.abs((predicted[i][k] - truth[i][k]) /(truth[i][k]))
 
-        error[0] /= (len(truth) - zeros[0])
-        error[1] /= (len(truth) - zeros[1])
-        error[2] /= (len(truth) - zeros[2])
+        # error[0] /= (len(truth) - zeros[0])
+        # error[1] /= (len(truth) - zeros[1])
+        # error[2] /= (len(truth) - zeros[2])
+        error[0] = np.median(np.abs((predicted[:,0] - truth[:,0])/ truth[:,0]))
+        error[1] = np.median(np.abs((predicted[:,1] - truth[:,1])/ truth[:,1]))
+        error[2] = np.median(np.abs((predicted[:,2] - truth[:,2])/ truth[:,2]))
+        error[3] =  np.median(np.abs(np.linalg.norm(predicted - truth,axis=1)/ np.linalg.norm(truth,axis=1)))
         error *= 100
 
-        cumulativeSum = np.sum(error)
-        cumulativeSum /= len(error)
-
         print("\n\n\n")
-        print("Average Total Error: " + str(cumulativeSum) + "\n")
+        print("Median Total Error: " + str(error[3]) + "\n")
         print("Component Error")
-        print(error)
+        print(error[0:3])
         return 
 
     def predict(self, x):
