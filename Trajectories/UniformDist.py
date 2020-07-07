@@ -8,10 +8,11 @@ class UniformDist(TrajectoryBase):
     points = None # Total points to distribute
 
     def __init__(self, celestial_body, radius, points):
-        if points % np.sqrt(points) != 0:
+        if points % np.sqrt(points/2) != 0:
             print("The total number of points is not a perfect square")
-            points = int(np.sqrt(points))**2
-            print("The total number of points changed to " + str(points))
+            N = int(np.sqrt(points/2))
+            points = 2*N**2
+            print("The total number of points changed to " + str(points) + ". N = " +str(N))
         self.radius = radius
         self.points = points
         super().__init__(celestial_body)
@@ -37,12 +38,12 @@ class UniformDist(TrajectoryBase):
         Y.extend(np.zeros((self.points,)).tolist())
         Z.extend(np.zeros((self.points,)).tolist())
 
-        N = int(np.sqrt(self.points))
+        N = int(np.sqrt(self.points/2))
         phi = np.linspace(0, np.pi, N, endpoint=True)
         #phi = np.linspace(-np.pi/2, np.pi/2, numPoints, endpoint=False)
-        theta = np.linspace(0, 2*np.pi, N, endpoint=True)
-        for i in range(0,N): #Theta Loop
-            for j in range(0, N):
+        theta = np.linspace(0, 2*np.pi, 2*N, endpoint=True)
+        for i in range(0,len(phi)): #Theta Loop
+            for j in range(0, len(theta)):
                 X[idx] = (radTrue)*np.sin(phi[i])*np.cos(theta[j])
                 Y[idx] = (radTrue)*np.sin(phi[i])*np.sin(theta[j])
                 Z[idx] = (radTrue)*np.cos(phi[i])

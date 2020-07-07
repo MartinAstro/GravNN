@@ -3,10 +3,54 @@ from Visualization.MapVisualization import MapVisualization
 from GravityModels.SphericalHarmonics import SphericalHarmonics
 from CelestialBodies.Planets import Earth
 from Trajectories.DHGridDist import DHGridDist
+from Trajectories.RandomDist import RandomDist
+from Trajectories.UniformDist import UniformDist
+from Support.transformations import cart2sph
 import os
 import pyshtools
 import matplotlib.pyplot as plt
 import numpy as np
+
+def plot_grid_on_map():
+    # Plot Grid Points on Perturbations
+    planet = Earth()
+    radius = planet.radius
+    model_file = planet.sh_hf_file
+    # Specify the grid density via the degree
+    density_deg = 175
+    max_deg = 1000
+    trajectory_surf = DHGridDist(planet, radius, degree=density_deg)
+
+    Call_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory_surf)
+    Call_grid = Grid(gravityModel=Call_gm)
+
+    C20_gm = SphericalHarmonics(model_file, 2, trajectory=trajectory_surf)
+    C20_grid = Grid(gravityModel=C20_gm)
+
+    map_vis = MapVisualization()
+    true_mC20_grid = Call_grid - C20_grid
+    point_count_list = [1000, 10000]
+    size = 0.1
+    for point_count in point_count_list:
+        trajectory_random = RandomDist(planet, [planet.radius, planet.radius*1.1], point_count)
+        trajectory_uniform = UniformDist(planet, planet.radius, point_count)
+
+        pos_sphere_random = cart2sph(trajectory_random.positions)
+        pos_sphere_uniform = cart2sph(trajectory_uniform.positions)
+
+        # Scale down to 360 and 180 respectively
+        fig_pert, ax = map_vis.plot_grid(true_mC20_grid.total, "Acceleration Perturbations")
+        ax.scatter(pos_sphere_random[:,1]/np.max(pos_sphere_random[:,1])*(len(true_mC20_grid.total)-1),
+                            pos_sphere_random[:,2]/np.max(pos_sphere_random[:,2])*(len(true_mC20_grid.total[1]-1)),
+                            color='r', s=size)
+        map_vis.save(fig_pert, str(point_count) + "_Random_Grid_SH.png")      
+
+        fig_pert, ax = map_vis.plot_grid(true_mC20_grid.total, "Acceleration Perturbations")
+        ax.scatter(pos_sphere_uniform[:,1]/np.max(pos_sphere_uniform[:,1])*(len(true_mC20_grid.total)-1),
+                            pos_sphere_uniform[:,2]/np.max(pos_sphere_uniform[:,2])*(len(true_mC20_grid.total[1]-1)),
+                            color='r', s=size)
+        map_vis.save(fig_pert, str(point_count) + "_Uniform_Grid_SH.png")      
+
 
 def plot_sh_perturbations():
     # Phase 0: Plot Perturbations beyond C20
@@ -93,6 +137,7 @@ def phase_2():
         map_vis.save(plt.gcf(), "SH_Rel_Error_2D.pdf")
 
 
+
 def main():
 
     planet = Earth()
@@ -104,10 +149,10 @@ def main():
     trajectory_surf = DHGridDist(planet, radius, degree=density_deg)
     
 
-
+    plot_grid_on_map()
     #plot_sh_perturbations()
     #plot_sh_v_altitude()
-    phase_2()
+    #phase_2()
 
     plt.show()
     # grid_list = []

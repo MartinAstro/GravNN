@@ -47,7 +47,7 @@ class MapVisualization(VisualizationBase):
         fig,ax = self.newFig()
         im = self.new_map(grid)
         self.add_colorbar(im, label)
-        return plt.gcf(), plt.gca()
+        return fig, ax
 
 
     def plot_grid_error(self, grid, grid_true, vlim=None):
@@ -57,8 +57,8 @@ class MapVisualization(VisualizationBase):
         fig, ax = self.newFig()
         im = self.new_map(error_grid, vlim)
         self.add_colorbar(im,  'Acceleration, $\%$ Error')
-        return plt.gcf(), plt.gca()
-    
+        return fig, ax
+        
     def plot_component_errors(self, x_list, error_list, color):
         """Plot the errors of each component over some type of interval (be it SH degree or number of data points to train the NN). X-labels are specifically omitted and to be later specified by the user. 
 

@@ -160,7 +160,7 @@ def main():
             trajectory = UniformDist(planet, planet.radius, points)
             grav_model = SphericalHarmonics(planet.sh_file, None, trajectory=trajectory)
             unique_existing_solution, regression = regress(grav_model, deg_start, deg_regress, tolerance)
-            grav_model_regress = SphericalHarmonics(regression.result, None, trajectory=trajectory_surface)
+            grav_model_regress = SphericalHarmonics(regression.coef_regress, None, trajectory=trajectory_surface)
             grid_regress = Grid(grav_model_regress, override=True)
 
             # Provide enough points for a unique solution

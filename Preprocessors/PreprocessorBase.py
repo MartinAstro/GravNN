@@ -17,7 +17,7 @@ class PreprocessorBase:
     def split(self, position, acceleration):
         self.input_train, self.input_test, self.output_train, self.output_test = train_test_split(position, acceleration, test_size=self.percentTest, random_state=13)
 
-        return   self.input_train, self.input_test, self.output_train, self.output_test
+        return  self.input_train, self.input_test, self.output_train, self.output_test
     
     def fit_transform(self):
         return

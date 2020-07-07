@@ -53,8 +53,11 @@ def compute_coef_error(CS_regress, C_lm, S_lm):
     error_list = np.zeros((N*(N+1),))
     for l in range(len(C_lm)): # l max
         for m in range(len(C_lm[l])): # m max
-            error_list[l*(l+1) + 2*m] = abs((CS_regress.C_lm[l][m]- C_lm[l][m])/C_lm[l][m])
-            error_list[l*(l+1) + 2*m+1] =  abs((CS_regress.S_lm[l][m] - S_lm[l][m])/S_lm[l][m])
+            try:
+                error_list[l*(l+1) + 2*m] = abs((CS_regress.C_lm[l][m]- C_lm[l][m])/C_lm[l][m])
+                error_list[l*(l+1) + 2*m+1] =  abs((CS_regress.S_lm[l][m] - S_lm[l][m])/S_lm[l][m])
+            except:
+                pass
     return np.nanmean(error_list)
 
 def print_C2m_error(l_start, regress_coef, gravityModel):
