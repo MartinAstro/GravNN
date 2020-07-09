@@ -1,93 +1,86 @@
 #include "Regression.h"
 #include <iostream>
 #include <cmath>
-#include "Eigen/Sparse"
-#include "Eigen/SparseCore"
-#include "Eigen/SparseQR"
-#include "Eigen/OrderingMethods"
+
+#include "../PinesAlgorithm/PinesAlgorithm.h"
 
 
 Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, int degree, double r0, double muBdy)
 {
-    /*
-    Want to regression object to take inputs: positions (cartesian) and accelerations (cartesian?)
-    Want to regression object to output coefficient list
-    */
-    P = rVec1D.size();
-    N = degree;
-    a = r0;
-    mu = muBdy;
+    // initialize variables
+    this->P = rVec1D.size();
+    this->N = degree;
+    this->a = r0;
+    this->mu = muBdy;
 
-    std::vector<double> doubleFiller;
-    doubleFiller.resize(N+2, 0);
+    this->pos_meas_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(rVec1D.data(), rVec1D.size());
+    this->acc_meas_eigen =Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(aVec1D.data(), aVec1D.size());
+    this->pos_meas = rVec1D;
+    this->acc_meas = aVec1D;
 
-    r.resize(N+2, 0);
-    i.resize(N+2,0);
-    rho.resize(N+3, 0);
-    coeff = Eigen::VectorXd::Zero(N*(N+1));
-    A.resize(N+2, doubleFiller);
-
-    for(unsigned int i = 0; i < N + 2; i++)
+    std::vector<double> coef_row;
+    for (int l = 0; l <= this->N; l++)
     {
-        std::vector<double> n1Row, n2Row;
+        coef_row.resize(l+1, 0.0);
+        coef_regress.C_lm.push_back(coef_row);
+        coef_regress.S_lm.push_back(coef_row);
+    }
 
-        // Diagonal elements of A_bar
-        if (i == 0)
+    // Load single calculation objects
+    std::vector<double> dubFiller(N+2, 0);
+    std::vector<std::vector<double> > empty(N+2, dubFiller);
+    this->A = empty;
+    this->r = dubFiller;
+    this->i = dubFiller;
+    this->rho.resize(N+2+1, 0); // Need to go to + 3 for the original rho[n+2] formulation. 
+
+    for(unsigned int l = 0; l < N+2; l++)
+    {
+        this->A[l][l] = (l == 0) ? 1.0 : sqrt((2*l+1)*getK(l))/(2*l*getK(l-1)) * this->A[l-1][l-1]; // Diagonal elements of A_bar
+        
+        std::vector<double> n1Row(l+1, 0.0);
+        std::vector<double> n2Row(l+1, 0.0);
+        for (unsigned int m = 0; m <= l; m++)
         {
-            A[i][i] = 1.0;
-        }
-        else
-        {
-            A[i][i] = sqrt(double((2*i+1)*getK(i))/(2*i*getK(i-1))) * A[i-1][i-1];
-        }
-        n1Row.resize(i+1, 0.0);
-        n2Row.resize(i+1, 0.0);
-        for (unsigned int m = 0; m <= i; m++)
-        {
-            if (i >= m + 2)
+            if (l >= m + 2)
             {
-                n1Row[m] = sqrt(double((2*i+1)*(2*i-1))/((i-m)*(i+m)));
-                n2Row[m] = sqrt(double((i+m-1)*(2*i+1)*(i-m-1))/((i+m)*(i-m)*(2*i-3)));
-
+                n1Row[m] = sqrt((2.0*l+1.0)*(2.0*l-1))/((l-m)*(l+m));
+                n2Row[m] = sqrt((l+m-1.0)*(2.0*l+1.0)*(l-m-1.0))/((l+m)*(l-m)*(2.0*l-3.0));
             }
         }
-        n1.push_back(n1Row);
-        n2.push_back(n2Row);
+        this->n1.push_back(n1Row);
+        this->n2.push_back(n2Row);
     }
-    
-
-    positions = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(rVec1D.data(), rVec1D.size());
-    accelerations =Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(aVec1D.data(), aVec1D.size());
 }
 
-void Regression::populate_variables(double x, double y, double z)
+void Regression::set_regression_variables(double x, double y, double z)
 {
     double rMag = sqrt(pow(x,2) + pow(y,2) + pow(z,2));
-    s = x/rMag;
-    t = y/rMag;
-    u = z/rMag;
+    this->s = x/rMag;
+    this->t = y/rMag;
+    this->u = z/rMag;
 
     //Eq 23
-    for (int n = 1; n < A.size(); n++)
+    for (unsigned int l = 1; l < A.size(); l++)
     {
-         A[n][n-1] = sqrt(double((2*n)*getK(n-1))/getK(n)) * A[n][n] * u;
+         this->A[l][l-1] = sqrt((2.0*l)*getK(l-1)/getK(l)) * this->A[l][l] * this->u;
     }
 
-    for (unsigned int m = 0; m < A.size(); m++)
+    for (unsigned int m = 0; m < this->A.size(); m++)
     {
-        for(unsigned int n = m + 2; n < A.size(); n++)
+        for(unsigned int l = m + 2; l < this->A.size(); l++)
         {
-            A[n][m] = u * n1[n][m] * A[n-1][m] - n2[n][m] * A[n-2][m];
+            this->A[l][m] = u *this-> n1[l][m] * this->A[l-1][m] - this->n2[l][m] * this->A[l-2][m];
         }
     }
 
     //Eq 24
-    r[0] = 1; // cos(m*lambda)*cos(m*alpha);
-    i[0] = 0; //sin(m*lambda)*cos(m*alpha);
+    this->r[0] = 1; // cos(m*lambda)*cos(m*alpha);
+    this->i[0] = 0; //sin(m*lambda)*cos(m*alpha);
     for (int m = 1; m < r.size(); m++)
     {
-        r[m] = s*r[m-1] - t*i[m-1];
-        i[m] = s*i[m-1] + t*r[m-1];
+        this->r[m] = this->s*this->r[m-1] - this->t*this->i[m-1];
+        this->i[m] = this->s*this->i[m-1] + this->t*this->r[m-1];
     }
 
     //Eq 26 and 26a
@@ -100,62 +93,61 @@ void Regression::populate_variables(double x, double y, double z)
     }
 }
 
-void Regression::perform_regression()
-{
-    int Q = N + 1; // Total Indicies Needed to store all coefficients
-    Eigen::MatrixXd M(P, Q*(Q+1) - (2*(2+1)));
+Coefficients Regression::perform_regression(int l_i, double precision)
+{   
+    this->l_i = l_i; // Degree of first coefficient to regress (typically either 0 or 2)
+    this->M_skip = l_i*(l_i+1); // Number of coefficients to skip
+    this->M_total = (this->N + 1)*(this->N + 2); // Total number of coefficients up to degree l_{f+1} -- e.g if l_max = 2 then M_total = 12
 
+    Eigen::MatrixXd M(this->P, M_total - M_skip);
+    Eigen::SparseMatrix<double> M_sparse(this->P, M_total - M_skip);
+
+    int delta_m, delta_m_p1;
     double f_Cnm_1, f_Cnm_2, f_Cnm_3;
     double f_Snm_1, f_Snm_2, f_Snm_3;
-    double n_lm_n_lm_p1; // Eq 79 BSK
-    double n_lm_n_l_p1_m_p1; // Eq 80 BSK
-    int delta_m, delta_m_p1;
-    double c1, c2;
+    double c1, c2; // Eq 79, 80 BSK
     double rTerm, iTerm;
     double x, y, z;
-    Eigen::SparseMatrix<double> AMat(P, Q*(Q+1) - 2*(2+1));
     int idx;
     int degIdx;
     for (int p = 0; p < P/3; p++)
     {  
-        x = positions(3*p);
-        y = positions(3*p + 1);
-        z = positions(3*p + 2);
-        populate_variables(x, y, z);
-        // NOTE: NO ESTIMATION OF C00, C10, C11 -- THESE ARE DETERMINED ALREADY
-        for (int n = 2; n <= N; n++)
+        x = pos_meas_eigen(3*p);
+        y = pos_meas_eigen(3*p + 1);
+        z = pos_meas_eigen(3*p + 2);
+        this->set_regression_variables(x, y, z);
+        for (int l = l_i; l <= N; l++)
         {
-            for (int m = 0; m <= n; m++)
+            for (int m = 0; m <= l; m++)
             {
                 delta_m = (m == 0) ? 1 : 0;
                 delta_m_p1 = (m+1 == 0) ? 1: 0;
-                n_lm_n_lm_p1 = sqrt((n-m)*(2.0-delta_m)*(n+m+1)/(2-delta_m_p1));
-                n_lm_n_l_p1_m_p1 = sqrt((n+m+2.0)*(n+m+1)*(2*n+1)*(2-delta_m)/((2*n+3)*(2-delta_m_p1)));
+                c1 = sqrt((l-m)*(2.0-delta_m)*(l+m+1.0)/(2.0-delta_m_p1)); // n_lm_n_lm_p1
+                c2 = sqrt((l+m+2.0)*(l+m+1)*(2.0*l+1.0)*(2.0-delta_m)/((2.0*l+3.0)*(2.0-delta_m_p1))); // n_lm_n_l_p1_m_p1
 
-                c1 = n_lm_n_lm_p1;
-                c2 = n_lm_n_l_p1_m_p1;
+                rTerm =(m == 0) ? 0 : r[m-1];
+                iTerm =(m == 0) ? 0 : i[m-1];
 
-                //TODO: These will need the normalizaiton factor out in front (N1, N2)
                 // Coefficient contribution to X, Y, Z components of the acceleration
-                
-                if (m == 0) { 
-                    rTerm = 0;
-                    iTerm = 0;
-                } else {
-                    rTerm = r[m-1];
-                    iTerm = i[m-1];
-                }
-                f_Cnm_1 = (rho[n+2]/a)*(m*A[n][m]*rTerm -s*c2*A[n+1][m+1]*r[m]);
-                f_Cnm_2 = -(rho[n+2]/a)*(m*A[n][m]*rTerm + t*c2*A[n+1][m+1]*r[m]);
-                f_Cnm_3 = (rho[n+2]/a)*(c1*A[n][m+1] - u*c2*A[n+1][m+1])*r[m];
+                // ORIGINAL CALL FROM PAPER
+                f_Cnm_1 = (rho[l+2]/a)*(m*A[l][m]*rTerm - s*c2*A[l+1][m+1]*r[m]);
+                f_Cnm_2 = -(rho[l+2]/a)*(m*A[l][m]*rTerm + t*c2*A[l+1][m+1]*r[m]);
+                f_Cnm_3 = (rho[l+2]/a)*(c1*A[l][m+1] - u*c2*A[l+1][m+1])*r[m];
 
-                f_Snm_1 = (rho[n+2]/a)*(m*A[n][m]*iTerm -s*c2*A[n+1][m+1]*i[m]);
-                f_Snm_2 = (rho[n+2]/a)*(m*A[n][m]*iTerm - t*c2*A[n+1][m+1]*i[m]);
-                f_Snm_3 = (rho[n+2]/a)*(c1*A[n][m+1] - u*c2*A[n+1][m+1])*i[m];
-                
-                idx = n - 2; // The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
-                idx = n;
-                degIdx = n*(n+1) - (2*(2+1));
+                f_Snm_1 = (rho[l+2]/a)*(m*A[l][m]*iTerm - s*c2*A[l+1][m+1]*i[m]);
+                f_Snm_2 = (rho[l+2]/a)*(m*A[l][m]*iTerm - t*c2*A[l+1][m+1]*i[m]);
+                f_Snm_3 = (rho[l+2]/a)*(c1*A[l][m+1] - u*c2*A[l+1][m+1])*i[m];
+
+                // RHO N+1 RATHER THAN N+2 BC CAN'T FIGURE OUT MATH
+                // f_Cnm_1 = (rho[l+1]/a)*(m*A[l][m]*rTerm - s*c2*A[l+1][m+1]*r[m]);
+                // f_Cnm_2 = -(rho[l+1]/a)*(m*A[l][m]*rTerm + t*c2*A[l+1][m+1]*r[m]);
+                // f_Cnm_3 = (rho[l+1]/a)*(c1*A[l][m+1] - u*c2*A[l+1][m+1])*r[m];
+
+                // f_Snm_1 = (rho[l+1]/a)*(m*A[l][m]*iTerm - s*c2*A[l+1][m+1]*i[m]);
+                // f_Snm_2 = (rho[l+1]/a)*(m*A[l][m]*iTerm - t*c2*A[l+1][m+1]*i[m]);
+                // f_Snm_3 = (rho[l+1]/a)*(c1*A[l][m+1] - u*c2*A[l+1][m+1])*i[m];
+
+                degIdx = l*(l+1) - M_skip;
                 M(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
                 M(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
                 M(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
@@ -163,27 +155,87 @@ void Regression::perform_regression()
                 M(3*p + 2, degIdx + 2*m + 0) = f_Cnm_3; // Z direction
                 M(3*p + 2, degIdx + 2*m + 1) = f_Snm_3;
 
-                AMat.insert(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
-                AMat.insert(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
-                AMat.insert(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
-                AMat.insert(3*p + 1, degIdx + 2*m + 1) = f_Snm_2;
-                AMat.insert(3*p + 2, degIdx + 2*m + 0) = f_Cnm_3; // Z direction
-                AMat.insert(3*p + 2, degIdx + 2*m + 1) = f_Snm_3;
+                // M_sparse.insert(3*p + 0, degIdx + 2*m + 0) = f_Cnm_1; // X direction
+                // M_sparse.insert(3*p + 0, degIdx + 2*m + 1) = f_Snm_1;
+                // M_sparse.insert(3*p + 1, degIdx + 2*m + 0) = f_Cnm_2; // Y direction
+                // M_sparse.insert(3*p + 1, degIdx + 2*m + 1) = f_Snm_2;
+                // M_sparse.insert(3*p + 2, degIdx + 2*m + 0) = f_Cnm_3; // Z direction
+                // M_sparse.insert(3*p + 2, degIdx + 2*m + 1) = f_Snm_3;
             }
         }
     }
-    //std::cout << Eigen::MatrixXd(A) << std::endl;
-    //std::cout << accelerations << std::endl;
-    //std::cout << M << std::endl;
-    //std::cout << "The solution using the QR decomposition is:\n" << M.colPivHouseholderQr().solve(accelerations) << std::endl;
-    std::cout << "The QR decomposition solution is:\n" << M.fullPivHouseholderQr().solve(accelerations) << std::endl;
-    std::cout << "The SVD Solution is:\n"<< M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(accelerations) << std::endl;
+    find_solution(precision, M, M_sparse);
+    return coef_regress;
+}
 
-    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > solver;
-    AMat.makeCompressed();
-    solver.compute(AMat);
-    std::cout << "The sparse solution is:\n"<<     solver.solve(accelerations)<< std::endl;
+void Regression::find_solution(double precision, Eigen::MatrixXd &M, Eigen::SparseMatrix<double> &M_sparse)
+{
+    // Initialize variables
+    int iterations = 0;
+    int max_iterations = 1000;
+    double rel_error;
+    PinesAlgorithm pines = PinesAlgorithm(a, mu, N);
+    std::vector<double> acc_regress;
+    std::vector<double> coef_row;
+    std::vector<double> zero_vec(acc_meas.size(), 0);
 
+    Eigen::VectorXd Y = acc_meas_eigen; // true acceleration
+    Eigen::VectorXd Y_hat; // regressed acceleration
+    Eigen::VectorXd dY; // difference in acceleration
+    Eigen::VectorXd X_f; // new coefficient guess 
+    Eigen::VectorXd X_i= Eigen::VectorXd::Zero(M_total - M_skip); // original coefficient guess
+    Eigen::VectorXd dX; // improvement for coefficients
+
+    // Initialize variables and sparse matrix
+    solution_unique = Y.size() > (M_total - M_skip); // Check if the problem is underdetermined
+    solution_exists = false;
+
+    // Perform one time calcuations
+    // Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > solver;
+    // M_sparse.makeCompressed();
+    // solver.compute(M_sparse);
+
+    while(!solution_exists && iterations < max_iterations)
+    {
+        acc_regress = pines.compute_acc(pos_meas, coef_regress.C_lm, coef_regress.S_lm);
+        Y_hat = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(acc_regress.data(), acc_regress.size());
+        dY =  Y - Y_hat;
+
+        // try BDCSVD decomposition
+        dX = M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(dY);
+        //dX = M.fullPivHouseholderQr().solve(dY);
+        //dX = solver.solve(dY);
+        rel_error = (M*dX - dY).norm() / dY.norm();
+        solution_exists = rel_error < precision;
+
+        X_f = X_i + dX;
+        // X_f(0) = 1.0;
+        // X_f.segment(1,5) *= 0.0;
+        format_coefficients(X_f);
+        X_i = X_f;
+        iterations++;
+    }
+    std::cout << "Ran " + std::to_string(iterations) + " iterations! \n";
+    X_f(0) = 1.0;
+}
+
+void Regression::format_coefficients(Eigen::VectorXd coef_list)
+{
+    int l = this->l_i;
+    int m = 0;
+    this->coef_regress.C_lm[0][0] = (this->l_i != 0) ? 1.0 : 0.0; // If regressing only C20 and force the earlier coefficients
+
+    for(int i = 0; i < coef_list.size()/2; i++)
+    {
+        if (m > l)
+        {
+            l += 1;
+            m = 0;
+        } 
+        this->coef_regress.C_lm[l][m] = coef_list[2*i];
+        this->coef_regress.S_lm[l][m] = coef_list[2*i + 1];
+        m += 1;
+    }
 }
 
 Regression::~Regression()

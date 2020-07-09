@@ -1,6 +1,7 @@
 %module Regression
 %{
 #include "Regression.h"
+#include "../PinesAlgorithm/PinesAlgorithm.h"
 %}
 %include "std_vector.i"
 
