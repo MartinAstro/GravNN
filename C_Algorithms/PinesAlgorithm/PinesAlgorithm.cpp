@@ -70,20 +70,39 @@ PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree)
 
 }
 
+int PinesAlgorithm::print_percentage(int n, int size, int progress)
+{
+    int percent = (int)round(n / size) *100 ;
+    if (percent > progress)
+    {
+        std::cout << progress << std::endl;
+        progress += 10;
+    }
+    return progress;
+}
+
 std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, std::vector<std::vector<double> > cBar, std::vector<std::vector<double> > sBar)
 {
+    int progress;
     double order;
     double rho;
-    double a1, a2, a3, a4, sum_a1, sum_a2, sum_a3, sum_a4;
-    std::vector<double> acc;
-    order = N;
-
+    double a1, a2, a3, a4;
+    double sum_a1, sum_a2, sum_a3, sum_a4;
     double x, y, z;
     double u, t, s, r;
-    acc.resize(positions.size(), 0);
+    double D, E, F;
+    std::vector<double> acc(positions.size(), 0);
+    order = N;
+    progress = 0;
+
+    if (cBar[0][0] == 0.0)
+    {
+        return acc;
+    }
 
     for (int p = 0; p < positions.size()/3; p++)
     {
+        //progress = print_percentage(p, positions.size()/3, progress);
         x = positions[3*p + 0];
         y = positions[3*p + 1];
         z = positions[3*p + 2];
@@ -121,32 +140,17 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, s
         rhol[0] = mu/r;
         rhol[1] = rhol[0]*rho;
 
-        a1 = 0;
-        a2 = 0; 
-        a3 = 0;
-        a4 = 0;
+        a1 = 0, a2 = 0, a3 = 0, a4 = 0;
         for (unsigned int l = 1; l <= N; l++) // does not include l = maxDegree
         {
             rhol[l+1] =  rho * rhol[l]; // rho_l computed
 
-            sum_a1 = 0;
-            sum_a2 = 0;
-            sum_a3 = 0;
-            sum_a4 = 0;
+            sum_a1 = 0, sum_a2 = 0, sum_a3 = 0, sum_a4 = 0;
             for(unsigned int m = 0; m <= l; m++)
             {
-                double D, E, F;
                 D = cBar[l][m] * rE[m] + sBar[l][m] * iM[m];
-                if (m == 0)
-                {
-                    E = 0.0;
-                    F = 0.0;
-                }
-                else
-                {
-                    E = cBar[l][m] * rE[m-1] + sBar[l][m] * iM[m-1];
-                    F = sBar[l][m] * rE[m-1] - cBar[l][m] * iM[m-1];
-                }
+                E = (m == 0) ? 0.0 : cBar[l][m] * rE[m-1] + sBar[l][m] * iM[m-1];
+                F = (m == 0) ? 0.0 : sBar[l][m] * rE[m-1] - cBar[l][m] * iM[m-1];
 
                 sum_a1 = sum_a1 + m * aBar[l][m] * E;
                 sum_a2 = sum_a2 + m * aBar[l][m] * F;
@@ -167,8 +171,12 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, s
         acc[3*p + 0] = a1 + s * a4;
         acc[3*p + 1] = a2 + t * a4;
         acc[3*p + 2] = a3 + u * a4;
+
+        if (std::isnan(acc[3*p + 0]))
+        {
+            std::cout << "WE GOT EM\n";
+        }
     }
-	
     return acc;
 }
 PinesAlgorithm::~PinesAlgorithm()

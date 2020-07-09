@@ -18,7 +18,7 @@ public:
     std::vector<std::vector<double> > n1, n2, n1q, n2q;
 
     std::vector<double> compute_acc(std::vector<double>, std::vector<std::vector<double> >, std::vector<std::vector<double> >);
-
+    int print_percentage(int n, int size, int progress);
     PinesAlgorithm(double r0, double muBdy, int degree);
     ~PinesAlgorithm();
 
