@@ -46,6 +46,21 @@ def cart2sph(carts):
         spheres.append([r, theta, phi])
     return np.array(spheres)
 
+def check_fix_radial_precision_errors(position):
+    """Check the radial component of the vector to see if the values are all within machine precision. If so, round them to the same precision and value to ensure NN processing is not erroneous
+
+    Args:
+        position (np.array): positions in spherical coordinates
+
+    Returns:
+        np.array: positions in spherical coordinates
+    """
+    position = np.array(position)
+    # If there is no diversity in the radial component, round them to be the same value. This is necessary for preprocessing. 
+    if abs(position[:,0].max() - position[:,0].min()) < 10E-8:
+        position[:,0] = np.round(position[:,0], 6)
+    return position
+
 def project_acceleration(positions, accelerations):
     """Converts the acceleration measurements from cartesian coordinates to spherical coordinates. 
 

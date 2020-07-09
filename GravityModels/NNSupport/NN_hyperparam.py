@@ -34,12 +34,13 @@ from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Dropout, Input, LeakyReLU
 
 
-def NN_hyperparam(x_train, y_train, x_val, y_val, params):
+def NN_hyperparam(x_train, y_train, x_val, y_val, params, verbose=0):
     model = Sequential()
-    model.add(Dense(units=params['first_neuron'], 
+    model.add(Dense(units=params['first_unit'], 
                                       input_dim=x_train.shape[1],
                                       activation=params['activation'],
-                                      kernel_initializer=params['kernel_initializer']))
+                                      kernel_initializer=params['kernel_initializer'],
+                                      kernel_regularizer=params['kernel_regularizer']))
 
     model.add(Dropout(params['dropout']))
     hidden_layers(model, params, y_train.shape[1])
@@ -47,13 +48,13 @@ def NN_hyperparam(x_train, y_train, x_val, y_val, params):
 
     model.compile(loss=params['losses'],
                                 optimizer=params['optimizer'](lr=lr_normalizer(params['lr'], params['optimizer'])),
-                                metrics=['accuracy'])
+                                metrics=['mse'])
 
     #earlyStop = EarlyStopping(monitor='loss', min_delta=1E-4, patience=patience, verbose=1, mode='auto', baseline=None, restore_best_weights=False)
     history = model.fit(x_train, y_train,
                 epochs=params['epochs'],
                 batch_size=params['batch_size'],
-                verbose=0,
+                verbose=verbose,
                 validation_data=(x_val, y_val))
                 #callbacks=[talos.utils.live()])
                 #callbacks=[earlyStop])
