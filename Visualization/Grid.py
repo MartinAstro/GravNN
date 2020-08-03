@@ -39,6 +39,7 @@ class Grid(object):
         self.theta = self.acceleration[:,1].reshape((self.N_lon,self.N_lat))
         self.phi = self.acceleration[:,2].reshape((self.N_lon,self.N_lat))
 
+
     def __sub__(self, other):
         newGrid = deepcopy(self)
         newGrid.acceleration -= other.acceleration
@@ -70,11 +71,18 @@ class Grid(object):
 
     def __mul__(self, other):
         newGrid = deepcopy(self)
-        newGrid.total *= other
-        newGrid.r *= other
-        newGrid.theta *= other
-        newGrid.phi *= other
+        try:
+            newGrid.total *= other.total
+            newGrid.r *= other.r
+            newGrid.theta *= other.theta
+            newGrid.phi *= other.phi
+        except:
+            newGrid.total *= other
+            newGrid.r *= other
+            newGrid.theta *= other
+            newGrid.phi *= other
         return newGrid
+
 
 
 

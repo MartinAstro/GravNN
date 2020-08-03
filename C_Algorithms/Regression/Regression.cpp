@@ -8,18 +8,18 @@
 Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, int degree, double r0, double muBdy)
 {
     // initialize variables
-    this->P = rVec1D.size();
-    this->N = degree;
-    this->a = r0;
-    this->mu = muBdy;
+    P = rVec1D.size();
+    N = degree;
+    a = r0;
+    mu = muBdy;
 
-    this->pos_meas_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(rVec1D.data(), rVec1D.size());
-    this->acc_meas_eigen =Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(aVec1D.data(), aVec1D.size());
-    this->pos_meas = rVec1D;
-    this->acc_meas = aVec1D;
+    pos_meas_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(rVec1D.data(), rVec1D.size());
+    acc_meas_eigen =Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(aVec1D.data(), aVec1D.size());
+    pos_meas = rVec1D;
+    acc_meas = aVec1D;
 
     std::vector<double> coef_row;
-    for (int l = 0; l <= this->N; l++)
+    for (int l = 0; l <= N; l++)
     {
         coef_row.resize(l+1, 0.0);
         coef_regress.C_lm.push_back(coef_row);
@@ -29,14 +29,14 @@ Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, i
     // Load single calculation objects
     std::vector<double> dubFiller(N+2, 0);
     std::vector<std::vector<double> > empty(N+2, dubFiller);
-    this->A = empty;
-    this->r = dubFiller;
-    this->i = dubFiller;
-    this->rho.resize(N+2+1, 0); // Need to go to + 3 for the original rho[n+2] formulation. 
+    A = empty;
+    r = dubFiller;
+    i = dubFiller;
+    rho.resize(N+2+1, 0); // Need to go to + 3 for the original rho[n+2] formulation. 
 
     for(unsigned int l = 0; l < N+2; l++)
     {
-        this->A[l][l] = (l == 0) ? 1.0 : sqrt((2*l+1)*getK(l))/(2*l*getK(l-1)) * this->A[l-1][l-1]; // Diagonal elements of A_bar
+        A[l][l] = (l == 0) ? 1.0 : sqrt((2*l+1)*getK(l))/(2*l*getK(l-1)) * A[l-1][l-1]; // Diagonal elements of A_bar
         
         std::vector<double> n1Row(l+1, 0.0);
         std::vector<double> n2Row(l+1, 0.0);
@@ -48,39 +48,39 @@ Regression::Regression(std::vector<double> rVec1D, std::vector<double> aVec1D, i
                 n2Row[m] = sqrt((l+m-1.0)*(2.0*l+1.0)*(l-m-1.0))/((l+m)*(l-m)*(2.0*l-3.0));
             }
         }
-        this->n1.push_back(n1Row);
-        this->n2.push_back(n2Row);
+        n1.push_back(n1Row);
+        n2.push_back(n2Row);
     }
 }
 
 void Regression::set_regression_variables(double x, double y, double z)
 {
     double rMag = sqrt(pow(x,2) + pow(y,2) + pow(z,2));
-    this->s = x/rMag;
-    this->t = y/rMag;
-    this->u = z/rMag;
+    s = x/rMag;
+    t = y/rMag;
+    u = z/rMag;
 
     //Eq 23
     for (unsigned int l = 1; l < A.size(); l++)
     {
-         this->A[l][l-1] = sqrt((2.0*l)*getK(l-1)/getK(l)) * this->A[l][l] * this->u;
+         A[l][l-1] = sqrt((2.0*l)*getK(l-1)/getK(l)) * A[l][l] * u;
     }
 
-    for (unsigned int m = 0; m < this->A.size(); m++)
+    for (unsigned int m = 0; m < A.size(); m++)
     {
-        for(unsigned int l = m + 2; l < this->A.size(); l++)
+        for(unsigned int l = m + 2; l < A.size(); l++)
         {
-            this->A[l][m] = u *this-> n1[l][m] * this->A[l-1][m] - this->n2[l][m] * this->A[l-2][m];
+            A[l][m] = u * n1[l][m] * A[l-1][m] - n2[l][m] * A[l-2][m];
         }
     }
 
     //Eq 24
-    this->r[0] = 1; // cos(m*lambda)*cos(m*alpha);
-    this->i[0] = 0; //sin(m*lambda)*cos(m*alpha);
+    r[0] = 1; // cos(m*lambda)*cos(m*alpha);
+    i[0] = 0; //sin(m*lambda)*cos(m*alpha);
     for (int m = 1; m < r.size(); m++)
     {
-        this->r[m] = this->s*this->r[m-1] - this->t*this->i[m-1];
-        this->i[m] = this->s*this->i[m-1] + this->t*this->r[m-1];
+        r[m] = s*r[m-1] - t*i[m-1];
+        i[m] = s*i[m-1] + t*r[m-1];
     }
 
     //Eq 26 and 26a
@@ -95,12 +95,12 @@ void Regression::set_regression_variables(double x, double y, double z)
 
 Coefficients Regression::perform_regression(int l_i, double precision)
 {   
-    this->l_i = l_i; // Degree of first coefficient to regress (typically either 0 or 2)
-    this->M_skip = l_i*(l_i+1); // Number of coefficients to skip
-    this->M_total = (this->N + 1)*(this->N + 2); // Total number of coefficients up to degree l_{f+1} -- e.g if l_max = 2 then M_total = 12
+    l_i = l_i; // Degree of first coefficient to regress (typically either 0 or 2)
+    M_skip = l_i*(l_i+1); // Number of coefficients to skip
+    M_total = (N + 1)*(N + 2); // Total number of coefficients up to degree l_{f+1} -- e.g if l_max = 2 then M_total = 12
 
-    Eigen::MatrixXd M(this->P, M_total - M_skip);
-    Eigen::SparseMatrix<double> M_sparse(this->P, M_total - M_skip);
+    Eigen::MatrixXd M(P, M_total - M_skip);
+    Eigen::SparseMatrix<double> M_sparse(P, M_total - M_skip);
 
     int delta_m, delta_m_p1;
     double f_Cnm_1, f_Cnm_2, f_Cnm_3;
@@ -115,7 +115,7 @@ Coefficients Regression::perform_regression(int l_i, double precision)
         x = pos_meas_eigen(3*p);
         y = pos_meas_eigen(3*p + 1);
         z = pos_meas_eigen(3*p + 2);
-        this->set_regression_variables(x, y, z);
+        set_regression_variables(x, y, z);
         for (int l = l_i; l <= N; l++)
         {
             for (int m = 0; m <= l; m++)
@@ -221,9 +221,9 @@ void Regression::find_solution(double precision, Eigen::MatrixXd &M, Eigen::Spar
 
 void Regression::format_coefficients(Eigen::VectorXd coef_list)
 {
-    int l = this->l_i;
+    int l = l_i;
     int m = 0;
-    this->coef_regress.C_lm[0][0] = (this->l_i != 0) ? 1.0 : 0.0; // If regressing only C20 and force the earlier coefficients
+    coef_regress.C_lm[0][0] = (l_i != 0) ? 1.0 : 0.0; // If regressing only C20 and force the earlier coefficients
 
     for(int i = 0; i < coef_list.size()/2; i++)
     {
@@ -232,8 +232,8 @@ void Regression::format_coefficients(Eigen::VectorXd coef_list)
             l += 1;
             m = 0;
         } 
-        this->coef_regress.C_lm[l][m] = coef_list[2*i];
-        this->coef_regress.S_lm[l][m] = coef_list[2*i + 1];
+        coef_regress.C_lm[l][m] = coef_list[2*i];
+        coef_regress.S_lm[l][m] = coef_list[2*i + 1];
         m += 1;
     }
 }

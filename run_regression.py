@@ -99,6 +99,17 @@ def main():
     deg_list = [max_deg]
     tolerance = 1E-6 #1.7E-6 switches between 1 and max iterations
     error_bound = 10 # percent
+
+    pos = trajectory.positions.reshape(-1)
+    acc =  accelerations.reshape(-1)
+    deg = int(max_deg)
+    rad = planet.radius
+    mu = planet.mu
+    regression = Regression.Regression(pos, 
+                                                                    acc, 
+                                                                    deg, 
+                                                                    rad, 
+                                                                    mu)
     for deg in deg_list:
         regression = Regression.Regression(trajectory.positions.reshape(-1), 
                                                                             accelerations.reshape(-1), 

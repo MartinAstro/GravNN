@@ -21,6 +21,8 @@ from Preprocessors.MinMaxTransform import MinMaxTransform
 from Preprocessors.StandardTransform import StandardTransform
 from Preprocessors.RobustTransform import RobustTransform
 from Preprocessors.QuantileTransform import QuantileTransform
+from Preprocessors.MaxAbsTransform import MaxAbsTransform
+
 
 from Support.transformations import sphere2cart, cart2sph, project_acceleration
 
@@ -62,7 +64,7 @@ def main():
     # Loop through different NN configurations
     nn_list = []
     #points = [1000, 10000]#, 100000]
-    points = 1000
+    points = 10000
     trajectory = UniformDist(planet, planet.radius, points)
     #trajectory = RandomDist(planet, [planet.radius, planet.radius*1.1], point_count)
     training_gravity_model = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
@@ -80,6 +82,8 @@ def main():
     plots(StandardTransform(), pos_sphere, acc_proj)
     plots(RobustTransform(), pos_sphere, acc_proj)
     plots(QuantileTransform(), pos_sphere, acc_proj)
+    plots(MaxAbsTransform(), pos_sphere, acc_proj)
+
 
 
 

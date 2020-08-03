@@ -10,7 +10,8 @@ class RandomDist(TrajectoryBase):
     def __init__(self, celestial_body, radiusBounds, points):
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
-            points = int(np.sqrt(points))**2
+            N = int(np.sqrt(points/2))
+            points = 2*N**2
             print("The total number of points changed to " + str(points))
         self.radiusBounds = radiusBounds
         self.points = points

@@ -8,10 +8,12 @@ class VisualizationBase(ABC):
     def __init__(self):
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
+        plt.rc('font', size= 8.0)
+        self.fig_size = (5,3.5) #(3, 1.8) is half page. 
         return
 
     def new3DFig(self):
-        fig = plt.figure(num=None, figsize=(5, 3.5), dpi=200)
+        fig = plt.figure(num=None, figsize=self.fig_size, dpi=200)
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlabel(r'$x$ (m)', fontsize=10)
         ax.set_ylabel(r'$y$ (m)', fontsize=10)
@@ -26,7 +28,7 @@ class VisualizationBase(ABC):
         return fig, ax
 
     def newFig(self):
-        fig = plt.figure(num=None, figsize=(5, 3.5), dpi=200)
+        fig = plt.figure(num=None, figsize=self.fig_size, dpi=200)
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=8)
         #ax.legend(prop={'size': 10})

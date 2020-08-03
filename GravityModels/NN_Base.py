@@ -1,27 +1,26 @@
 import os
 import numpy as np
-from keras.models import Sequential, Model
-from keras.layers import Dense, Dropout, Input
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Dropout, Input
 from sklearn.model_selection import train_test_split
-from keras.wrappers.scikit_learn import KerasRegressor
-from keras.optimizers import *
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from tensorflow.keras.optimizers import *
 from sklearn.model_selection import KFold, cross_val_score
 import matplotlib.pyplot as plt
 from sklearn.utils import class_weight
-from keras.regularizers import l1
-from keras.callbacks import EarlyStopping
-from keras.models import load_model
+from tensorflow.keras.regularizers import l1
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.models import load_model
 from GravityModels.GravityModelBase import GravityModelBase
 from Trajectories.TrajectoryBase import TrajectoryBase
 
-import sigfig
 import pickle
 
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/../")
 from Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 import inspect
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 class NN_Base(GravityModelBase):
     def __init__(self, model, preprocessor, test_traj=None):

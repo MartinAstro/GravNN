@@ -72,7 +72,7 @@ PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree)
 
 int PinesAlgorithm::print_percentage(int n, int size, int progress)
 {
-    int percent = (int)round(n / size) *100 ;
+    int percent = (int)round(float(n) / float(size)) *100 ;
     if (percent > progress)
     {
         std::cout << progress << std::endl;
@@ -102,7 +102,7 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, s
 
     for (int p = 0; p < positions.size()/3; p++)
     {
-        //progress = print_percentage(p, positions.size()/3, progress);
+        progress = print_percentage(p, positions.size()/3, progress);
         x = positions[3*p + 0];
         y = positions[3*p + 1];
         z = positions[3*p + 2];

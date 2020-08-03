@@ -12,3 +12,4 @@ namespace std {
 }
 
 %include "Regression.h"
+%include "../PinesAlgorithm/PinesAlgorithm.h"
