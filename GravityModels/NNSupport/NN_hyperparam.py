@@ -1,39 +1,34 @@
-import os
-import numpy as np
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Dropout, Input
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
-from tensorflow.keras.optimizers import *
-from sklearn.model_selection import KFold, cross_val_score
-import matplotlib.pyplot as plt
-from sklearn.utils import class_weight
-from tensorflow.keras.regularizers import l1
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.models import load_model
-from GravityModels.GravityModelBase import GravityModelBase
-from Trajectories.TrajectoryBase import TrajectoryBase
-from talos.utils import hidden_layers
-
-import sigfig
-import pickle
-
-import os, sys
-sys.path.append(os.path.dirname(__file__) + "/../")
-from Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 import inspect
+import os
+import pickle
+import sys
+sys.path.append(os.path.dirname(__file__) + "/../")
+
+import matplotlib.pyplot as plt
+import numpy as np
+import sigfig
 import tensorflow.keras.backend as K
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Dropout, Input, LeakyReLU
-from tensorflow.keras.regularizers import l1, l2, l1_l2
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.utils import class_weight
 from talos.model.normalizers import lr_normalizer
+from talos.utils import hidden_layers
 from tensorflow.keras import Sequential
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout, Input, LeakyReLU
+from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.optimizers import *
+from tensorflow.keras.regularizers import l1, l1_l2, l2
 from tensorflow.keras.utils import plot_model
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+
+from GravityModels.GravityModelBase import GravityModelBase
+from Support.transformations import (cart2sph, invert_projection,
+                                     project_acceleration, sphere2cart)
+from Trajectories.TrajectoryBase import TrajectoryBase
 
 
-def NN_hyperparam(x_train, y_train, x_val, y_val, params, verbose=0, save_location=None, validation_split=None):
+
+def NN_hyperparam(x_train, y_train, x_val, y_val, params, verbose=0, save_location=None, validation_split=None, lr_norm=False):
     model = Sequential()
     model.add(Dense(units=params['first_unit'], 
                                       input_shape=(x_train.shape[1],),
@@ -45,8 +40,12 @@ def NN_hyperparam(x_train, y_train, x_val, y_val, params, verbose=0, save_locati
     hidden_layers(model, params, y_train.shape[1])
     model.add(Dense(units=y_train.shape[1], activation='linear'))
 
+    if lr_norm:
+        optimizer = params['optimizer'](lr=lr_normalizer(params['lr'], params['optimizer']))
+    else:
+        optimizer = params['optimizer'](lr=params['lr'])
     model.compile(loss=params['losses'],
-                                optimizer=params['optimizer'](lr=lr_normalizer(params['lr'], params['optimizer'])),
+                                optimizer=optimizer,
                                 metrics=['mse', 'mae']
                                 ) # accuracy doesn't tell you anything
                                 #https://datascience.stackexchange.com/questions/48346/multi-output-regression-problem-with-keras
