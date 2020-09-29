@@ -22,7 +22,7 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 
 from GravityModels.GravityModelBase import GravityModelBase
-from Support.transformations import (cart2sph, invert_projection,
+from GravNN.Support.transformations import (cart2sph, invert_projection,
                                      project_acceleration, sphere2cart)
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 from GravNN.GravityModels.NNSupport.kmeans_initializer import InitCentersKMeans

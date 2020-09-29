@@ -1,8 +1,7 @@
 import csv
 import os, sys
 import numpy as np
-sys.path.append(os.path.dirname(__file__) + "/../build/PinesAlgorithm/")
-import PinesAlgorithm
+from GravNN.build.PinesAlgorithm import PinesAlgorithm
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
@@ -131,8 +130,8 @@ class SphericalHarmonics(GravityModelBase):
             positions = self.trajectory.positions
         
         positions = np.reshape(positions, (len(positions)*3))
-        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree)
-        accelerations = pines.compute_acc(positions, self.C_lm, self.S_lm)
+        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
+        accelerations = pines.compute_acc(positions)
         self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
         return self.accelerations
 
@@ -142,8 +141,8 @@ class SphericalHarmonics(GravityModelBase):
             positions = self.trajectory.positions
         
         positions = np.reshape(positions, (len(positions)*3))
-        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree)
-        accelerations = pines.compute_acc_components(positions.tolist(), self.C_lm, self.S_lm)
+        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
+        accelerations = pines.compute_acc_components(positions.tolist())
         total_terms = int(self.degree*(self.degree+1)/2*3)
         components = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/total_terms),total_terms))
         return components

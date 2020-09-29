@@ -4,7 +4,7 @@
 
 
 
-PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree)
+PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree, std::vector<std::vector<double> > cBar, std::vector<std::vector<double> > sBar)
 {
     /*
     Want to regression object to take inputs: positions (cartesian) and accelerations (cartesian?)
@@ -13,6 +13,8 @@ PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree)
     N = degree;
     a = r0;
     mu = muBdy;
+    cBar = cBar;
+    sBar = sBar;
 
     std::vector<double> doubleFiller;
     doubleFiller.resize(N+2, 0);
@@ -81,7 +83,7 @@ int PinesAlgorithm::print_percentage(int n, int size, int progress)
     return progress;
 }
 
-std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, std::vector<std::vector<double> > cBar, std::vector<std::vector<double> > sBar)
+std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions)
 {
     int progress;
     double order;
@@ -180,7 +182,7 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, s
     return acc;
 }
 
-std::vector<double> PinesAlgorithm::compute_acc_components(std::vector<double> positions, std::vector<std::vector<double> > cBar, std::vector<std::vector<double> > sBar)
+std::vector<double> PinesAlgorithm::compute_acc_components(std::vector<double> positions)
 {
     int progress;
     double order;

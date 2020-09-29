@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from Support.transformations import sphere2cart, cart2sph
+from GravNN.Support.transformations import sphere2cart, cart2sph
 from sklearn.model_selection import train_test_split
 import copy
 class PreprocessorBase:

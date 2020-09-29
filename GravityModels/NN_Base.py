@@ -1,26 +1,24 @@
-import os
-import numpy as np
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Dropout, Input
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
-from tensorflow.keras.optimizers import *
-from sklearn.model_selection import KFold, cross_val_score
-import matplotlib.pyplot as plt
-from sklearn.utils import class_weight
-from tensorflow.keras.regularizers import l1
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.models import load_model
-from GravNN.GravityModels.GravityModelBase import GravityModelBase
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-
-import pickle
-
-import os, sys
-sys.path.append(os.path.dirname(__file__) + "/../")
-from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 import inspect
+import os
+import pickle
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow.keras.backend as K
+from GravNN.GravityModels.GravityModelBase import GravityModelBase
+from GravNN.Support.transformations import (cart2sph, invert_projection,
+                                            project_acceleration, sphere2cart)
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.utils import class_weight
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense, Dropout, Input
+from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.optimizers import *
+from tensorflow.keras.regularizers import l1
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+
 
 class NN_Base(GravityModelBase):
     def __init__(self, model, preprocessor, test_traj=None):
@@ -33,17 +31,17 @@ class NN_Base(GravityModelBase):
     def generate_full_file_directory(self):
         self.file_directory +=  self.model.name + "/"
     
-    def trainNN(self):
-        self.generate_full_file_directory()
-        #earlyStop = EarlyStopping(monitor='loss', min_delta=1E-4, patience=self.patience, verbose=1, mode='auto',
-                                                #baseline=None, restore_best_weights=False)
-        self.saveNN()
-        return
+    # def trainNN(self):
+    #     self.generate_full_file_directory()
+    #     #earlyStop = EarlyStopping(monitor='loss', min_delta=1E-4, patience=self.patience, verbose=1, mode='auto',
+    #                                             #baseline=None, restore_best_weights=False)
+    #     self.saveNN()
+    #     return
 
 
-    def plotMetrics(self):
-        loss = self.fit.history['loss']
-        val_loss = self.fit.history['val_loss']
+    def plotMetrics(self, history):
+        loss = history['loss']
+        val_loss = history['val_loss']
         epochs = range(len(loss))
 
         plt.figure()
@@ -58,13 +56,9 @@ class NN_Base(GravityModelBase):
         plt.savefig(self.file_directory + 'loss.pdf', bbox_inches='tight')
         return
 
-    def compute_percent_error(self,predicted=None, truth=None):
-        if predicted is None and truth is None:
-            predicted = self.model.predict(np.array(self.x_test).reshape((len(self.x_test),3)))
-            truth = self.y_test
-        else:
-            predicted = predicted.reshape(len(truth),3)
-            truth = truth.reshape(len(truth),3)
+    def compute_percent_error(self,predicted, truth):
+        predicted = predicted.reshape(len(truth),3)
+        truth = truth.reshape(len(truth),3)
 
         error = np.zeros((4,))
         cumulativeSum = 0.0

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import QuantileTransformer
-from Preprocessors.PreprocessorBase import PreprocessorBase
+from GravNN.Preprocessors.PreprocessorBase import PreprocessorBase
 import copy
 class QuantileTransform(PreprocessorBase):
     def __init__(self):

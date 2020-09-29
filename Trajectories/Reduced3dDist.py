@@ -1,7 +1,9 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
+
 import numpy as np
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 
 class Reduced3dDist(TrajectoryBase):
     def __init__(self, celestial_body, radiusBounds, layers, degree, reduction=0.25):

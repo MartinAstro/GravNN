@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from Preprocessors.PreprocessorBase import PreprocessorBase
+from GravNN.Preprocessors.PreprocessorBase import PreprocessorBase
 import copy
 class MinMaxTransform(PreprocessorBase):
     def __init__(self, val_range=(0,1)):

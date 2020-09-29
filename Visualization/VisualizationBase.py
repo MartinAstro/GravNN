@@ -1,7 +1,10 @@
-from abc import ABC, abstractmethod
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D 
 import os
+from abc import ABC, abstractmethod
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+
 class VisualizationBase(ABC):
 
     def __init__(self, save_directory=None, halt_formatting=False):

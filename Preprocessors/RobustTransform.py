@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.preprocessing import RobustScaler
-from Preprocessors.PreprocessorBase import PreprocessorBase
+from GravNN.Preprocessors.PreprocessorBase import PreprocessorBase
 import copy
 class RobustTransform(PreprocessorBase):
     def __init__(self):

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/../")
 from mpl_toolkits.mplot3d import Axes3D
-from Visualization.VisualizationBase import  VisualizationBase
+from GravNN.Visualization.VisualizationBase import  VisualizationBase
 from CelestialBodies.Planets import Earth
 from GravNN.Trajectories.UniformDist import UniformDist
 

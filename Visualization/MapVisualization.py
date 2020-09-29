@@ -1,5 +1,5 @@
-from Visualization.VisualizationBase import VisualizationBase
-from Support.transformations import sphere2cart
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Support.transformations import sphere2cart
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt

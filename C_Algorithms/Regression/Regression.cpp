@@ -174,7 +174,7 @@ void Regression::find_solution(double precision, Eigen::MatrixXd &M, Eigen::Spar
     int iterations = 0;
     int max_iterations = 1000;
     double rel_error;
-    PinesAlgorithm pines = PinesAlgorithm(a, mu, N);
+    PinesAlgorithm pines = PinesAlgorithm(a, mu, N, coef_regress.C_lm, coef_regress.S_lm);
     std::vector<double> acc_regress;
     std::vector<double> coef_row;
     std::vector<double> zero_vec(acc_meas.size(), 0);
@@ -197,7 +197,9 @@ void Regression::find_solution(double precision, Eigen::MatrixXd &M, Eigen::Spar
 
     while(!solution_exists && iterations < max_iterations)
     {
-        acc_regress = pines.compute_acc(pos_meas, coef_regress.C_lm, coef_regress.S_lm);
+        pines.cBar = coef_regress.C_lm;
+        pines.sBar = coef_regress.S_lm;
+        acc_regress = pines.compute_acc(pos_meas);
         Y_hat = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(acc_regress.data(), acc_regress.size());
         dY =  Y - Y_hat;
 

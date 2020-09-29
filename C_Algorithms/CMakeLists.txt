@@ -16,6 +16,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
 
+
 add_subdirectory(PinesAlgorithm)
 add_subdirectory(Regression)
 
