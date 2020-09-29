@@ -1,5 +1,5 @@
 import os
-from Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 
@@ -10,6 +10,7 @@ class DHGridDist(TrajectoryBase):
         n =  2*degree + 2
         self.N_lon = 2*n
         self.N_lat = n
+        self.points = self.N_lon*self.N_lat
         super().__init__(celestial_body)
         pass
 

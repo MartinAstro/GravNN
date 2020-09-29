@@ -4,7 +4,7 @@ import numpy as np
 sys.path.append(os.path.dirname(__file__) + "/../build/PinesAlgorithm/")
 import PinesAlgorithm
 from GravityModels.GravityModelBase import GravityModelBase
-from Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 class ArtificialModel(GravityModelBase):
     def __init__(self, feature_range, trajectory=None):

@@ -1,14 +1,19 @@
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D 
 import os
 class VisualizationBase(ABC):
-    file_directory = os.path.splitext(__file__)[0]  + "/../../Files/Plots/" 
-    trajectory = None
-    accelerations = None
-    def __init__(self):
-        plt.rc('text', usetex=True)
-        plt.rc('font', family='serif')
-        plt.rc('font', size= 8.0)
+
+    def __init__(self, save_directory=None, halt_formatting=False):
+        if save_directory is None:
+            self.file_directory = os.path.splitext(__file__)[0]  + "/../../Files/Plots/" 
+        else:
+            self.file_directory = save_directory
+
+        if not halt_formatting:
+            plt.rc('text', usetex=True)
+            plt.rc('font', family='serif')
+            plt.rc('font', size= 8.0)
         self.fig_size = (5,3.5) #(3, 1.8) is half page. 
         return
 
@@ -45,10 +50,18 @@ class VisualizationBase(ABC):
             return    
         
         # If not absolute, create a directory and save the plot
-        if not os.path.exists(self.file_directory):
-            os.makedirs(self.file_directory)
+        directory = os.path.abspath(os.path.dirname(self.file_directory + name))
+        directory = directory.replace(".","_")
+        directory = directory.replace("[", "_")
+        directory = directory.replace("]", "_")
+        directory = directory.replace(" ", "")
+        directory = directory.replace(",", "_")
+
+        filename =  os.path.basename(name)
+        if not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
         try:
-            plt.savefig(self.file_directory + name, bbox_inches='tight')
+            plt.savefig(directory+"/" + filename, bbox_inches='tight')
         except:
-            print("Couldn't save " + name)
+            print("Couldn't save " + filename)
 

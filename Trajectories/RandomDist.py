@@ -1,5 +1,5 @@
 import os
-from Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 

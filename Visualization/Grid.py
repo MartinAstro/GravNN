@@ -1,11 +1,11 @@
-from Support import transformations
+from ..Support import transformations
 from copy import deepcopy
 import numpy as np
 
 import sys, os
 sys.path.append(os.path.dirname(__file__) + "/../")
-from Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection, check_fix_radial_precision_errors
-from GravityModels.NN_Base import NN_Base
+from ..Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection, check_fix_radial_precision_errors
+from ..GravityModels.NN_Base import NN_Base
 
 
 
@@ -14,6 +14,7 @@ class Grid(object):
     lons = np.array([])
 
     def __init__(self, gravityModel, override=False):
+
         self.radius = gravityModel.trajectory.radius
 
         self.N_lat = gravityModel.trajectory.N_lat

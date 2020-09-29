@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(__file__) + "/../")
 from mpl_toolkits.mplot3d import Axes3D
 from Visualization.VisualizationBase import  VisualizationBase
 from CelestialBodies.Planets import Earth
-from Trajectories.UniformDist import UniformDist
+from GravNN.Trajectories.UniformDist import UniformDist
 
 class StateVisualization(VisualizationBase):
     def __init__(self):

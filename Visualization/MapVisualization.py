@@ -63,7 +63,7 @@ class MapVisualization(VisualizationBase):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         if vlim is not None:
             t = np.linspace(vlim[0], vlim[1], 5)
-            cBar = plt.colorbar(im,  cax=cax, ticks=t, format='$%.2f$', extend=extend)
+            cBar = plt.colorbar(im,  cax=cax, ticks=t, format='$%.4f$', extend=extend)
         else:
             cBar = plt.colorbar(im, cax=cax)
         cBar.ax.set_ylabel(label)

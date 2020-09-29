@@ -72,7 +72,7 @@ PinesAlgorithm::PinesAlgorithm(double r0, double muBdy, int degree)
 
 int PinesAlgorithm::print_percentage(int n, int size, int progress)
 {
-    int percent = (int)round(float(n) / float(size)) *100 ;
+    int percent = (int)round(float(n) / float(size)*100.0);
     if (percent > progress)
     {
         std::cout << progress << std::endl;
@@ -179,6 +179,100 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions, s
     }
     return acc;
 }
+
+std::vector<double> PinesAlgorithm::compute_acc_components(std::vector<double> positions, std::vector<std::vector<double> > cBar, std::vector<std::vector<double> > sBar)
+{
+    int progress;
+    double order;
+    double rho;
+    double a1, a2, a3, a4;
+    double sum_a1, sum_a2, sum_a3, sum_a4;
+    double x, y, z;
+    double u, t, s, r;
+    double D, E, F;
+    int idx;
+    int total_components = (N)*(N+1)/2*3;
+    std::vector<double> acc_components(((positions.size()/3))*total_components, 0);
+    std::cout << total_components << "\n";
+
+    order = N;
+    progress = 0;
+
+    if (cBar[0][0] == 0.0)
+    {
+        return acc_components;
+    }
+
+    for (int p = 0; p < positions.size()/3; p++)
+    {
+        progress = print_percentage(p, positions.size()/3, progress);
+        x = positions[3*p + 0];
+        y = positions[3*p + 1];
+        z = positions[3*p + 2];
+
+        r = sqrt(pow(x,2) + pow(y,2) + pow(z, 2));
+        s = x/r;
+        t = y/r;
+        u = z/r;
+
+        for (unsigned int l = 1; l <= N+1; l++)
+        {
+            aBar[l][l-1] = sqrt(double((2*l)*getK(l-1))/getK(l)) * aBar[l][l] * u;
+        }
+
+        // Lower terms of A_bar
+        for (unsigned int m = 0; m <= order+1; m++)
+        {
+            for(unsigned int l = m + 2; l <= N+1; l++)
+            {
+                aBar[l][m] = u * n1[l][m] * aBar[l-1][m] - n2[l][m] * aBar[l-2][m];
+            }
+
+            // Computation of real and imaginary parts of (2+j*t)^m
+            if (m == 0)
+            {
+                rE[m] = 1.0;
+                iM[m] = 0.0;
+            } else {
+                rE[m] = s * rE[m-1] - t * iM[m-1];
+                iM[m] = s * iM[m-1] + t * rE[m-1];
+            }
+        }
+
+        rho = a/r;
+        rhol[0] = mu/r;
+        rhol[1] = rhol[0]*rho;
+
+        a1 = 0, a2 = 0, a3 = 0, a4 = 0;
+        for (unsigned int l = 1; l < N; l++) // does not include l = maxDegree
+        {
+            rhol[l+1] =  rho * rhol[l]; // rho_l computed
+
+            for(unsigned int m = 0; m <= l; m++)
+            {
+                D = cBar[l][m] * rE[m] + sBar[l][m] * iM[m];
+                E = (m == 0) ? 0.0 : cBar[l][m] * rE[m-1] + sBar[l][m] * iM[m-1];
+                F = (m == 0) ? 0.0 : sBar[l][m] * rE[m-1] - cBar[l][m] * iM[m-1];
+
+                idx = total_components*p + 3*(l*(l+1)/2) + 3*m;
+                // std::cout << total_components << "\t" << l*(l+1)/2 << "\t" << 3*(l*(l+1)/2) << "\t" << idx <<  "\n";
+                // std::cin.get(); 
+
+                a4 = -1.0* rhol[l+1]/a *n2q[l][m] * aBar[l+1][m+1] * D;
+
+                acc_components[idx+0] = rhol[l+1]/a* m*aBar[l][m]*E + s*a4;
+                acc_components[idx+1] = rhol[l+1]/a* m*aBar[l][m]*F + t*a4;
+
+                if (m < l)
+                {
+                    acc_components[idx+2] = rhol[l+1]/a* n1q[l][m] * aBar[l][m+1] * D + u*a4;
+                }
+            }
+        }
+    }
+    return acc_components;
+}
+
 PinesAlgorithm::~PinesAlgorithm()
 {
 }

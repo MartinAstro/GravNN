@@ -5,8 +5,7 @@ class PinesAlgorithm
 private:
     /* data */
 public:
-    std::vector<std::vector<double> > cBar, sBar;
-
+   
     double s, t, u;
     double a, mu;
     int N; // Degree of coefficient model
@@ -18,6 +17,8 @@ public:
     std::vector<std::vector<double> > n1, n2, n1q, n2q;
 
     std::vector<double> compute_acc(std::vector<double>, std::vector<std::vector<double> >, std::vector<std::vector<double> >);
+    std::vector<double> compute_acc_components(std::vector<double>, std::vector<std::vector<double> >, std::vector<std::vector<double> >);
+
     int print_percentage(int n, int size, int progress);
     PinesAlgorithm(double r0, double muBdy, int degree);
     ~PinesAlgorithm();

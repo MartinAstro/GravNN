@@ -11,14 +11,14 @@ from sklearn.utils import class_weight
 from tensorflow.keras.regularizers import l1
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.models import load_model
-from GravityModels.GravityModelBase import GravityModelBase
-from Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.GravityModels.GravityModelBase import GravityModelBase
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 import pickle
 
 import os, sys
 sys.path.append(os.path.dirname(__file__) + "/../")
-from Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
+from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 import inspect
 import tensorflow.keras.backend as K
 

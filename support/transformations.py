@@ -1,7 +1,9 @@
 import numpy as np
 import glob
 import pickle
+from numba import njit
 
+@njit(parallel=True)
 def sphere2cart(data):
     """Convert spherical coordinates into cartesian coordinates. Spherical coordinates should be in degrees.
 
@@ -25,7 +27,7 @@ def sphere2cart(data):
 
     return np.transpose(np.array([x,y,z]))
 
-
+@njit(parallel=True)
 def cart2sph(carts):
     """Converts cartesian coordinates into spherical coordinates. Spherical coordinates should be in degrees.
 
@@ -61,6 +63,7 @@ def check_fix_radial_precision_errors(position):
         position[:,0] = np.round(position[:,0], 6)
     return position
 
+#@njit(parallel=True)
 def project_acceleration(positions, accelerations):
     """Converts the acceleration measurements from cartesian coordinates to spherical coordinates. 
 
@@ -75,20 +78,21 @@ def project_acceleration(positions, accelerations):
     for i in range(len(positions)):
         theta = positions[i,1] * np.pi/180.0 - np.pi
         phi = positions[i,2] * np.pi/180.0 
-        r_hat = [np.sin(phi)*np.cos(theta),
+        r_hat = np.array([np.sin(phi)*np.cos(theta),
                         np.sin(phi)*np.sin(theta),
-                        np.cos(phi)]
-        theta_hat = [np.cos(phi)*np.cos(theta),
+                        np.cos(phi)])
+        theta_hat = np.array([np.cos(phi)*np.cos(theta),
                                 np.cos(phi)*np.sin(theta), 
-                                -np.sin(phi)]
-        phi_hat = [-np.sin(theta), 
+                                -np.sin(phi)])
+        phi_hat = np.array([-np.sin(theta), 
                             np.cos(theta),
-                            0]
+                            0])
         project_acc[i,:] = np.array([np.dot(accelerations[i], r_hat),
                                                         np.dot(accelerations[i], theta_hat),
                                                         np.dot(accelerations[i], phi_hat)])
     return project_acc
 
+@njit(parallel=True)
 def invert_projection(positions, accelerations):
     """Converts the acceleration measurements from spherical coordinates to cartesian coordinates
 

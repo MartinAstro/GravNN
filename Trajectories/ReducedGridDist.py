@@ -1,5 +1,5 @@
 import os
-from Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 
@@ -11,6 +11,7 @@ class ReducedGridDist(TrajectoryBase):
         n =  2*degree + 2
         self.N_lon = int(2*n*self.reduction)
         self.N_lat = int(n*self.reduction)
+        self.points = self.N_lat*self.N_lon
         super().__init__(celestial_body)
         pass
 
@@ -34,8 +35,13 @@ class ReducedGridDist(TrajectoryBase):
         Y.extend(np.zeros((self.N_lat*self.N_lon,)).tolist())
         Z.extend(np.zeros((self.N_lat*self.N_lon,)).tolist())
 
-        phi = np.linspace(0, np.pi*self.reduction, self.N_lat, endpoint=True)
-        theta = np.linspace(0, 2*np.pi*self.reduction, self.N_lon, endpoint=True)
+        # Center the reduction
+        phi = np.linspace(np.pi/2-(np.pi*self.reduction)/2, np.pi/2+(np.pi*self.reduction)/2, self.N_lat, endpoint=True)
+        theta = np.linspace(np.pi-(2*np.pi*self.reduction)/2, np.pi+(2*np.pi*self.reduction)/2, self.N_lon, endpoint=True)
+
+        # Shift to interesting feature
+        theta -= np.pi/3 # Indonesia area
+
         for i in range(0, self.N_lon): #Theta Loop
             for j in range(0,self.N_lat):
                 X[idx] = (radTrue)*np.sin(phi[j])*np.cos(theta[i])
