@@ -6,7 +6,7 @@ class Earth():
         self.radius = 6378136.6 # meters
         self.gravModel = gravityModel
         self.sh_file = os.path.dirname(os.path.realpath(__file__))  + "/../Files/GravityModels/GGM03S.txt"    
-        self.sh_hf_file = "/Users/johnmartin/Documents/GraduateSchool/Research/SH_GPU/GravityCompute/EGM2008_to2190_TideFree_E.txt"   
+        self.sh_hf_file = os.path.dirname(os.path.realpath(__file__)) +"/../Files/GravityModels/EGM2008_to2190_TideFree_E.txt"   
 
 
 

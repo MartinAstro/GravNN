@@ -19,6 +19,10 @@ swig_add_library(${TARGET_NAME}
 
 target_include_directories(${TARGET_NAME} PRIVATE ${PYTHON_INCLUDE_PATH})
 
+target_compile_options(${TARGET_NAME} PRIVATE  ${OpenMP_CXX_FLAGS})
+target_include_directories(${TARGET_NAME} PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
+target_link_libraries(${TARGET_NAME} ${OpenMP_CXX_LIBRARIES})
+
 target_link_libraries(${TARGET_NAME} ${PYTHON_LIBRARIES})
 target_link_libraries(${TARGET_NAME} Eigen3::Eigen)
 
