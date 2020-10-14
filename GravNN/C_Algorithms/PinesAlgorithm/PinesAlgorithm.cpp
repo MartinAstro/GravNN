@@ -84,7 +84,7 @@ std::vector<double> PinesAlgorithm::compute_acc(std::vector<double> positions)
     #pragma omp parallel for private(p)
     for (p = 0; p < positions.size()/3; p++)
     {
-        progress = print_percentage(p, positions.size()/3, progress);
+        progress = print_percentage(p, (int)(positions.size()/3), progress);
         acc_inst = compute_acc_thread(positions[3*p + 0], positions[3*p + 1], positions[3*p + 2]);
         //std::future<std::vector<double> > result = std::async(std::launch::async, &PinesAlgorithm::compute_acc_thread, this, positions[3*p + 0], positions[3*p + 1], positions[3*p + 2]);
         //acc_inst = result.get();
@@ -218,7 +218,7 @@ std::vector<double> PinesAlgorithm::compute_acc_components(std::vector<double> p
 
     for (int p = 0; p < positions.size()/3; p++)
     {
-        progress = print_percentage(p, positions.size()/3, progress);
+        progress = print_percentage(p, (int)(positions.size()/3), progress);
         x = positions[3*p + 0];
         y = positions[3*p + 1];
         z = positions[3*p + 2];

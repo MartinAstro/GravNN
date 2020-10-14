@@ -1,0 +1,9 @@
+numpy
+matplotlib
+numba
+umap-learn
+umap-learn[plot]
+pandas
+tensorflow
+sklearn
+pyshtools

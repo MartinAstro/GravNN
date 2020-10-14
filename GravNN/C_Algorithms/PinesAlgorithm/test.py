@@ -1,7 +1,10 @@
+
 import os, sys
+sys.path.append("C://Users//John//Documents//Research//ML_Gravity//")
+from GravNN.build.PinesAlgorithm import PinesAlgorithm
+
 import numpy as np
 
-from GravNN.build.PinesAlgorithm import PinesAlgorithm
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
@@ -41,6 +44,7 @@ def main():
     assert(accelerations_all[3:6] == (-0.0001783443985249206, -9.813966166581835, -3.721700725970816e-05))
     assert(accelerations_all[6:9] == (7.908837227492863e-05, -2.8203542979164537e-05, -9.766641408111397))
 
+    print("Passed!")
 
 if __name__ == "__main__":
     main()

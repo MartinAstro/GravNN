@@ -2,9 +2,21 @@ import csv
 import os, sys
 import numpy as np
 
-from GravNN.build.PinesAlgorithm import PinesAlgorithm
+#from GravNN.build.PinesAlgorithm import PinesAlgorithm
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.GravityModels.PinesAlgorithmModule import compute_acc_parallel, compute_n_matrices
+
+def make_2D_array(lis):
+    """Funciton to get 2D array from a list of lists"""
+    n = len(lis)
+    lengths = np.array([len(x) for x in lis])
+    max_len = np.max(lengths)
+    arr = np.zeros((n, max_len))
+
+    for i in range(n):
+        arr[i, :lengths[i]] = lis[i]
+    return arr
 
 class SphericalHarmonics(GravityModelBase):
     def __init__(self, sh_info, degree, trajectory=None):
@@ -70,8 +82,9 @@ class SphericalHarmonics(GravityModelBase):
                 
             if self.degree is None:
                 self.degree = currDeg -2
-            self.C_lm = clmList
-            self.S_lm = slmList
+            
+            self.C_lm = make_2D_array(clmList)
+            self.S_lm = make_2D_array(slmList)
             return 
 
     def load_regression(self, reg_solution):
@@ -124,26 +137,42 @@ class SphericalHarmonics(GravityModelBase):
         
         return 
 
+    # C Legacy
 
+    # def compute_acc(self, positions=None):
+    #     "Compute the acceleration for an existing trajectory or provided set of positions"
+    #     if positions is None:
+    #         positions = self.trajectory.positions
+        
+    #     positions = np.reshape(positions, (len(positions)*3))
+    #     pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
+    #     accelerations = pines.compute_acc(positions)
+    #     self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
+    #     return self.accelerations
+
+    # def compute_acc_components(self, positions=None):
+    #     "Compute the acceleration components for an existing trajectory or provided set of positions"
+    #     if positions is None:
+    #         positions = self.trajectory.positions
+        
+    #     positions = np.reshape(positions, (len(positions)*3))
+    #     pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
+    #     accelerations = pines.compute_acc_components(positions.tolist())
+    #     total_terms = int(self.degree*(self.degree+1)/2*3)
+    #     components = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/total_terms),total_terms))
+    #     return components
+
+    
     def compute_acc(self, positions=None):
         "Compute the acceleration for an existing trajectory or provided set of positions"
         if positions is None:
             positions = self.trajectory.positions
         
         positions = np.reshape(positions, (len(positions)*3))
-        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
-        accelerations = pines.compute_acc(positions)
+        
+        n1, n2, n1q, n2q = compute_n_matrices(self.degree)
+        accelerations = compute_acc_parallel(positions, self.degree, self.mu, self.radEquator, n1, n2, n1q, n2q, self.C_lm, self.S_lm)      
+        
         self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
         return self.accelerations
 
-    def compute_acc_components(self, positions=None):
-        "Compute the acceleration components for an existing trajectory or provided set of positions"
-        if positions is None:
-            positions = self.trajectory.positions
-        
-        positions = np.reshape(positions, (len(positions)*3))
-        pines = PinesAlgorithm.PinesAlgorithm(self.radEquator, self.mu, self.degree, self.C_lm, self.S_lm)
-        accelerations = pines.compute_acc_components(positions.tolist())
-        total_terms = int(self.degree*(self.degree+1)/2*3)
-        components = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/total_terms),total_terms))
-        return components
