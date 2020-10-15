@@ -81,7 +81,8 @@ def compute_acc_parallel(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
     for i in prange(0, int(len(positions)/3)):
         acc[3*i:3*(i+1)] = compute_acc_thread(positions[3*i:3*(i+1)], N, mu, a, n1, n2, n1q, n2q, cbar, sbar)
-
+    return acc
+    
 @njit(cache=True)
 def compute_acc_thread(position, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(position.shape)

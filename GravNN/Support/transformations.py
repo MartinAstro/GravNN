@@ -27,7 +27,7 @@ def sphere2cart(data):
 
     return np.transpose(np.array([x,y,z]))
 
-@njit(parallel=True)
+#@njit(parallel=True)
 def cart2sph(carts):
     """Converts cartesian coordinates into spherical coordinates. Spherical coordinates should be in degrees.
 

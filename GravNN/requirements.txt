@@ -4,6 +4,6 @@ numba
 umap-learn
 umap-learn[plot]
 pandas
-tensorflow
+tensorflow-gpu==1.15
 sklearn
 pyshtools
