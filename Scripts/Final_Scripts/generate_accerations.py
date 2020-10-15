@@ -26,7 +26,7 @@ density_deg = 175
 max_deg = 1000
 trajectory_surf = DHGridDist(planet, radius, degree=density_deg)
 Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory_surf)
-Call_r0_grid = Grid(gravityModel=Call_r0_gm)
+Call_r0_grid = Grid(trajectory=trajectory_surf, accelerations=Call_r0_gm.load())
 C20_r0_gm= SphericalHarmonics(model_file, degree=2, trajectory=trajectory_surf)
-C20_r0_grid = Grid(gravityModel=C20_r0_gm)
+C20_r0_grid = Grid(trajectory=trajectory_surf, accelerations=C20_r0_gm.load())
 R0_pert_grid = Call_r0_grid - C20_r0_grid

@@ -139,18 +139,18 @@ def main(case):
         map_grid = DHGridDist(planet, planet.radius, degree=175)
         sh_all_gravityModel = SphericalHarmonics(sh_file, degree=max_deg, trajectory=map_grid)
         sh_C20_gravityModel = SphericalHarmonics(sh_file, degree=2, trajectory=map_grid)
-        true_grid = Grid(gravityModel=sh_all_gravityModel)
-        sh_20_grid = Grid(gravityModel=sh_C20_gravityModel)
+        true_grid = Grid(trajectory=map_grid, accelerations=sh_all_gravityModel.load()
+        sh_20_grid = Grid(trajectory=map_grid, accelerations=sh_C20_gravityModel.load()
         true_grid -= sh_20_grid #these values are projected
         nn = NN_Base(model, preprocessor, test_traj=map_grid)
 
         gravityModelMap = SphericalHarmonics(sh_file, degree=100, trajectory=map_grid)
         gravityModelMap.load() 
-        C100_grid = Grid(gravityModel=gravityModelMap)
+        C100_grid = Grid(trajectory=map_grid, accelerations=gravityModelMap.load()
         C100_grid -= sh_20_grid
 
         map_viz = MapVisualization(unit = 'mGal')
-        grid = Grid(gravityModel=nn, override=True)
+        grid = Grid(trajectory=map_grid, accelerations=nn.load(), override=True)
         #fig, ax = map_viz.plot_grid_mse(C100_grid, true_grid,vlim=[0, 2E-7])
         fig, ax = map_viz.plot_grid_rmse(grid, true_grid,vlim=[0, 40])
 

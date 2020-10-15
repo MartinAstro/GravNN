@@ -46,16 +46,16 @@ density_deg = 175
 
 trajectory_r0 = DHGridDist(planet, planet.radius, degree=density_deg)
 Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory_r0)
-Call_r0_grid = Grid(gravityModel=Call_r0_gm)
+Call_r0_grid = Grid(trajectory=trajectory_r0, accelerations=Call_r0_gm.load())
 C20_r0_gm= SphericalHarmonics(sh_file, degree=2, trajectory=trajectory_r0)
-C20_r0_grid = Grid(gravityModel=C20_r0_gm)
+C20_r0_grid = Grid(trajectory=trajectory_r0, accelerations=C20_r0_gm.load())
 R0_pert_grid = Call_r0_grid - C20_r0_grid
 
 trajectory_leo = DHGridDist(planet, planet.radius + 330*1000, degree=density_deg) 
 Call_leo_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory_leo)
-Call_leo_grid = Grid(gravityModel=Call_leo_gm)
+Call_leo_grid = Grid(trajectory=trajectory_leo, accelerations=Call_leo_gm.load())
 C20_leo_gm = SphericalHarmonics(sh_file, degree=2, trajectory=trajectory_leo)
-C20_leo_grid = Grid(gravityModel=C20_leo_gm)
+C20_leo_grid = Grid(trajectory=trajectory_leo, accelerations=C20_leo_gm.load())
 LEO_pert_grid = Call_leo_grid - C20_leo_grid
 
 def convert_fig(fig, ax):
@@ -122,7 +122,7 @@ def generate_se_map(trajectory, preprocessor, model, vlim, point_count,name):
     nn = NN_Base(model, preprocessor, test_traj=trajectory_r0)
 
     ####### Plot NN Results
-    nn_grid = Grid(gravityModel=nn, override=True)
+    nn_grid = Grid(trajectory=trajectory_r0, accelerations=nn.load(), override=True)
     fig, ax = map_vis.plot_grid_rmse(nn_grid, R0_pert_grid, vlim=vlim)
 
     map_vis.save(fig, name + "_NN_RMSE.pdf")
@@ -139,7 +139,7 @@ def generate_LEO_se_map(trajectory, preprocessor, model, vlim, point_count,name)
     nn = NN_Base(model, preprocessor, test_traj=trajectory_leo)
 
     ####### Plot NN Results
-    nn_grid = Grid(gravityModel=nn, override=True)
+    nn_grid = Grid(trajectory=trajectory_leo, accelerations=nn.load(), override=True)
     fig, ax = map_vis.plot_grid_rmse(nn_grid, LEO_pert_grid, vlim=vlim)
 
     map_vis.save(fig, name + "_NN_LEO_RMSE.pdf")
@@ -167,7 +167,7 @@ def plot_se_v_coef(trajectory, preprocessor, point_count, vlim=None):
         model, history = load_final_model(i, trajectory, preprocessor, point_count)
 
         nn = NN_Base(model, preprocessor, test_traj=trajectory_r0)
-        nn_grid = Grid(gravityModel=nn, override=True)
+        nn_grid = Grid(trajectory=trajectory_r0, accelerations=nn.load(), override=True)
 
         ####### Plot the Loss for each NN 
         N = len(history['loss'])
@@ -251,7 +251,7 @@ def plot_LEO_se_v_coef(trajectory, preprocessor, point_count, vlim=None):
         model, history = load_final_model(i, trajectory, preprocessor, point_count)
 
         nn = NN_Base(model, preprocessor, test_traj=trajectory_leo)
-        nn_grid = Grid(gravityModel=nn, override=True)
+        nn_grid = Grid(trajectory=trajectory_leo, accelerations=nn.load(), override=True)
 
         ####### Plot the Loss for each NN 
         N = len(history['loss'])
@@ -326,7 +326,7 @@ def plot_nn_projection(trajectory, preprocessor, point_count, vlim=None):
         model, history = load_final_model(i, trajectory, preprocessor, point_count)
 
         nn = NN_Base(model, preprocessor, test_traj=trajectory_r0)
-        nn_grid = Grid(gravityModel=nn, override=True)
+        nn_grid = Grid(trajectory=trajectory_r0, accelerations=nn.load(), override=True)
         fig,ax = map_vis.newFig()
         im = map_vis.new_map(nn_grid.total, vlim=vlim)
         map_vis.add_colorbar(im, "Case "+str(i))

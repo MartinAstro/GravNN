@@ -26,16 +26,16 @@ density_deg = 175
 max_deg = 1000
 trajectory_surf = DHGridDist(planet, radius, degree=density_deg)
 Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory_surf)
-Call_r0_grid = Grid(gravityModel=Call_r0_gm)
+Call_r0_grid = Grid(trajectory=trajectory_surf, accelerations=Call_r0_gm.load())
 C20_r0_gm= SphericalHarmonics(model_file, degree=2, trajectory=trajectory_surf)
-C20_r0_grid = Grid(gravityModel=C20_r0_gm)
+C20_r0_grid = Grid(trajectory=trajectory_surf, accelerations=C20_r0_gm.load())
 R0_pert_grid = Call_r0_grid - C20_r0_grid
 
 trajectory_leo = DHGridDist(planet, radius + 330*1000, degree=density_deg) 
 Call_leo_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory_leo)
-Call_leo_grid = Grid(gravityModel=Call_leo_gm)
+Call_leo_grid = Grid(trajectory=trajectory_leo, accelerations=Call_leo_gm.load())
 C20_leo_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory_leo)
-C20_leo_grid = Grid(gravityModel=C20_leo_gm)
+C20_leo_grid = Grid(trajectory=trajectory_leo, accelerations=C20_leo_gm.load())
 LEO_pert_grid = Call_leo_grid - C20_leo_grid
 
 
@@ -45,7 +45,7 @@ LEO_pert_grid = Call_leo_grid - C20_leo_grid
 #         degree_list = [5, 10, 25, 50, 180, 500]
 #         for deg in degree_list:
 #             Clm_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory_surf)
-#             Clm_grid = Grid(gravityModel=Clm_gm)
+#             Clm_grid = Grid(trajectory=trajectory_surf, accelerations=Clm_gm.load())
 #             Clm_grid -= C20_r0_grid
 #             fig_abs_err, fig_rel_err = map_vis.percent_maps(R0_pert_grid, Clm_grid, vlim=[0, 100])#, C20_grid, vlim=10)
 #             map_vis.save(fig_abs_err, str(deg) + "_SH_Abs_Error.pdf")
@@ -149,7 +149,7 @@ def plot_rmse_v_deg(plot_save_coef):
 
         for deg in degree_list:
             Clm_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory_surf)
-            Clm_grid = Grid(gravityModel=Clm_gm)
+            Clm_grid = Grid(trajectory=trajectory_surf, accelerations=Clm_gm.load())
             Clm_grid -= C20_r0_grid
             fig_rmse = map_vis.plot_grid_rmse(Clm_grid, R0_pert_grid, vlim=[0, 5], log_scale=False)
             map_vis.save(fig_rmse, str(deg) + "_SH_RMSE.pdf")
@@ -182,7 +182,7 @@ def plot_sh_multi_deg():
 
         for deg in degree_list:
             Clm_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory_surf)
-            Clm_grid = Grid(gravityModel=Clm_gm)
+            Clm_grid = Grid(trajectory=trajectory_surf, accelerations=Clm_gm.load())
             Clm_grid -= C20_r0_grid
             fig_rmse = map_vis.plot_grid(Clm_grid.total, "Perturbations [mGal]", vlim=[0, 10])
             map_vis.save(fig_rmse, str(deg) + "_SH.pdf")
@@ -202,7 +202,7 @@ def plot_rmse_v_deg_at_leo():
         degree_list = [5, 10, 18, 25, 31, 40, 50, 65, 80, 100]
         for deg in degree_list:
             Clm_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory_leo)
-            Clm_grid = Grid(gravityModel=Clm_gm)
+            Clm_grid = Grid(trajectory=trajectory_leo, accelerations=Clm_gm.load())
             Clm_grid -= C20_leo_grid
 
             fig_rmse = map_vis.plot_grid_rmse(Clm_grid, LEO_pert_grid, vlim=[0, 0.75], log_scale=False)

@@ -33,9 +33,9 @@ trajectory = ReducedGridDist(planet, radius, degree=density_deg, reduction=0.25)
 #trajectory = DHGridDist(planet, radius, degree=density_deg)
 
 Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-Call_r0_grid = Grid(gravityModel=Call_r0_gm)
+Call_r0_grid = Grid(trajectory=trajectory, accelerations=Call_r0_gm.load())
 C20_r0_gm= SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
-C20_r0_grid = Grid(gravityModel=C20_r0_gm)
+C20_r0_grid = Grid(trajectory=trajectory, accelerations=C20_r0_gm.load())
 R0_pert_grid = Call_r0_grid - C20_r0_grid
 
 input_vec = trajectory.positions
@@ -168,7 +168,7 @@ params = model.count_params()
 print(params)
 coef = int(np.floor(np.max(np.roots([1, 1, -SH_coef]))))
 Clm_r0_gm= SphericalHarmonics(model_file, degree=coef, trajectory=trajectory)
-Clm_r0_grid = Grid(gravityModel=Clm_r0_gm)
+Clm_r0_grid = Grid(trajectory=trajectory, accelerations=Clm_r0_gm.load()
 SH_error_grid = Clm_r0_grid - C20_r0_grid
 
 SH_error_grid = np.sqrt(np.square(SH_error_grid.total - R0_pert_grid.total))

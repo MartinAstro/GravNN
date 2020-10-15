@@ -24,10 +24,10 @@ def plot_grid_on_map():
     trajectory_surf = DHGridDist(planet, radius, degree=density_deg)
 
     Call_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory_surf)
-    Call_grid = Grid(gravityModel=Call_gm)
+    Call_grid = Grid(trajectory=trajectory_surf, accelerations=Call_gm.load())gm)
 
     C20_gm = SphericalHarmonics(sh_file, 2, trajectory=trajectory_surf)
-    C20_grid = Grid(gravityModel=C20_gm)
+    C20_grid = Grid(trajectory=trajectory_surf, accelerations=C20_gm.load())
 
     map_vis = MapVisualization()
     true_mC20_grid = Call_grid - C20_grid

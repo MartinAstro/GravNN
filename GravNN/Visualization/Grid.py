@@ -15,24 +15,16 @@ class Grid(object):
     lats = np.array([])
     lons = np.array([])
 
-    def __init__(self, gravityModel, override=False):
+    def __init__(self, trajectory, accelerations, override=False):
 
-        self.radius = gravityModel.trajectory.radius
+        self.radius = trajectory.radius
 
-        self.N_lat = gravityModel.trajectory.N_lat
-        self.N_lon = gravityModel.trajectory.N_lon
-
-        # Generate shapes for grids
-        self.total = np.zeros((self.N_lon, self.N_lat))
-        self.phi = np.zeros((self.N_lon, self.N_lat))
-        self.theta = np.zeros((self.N_lon, self.N_lat))
-        self.r = np.zeros((self.N_lon, self.N_lat))
+        self.N_lat = trajectory.N_lat
+        self.N_lon = trajectory.N_lon
         
-        acc_cart = gravityModel.load(override=override)
-
-        pos_sph = cart2sph(gravityModel.trajectory.positions)
+        pos_sph = cart2sph(trajectory.positions)
         pos_sph = check_fix_radial_precision_errors(pos_sph)
-        acc_sph = transformations.project_acceleration(pos_sph, acc_cart)
+        acc_sph = transformations.project_acceleration(pos_sph, accelerations)
 
         self.positions = pos_sph
         self.acceleration = acc_sph

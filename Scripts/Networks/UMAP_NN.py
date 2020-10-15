@@ -56,8 +56,8 @@ trajectory_reduced = ReducedGridDist(planet, radius*1.05, degree=density_deg, re
 Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory_reduced)
 C20_r0_gm= SphericalHarmonics(model_file, degree=2, trajectory=trajectory_reduced)
 
-Call_r0_state_obj = Grid(gravityModel=Call_r0_gm)
-C20_r0_state_obj = Grid(gravityModel=C20_r0_gm)
+Call_r0_state_obj = Grid(trajectory=trajectory_reduced, accelerations=Call_r0_gm.load())
+C20_r0_state_obj = Grid(trajectory=trajectory_reduced, accelerations=C20_r0_gm.load())
 R0_pert_state_obj = Call_r0_state_obj - C20_r0_state_obj
 
 
@@ -155,7 +155,7 @@ print(params)
 map_vis = MapVisualization()
 coef = int(np.floor(np.max(np.roots([1, 1, -SH_coef]))))
 Clm_r0_gm= SphericalHarmonics(model_file, degree=coef, trajectory=trajectory_reduced)
-Clm_r0_state_obj = Grid(gravityModel=Clm_r0_gm)
+Clm_r0_state_obj = Grid(trajectory=trajectory_reduced, accelerations=Clm_r0_gm.load()
 SH_error_state_obj = Clm_r0_state_obj - C20_r0_state_obj
 
 SH_error_state_obj = np.sqrt(np.square(SH_error_state_obj.total - R0_pert_state_obj.total))
