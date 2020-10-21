@@ -3,7 +3,7 @@ import os, sys
 import numpy as np
 import GravNN
 
-from GravNN.GravityModels.PinesAlgorithmModule import *
+from GravNN.GravityModels.PinesAlgorithm import *
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
