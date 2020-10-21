@@ -151,7 +151,6 @@ def main(case):
 
         map_viz = MapVisualization(unit = 'mGal')
         grid = Grid(trajectory=map_grid, accelerations=nn.load(), override=True)
-        #fig, ax = map_viz.plot_grid_mse(C100_grid, true_grid,vlim=[0, 2E-7])
         fig, ax = map_viz.plot_grid_rmse(grid, true_grid,vlim=[0, 40])
 
         # std = np.std(true_grid.total)

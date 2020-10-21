@@ -39,25 +39,6 @@ C20_leo_grid = Grid(trajectory=trajectory_leo, accelerations=C20_leo_gm.load())
 LEO_pert_grid = Call_leo_grid - C20_leo_grid
 
 
-# def percent_error_maps():        
-#         error_list = []
-#         coefficient_list = []
-#         degree_list = [5, 10, 25, 50, 180, 500]
-#         for deg in degree_list:
-#             Clm_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory_surf)
-#             Clm_grid = Grid(trajectory=trajectory_surf, accelerations=Clm_gm.load())
-#             Clm_grid -= C20_r0_grid
-#             fig_abs_err, fig_rel_err = map_vis.percent_maps(R0_pert_grid, Clm_grid, vlim=[0, 100])#, C20_grid, vlim=10)
-#             map_vis.save(fig_abs_err, str(deg) + "_SH_Abs_Error.pdf")
-#             map_vis.save(fig_rel_err, str(deg) + "_SH_Rel_Error.pdf")
-#             coefficient_list.append(deg*(deg+1))
-#             error_list.append(np.median(np.abs(100*((Clm_grid - R0_pert_grid)/R0_pert_grid).total)))
-#         map_vis.newFig()
-#         plt.plot(coefficient_list, error_list)
-#         plt.xlabel("N Coefficients in Model")
-#         plt.ylabel("Median Percent Error")
-#         map_vis.save(plt.gcf(), "SH_Rel_Error_2D.pdf")
-
 def plot_sh_model():
     fig_pert, ax = map_vis.plot_grid(Call_r0_grid.total, "Acceleration [mGal]")
     map_vis.save(fig_pert,"Full_SH_Grid.pdf")      

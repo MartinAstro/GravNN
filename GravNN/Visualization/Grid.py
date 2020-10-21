@@ -3,7 +3,6 @@ import sys
 from copy import deepcopy
 
 import numpy as np
-from GravNN.GravityModels.NN_Base import NN_Base
 from GravNN.Support import transformations
 from GravNN.Support.transformations import (cart2sph,
                                             check_fix_radial_precision_errors,
@@ -16,8 +15,6 @@ class Grid(object):
     lons = np.array([])
 
     def __init__(self, trajectory, accelerations, override=False):
-
-        self.radius = trajectory.radius
 
         self.N_lat = trajectory.N_lat
         self.N_lon = trajectory.N_lon
