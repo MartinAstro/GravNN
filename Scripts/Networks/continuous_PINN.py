@@ -16,6 +16,7 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 
@@ -183,58 +184,27 @@ class PhysicsInformedNN:
 
     
 if __name__ == "__main__": 
+    planet = Earth()
+    model_file = planet.sh_hf_file
+    density_deg = 180
+    max_deg = 1000
+    save = False
 
     configurations = {
-        "config_4" : {
-            'N_train' : 40000,
-            'PINN' : True,
-            'epochs' : 400000,
-        },
-        "config_5" : {
-            'N_train' : 40000,
-            'PINN' : False,
-            'epochs' : 400000,
-        },
-        "config_2" : {
-            'N_train' : 60000,
-            'PINN' : False,
-            'epochs' : 200000,
-        },
-        "config_3" : {
-            'N_train' : 60000,
-            'PINN' : True,
-            'epochs' : 200000,
-        },
-        "config_6" : {
-            'N_train' : 60000,
-            'PINN' : True,
-            'epochs' : 400000,
-        },
-        "config_1" : {
-            'N_train' : 60000,
-            'PINN' : False,
-            'epochs' : 400000,
+        "config_entire_map_40000" : {
+            'N_train' : [40000],
+            'PINN_flag' : [False],
+            'epochs' : [10], #[400000],
+            'radius_max' : [planet.radius + 10.0],
+            'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 4]],
+            'acc_noise' : [0.00],
+            'deg_removed' : [2]
         },
     }    
 
-    for key, value in configurations.items():
-                
-        N_train = value['N_train']
+    for key, config in configurations.items():
 
-        layers = [3, 20, 20, 20, 20, 20, 20, 20, 20, 4]
-        layers = [3, 40, 40, 40, 40, 40, 40, 40, 40, 4]
-
-        #layers = [3, 100, 100, 100, 4]
-
-        planet = Earth()
-        model_file = planet.sh_hf_file
-        density_deg = 180
-        max_deg = 1000
-        epochs = value['epochs']
-
-        PINN = value['PINN']
         radius_min = planet.radius
-        radius_max = planet.radius + 10
 
         activation = 'tanh'
         #activation = 'relu'
@@ -244,9 +214,14 @@ if __name__ == "__main__":
         #trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
         #radius _max = None
 
-        trajectory = ReducedRandDist(planet, [radius_min, radius_max], points=15488*4, degree=density_deg, reduction=0.25)
-        map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
-        
+        # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
+        # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
+
+        #trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=15488*4)
+        trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
+
+        map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
+
         # trajectory = DHGridDist(planet, radius_min, degree=density_deg)
         # map_trajectory = trajectory
         # radius_max = None
@@ -254,80 +229,51 @@ if __name__ == "__main__":
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
         accelerations = Call_r0_gm.load()
 
-        C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
-        accelerations_C22 = C22_r0_gm.load()
+        Clm_r0_gm = SphericalHarmonics(model_file, degree=config['deg_removed'][0], trajectory=trajectory)
+        accelerations_Clm = Clm_r0_gm.load()
 
-        #t = None #time T x 1
         x = Call_r0_gm.positions # position (N x 3)
-        a = accelerations-accelerations_C22 # acceleration (N x 3) 
+        a = accelerations - accelerations_Clm
         u = None # potential (N x 1)
 
-        x0 = x[:,0].reshape(-1,1) #r
-        x1 = x[:,1].reshape(-1,1) #theta
-        x2 = x[:,2].reshape(-1,1) #phi
+        idx_x = np.random.choice(x.shape[0], config['N_train'][0], replace=False) 
         
-        a0 = a[:,0].reshape(-1,1) #a r
-        a1 = a[:,1].reshape(-1,1) #a theta
-        a2 = a[:,2].reshape(-1,1) #a phi
-
         # Initial Data
-        noise_a0 = 0.0
-        idx_x = np.random.choice(x.shape[0], N_train, replace=False) 
-        x0_train = x0[idx_x]
-        x1_train = x1[idx_x]
-        x2_train = x2[idx_x]
+        x0_train = x[:,0].reshape(-1,1)[idx_x] #r
+        x1_train = x[:,1].reshape(-1,1)[idx_x] #theta
+        x2_train = x[:,2].reshape(-1,1)[idx_x] #phi
 
-        a0_train = a0[idx_x]
-        a1_train = a1[idx_x]
-        a2_train = a2[idx_x]
-
+        a0_train = a[:,0].reshape(-1,1)[idx_x] #a r
+        a1_train = a[:,1].reshape(-1,1)[idx_x] #a theta
+        a2_train = a[:,2].reshape(-1,1)[idx_x] #a phi
 
         # Add Noise if interested
-        # u0 = u0 + noise_a0*np.std(u0)*np.random.randn(u0.shape[0], u0.shape[1])
+        a0_train = a0_train + config['acc_noise'][0]*np.std(a0_train)*np.random.randn(a0_train.shape[0], a0_train.shape[1])
+        a1_train = a1_train + config['acc_noise'][0]*np.std(a1_train)*np.random.randn(a1_train.shape[0], a1_train.shape[1])
+        a2_train = a2_train + config['acc_noise'][0]*np.std(a2_train)*np.random.randn(a2_train.shape[0], a2_train.shape[1])
 
         model = PhysicsInformedNN(x0_train, x1_train, x2_train, 
                                     a0_train, a1_train, a2_train, 
-                                    layers, PINN, activation)
+                                    config['layers'][0], config['PINN_flag'][0], activation)
+
         start = time.time()
-        model.train(epochs)
+        model.train(config['epochs'][0])
         time_delta = np.round(time.time() - start, 2)
                     
-        # Test data
-        mask = np.ones(x0.shape,dtype=bool) #np.ones_like(a,dtype=bool)
-        mask[idx_x] = False
-
-        x0_star = x0[~mask].reshape(-1,1)
-        x1_star = x1[~mask].reshape(-1,1)
-        x2_star = x2[~mask].reshape(-1,1)
-
-        a0_star = a0[~mask].reshape(-1,1)
-        a1_star = a1[~mask].reshape(-1,1)
-        a2_star = a2[~mask].reshape(-1,1)
-
-        U_star = None
-        
-        a0_pred, a1_pred, a2_pred, U_pred = model.predict(x0_star, x1_star, x2_star)
-
-        a_pred = np.hstack([a0_pred, a1_pred, a2_pred])
-        a_test = np.hstack([a0_star, a1_star, a2_star])
-
-        error = np.abs(np.divide(a_pred-a_test, a_test))*100
-        print("Test Error")
-        print(np.mean(error, axis=0))
 
         ######################################################################
-        ############################# Stats ##################################
+        ############################# Training Stats #########################
         ######################################################################    
 
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=map_trajectory)
         Call_a = Call_r0_gm.load()
         
-        C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=map_trajectory)
-        C22_a = C22_r0_gm.load()
+        Clm_r0_gm = SphericalHarmonics(model_file, degree=config['deg_removed'][0], trajectory=map_trajectory)
+        Clm_a = Clm_r0_gm.load()
 
         x = Call_r0_gm.positions # position (N x 3)
-        a = Call_a-C22_a # acceleration (N x 3) 
-
+        a = Call_a - Clm_a
+    
         x0 = x[:,0].reshape(-1,1) #r
         x1 = x[:,1].reshape(-1,1) #theta
         x2 = x[:,2].reshape(-1,1) #phi
@@ -345,13 +291,8 @@ if __name__ == "__main__":
             'timetag' : [timestamp],
             'trajectory' : [trajectory.__class__.__name__],
             'radius_min' : [radius_min],
-            'radius_max' : [radius_max],
             'train_time' : [time_delta],
-            'PINN_flag' : [PINN],
-            'N_train' : [N_train],
             'degree' : [max_deg],
-            'layers' : [layers],
-            'epochs' : [epochs],
             'activation' : [activation],
 
             'rse_mean' : [np.mean(RSE_Call)],
@@ -370,59 +311,98 @@ if __name__ == "__main__":
 
             'params' : [params]
         }
+        entries.update(config)
+
+        ######################################################################
+        ############################# Testing Stats ##########################
+        ######################################################################    
+
+        grid_true = Grid(trajectory=map_trajectory, accelerations=a)
+        grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
+        diff = grid_pred - grid_true
+
+        five_sigma_mask = np.where(grid_true.total > 5*np.std(grid_true.total))
+        five_sigma_mask_compliment = np.where(grid_true.total < 5*np.std(grid_true.total))
+        five_sig_features = diff.total[five_sigma_mask]
+        five_sig_features_comp = diff.total[five_sigma_mask_compliment]
+
+        three_sigma_mask = np.where(grid_true.total > 3*np.std(grid_true.total))
+        three_sigma_mask_compliment = np.where(grid_true.total < 3*np.std(grid_true.total))
+        three_sig_features = diff.total[three_sigma_mask]
+        three_sig_features_comp = diff.total[three_sigma_mask_compliment]
+
+        map_stats = {
+            'sigma_3_mean' : [np.average(np.sqrt(np.square(three_sig_features)))],
+            'sigma_3_std' : [np.std(np.sqrt(np.square(three_sig_features)))],
+            'sigma_3_median' : [np.median(np.sqrt(np.square(three_sig_features)))],
+
+            'sigma_3_c_mean' : [np.average(np.sqrt(np.square(three_sig_features_comp)))],
+            'sigma_3_c_std' : [np.std(np.sqrt(np.square(three_sig_features_comp)))],
+            'sigma_3_c_median' : [np.median(np.sqrt(np.square(three_sig_features_comp)))],
+
+            'sigma_5_mean' : [np.average(np.sqrt(np.square(five_sig_features)))],
+            'sigma_5_std' : [np.std(np.sqrt(np.square(five_sig_features)))],
+            'sigma_5_median' : [np.median(np.sqrt(np.square(five_sig_features)))],
+
+            'sigma_5_c_mean' : [np.average(np.sqrt(np.square(three_sig_features_comp)))],
+            'sigma_5_c_std' : [np.std(np.sqrt(np.square(three_sig_features_comp)))],
+            'sigma_5_c_median' : [np.median(np.sqrt(np.square(three_sig_features_comp)))],
+
+            'max_error' : [np.max(np.sqrt(np.square(diff.total)))]
+        }
+        entries.update(map_stats)
         df = pd.DataFrame().from_dict(entries).set_index('timetag')
-        print(df)
-
-        try: 
-            df_all = pd.read_pickle(df_file)
-            df_all = df_all.append(df)
-            df_all.to_pickle(df_file)
-        except: 
-            df.to_pickle(df_file)
-
-
 
         ######################################################################
         ############################# Plotting ###############################
         ######################################################################    
 
-
-        grid_true = Grid(trajectory=map_trajectory, accelerations=a)
-        grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
-        grid_C20 = Grid(trajectory=map_trajectory, accelerations=C22_a)
-
-        # mapUnit = "m/s^2"
         mapUnit = 'mGal'
         map_vis = MapVisualization(mapUnit)
-        directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
-        os.makedirs(directory, exist_ok=True)
-
         plt.rc('text', usetex=False)
+
         fig_true, ax = map_vis.plot_grid(grid_true.total, "True Grid [mGal]")
-
-        map_vis.save(fig_true, directory + "true.pdf")
         fig_pred, ax = map_vis.plot_grid(grid_pred.total, "NN Grid [mGal]")
-        map_vis.save(fig_pred, directory + "pred.pdf")
-
-        diff = grid_pred - grid_true
         fig_pert, ax = map_vis.plot_grid(diff.total, "Acceleration Difference [mGal]")
-        map_vis.save(fig_pert, directory + "diff.pdf")
-
 
         map_vis.fig_size = (5*4,3.5*4)
         fig, ax = map_vis.newFig()
-        vlim = None 
+        vlim = [0, np.max(grid_true.total)*10000.0] 
         plt.subplot(311)
-        im = map_vis.new_map(grid_true.total, vlim=None, log_scale=False)
+        im = map_vis.new_map(grid_true.total, vlim=vlim, log_scale=False)
         map_vis.add_colorbar(im, '[mGal]', vlim)
         
         plt.subplot(312)
-        im = map_vis.new_map(grid_pred.total, vlim=None, log_scale=False)
+        im = map_vis.new_map(grid_pred.total, vlim=vlim, log_scale=False)
         map_vis.add_colorbar(im, '[mGal]', vlim)
         
         plt.subplot(313)
-        im = map_vis.new_map(diff.total, vlim=None, log_scale=False)
+        im = map_vis.new_map(diff.total, vlim=vlim, log_scale=False)
         map_vis.add_colorbar(im, '[mGal]', vlim)
-        map_vis.save(fig, directory + "all.pdf")
 
+        ######################################################################
+        ############################# Saving #################################
+        ######################################################################    
+
+        if save: 
+            try: 
+                df_all = pd.read_pickle(df_file)
+                df_all = df_all.append(df)
+                df_all.to_pickle(df_file)
+            except: 
+                df.to_pickle(df_file)
+
+            directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
+            os.makedirs(directory, exist_ok=True)
+
+            map_vis.save(fig_true, directory + "true.pdf")
+            map_vis.save(fig_pred, directory + "pred.pdf")
+            map_vis.save(fig_pert, directory + "diff.pdf")
+            map_vis.save(fig, directory + "all.pdf")
+
+            # with open(directory + "network.data", 'wb') as f:
+            #     pickle.dump(model, f)
+
+          
         #plt.show()
+        
