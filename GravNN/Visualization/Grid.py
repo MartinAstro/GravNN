@@ -18,10 +18,9 @@ class Grid(object):
 
         self.N_lat = trajectory.N_lat
         self.N_lon = trajectory.N_lon
-        
-        pos_sph = cart2sph(trajectory.positions)
+        pos_sph = cart2sph(np.array(trajectory.positions))
         pos_sph = check_fix_radial_precision_errors(pos_sph)
-        acc_sph = transformations.project_acceleration(pos_sph, accelerations)
+        acc_sph = transformations.project_acceleration(pos_sph, np.array(accelerations, dtype=float))
 
         self.positions = pos_sph
         self.acceleration = acc_sph

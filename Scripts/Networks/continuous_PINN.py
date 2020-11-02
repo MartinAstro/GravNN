@@ -25,7 +25,7 @@ tf.set_random_seed(1234)
 
 class PhysicsInformedNN:
     # Initialize the class
-    def __init__(self, x0, x1, x2, a0, a1, a2, layers, PINN=True, activation='tanh'):
+    def __init__(self, x0, x1, x2, a0, a1, a2, config=None):
         
         X = np.concatenate([x0, x1, x2], 1) # N x 3
 
@@ -40,17 +40,14 @@ class PhysicsInformedNN:
         self.a1 = a1
         self.a2 = a2
         
-        self.layers = layers
-
-        self.PINN = PINN
-        self.activation = activation
-        
-        # Initialize NN
-        self.weights, self.biases = self.initialize_NN(layers)  
+        self.config = config
 
         # tf placeholders and graph
         self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                                                      log_device_placement=True))
+
+        # Initialize NN
+        self.weights, self.biases = self.initialize_NN(self.config['layers'][0])  
         
         self.x0_tf = tf.placeholder(tf.float32, shape=[None, self.x0.shape[1]])
         self.x1_tf = tf.placeholder(tf.float32, shape=[None, self.x1.shape[1]])
@@ -63,7 +60,7 @@ class PhysicsInformedNN:
         
         self.a0_pred, self.a1_pred, self.a2_pred, self.f_a0_pred, self.f_a1_pred, self.f_a2_pred, self.U_pred = self.net_NS(self.x0_tf, self.x1_tf, self.x2_tf)
         
-        if self.PINN:
+        if self.config['PINN_flag'][0]:
             self.loss = tf.reduce_sum(tf.square(self.a0_tf - self.a0_pred)) + \
                         tf.reduce_sum(tf.square(self.a1_tf - self.a1_pred)) + \
                         tf.reduce_sum(tf.square(self.a2_tf - self.a2_pred)) + \
@@ -93,11 +90,27 @@ class PhysicsInformedNN:
         weights = []
         biases = []
         num_layers = len(layers) 
-        for l in range(0,num_layers-1):
-            W = self.xavier_init(size=[layers[l], layers[l+1]])
-            b = tf.Variable(tf.zeros([1,layers[l+1]], dtype=tf.float32), dtype=tf.float32)
-            weights.append(W)
-            biases.append(b)        
+
+        if self.config['init_file'][0] is not None:
+            with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
+                weights_init = pickle.load(f)
+                biases_init = pickle.load(f)
+            
+            for l in range(0, num_layers - 1):
+                W = tf.Variable(weights_init[l], dtype=tf.float32)
+                b = tf.Variable(biases_init[l], dtype=tf.float32)
+                weights.append(W)
+                biases.append(b)  
+
+        else:
+            for l in range(0,num_layers-1):
+                W = self.xavier_init(size=[layers[l], layers[l+1]])
+                b = tf.Variable(tf.zeros([1,layers[l+1]], dtype=tf.float32), dtype=tf.float32)
+                weights.append(W)
+                biases.append(b)  
+
+ 
+
         return weights, biases
         
     def xavier_init(self, size):
@@ -113,9 +126,9 @@ class PhysicsInformedNN:
         for l in range(0,num_layers-2):
             W = weights[l]
             b = biases[l]
-            if self.activation == 'tanh':
+            if self.config['activation'][0] == 'tanh':
                 H = tf.tanh(tf.add(tf.matmul(H, W), b))
-            if self.activation == 'relu':
+            if self.config['activation'][0] == 'relu':
                 H = tf.nn.relu(tf.add(tf.matmul(H, W), b))
         W = weights[-1]
         b = biases[-1]
@@ -131,7 +144,7 @@ class PhysicsInformedNN:
 
         U = a_and_U[:,3:4]
         
-        if self.PINN: 
+        if self.config['PINN_flag'][0]: 
             U_x0 = tf.gradients(U, x0)[0]
             U_x1 = tf.gradients(U, x1)[0]
             U_x2 = tf.gradients(U, x2)[0]
@@ -188,26 +201,63 @@ if __name__ == "__main__":
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
-    save = False
+    save = True
+    train = False
+    
+    # nn_df = pd.read_pickle('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\continuous_results.data')
+    # configurations = {}
+    # for i in range(1,16):
+    #     config = nn_df.iloc[-i].to_dict()
+    #     config['init_file'] = pd.Timestamp(nn_df.iloc[-i].name).to_julian_date()
+    #     for key, value in config.items():
+    #         config[key] = [value]
+    #     configurations.update({str(i) : config})
+
 
     configurations = {
-        "config_entire_map_40000" : {
+        # "config_nonPINN" : {
+        #     'N_train' : [40000],
+        #     'PINN_flag' : [False],
+        #     'epochs' : [200000], 
+        #     'radius_max' : [planet.radius + 10.0],
+        #     'layers' : [[3, 80, 80, 80, 80, 80, 80, 80, 80, 4]],
+        #     'acc_noise' : [0.00],
+        #     'deg_removed' : [2],
+        #     'activation' : ['tanh'],
+        #     'init_file': [None],
+        #     #'init_file' : ['2459152.489340278']
+        # },
+        "config_nonPINN_1" : {
+            'N_train' : [40000],
+            'PINN_flag' : [True],
+            'epochs' : [200000], 
+            'radius_max' : [planet.radius + 10.0],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 4]],
+            'acc_noise' : [0.00],
+            'deg_removed' : [2],
+            'activation' : ['tanh'],
+            #'init_file': [None],
+            'init_file' : ['2459155.6646064813']
+        },
+        "config_nonPINN_2" : {
             'N_train' : [40000],
             'PINN_flag' : [False],
-            'epochs' : [10], #[400000],
+            'epochs' : [200000], 
             'radius_max' : [planet.radius + 10.0],
-            'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 4]],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 4]],
             'acc_noise' : [0.00],
-            'deg_removed' : [2]
+            'deg_removed' : [2],
+            'activation' : ['tanh'],
+            #'init_file': [None],
+            'init_file' : ['2459155.6064930554']
         },
     }    
 
     for key, config in configurations.items():
+        
+        tf.reset_default_graph()
 
         radius_min = planet.radius
-
-        activation = 'tanh'
-        #activation = 'relu'
 
         df_file = "continuous_results.data"
 
@@ -217,9 +267,7 @@ if __name__ == "__main__":
         # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
         # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
 
-        #trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=15488*4)
         trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
-
         map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
 
         # trajectory = DHGridDist(planet, radius_min, degree=density_deg)
@@ -229,7 +277,7 @@ if __name__ == "__main__":
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
         accelerations = Call_r0_gm.load()
 
-        Clm_r0_gm = SphericalHarmonics(model_file, degree=config['deg_removed'][0], trajectory=trajectory)
+        Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=trajectory)
         accelerations_Clm = Clm_r0_gm.load()
 
         x = Call_r0_gm.positions # position (N x 3)
@@ -254,10 +302,11 @@ if __name__ == "__main__":
 
         model = PhysicsInformedNN(x0_train, x1_train, x2_train, 
                                     a0_train, a1_train, a2_train, 
-                                    config['layers'][0], config['PINN_flag'][0], activation)
+                                    config)
 
         start = time.time()
-        model.train(config['epochs'][0])
+        if train:
+            model.train(config['epochs'][0])
         time_delta = np.round(time.time() - start, 2)
                     
 
@@ -268,7 +317,7 @@ if __name__ == "__main__":
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=map_trajectory)
         Call_a = Call_r0_gm.load()
         
-        Clm_r0_gm = SphericalHarmonics(model_file, degree=config['deg_removed'][0], trajectory=map_trajectory)
+        Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=map_trajectory)
         Clm_a = Clm_r0_gm.load()
 
         x = Call_r0_gm.positions # position (N x 3)
@@ -293,7 +342,6 @@ if __name__ == "__main__":
             'radius_min' : [radius_min],
             'train_time' : [time_delta],
             'degree' : [max_deg],
-            'activation' : [activation],
 
             'rse_mean' : [np.mean(RSE_Call)],
             'rse_std' : [np.std(RSE_Call)],
@@ -311,7 +359,7 @@ if __name__ == "__main__":
 
             'params' : [params]
         }
-        entries.update(config)
+        config.update(entries)
 
         ######################################################################
         ############################# Testing Stats ##########################
@@ -320,38 +368,43 @@ if __name__ == "__main__":
         grid_true = Grid(trajectory=map_trajectory, accelerations=a)
         grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
         diff = grid_pred - grid_true
+       
+        # This ensures the same features are being evaluated independent of what degree is taken off at beginning
+        C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=map_trajectory)
+        C22_a = C22_r0_gm.load()
+        grid_C22 = Grid(trajectory=map_trajectory, accelerations=Call_a - C22_a)
 
-        five_sigma_mask = np.where(grid_true.total > 5*np.std(grid_true.total))
-        five_sigma_mask_compliment = np.where(grid_true.total < 5*np.std(grid_true.total))
-        five_sig_features = diff.total[five_sigma_mask]
-        five_sig_features_comp = diff.total[five_sigma_mask_compliment]
+        two_sigma_mask = np.where(grid_C22.total > (np.mean(grid_C22.total) + 2*np.std(grid_C22.total)))
+        two_sigma_mask_compliment = np.where(grid_C22.total < (np.mean(grid_C22.total) + 2*np.std(grid_C22.total)))
+        two_sig_features = diff.total[two_sigma_mask]
+        two_sig_features_comp = diff.total[two_sigma_mask_compliment]
 
-        three_sigma_mask = np.where(grid_true.total > 3*np.std(grid_true.total))
-        three_sigma_mask_compliment = np.where(grid_true.total < 3*np.std(grid_true.total))
+        three_sigma_mask = np.where(grid_C22.total > (np.mean(grid_C22.total) + 3*np.std(grid_C22.total)))
+        three_sigma_mask_compliment = np.where(grid_C22.total < (np.mean(grid_C22.total) + 3*np.std(grid_C22.total)))
         three_sig_features = diff.total[three_sigma_mask]
         three_sig_features_comp = diff.total[three_sigma_mask_compliment]
 
         map_stats = {
-            'sigma_3_mean' : [np.average(np.sqrt(np.square(three_sig_features)))],
+            'sigma_2_mean' : [np.mean(np.sqrt(np.square(two_sig_features)))],
+            'sigma_2_std' : [np.std(np.sqrt(np.square(two_sig_features)))],
+            'sigma_2_median' : [np.median(np.sqrt(np.square(two_sig_features)))],
+
+            'sigma_2_c_mean' : [np.mean(np.sqrt(np.square(two_sig_features_comp)))],
+            'sigma_2_c_std' : [np.std(np.sqrt(np.square(two_sig_features_comp)))],
+            'sigma_2_c_median' : [np.median(np.sqrt(np.square(two_sig_features_comp)))],
+
+            'sigma_3_mean' : [np.mean(np.sqrt(np.square(three_sig_features)))],
             'sigma_3_std' : [np.std(np.sqrt(np.square(three_sig_features)))],
             'sigma_3_median' : [np.median(np.sqrt(np.square(three_sig_features)))],
 
-            'sigma_3_c_mean' : [np.average(np.sqrt(np.square(three_sig_features_comp)))],
+            'sigma_3_c_mean' : [np.mean(np.sqrt(np.square(three_sig_features_comp)))],
             'sigma_3_c_std' : [np.std(np.sqrt(np.square(three_sig_features_comp)))],
             'sigma_3_c_median' : [np.median(np.sqrt(np.square(three_sig_features_comp)))],
 
-            'sigma_5_mean' : [np.average(np.sqrt(np.square(five_sig_features)))],
-            'sigma_5_std' : [np.std(np.sqrt(np.square(five_sig_features)))],
-            'sigma_5_median' : [np.median(np.sqrt(np.square(five_sig_features)))],
-
-            'sigma_5_c_mean' : [np.average(np.sqrt(np.square(three_sig_features_comp)))],
-            'sigma_5_c_std' : [np.std(np.sqrt(np.square(three_sig_features_comp)))],
-            'sigma_5_c_median' : [np.median(np.sqrt(np.square(three_sig_features_comp)))],
-
             'max_error' : [np.max(np.sqrt(np.square(diff.total)))]
         }
-        entries.update(map_stats)
-        df = pd.DataFrame().from_dict(entries).set_index('timetag')
+        config.update(map_stats)
+        df = pd.DataFrame().from_dict(config).set_index('timetag')
 
         ######################################################################
         ############################# Plotting ###############################
@@ -400,9 +453,16 @@ if __name__ == "__main__":
             map_vis.save(fig_pert, directory + "diff.pdf")
             map_vis.save(fig, directory + "all.pdf")
 
-            # with open(directory + "network.data", 'wb') as f:
-            #     pickle.dump(model, f)
-
-          
+            with open(directory + "network.data", 'wb') as f:
+                weights = []
+                biases = []
+                for i in range(len(model.weights)):
+                    weights.append(model.weights[i].eval(session=model.sess))
+                    biases.append(model.biases[i].eval(session=model.sess))
+                pickle.dump(weights, f)
+                pickle.dump(biases, f)
+        
+        model.sess.close()
+        plt.close()
         #plt.show()
         

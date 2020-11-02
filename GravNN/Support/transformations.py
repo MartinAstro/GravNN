@@ -1,9 +1,9 @@
 import numpy as np
 import glob
 import pickle
-from numba import njit
+from numba import njit, prange
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def sphere2cart(data):
     """Convert spherical coordinates into cartesian coordinates. Spherical coordinates should be in degrees.
 
@@ -27,7 +27,7 @@ def sphere2cart(data):
 
     return np.transpose(np.array([x,y,z]))
 
-#@njit(parallel=True)
+@njit(parallel=True,cache=True)
 def cart2sph(carts):
     """Converts cartesian coordinates into spherical coordinates. Spherical coordinates should be in degrees.
 
@@ -37,16 +37,16 @@ def cart2sph(carts):
     Returns:
         [np.array]: [[3xM] with r, θ (0,360), Φ (0,180)]
     """
-    spheres = []
-    for cartFull in carts:
-        X, Y, Z = cartFull
+    spheres = np.zeros(carts.shape)#spheres = []
+    for i in prange(0,len(carts)):
+        X, Y, Z = carts[i]
 
         r = np.sqrt(X**2 + Y**2 + Z**2)  # r
         theta = np.arctan2(Y, X) * 180.0 / np.pi + 180.0#  [0, 360]
         phi = np.arctan2(np.sqrt(X**2 + Y**2),Z) * 180.0 / np.pi   # [0,180]
 
-        spheres.append([r, theta, phi])
-    return np.array(spheres)
+        spheres[i] = [r, theta, phi]
+    return spheres
 
 def check_fix_radial_precision_errors(position):
     """Check the radial component of the vector to see if the values are all within machine precision. If so, round them to the same precision and value to ensure NN processing is not erroneous
@@ -63,7 +63,7 @@ def check_fix_radial_precision_errors(position):
         position[:,0] = np.round(position[:,0], 6)
     return position
 
-#@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def project_acceleration(positions, accelerations):
     """Converts the acceleration measurements from cartesian coordinates to spherical coordinates. 
 
@@ -74,8 +74,8 @@ def project_acceleration(positions, accelerations):
     Returns:
         np.array: acceleration in spherical coordinates
     """
-    project_acc = np.zeros(np.shape(accelerations))
-    for i in range(len(positions)):
+    project_acc = np.zeros(accelerations.shape)
+    for i in prange(0, len(positions)):
         theta = positions[i,1] * np.pi/180.0 - np.pi
         phi = positions[i,2] * np.pi/180.0 
         r_hat = np.array([np.sin(phi)*np.cos(theta),
@@ -86,13 +86,13 @@ def project_acceleration(positions, accelerations):
                                 -np.sin(phi)])
         phi_hat = np.array([-np.sin(theta), 
                             np.cos(theta),
-                            0])
+                            0.0])
         project_acc[i,:] = np.array([np.dot(accelerations[i], r_hat),
-                                                        np.dot(accelerations[i], theta_hat),
-                                                        np.dot(accelerations[i], phi_hat)])
+                                    np.dot(accelerations[i], theta_hat),
+                                    np.dot(accelerations[i], phi_hat)])
     return project_acc
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def invert_projection(positions, accelerations):
     """Converts the acceleration measurements from spherical coordinates to cartesian coordinates
 
@@ -104,7 +104,7 @@ def invert_projection(positions, accelerations):
         np.array: acceleration in cartesian coordinates
     """
     invert_acc = np.zeros(np.shape(accelerations))
-    for i in range(len(positions)):
+    for i in prange(0, len(positions)):
         theta = positions[i,1] * np.pi/180.0 - np.pi
         phi = positions[i,2] * np.pi/180.0 
         r_hat = [np.sin(phi)*np.cos(theta),
@@ -118,8 +118,8 @@ def invert_projection(positions, accelerations):
                             0]
 
         BN = np.array([r_hat,
-                                    theta_hat,
-                                    phi_hat])
+                        theta_hat,
+                        phi_hat])
                                     
         NB = np.transpose(BN)
         invert_acc[i,:] = np.dot(NB, accelerations[i])
