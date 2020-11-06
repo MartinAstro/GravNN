@@ -34,7 +34,7 @@ def get_grid(degree, map_type='world'):
 
 def main():
     map_type = 'pacific'
-    #map_type = 'world'
+    map_type = 'world'
     grid_true = get_grid(1000, map_type)
     grid_C00 = get_grid(0, map_type)
     grid_C22 = get_grid(2, map_type)
@@ -45,24 +45,24 @@ def main():
     # ##################### Primary Figures #########################
     # ###############################################################
 
-    # plt.figure()
-    # plt.hist(grid_true.total.reshape((-1,)), 100)
-    # plt.xlabel("||a|| [m/s^2]")
+    plt.figure()
+    plt.hist(grid_true.total.reshape((-1,)), 100)
+    plt.xlabel("||a|| [m/s^2]")
 
-    # grid_Call_m_C00 = grid_true - grid_C00
-    # plt.figure()
-    # plt.hist(grid_Call_m_C00.total.reshape((-1,)), 100)
-    # plt.xlabel("||a-a0|| [m/s^2]")
+    grid_Call_m_C00 = grid_true - grid_C00
+    plt.figure()
+    plt.hist(grid_Call_m_C00.total.reshape((-1,)), 100)
+    plt.xlabel("||a-a0|| [m/s^2]")
 
-    # grid_Call_m_C22 = grid_true - grid_C22
-    # plt.figure()
-    # plt.hist(grid_Call_m_C22.total.reshape((-1,)), 100)
-    # plt.xlabel("||a-(a0 + grad(U_c22))|| [m/s^2]")
+    grid_Call_m_C22 = grid_true - grid_C22
+    plt.figure()
+    plt.hist(grid_Call_m_C22.total.reshape((-1,)), 100)
+    plt.xlabel("||a-(a0 + grad(U_c22))|| [m/s^2]")
 
-    # grid_Call_m_C33 = grid_true - grid_C33
-    # plt.figure()
-    # plt.hist(grid_Call_m_C33.total.reshape((-1,)), 100)
-    # plt.xlabel("||a-(a0 + grad(U_c33))|| [m/s^2]")
+    grid_Call_m_C33 = grid_true - grid_C33
+    plt.figure()
+    plt.hist(grid_Call_m_C33.total.reshape((-1,)), 100)
+    plt.xlabel("||a-(a0 + grad(U_c33))|| [m/s^2]")
 
 
     # ###############################################################
@@ -152,32 +152,32 @@ def main():
     
     directory = os.path.abspath('.') +"/Plots/"
 
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "Truth", vlim)
-    map_vis.save(fig, directory + 'OneOff/true_' + map_type + '.pdf')
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "Truth", vlim)
+    # map_vis.save(fig, directory + 'OneOff/true_' + map_type + '.pdf')
 
-    two_sigma_values = grid_Call_m_C22.total[two_sigma_mask]
-    grid_Call_m_C22.total[two_sigma_mask] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Feature Compliment", vlim)
-    map_vis.save(fig, directory + 'OneOff/two_sigma_mask_compliment_' + map_type + '.pdf')
-    grid_Call_m_C22.total[two_sigma_mask] = two_sigma_values
+    # two_sigma_values = grid_Call_m_C22.total[two_sigma_mask]
+    # grid_Call_m_C22.total[two_sigma_mask] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Feature Compliment", vlim)
+    # map_vis.save(fig, directory + 'OneOff/two_sigma_mask_compliment_' + map_type + '.pdf')
+    # grid_Call_m_C22.total[two_sigma_mask] = two_sigma_values
 
-    two_sigma_compliment_values = grid_Call_m_C22.total[two_sigma_mask_compliment]
-    grid_Call_m_C22.total[two_sigma_mask_compliment] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Features", vlim)
-    map_vis.save(fig, directory + 'OneOff/two_sigma_mask_' + map_type + '.pdf')
-    grid_Call_m_C22.total[two_sigma_mask_compliment] = two_sigma_compliment_values
+    # two_sigma_compliment_values = grid_Call_m_C22.total[two_sigma_mask_compliment]
+    # grid_Call_m_C22.total[two_sigma_mask_compliment] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Features", vlim)
+    # map_vis.save(fig, directory + 'OneOff/two_sigma_mask_' + map_type + '.pdf')
+    # grid_Call_m_C22.total[two_sigma_mask_compliment] = two_sigma_compliment_values
 
-    three_sigma_values = grid_Call_m_C22.total[three_sigma_mask]
-    grid_Call_m_C22.total[three_sigma_mask] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Feature Compliment", vlim)
-    map_vis.save(fig, directory + 'OneOff/three_sigma_mask_compliment_' + map_type + '.pdf')
-    grid_Call_m_C22.total[three_sigma_mask] = three_sigma_values
+    # three_sigma_values = grid_Call_m_C22.total[three_sigma_mask]
+    # grid_Call_m_C22.total[three_sigma_mask] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Feature Compliment", vlim)
+    # map_vis.save(fig, directory + 'OneOff/three_sigma_mask_compliment_' + map_type + '.pdf')
+    # grid_Call_m_C22.total[three_sigma_mask] = three_sigma_values
 
-    three_sigma_compliment_values = grid_Call_m_C22.total[three_sigma_mask_compliment]
-    grid_Call_m_C22.total[three_sigma_mask_compliment] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Features", vlim)
-    map_vis.save(fig, directory + 'OneOff/three_sigma_mask_' + map_type + '.pdf')
-    grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
+    # three_sigma_compliment_values = grid_Call_m_C22.total[three_sigma_mask_compliment]
+    # grid_Call_m_C22.total[three_sigma_mask_compliment] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Features", vlim)
+    # map_vis.save(fig, directory + 'OneOff/three_sigma_mask_' + map_type + '.pdf')
+    # grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
  
     plt.show()
 

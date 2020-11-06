@@ -21,6 +21,7 @@ from GravNN.Visualization.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
+from scipy.optimize import minimize, fmin_l_bfgs_b
 
 np.random.seed(1234)
 tf.set_random_seed(1234)
@@ -34,157 +35,123 @@ class PhysicsInformedNN:
         self.lb = X.min(0) # min of each components
         self.ub = X.max(0) # max of each components
         
-        self.x0 = x0
-        self.x1 = x1
-        self.x2 = x2
-        
-        self.a0 = a0
-        self.a1 = a1
-        self.a2 = a2
-        
         self.config = config
 
-        # tf placeholders and graph
-        self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
-                                                     log_device_placement=True))
-
         # Initialize NN
-        self.weights, self.biases = self.initialize_NN(self.config['layers'][0])  
+        if self.config['init_file'][0] is not None:
+            self.weights, self.biases = self.load_weights_biases(self.config['layers'][0])  
+        else:
+            self.weights, self.biases = None, None
         
-        self.x0_tf = tf.placeholder(tf.float32, shape=[None, self.x0.shape[1]])
-        self.x1_tf = tf.placeholder(tf.float32, shape=[None, self.x1.shape[1]])
-        self.x2_tf = tf.placeholder(tf.float32, shape=[None, self.x2.shape[1]])
+        self.x0_tf = tf.placeholder(tf.float32, shape=[None, x0.shape[1]])
+        self.x1_tf = tf.placeholder(tf.float32, shape=[None, x1.shape[1]])
+        self.x2_tf = tf.placeholder(tf.float32, shape=[None, x2.shape[1]])
         
-        self.a0_tf = tf.placeholder(tf.float32, shape=[None, self.a0.shape[1]])
-        self.a1_tf = tf.placeholder(tf.float32, shape=[None, self.a1.shape[1]])
-        self.a2_tf = tf.placeholder(tf.float32, shape=[None, self.a2.shape[1]])
+        self.a0_tf = tf.placeholder(tf.float32, shape=[None, a0.shape[1]])
+        self.a1_tf = tf.placeholder(tf.float32, shape=[None, a1.shape[1]])
+        self.a2_tf = tf.placeholder(tf.float32, shape=[None, a2.shape[1]])
+        
+        self.a0_pred, self.a1_pred, self.a2_pred, self.U_pred = self.f_model(self.x0_tf, self.x1_tf, self.x2_tf)
 
-        
-        self.a0_pred, self.a1_pred, self.a2_pred, self.U_pred = self.net_NS(self.x0_tf, self.x1_tf, self.x2_tf)
-        self.loss = tf.reduce_sum(tf.square(self.a0_tf - self.a0_pred)) + \
+        def loss_fn(y_true, y_pred):
+            return tf.reduce_sum(tf.square(y_true - y_pred))
+
+        self.loss = loss_fn
+        '''
+        tf.reduce_sum(tf.square(self.a0_tf - self.a0_pred)) + \
                     tf.reduce_sum(tf.square(self.a1_tf - self.a1_pred)) + \
                     tf.reduce_sum(tf.square(self.a2_tf - self.a2_pred))
-         
-        self.optimizer = tf.contrib.opt.ScipyOptimizerInterface(self.loss, 
-                                                                method = 'L-BFGS-B', 
-                                                                options = {'maxiter': 50000,
-                                                                           'maxfun': 50000,
-                                                                           'maxcor': 50,
-                                                                           'maxls': 50,
-                                                                           'ftol' : 1.0 * np.finfo(float).eps})
+        '''
+        self.network.compile(optimizer='adam',
+                                loss=self.loss,
+                                metrics=['accuracy'])
+
+
+    def f_model(self, x0, x1, x2):
+
+        self.network = self.neural_net(tf.concat([x0,x1,x2], 1), self.weights, self.biases)
+        if self.config['PINN_flag'][0]:
+            U_pred = self.network(tf.concat([x0, x1, x2], 1))
+            a0_pred = -tf.gradients(U_pred, x0)
+            a1_pred = -tf.gradients(U_pred, x1)
+            a2_pred = -tf.gradients(U_pred, x2)
+            # with tf.GradientTape(persistent=True) as tape:
+            #     tape.watch(x)
+            #     tape.watch(t)
+
+            #     U_pred = self.self.network(tf.concat([x0, x1, x2], 1))
+            #     a0_pred = -tape.gradients(U_pred, x0)
+            #     a1_pred = -tape.gradients(U_pred, x1)
+            #     a2_pred = -tape.gradients(U_pred, x2)
+            # del tape
+        else:
+            acc = self.network(tf.concat([x0,x1,x2], 1))
+
+            U_pred = None
+            a0_pred = acc[:,0:1]
+            a1_pred = acc[:,1:2]
+            a2_pred = acc[:,2:3]       
+
+        return a0_pred, a1_pred, a2_pred, U_pred
         
-        self.optimizer_Adam = tf.train.AdamOptimizer()
-        self.train_op_Adam = self.optimizer_Adam.minimize(self.loss)
-        
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
-        
-    def initialize_NN(self, layers):        
+    def load_weights_biases(self, layers):        
         weights = []
         biases = []
-        num_layers = len(layers) 
-
-        if self.config['init_file'][0] is not None:
-            with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
-                weights_init = pickle.load(f)
-                biases_init = pickle.load(f)
-            
-            for l in range(0, num_layers - 1):
-                W = tf.Variable(weights_init[l], dtype=tf.float32)
-                b = tf.Variable(biases_init[l], dtype=tf.float32)
-                weights.append(W)
-                biases.append(b)  
-        else:
-            for l in range(0,num_layers-1):
-                W = self.xavier_init(size=[layers[l], layers[l+1]])
-                b = tf.Variable(tf.zeros([1,layers[l+1]], dtype=tf.float32), dtype=tf.float32)
-                weights.append(W)
-                biases.append(b)  
-
+        with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
+            weights_init = pickle.load(f)
+            biases_init = pickle.load(f)
+        for l in range(0, len(layers)  - 1):
+            weights.append(tf.Variable(weights_init[l], dtype=tf.float32))
+            biases.append(tf.Variable(biases_init[l], dtype=tf.float32))  
         return weights, biases
-        
-    def xavier_init(self, size):
-        in_dim = size[0]
-        out_dim = size[1]        
-        xavier_stddev = np.sqrt(2/(in_dim + out_dim))
-        return tf.Variable(tf.truncated_normal([in_dim, out_dim], stddev=xavier_stddev), dtype=tf.float32)
-    
-    def neural_net(self, X, weights, biases):
-        num_layers = len(weights) + 1
-        H = 2.0*(X - self.lb)/(self.ub - self.lb) - 1.0
-        for l in range(0,num_layers-2):
-            W = weights[l]
-            b = biases[l]
-            if self.config['activation'][0] == 'tanh':
-                H = tf.tanh(tf.add(tf.matmul(H, W), b))
-            if self.config['activation'][0] == 'relu':
-                H = tf.nn.relu(tf.add(tf.matmul(H, W), b))
-        W = weights[-1]
-        b = biases[-1]
-        Y = tf.add(tf.matmul(H, W), b)
-        return Y
-      
-    def net_NS(self, x0, x1, x2):
-        if self.config['PINN_flag'][0]:
-            assert 1 in np.array(self.config['layers'][0]) 
-            U_network = self.neural_net(tf.concat([x0,x1,x2], 1), self.weights, self.biases)
+           
+    def neural_net(self, X, weights=None, biases=None):
+        layers = self.config['layers'][0]
 
-            U = U_network[:,0:1]
-            a0 = -tf.gradients(U, x0)[0]
-            a1 = -tf.gradients(U, x1)[0]
-            a2 = -tf.gradients(U, x2)[0]
-        else:
-            a_network = self.neural_net(tf.concat([x0,x1,x2], 1), self.weights, self.biases)
-            U = None
+        inputs = [tf.keras.layers.InputLayer(input_shape=(layers[0],))]
+        hidden_layers = []
+        for i in range(len(layers)-1):
+            hidden_layer = tf.keras.layers.Dense(
+                                            units=layers[i], 
+                                            activation=self.config['activation'][0], 
+                                            kernel_initializer='glorot_normal')
+            hidden_layers.append(hidden_layer)
+                                                    
+        outputs = [tf.keras.layers.Dense(
+                                    units=layers[-1], 
+                                    activation='linear', 
+                                    kernel_initializer='glorot_normal')]
 
-            a0 = a_network[:,0:1]
-            a1 = a_network[:,1:2]
-            a2 = a_network[:,2:3]
+        model = tf.keras.Sequential(
+            np.concatenate(
+                    (inputs,
+                    hidden_layers,
+                    outputs)).tolist()
+        )
+        if weights is not None:
+            model.set_weights(weights)
+        if biases is not None: 
+            model.set_biases(biases)
+        return model
 
-        return a0, a1, a2, U
+    def optimize(self):
+        self.optimizer = fmin_l_bfgs_b(self.loss, tf.get_weights(self.network), tf.gradient(self.loss, tf.concat([self.x0_tf, self.x1_tf, self.x2_tf])), 
+                                        maxfun=50000, 
+                                        maxiter=50000,
+                                        epsilon=1.0*np.finfo(float).eps, 
+                                        maxls=50) 
+                                        
+        # self.optimizer = tf.contrib.opt.ScipyOptimizerInterface(self.loss, 
+        #                                                         method = 'L-BFGS-B', 
+        #                                                         options = {'maxiter': 50000,
+        #                                                                    'maxfun': 50000,
+        #                                                                    'maxcor': 50,
+        #                                                                    'maxls': 50,
+        #                                                                    'ftol' : 1.0 * np.finfo(float).eps})
+    def predict(self, x0, x1, x2):
+        return self.f_model(tf.concat([x0, x1, x2]))
     
-    def callback(self, loss):
-        print('Loss:', loss)
-    
-    def train(self, nIter):
-        tf_dict = {self.x0_tf: self.x0, 
-                    self.x1_tf: self.x1, 
-                    self.x2_tf: self.x2,
-                    self.a0_tf: self.a0,
-                    self.a1_tf: self.a1,
-                    self.a2_tf: self.a2}
-        
-        start_time = time.time()
-        for it in range(nIter):
-            self.sess.run(self.train_op_Adam, tf_dict)
-            
-            # Print
-            if it % 10 == 0:
-                elapsed = time.time() - start_time
-                loss_value = self.sess.run(self.loss, tf_dict)
-                print('It: %d, Loss: %.3e, Time: %.2f' % 
-                      (it, loss_value, elapsed))
-                start_time = time.time()
-    
-        self.optimizer.minimize(self.sess,
-                                feed_dict = tf_dict,
-                                fetches = [self.loss],
-                                loss_callback = self.callback)
-    
-    def predict(self, x0_star, x1_star, x2_star):
-        tf_dict = {self.x0_tf: x0_star, 
-                    self.x1_tf: x1_star, 
-                    self.x2_tf: x2_star}
-
-        a0_star = self.sess.run(self.a0_pred, tf_dict)
-        a1_star = self.sess.run(self.a1_pred, tf_dict)
-        a2_star = self.sess.run(self.a2_pred, tf_dict)
-        #U_star = self.sess.run(self.U_pred, tf_dict)
-
-        return a0_star, a1_star, a2_star#, U_star
-
-    
-if __name__ == "__main__": 
+def main():
     planet = Earth()
     model_file = planet.sh_hf_file
     density_deg = 180
@@ -192,16 +159,6 @@ if __name__ == "__main__":
     save = True
     train = True
     
-    # nn_df = pd.read_pickle('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\continuous_results.data')
-    # configurations = {}
-    # for i in range(1,16):
-    #     config = nn_df.iloc[-i].to_dict()
-    #     config['init_file'] = pd.Timestamp(nn_df.iloc[-i].name).to_julian_date()
-    #     for key, value in config.items():
-    #         config[key] = [value]
-    #     configurations.update({str(i) : config})
-
-
     configurations = {
         "config_nonPINN" : {
             'N_train' : [40000],
@@ -214,18 +171,6 @@ if __name__ == "__main__":
             'activation' : ['tanh'],
             'init_file': [None],
             'notes' : ['nonPINN - No potential included']
-        },
-        "config_PINN" : {
-            'N_train' : [40000],
-            'PINN_flag' : [True],
-            'epochs' : [200000], 
-            'radius_max' : [planet.radius + 10.0],
-            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
-            'acc_noise' : [0.00],
-            'deg_removed' : [2],
-            'activation' : ['tanh'],
-            'init_file': [None],
-            'notes' : ['PINN - Only use automatic differentiation for acc']
         },
     }    
 
@@ -253,7 +198,7 @@ if __name__ == "__main__":
         a_unscaled = accelerations - accelerations_Clm
         u = None # potential (N x 1)
 
-        # Preprocessing (This is only necessary for the acceleration -- the position is taken care of in the first H of the NN)
+        # Preprocessing
         x_transformer = MinMaxScaler(feature_range=(-1,1))
         x = x_transformer.fit_transform(x_unscaled)
 
@@ -276,13 +221,17 @@ if __name__ == "__main__":
         a1_train = a1_train + config['acc_noise'][0]*np.std(a1_train)*np.random.randn(a1_train.shape[0], a1_train.shape[1])
         a2_train = a2_train + config['acc_noise'][0]*np.std(a2_train)*np.random.randn(a2_train.shape[0], a2_train.shape[1])
 
-        model = PhysicsInformedNN(x0_train, x1_train, x2_train, 
+        PINN = PhysicsInformedNN(x0_train, x1_train, x2_train, 
                                     a0_train, a1_train, a2_train, 
                                     config)
 
         start = time.time()
         if train:
-            model.train(config['epochs'][0])
+            PINN.network.fit(x_train,
+                        a_train,
+                        epochs=config['epochs'][0],
+                        validation_split=0.0)
+            PINN.optimize()
         time_delta = np.round(time.time() - start, 2)
                     
 
@@ -306,12 +255,12 @@ if __name__ == "__main__":
         x1 = x[:,1].reshape(-1,1) #theta
         x2 = x[:,2].reshape(-1,1) #phi
 
-        a0_pred, a1_pred, a2_pred = model.predict(x0, x1, x2)
+        a0_pred, a1_pred, a2_pred, U_pred = PINN.predict(x0, x1, x2)
         acc_pred = np.hstack((a0_pred, a1_pred, a2_pred))
 
         x = x_transformer.inverse_transform(x)
         a = a_transformer.inverse_transform(a)
-        acc_pred = a_transformer.inverse_transform(acc_pred)
+        a_pred = a_transformer.inverse_transform(a_pred)
 
         error = np.abs(np.divide((acc_pred - a), a))*100 # Percent Error for each component
         RSE_Call = np.sqrt(np.square(acc_pred - a))
@@ -447,4 +396,6 @@ if __name__ == "__main__":
         model.sess.close()
         plt.close()
         #plt.show()
-        
+
+if __name__ == '__main__':
+    main()
