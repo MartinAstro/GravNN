@@ -1,7 +1,7 @@
 import csv
 import os, sys
 import numpy as np
-
+import json
 #from GravNN.build.PinesAlgorithm import PinesAlgorithm
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
@@ -47,7 +47,37 @@ class SphericalHarmonics(GravityModelBase):
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "_" + os.path.basename(self.file).split('.')[0] + "_" + str(self.degree) + "/"
         pass
 
-    def loadSH(self):
+    def loadSH_json(self):
+        data = json.load(open(self.file,'r'))
+        clm = np.zeros((40,40)).tolist()
+        slm = np.zeros((40,40)).tolist()
+        for i in range(len(data['Cnm_coefs'])):
+            n = data['Cnm_coefs'][i]['n']
+            m = data['Cnm_coefs'][i]['m']
+
+            clm[n][m] = data['Cnm_coefs'][i]['value']
+
+            n = data['Snm_coefs'][i]['n']
+            m = data['Snm_coefs'][i]['m']
+
+            slm[n][m] = data['Snm_coefs'][i]['value']
+
+        for i in range(len(clm)):
+            mask = np.ones(len(clm[i]), dtype=bool)
+            mask[i+1:] = False
+            clm_row = np.array(clm[i])[mask]
+            slm_row = np.array(slm[i])[mask]
+
+            clm[i] = clm_row.tolist()
+            slm[i] = slm_row.tolist()
+
+        self.mu = data['totalMass']['value']*6.67408*1E-11 
+        self.radEquator = data['referenceRadius']['value']
+        self.C_lm = make_2D_array(clm)
+        self.S_lm = make_2D_array(slm)
+        return
+        
+    def loadSH_csv():
         with open(self.file, 'r') as csvfile:
             gravReader = csv.reader(csvfile, delimiter=',')
             firstRow = next(gravReader)
@@ -86,6 +116,13 @@ class SphericalHarmonics(GravityModelBase):
             self.C_lm = make_2D_array(clmList)
             self.S_lm = make_2D_array(slmList)
             return 
+
+    def loadSH(self):
+        if '.json' in self.file:
+            self.loadSH_json()
+        else:
+            self.loadSH_csv()
+        
 
     def load_regression(self, reg_solution):
         self.file_directory += "_Regress"
