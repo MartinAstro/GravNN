@@ -7,3 +7,4 @@ pandas
 tensorflow-gpu==1.15
 sklearn
 pyshtools
+trimesh

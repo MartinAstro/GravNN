@@ -12,7 +12,11 @@ import scipy.io
 import tensorflow as tf
 
 from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Bennu
+
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+from GravNN.GravityModels.Polyhedral import Polyhedral
+
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
@@ -145,7 +149,8 @@ class PhysicsInformedNN:
     
     def callback(self, loss):
         print('Loss:', loss)
-    
+        self.loss_LBFGSB.append(loss)    
+
     def train(self, nIter):
         tf_dict = {self.x0_tf: self.x0, 
                     self.x1_tf: self.x1, 
@@ -154,6 +159,9 @@ class PhysicsInformedNN:
                     self.a1_tf: self.a1,
                     self.a2_tf: self.a2}
         
+        loss_adam = np.zeros((int(nIter/10),))
+        self.loss_LBFGSB = []
+
         start_time = time.time()
         for it in range(nIter):
             self.sess.run(self.train_op_Adam, tf_dict)
@@ -165,11 +173,14 @@ class PhysicsInformedNN:
                 print('It: %d, Loss: %.3e, Time: %.2f' % 
                       (it, loss_value, elapsed))
                 start_time = time.time()
+                loss_adam[int(it/10)] = loss_value
     
         self.optimizer.minimize(self.sess,
                                 feed_dict = tf_dict,
                                 fetches = [self.loss],
                                 loss_callback = self.callback)
+        
+        return loss_adam, self.loss_LBFGSB
     
     def predict(self, x0_star, x1_star, x2_star):
         tf_dict = {self.x0_tf: x0_star, 
@@ -189,8 +200,9 @@ if __name__ == "__main__":
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
+
     save = True
-    train = True
+    train = False
     
     # nn_df = pd.read_pickle('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\continuous_results.data')
     # configurations = {}
@@ -203,7 +215,7 @@ if __name__ == "__main__":
 
 
     configurations = {
-        "config_nonPINN" : {
+        "config_1" : {
             'N_train' : [40000],
             'PINN_flag' : [False],
             'epochs' : [200000], 
@@ -212,10 +224,10 @@ if __name__ == "__main__":
             'acc_noise' : [0.00],
             'deg_removed' : [2],
             'activation' : ['tanh'],
-            'init_file': [None],
-            'notes' : ['nonPINN - No potential included']
+            'init_file': ['2459168.759849537'],
+            'notes' : ['non-PINN 100 meters up']
         },
-        "config_PINN" : {
+        "config_2" : {
             'N_train' : [40000],
             'PINN_flag' : [True],
             'epochs' : [200000], 
@@ -224,15 +236,38 @@ if __name__ == "__main__":
             'acc_noise' : [0.00],
             'deg_removed' : [2],
             'activation' : ['tanh'],
-            'init_file': [None],
-            'notes' : ['PINN - Only use automatic differentiation for acc']
+            'init_file': ['2459168.815775463'],
+            'notes' : ['']
         },
+        # "config_3" : {
+        #     'N_train' : [40000],
+        #     'PINN_flag' : [False],
+        #     'epochs' : [200000], 
+        #     'radius_max' : [planet.radius + 10.0],
+        #     'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+        #     'acc_noise' : [0.00],
+        #     'deg_removed' : [0],
+        #     'activation' : ['tanh'],
+        #     'init_file': [None],
+        #     'notes' : ['Attempting removing no spherical harmonics']
+        # },
+        # "config_4" : {
+        #     'N_train' : [40000],
+        #     'PINN_flag' : [True],
+        #     'epochs' : [200000], 
+        #     'radius_max' : [planet.radius + 10.0],
+        #     'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
+        #     'acc_noise' : [0.00],
+        #     'deg_removed' : [0],
+        #     'activation' : ['tanh'],
+        #     'init_file': [None],
+        #     'notes' : ['']
+        # },
     }    
 
     for key, config in configurations.items():
         
         tf.reset_default_graph()
-
         radius_min = planet.radius
 
         df_file = "continuous_results.data"
@@ -241,7 +276,12 @@ if __name__ == "__main__":
         # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
 
         trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
-        map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
+        #map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
+
+        df_file = "generalization_results.data"
+        #map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
+        map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
+
 
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
         accelerations = Call_r0_gm.load()
@@ -249,7 +289,9 @@ if __name__ == "__main__":
         Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=trajectory)
         accelerations_Clm = Clm_r0_gm.load()
 
-        x_unscaled = Call_r0_gm.positions # position (N x 3)
+
+
+        x_unscaled = trajectory.positions # position (N x 3)
         a_unscaled = accelerations - accelerations_Clm
         u = None # potential (N x 1)
 
@@ -282,7 +324,7 @@ if __name__ == "__main__":
 
         start = time.time()
         if train:
-            model.train(config['epochs'][0])
+            loss_adam, loss_LBFGSB = model.train(config['epochs'][0])
         time_delta = np.round(time.time() - start, 2)
                     
 
@@ -321,6 +363,9 @@ if __name__ == "__main__":
         entries = {
             'timetag' : [timestamp],
             'trajectory' : [trajectory.__class__.__name__],
+            'map_trajectory' :[map_trajectory.__class__.__name__],
+            'map_radius' :[map_trajectory.radius],
+
             'radius_min' : [radius_min],
             'train_time' : [time_delta],
             'degree' : [max_deg],
@@ -415,6 +460,7 @@ if __name__ == "__main__":
         im = map_vis.new_map(diff.total, vlim=vlim, log_scale=False)
         map_vis.add_colorbar(im, '[mGal]', vlim)
 
+
         ######################################################################
         ############################# Saving #################################
         ######################################################################    
@@ -443,6 +489,11 @@ if __name__ == "__main__":
                     biases.append(model.biases[i].eval(session=model.sess))
                 pickle.dump(weights, f)
                 pickle.dump(biases, f)
+            
+            if train:
+                with open(directory + "loss.data", 'wb') as f:
+                    pickle.dump(loss_adam, f)
+                    pickle.dump(loss_LBFGSB, f)
         
         model.sess.close()
         plt.close()

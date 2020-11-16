@@ -19,11 +19,27 @@ def main():
 
     radius_min = planet.radius
     
-    df_file = "sh_stats_full_grid.data"
-    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
+    ###########################
+    #### Trajectories #########
+    ###########################
+    # df_file = "sh_stats_full_grid.data"
+    # trajectory = DHGridDist(planet, radius_min, degree=density_deg)
 
     # df_file = "sh_stats_reduced_grid.data"
     # trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
+
+    # df_file = "sh_stats_world_R100.data"
+    # trajectory = DHGridDist(planet, radius_min+100, degree=density_deg)
+
+    df_file = "sh_stats_world_R1000.data"
+    trajectory = DHGridDist(planet, radius_min+1000, degree=density_deg)
+
+    df_file = "sh_stats_world_R10000.data"
+    trajectory = DHGridDist(planet, radius_min+10000, degree=density_deg)
+
+
+
+
 
     Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
     Call_a = Call_r0_gm.load()

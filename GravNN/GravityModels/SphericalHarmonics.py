@@ -77,7 +77,7 @@ class SphericalHarmonics(GravityModelBase):
         self.S_lm = make_2D_array(slm)
         return
         
-    def loadSH_csv():
+    def loadSH_csv(self):
         with open(self.file, 'r') as csvfile:
             gravReader = csv.reader(csvfile, delimiter=',')
             firstRow = next(gravReader)
