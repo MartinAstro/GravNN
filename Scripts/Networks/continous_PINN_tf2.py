@@ -21,169 +21,63 @@ from GravNN.Visualization.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
+from GravNN.Networks.model import PhysicsInformedNN
 from scipy.optimize import minimize, fmin_l_bfgs_b
 
 np.random.seed(1234)
-tf.set_random_seed(1234)
+#tf.compat.v1.disable_eager_execution()
 
-class PhysicsInformedNN:
-    # Initialize the class
-    def __init__(self, x0, x1, x2, a0, a1, a2, config=None):
-        
-        X = np.concatenate([x0, x1, x2], 1) # N x 3
-
-        self.lb = X.min(0) # min of each components
-        self.ub = X.max(0) # max of each components
-        
-        self.config = config
-
-        # Initialize NN
-        if self.config['init_file'][0] is not None:
-            self.weights, self.biases = self.load_weights_biases(self.config['layers'][0])  
-        else:
-            self.weights, self.biases = None, None
-        
-        self.x0_tf = tf.placeholder(tf.float32, shape=[None, x0.shape[1]])
-        self.x1_tf = tf.placeholder(tf.float32, shape=[None, x1.shape[1]])
-        self.x2_tf = tf.placeholder(tf.float32, shape=[None, x2.shape[1]])
-        
-        self.a0_tf = tf.placeholder(tf.float32, shape=[None, a0.shape[1]])
-        self.a1_tf = tf.placeholder(tf.float32, shape=[None, a1.shape[1]])
-        self.a2_tf = tf.placeholder(tf.float32, shape=[None, a2.shape[1]])
-        
-        self.a0_pred, self.a1_pred, self.a2_pred, self.U_pred = self.f_model(self.x0_tf, self.x1_tf, self.x2_tf)
-
-        def loss_fn(y_true, y_pred):
-            return tf.reduce_sum(tf.square(y_true - y_pred))
-
-        self.loss = loss_fn
-        '''
-        tf.reduce_sum(tf.square(self.a0_tf - self.a0_pred)) + \
-                    tf.reduce_sum(tf.square(self.a1_tf - self.a1_pred)) + \
-                    tf.reduce_sum(tf.square(self.a2_tf - self.a2_pred))
-        '''
-        self.network.compile(optimizer='adam',
-                                loss=self.loss,
-                                metrics=['accuracy'])
-
-
-    def f_model(self, x0, x1, x2):
-
-        self.network = self.neural_net(tf.concat([x0,x1,x2], 1), self.weights, self.biases)
-        if self.config['PINN_flag'][0]:
-            U_pred = self.network(tf.concat([x0, x1, x2], 1))
-            a0_pred = -tf.gradients(U_pred, x0)
-            a1_pred = -tf.gradients(U_pred, x1)
-            a2_pred = -tf.gradients(U_pred, x2)
-            # with tf.GradientTape(persistent=True) as tape:
-            #     tape.watch(x)
-            #     tape.watch(t)
-
-            #     U_pred = self.self.network(tf.concat([x0, x1, x2], 1))
-            #     a0_pred = -tape.gradients(U_pred, x0)
-            #     a1_pred = -tape.gradients(U_pred, x1)
-            #     a2_pred = -tape.gradients(U_pred, x2)
-            # del tape
-        else:
-            acc = self.network(tf.concat([x0,x1,x2], 1))
-
-            U_pred = None
-            a0_pred = acc[:,0:1]
-            a1_pred = acc[:,1:2]
-            a2_pred = acc[:,2:3]       
-
-        return a0_pred, a1_pred, a2_pred, U_pred
-        
-    def load_weights_biases(self, layers):        
-        weights = []
-        biases = []
-        with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
-            weights_init = pickle.load(f)
-            biases_init = pickle.load(f)
-        for l in range(0, len(layers)  - 1):
-            weights.append(tf.Variable(weights_init[l], dtype=tf.float32))
-            biases.append(tf.Variable(biases_init[l], dtype=tf.float32))  
-        return weights, biases
-           
-    def neural_net(self, X, weights=None, biases=None):
-        layers = self.config['layers'][0]
-
-        inputs = [tf.keras.layers.InputLayer(input_shape=(layers[0],))]
-        hidden_layers = []
-        for i in range(len(layers)-1):
-            hidden_layer = tf.keras.layers.Dense(
-                                            units=layers[i], 
-                                            activation=self.config['activation'][0], 
-                                            kernel_initializer='glorot_normal')
-            hidden_layers.append(hidden_layer)
-                                                    
-        outputs = [tf.keras.layers.Dense(
-                                    units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer='glorot_normal')]
-
-        model = tf.keras.Sequential(
-            np.concatenate(
-                    (inputs,
-                    hidden_layers,
-                    outputs)).tolist()
-        )
-        if weights is not None:
-            model.set_weights(weights)
-        if biases is not None: 
-            model.set_biases(biases)
-        return model
-
-    def optimize(self):
-        self.optimizer = fmin_l_bfgs_b(self.loss, tf.get_weights(self.network), tf.gradient(self.loss, tf.concat([self.x0_tf, self.x1_tf, self.x2_tf])), 
-                                        maxfun=50000, 
-                                        maxiter=50000,
-                                        epsilon=1.0*np.finfo(float).eps, 
-                                        maxls=50) 
-                                        
-        # self.optimizer = tf.contrib.opt.ScipyOptimizerInterface(self.loss, 
-        #                                                         method = 'L-BFGS-B', 
-        #                                                         options = {'maxiter': 50000,
-        #                                                                    'maxfun': 50000,
-        #                                                                    'maxcor': 50,
-        #                                                                    'maxls': 50,
-        #                                                                    'ftol' : 1.0 * np.finfo(float).eps})
-    def predict(self, x0, x1, x2):
-        return self.f_model(tf.concat([x0, x1, x2]))
-    
 def main():
     planet = Earth()
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
-    save = True
+    save = False
     train = True
+    print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
     
+    data_config = {
+        'distribution' : [RandomDist],
+        'N_train' : [40000], 
+        'radius_max' : [planet.radius + 10.0],
+        'acc_noise' : [0.00],
+        'preprocessing' : [MinMaxScaler],
+        'deg_removed' : [2],
+        'include_U' : [False]
+    }
+    network_config = {
+        'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+        'activation' : ['tanh'],
+        'init_model' : [None],
+        'epochs' : [200000],
+        'optimizer' : [tf.keras.optimizers.Adam],
+        'PINN_flag' : [False],
+        'batch_size' : [4096]
+    }
     configurations = {
         "config_nonPINN" : {
             'N_train' : [40000],
             'PINN_flag' : [False],
-            'epochs' : [200000], 
+            'epochs' : [1000], 
             'radius_max' : [planet.radius + 10.0],
             'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
             'acc_noise' : [0.00],
             'deg_removed' : [2],
             'activation' : ['tanh'],
             'init_file': [None],
-            'notes' : ['nonPINN - No potential included']
+            'notes' : ['nonPINN - No potential included'],
+            'batch_size' : [40000]#[8192]#4096]#4096]
         },
     }    
 
     for key, config in configurations.items():
-        
-        tf.reset_default_graph()
+        tf.keras.backend.clear_session()
+        #tf.debugging.set_log_device_placement(True)
+        #tf.reset_default_graph()
 
         radius_min = planet.radius
 
         df_file = "continuous_results.data"
-
-        # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
-        # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
 
         trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
         map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
@@ -208,30 +102,69 @@ def main():
         # Initial Data
         idx_x = np.random.choice(x.shape[0], config['N_train'][0], replace=False) 
 
-        x0_train = x[:,0].reshape(-1,1)[idx_x] #r
-        x1_train = x[:,1].reshape(-1,1)[idx_x] #theta
-        x2_train = x[:,2].reshape(-1,1)[idx_x] #phi
-
-        a0_train = a[:,0].reshape(-1,1)[idx_x] #a r
-        a1_train = a[:,1].reshape(-1,1)[idx_x] #a theta
-        a2_train = a[:,2].reshape(-1,1)[idx_x] #a phi
+        x_train = x[idx_x] # (x,y,z) or (r, theta, phi)
+        a_train = a[idx_x] # (a_x, a_y, a_z) or (a_r, a_theta, a_phi)
 
         # Add Noise if interested
-        a0_train = a0_train + config['acc_noise'][0]*np.std(a0_train)*np.random.randn(a0_train.shape[0], a0_train.shape[1])
-        a1_train = a1_train + config['acc_noise'][0]*np.std(a1_train)*np.random.randn(a1_train.shape[0], a1_train.shape[1])
-        a2_train = a2_train + config['acc_noise'][0]*np.std(a2_train)*np.random.randn(a2_train.shape[0], a2_train.shape[1])
+        a_train = a_train + config['acc_noise'][0]*np.std(a_train)*np.random.randn(a_train.shape[0], a_train.shape[1])
 
-        PINN = PhysicsInformedNN(x0_train, x1_train, x2_train, 
-                                    a0_train, a1_train, a2_train, 
-                                    config)
+        x_train = x_train.astype('float32')
+        a_train = a_train.astype('float32')
+
+        #dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
+        dataset = tf.data.Dataset.from_tensors((x_train, a_train))
+
+        # def serialize_example(feature0, feature1, feature2, feature3):
+        #     """
+        #     Creates a tf.train.Example message ready to be written to a file.
+        #     """
+        #     # Create a dictionary mapping the feature name to the tf.train.Example-compatible
+        #     # data type.
+        #     feature = {
+        #         'feature0': _int64_feature(feature0),
+        #         'feature1': _int64_feature(feature1),
+        #         'feature2': _bytes_feature(feature2),
+        #         'feature3': _float_feature(feature3),
+        #     }
+
+        #     # Create a Features message using tf.train.Example.
+
+        #     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
+        #     return example_proto.SerializeToString()
+
+
+        # def tf_serialize_example(f0,f1,f2,f3):
+        # tf_string = tf.py_function(
+        #     serialize_example,
+        #     (f0,f1,f2,f3),  # pass these args to the above function.
+        #     tf.string)      # the return type is `tf.string`.
+        # return tf.reshape(tf_string, ()) # The result is a scalar
+        
+        # serialized_features_dataset = dataset.map(tf_serialize_example)
+
+        # def generator():
+        #     for features in features_dataset:
+        #         yield serialize_example(*features)
+
+        # serialized_features_dataset = tf.data.Dataset.from_generator(
+        #     generator, output_types=tf.string, output_shapes=())
+
+        # filename = 'test.tfrecord'
+        # writer = tf.data.experimental.TFRecordWriter(filename)
+        # writer.write(serialized_features_dataset)
+
+        # filenames = [filename]
+        # raw_dataset = tf.data.TFRecordDataset(filenames)
+        # raw_dataset
+
+
+        PINN = PhysicsInformedNN(config)
 
         start = time.time()
         if train:
-            PINN.network.fit(x_train,
-                        a_train,
-                        epochs=config['epochs'][0],
-                        validation_split=0.0)
-            PINN.optimize()
+            PINN.train(dataset=dataset,
+                       epochs=config['epochs'][0],
+                       batch_size=config['batch_size'][0])
         time_delta = np.round(time.time() - start, 2)
                     
 
@@ -250,22 +183,19 @@ def main():
 
         x = x_transformer.transform(x)
         a = a_transformer.transform(a)
-    
-        x0 = x[:,0].reshape(-1,1) #r
-        x1 = x[:,1].reshape(-1,1) #theta
-        x2 = x[:,2].reshape(-1,1) #phi
 
-        a0_pred, a1_pred, a2_pred, U_pred = PINN.predict(x0, x1, x2)
-        acc_pred = np.hstack((a0_pred, a1_pred, a2_pred))
+        x_pred = tf.data.Dataset.from_tensors((x.astype('float32')))
+
+        U_pred, acc_pred = PINN.predict(x_pred)
 
         x = x_transformer.inverse_transform(x)
         a = a_transformer.inverse_transform(a)
-        a_pred = a_transformer.inverse_transform(a_pred)
+        acc_pred = a_transformer.inverse_transform(acc_pred)
 
         error = np.abs(np.divide((acc_pred - a), a))*100 # Percent Error for each component
         RSE_Call = np.sqrt(np.square(acc_pred - a))
 
-        params = np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()])
+        params = np.sum([np.prod(v.get_shape().as_list()) for v in PINN.network.trainable_variables])
         timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
         entries = {
             'timetag' : [timestamp],
@@ -273,7 +203,10 @@ def main():
             'radius_min' : [radius_min],
             'train_time' : [time_delta],
             'degree' : [max_deg],
+            'params' : [params]
 
+        }
+        training_stats = {
             'rse_mean' : [np.mean(RSE_Call)],
             'rse_std' : [np.std(RSE_Call)],
             'rse_median' : [np.median(RSE_Call)],
@@ -288,8 +221,8 @@ def main():
             'percent_rel_a1_mean' : [np.mean(error[:,1])], 
             'percent_rel_a2_mean' : [np.mean(error[:,2])],
 
-            'params' : [params]
         }
+        config.update(training_stats)
         config.update(entries)
 
         ######################################################################
@@ -392,10 +325,11 @@ def main():
                     biases.append(model.biases[i].eval(session=model.sess))
                 pickle.dump(weights, f)
                 pickle.dump(biases, f)
-        
-        model.sess.close()
+        else:
+            plt.show()
+
         plt.close()
-        #plt.show()
+        #model.sess.close()
 
 if __name__ == '__main__':
     main()
