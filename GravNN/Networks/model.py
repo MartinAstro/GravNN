@@ -100,38 +100,20 @@ class PhysicsInformedNN():
     def predict(self, x_test):
         for x in x_test:
             return self.physics_constraints(x)
-
+    
     @tf.function
     def train_step(self, x, y):
         with tf.GradientTape() as tape:
             U_pred, y_pred = self.physics_constraints(x)
             dynamics_loss = tf.reduce_mean(tf.square((y - y_pred)))
             #representation_loss = tf.reduce_mean(tf.square((u - U_pred)))
-            loss = dynamics_loss
-        gradients = tape.gradient(loss, self.network.trainable_variables)
+            loss_result = dynamics_loss
+        gradients = tape.gradient(loss_result, self.network.trainable_variables)
         self.adam_optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-        return loss
+        #print(loss)
+        return loss_result
 
-    def train(self, dataset, epochs, batch_size):
-        # dataset = dataset.batch(batch_size)
-        # dataset = dataset.shuffle(1000, seed=1234)
-        # dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-        # SGD optimization
-        start = time.time()
-        for epoch in range(epochs):
-            loss = 0.0
-            for step, (x_batch_train, y_batch_train) in enumerate(dataset):
-                loss += self.train_step(x_batch_train, y_batch_train)
-            # for x, y in dataset:
-            #     loss += self.train_step(x, y)
-            if epoch % 10 == 0:
-                print(
-                    f'Epoch {epoch}, '
-                    f'Loss: {loss.numpy():.{4}}, '
-                    f'Time: {time.time()-start:.{4}}, ')
-                start = time.time()
-        
+    def optimize(self, dataset):
         #L-BFGS Optimization
         x = np.concatenate([x for x, y in dataset], axis=0)
         y = np.concatenate([y for x, y in dataset], axis=0)
@@ -192,7 +174,23 @@ class PhysicsInformedNN():
                                                  x_tolerance=1.0*np.finfo(float).eps)
         print(results.converged)
         set_weights(self.network, results.position, sizes_w, sizes_b)
-
+    
+    #@tf.function
+    def train(self, dataset, epochs, batch_size):
+        # SGD optimization
+        start = time.time()
+        for epoch in range(epochs):
+            loss = 0.0
+            for step, (x_batch_train, y_batch_train) in enumerate(dataset):
+                loss += self.train_step(x_batch_train, y_batch_train)
+            if epoch % 10 == 0:
+                print(
+                    f'Epoch {epoch}, '
+                    f'Loss: {loss.numpy():.{4}}, '
+                    f'Time: {time.time()-start:.{4}}, ')
+                start = time.time()
+        
+       
 
 
     def save(self, path):

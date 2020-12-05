@@ -1,5 +1,7 @@
 
 import os
+os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+
 import pickle
 import sys
 import time
@@ -23,6 +25,7 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
 from GravNN.Networks.model import PhysicsInformedNN
 from scipy.optimize import minimize, fmin_l_bfgs_b
+import tensorflow_model_optimization as tfmot
 
 np.random.seed(1234)
 #tf.compat.v1.disable_eager_execution()
@@ -58,7 +61,7 @@ def main():
         "config_nonPINN" : {
             'N_train' : [40000],
             'PINN_flag' : [False],
-            'epochs' : [1000], 
+            'epochs' : [200000], 
             'radius_max' : [planet.radius + 10.0],
             'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
             'acc_noise' : [0.00],
@@ -66,7 +69,7 @@ def main():
             'activation' : ['tanh'],
             'init_file': [None],
             'notes' : ['nonPINN - No potential included'],
-            'batch_size' : [40000]#[8192]#4096]#4096]
+            'batch_size' : [40000]#96]#[8192]#4096]#4096]
         },
     }    
 
@@ -111,62 +114,79 @@ def main():
         x_train = x_train.astype('float32')
         a_train = a_train.astype('float32')
 
-        #dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
-        dataset = tf.data.Dataset.from_tensors((x_train, a_train))
-
-        # def serialize_example(feature0, feature1, feature2, feature3):
-        #     """
-        #     Creates a tf.train.Example message ready to be written to a file.
-        #     """
-        #     # Create a dictionary mapping the feature name to the tf.train.Example-compatible
-        #     # data type.
-        #     feature = {
-        #         'feature0': _int64_feature(feature0),
-        #         'feature1': _int64_feature(feature1),
-        #         'feature2': _bytes_feature(feature2),
-        #         'feature3': _float_feature(feature3),
-        #     }
-
-        #     # Create a Features message using tf.train.Example.
-
-        #     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
-        #     return example_proto.SerializeToString()
-
-
-        # def tf_serialize_example(f0,f1,f2,f3):
-        # tf_string = tf.py_function(
-        #     serialize_example,
-        #     (f0,f1,f2,f3),  # pass these args to the above function.
-        #     tf.string)      # the return type is `tf.string`.
-        # return tf.reshape(tf_string, ()) # The result is a scalar
-        
-        # serialized_features_dataset = dataset.map(tf_serialize_example)
-
-        # def generator():
-        #     for features in features_dataset:
-        #         yield serialize_example(*features)
-
-        # serialized_features_dataset = tf.data.Dataset.from_generator(
-        #     generator, output_types=tf.string, output_shapes=())
-
-        # filename = 'test.tfrecord'
-        # writer = tf.data.experimental.TFRecordWriter(filename)
-        # writer.write(serialized_features_dataset)
-
-        # filenames = [filename]
-        # raw_dataset = tf.data.TFRecordDataset(filenames)
-        # raw_dataset
-
-
         PINN = PhysicsInformedNN(config)
+
+        #dataset = tf.data.Dataset.from_tensors((x_train, a_train))
+
+        dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
+        dataset = dataset.batch(config['batch_size'][0])
+        dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)#tf.contrib.data.AUTOTUNE)
+        dataset = dataset.cache()
+
+        #dataset = dataset.shuffle(1000, seed=1234)
+        #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
 
         start = time.time()
         if train:
+            # from datetime import datetime
+            # stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            # logdir = 'logs/func/%s' % stamp
+            # writer = tf.summary.create_file_writer(logdir)
+            # tf.summary.trace_on(graph=True, profiler=True)
+
+            # from datetime import datetime
+            # logs = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+            # tboard_callback = tf.keras.callbacks.TensorBoard(log_dir = logs,
+            #                                                 histogram_freq = 1,
+            #                                                 profile_batch = '0,2')
+
             PINN.train(dataset=dataset,
                        epochs=config['epochs'][0],
-                       batch_size=config['batch_size'][0])
+                       batch_size=None)
+
+            # with writer.as_default():
+            #     tf.summary.trace_export(
+            #         name="my_func_trace",
+            #         step=0,
+            #         profiler_outdir=logdir)
+
         time_delta = np.round(time.time() - start, 2)
-                    
+        #exit(0)
+
+        ######################################################################
+        ############################# Prune Model    #########################
+        ######################################################################    
+
+        if False:
+            #Pruning https://blog.tensorflow.org/2019/05/tf-model-optimization-toolkit-pruning-API.html
+            pruning_schedule = tfmot.sparsity.keras.PolynomialDecay(
+                                    initial_sparsity=0.0, final_sparsity=0.5,
+                                    begin_step=2000, end_step=4000)
+
+            model_for_pruning = tfmot.sparsity.keras.prune_low_magnitude(model, pruning_schedule=pruning_schedule)
+            PINN.network = model_for_pruning
+            PINN.train(dataset=dataset,
+                        epochs=config['fine_tune_epochs'][0],
+                        batch_size=None)
+
+            #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
+            clustering_params = {
+                'number_of_clusters': 32,
+                'cluster_centroids_init': tfmot.clustering.keras.CentroidInitialization.LINEAR
+            }
+
+            clustered_model = cluster_weights(PINN.network, **clustering_params)
+            PINN.network = clustered_model
+            PINN.train(dataset=dataset,
+                        epochs=config['fine_tune_epochs'][0],
+                        batch_size=None)
+            model_for_serving = tfmot.clustering.keras.strip_clustering(clustered_model)
+
+            # Quantizations: https://blog.tensorflow.org/2020/04/quantization-aware-training-with-tensorflow-model-optimization-toolkit.html
+            #quantized_model = tfmot.quantization.keras.quantize_model(model)
+
 
         ######################################################################
         ############################# Training Stats #########################
