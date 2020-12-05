@@ -60,16 +60,16 @@ def main():
     configurations = {
         "config_nonPINN" : {
             'N_train' : [40000],
-            'PINN_flag' : [False],
+            'PINN_flag' : [True],
             'epochs' : [200000], 
             'radius_max' : [planet.radius + 10.0],
-            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
             'acc_noise' : [0.00],
             'deg_removed' : [2],
             'activation' : ['tanh'],
             'init_file': [None],
             'notes' : ['nonPINN - No potential included'],
-            'batch_size' : [40000]#96]#[8192]#4096]#4096]
+            'batch_size' : [8192]#96]#[8192]#4096]#4096]
         },
     }    
 
@@ -116,44 +116,24 @@ def main():
 
         PINN = PhysicsInformedNN(config)
 
-        #dataset = tf.data.Dataset.from_tensors((x_train, a_train))
-
         dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
+        dataset = dataset.shuffle(1000)
         dataset = dataset.batch(config['batch_size'][0])
         dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)#tf.contrib.data.AUTOTUNE)
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         dataset = dataset.cache()
 
+        #Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
         #dataset = dataset.shuffle(1000, seed=1234)
         #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
 
         start = time.time()
         if train:
-            # from datetime import datetime
-            # stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            # logdir = 'logs/func/%s' % stamp
-            # writer = tf.summary.create_file_writer(logdir)
-            # tf.summary.trace_on(graph=True, profiler=True)
-
-            # from datetime import datetime
-            # logs = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-            # tboard_callback = tf.keras.callbacks.TensorBoard(log_dir = logs,
-            #                                                 histogram_freq = 1,
-            #                                                 profile_batch = '0,2')
-
             PINN.train(dataset=dataset,
                        epochs=config['epochs'][0],
                        batch_size=None)
-
-            # with writer.as_default():
-            #     tf.summary.trace_export(
-            #         name="my_func_trace",
-            #         step=0,
-            #         profiler_outdir=logdir)
-
         time_delta = np.round(time.time() - start, 2)
-        #exit(0)
 
         ######################################################################
         ############################# Prune Model    #########################
