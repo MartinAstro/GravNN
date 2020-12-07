@@ -24,11 +24,15 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
 from GravNN.Networks.model import PhysicsInformedNN
+from GravNN.Networks.Callbacks import CustomCallback
+from GravNN.Networks.model_keras import CustomModel
+from GravNN.Networks.networks import DenseNet
+
 from scipy.optimize import minimize, fmin_l_bfgs_b
 import tensorflow_model_optimization as tfmot
 
+
 np.random.seed(1234)
-#tf.compat.v1.disable_eager_execution()
 
 def main():
     planet = Earth()
@@ -60,23 +64,21 @@ def main():
     configurations = {
         "config_nonPINN" : {
             'N_train' : [40000],
-            'PINN_flag' : [True],
-            'epochs' : [200000], 
+            'PINN_flag' : [False],
+            'epochs' : [100], 
             'radius_max' : [planet.radius + 10.0],
-            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
             'acc_noise' : [0.00],
             'deg_removed' : [2],
             'activation' : ['tanh'],
             'init_file': [None],
             'notes' : ['nonPINN - No potential included'],
-            'batch_size' : [8192]#96]#[8192]#4096]#4096]
+            'batch_size' : [40000]#96]#[8192]#4096]#4096]
         },
     }    
 
     for key, config in configurations.items():
         tf.keras.backend.clear_session()
-        #tf.debugging.set_log_device_placement(True)
-        #tf.reset_default_graph()
 
         radius_min = planet.radius
 
@@ -114,55 +116,79 @@ def main():
         x_train = x_train.astype('float32')
         a_train = a_train.astype('float32')
 
-        PINN = PhysicsInformedNN(config)
+        inputs, output = DenseNet(config['layers'][0], config['activation'][0])
+        model = CustomModel(config, network)
 
         dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
-        dataset = dataset.shuffle(1000)
+        dataset = dataset.shuffle(1000, seed=1234)
         dataset = dataset.batch(config['batch_size'][0])
         dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         dataset = dataset.cache()
 
         #Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
-        #dataset = dataset.shuffle(1000, seed=1234)
-        #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
 
         start = time.time()
         if train:
-            PINN.train(dataset=dataset,
-                       epochs=config['epochs'][0],
-                       batch_size=None)
+            model.compile(optimizer="adam", loss="mse")#, metrics=["mae"])
+            history = model.fit(dataset, 
+                                epochs=config['epochs'][0], 
+                                verbose=0,
+                                callbacks=[CustomCallback()])
+            print("Params before pruning: " + str(np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])))
+
         time_delta = np.round(time.time() - start, 2)
 
         ######################################################################
         ############################# Prune Model    #########################
         ######################################################################    
 
-        if False:
+        if True:
             #Pruning https://blog.tensorflow.org/2019/05/tf-model-optimization-toolkit-pruning-API.html
-            pruning_schedule = tfmot.sparsity.keras.PolynomialDecay(
-                                    initial_sparsity=0.0, final_sparsity=0.5,
-                                    begin_step=2000, end_step=4000)
+            import tempfile
+            pruning_params = {
+                                'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
+                                    initial_sparsity=0.00,
+                                    final_sparsity=0.50,
+                                    begin_step=0,
+                                    end_step=10)
+                            }
+            pruning_params = {
+                                'pruning_schedule': tfmot.sparsity.keras.ConstantSparsity(
+                                    target_sparsity=0.50,
+                                    begin_step=0,
+                                    frequency=1)
+                            }
+            model_for_pruning = tfmot.sparsity.keras.prune_low_magnitude(model.network, **pruning_params)
+            model.network = model_for_pruning
+            model.compile(optimizer='adam', loss='mse')
+            logdir = tempfile.mkdtemp()
+            model.network.fit(dataset, 
+                                epochs=100, 
+                                verbose=0,
+                                callbacks = [
+                                            CustomCallback(),
+                                            tfmot.sparsity.keras.UpdatePruningStep(),
+                                            tfmot.sparsity.keras.PruningSummaries(log_dir=logdir),
+                                            ])
 
-            model_for_pruning = tfmot.sparsity.keras.prune_low_magnitude(model, pruning_schedule=pruning_schedule)
-            PINN.network = model_for_pruning
-            PINN.train(dataset=dataset,
-                        epochs=config['fine_tune_epochs'][0],
-                        batch_size=None)
+            #model.network = tfmot.sparsity.keras.strip_pruning(model.network)
+            print("Params after pruning: " + str(np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])))
+            model.network.summary()
 
-            #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
-            clustering_params = {
-                'number_of_clusters': 32,
-                'cluster_centroids_init': tfmot.clustering.keras.CentroidInitialization.LINEAR
-            }
+            # #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
+            # clustering_params = {
+            #     'number_of_clusters': 32,
+            #     'cluster_centroids_init': tfmot.clustering.keras.CentroidInitialization.LINEAR
+            # }
 
-            clustered_model = cluster_weights(PINN.network, **clustering_params)
-            PINN.network = clustered_model
-            PINN.train(dataset=dataset,
-                        epochs=config['fine_tune_epochs'][0],
-                        batch_size=None)
-            model_for_serving = tfmot.clustering.keras.strip_clustering(clustered_model)
+            # clustered_model = cluster_weights(model.network, **clustering_params)
+            # model.network = clustered_model
+            # model.fit(dataset, 
+            #                     epochs=config['epochs'][0], 
+            #                     verbose=0,
+            #                     callbacks=[CustomCallback()])
+            # model_for_serving = tfmot.clustering.keras.strip_clustering(clustered_model)
 
             # Quantizations: https://blog.tensorflow.org/2020/04/quantization-aware-training-with-tensorflow-model-optimization-toolkit.html
             #quantized_model = tfmot.quantization.keras.quantize_model(model)
@@ -184,9 +210,10 @@ def main():
         x = x_transformer.transform(x)
         a = a_transformer.transform(a)
 
-        x_pred = tf.data.Dataset.from_tensors((x.astype('float32')))
 
-        U_pred, acc_pred = PINN.predict(x_pred)
+        x_pred = tf.data.Dataset.from_tensor_slices((x.astype('float32')))
+
+        U_pred, acc_pred = model.predict(x.astype('float32'))
 
         x = x_transformer.inverse_transform(x)
         a = a_transformer.inverse_transform(a)
@@ -195,7 +222,7 @@ def main():
         error = np.abs(np.divide((acc_pred - a), a))*100 # Percent Error for each component
         RSE_Call = np.sqrt(np.square(acc_pred - a))
 
-        params = np.sum([np.prod(v.get_shape().as_list()) for v in PINN.network.trainable_variables])
+        params = np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])
         timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
         entries = {
             'timetag' : [timestamp],
