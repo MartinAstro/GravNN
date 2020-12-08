@@ -27,6 +27,8 @@ from GravNN.Networks.model import PhysicsInformedNN
 from GravNN.Networks.Callbacks import CustomCallback
 from GravNN.Networks.model_keras import CustomModel
 from GravNN.Networks.networks import DenseNet
+from GravNN.Networks import utils
+from GravNN.Networks.Compression import pruning_training_loop
 
 from scipy.optimize import minimize, fmin_l_bfgs_b
 import tensorflow_model_optimization as tfmot
@@ -116,8 +118,9 @@ def main():
         x_train = x_train.astype('float32')
         a_train = a_train.astype('float32')
 
-        inputs, output = DenseNet(config['layers'][0], config['activation'][0])
-        model = CustomModel(config, network)
+        inputs, outputs = DenseNet(config['layers'][0], config['activation'][0])
+        model = CustomModel(inputs, outputs)
+        model.set_config(config)
 
         dataset = tf.data.Dataset.from_tensor_slices((x_train, a_train))
         dataset = dataset.shuffle(1000, seed=1234)
@@ -135,8 +138,6 @@ def main():
                                 epochs=config['epochs'][0], 
                                 verbose=0,
                                 callbacks=[CustomCallback()])
-            print("Params before pruning: " + str(np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])))
-
         time_delta = np.round(time.time() - start, 2)
 
         ######################################################################
@@ -145,7 +146,6 @@ def main():
 
         if True:
             #Pruning https://blog.tensorflow.org/2019/05/tf-model-optimization-toolkit-pruning-API.html
-            import tempfile
             pruning_params = {
                                 'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
                                     initial_sparsity=0.00,
@@ -159,22 +159,21 @@ def main():
                                     begin_step=0,
                                     frequency=1)
                             }
-            model_for_pruning = tfmot.sparsity.keras.prune_low_magnitude(model.network, **pruning_params)
-            model.network = model_for_pruning
-            model.compile(optimizer='adam', loss='mse')
-            logdir = tempfile.mkdtemp()
-            model.network.fit(dataset, 
-                                epochs=100, 
-                                verbose=0,
-                                callbacks = [
-                                            CustomCallback(),
-                                            tfmot.sparsity.keras.UpdatePruningStep(),
-                                            tfmot.sparsity.keras.PruningSummaries(log_dir=logdir),
-                                            ])
+            pruned_model = tfmot.sparsity.keras.prune_low_magnitude(model, **pruning_params)
+            pruned_model = pruning_training_loop(pruned_model, dataset, config)
+            pruned_model = tfmot.sparsity.keras.strip_pruning(pruned_model)
 
-            #model.network = tfmot.sparsity.keras.strip_pruning(model.network)
-            print("Params after pruning: " + str(np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])))
-            model.network.summary()
+            # Have to write over custom training loop again
+            pruned_model = CustomModel(pruned_model.inputs, pruned_model.outputs)
+            pruned_model.set_config(config)
+            pruned_model.compile(optimizer='adam', loss='mse')
+
+            print("Params before pruning: " + str(utils.count_nonzero_params(model)))
+            print("Params after pruning:" + str(utils.count_nonzero_params(pruned_model)))
+
+            print("Size before pruning: " + str(utils.get_gzipped_model_size(model)))
+            print("Size after pruning: " + str(utils.get_gzipped_model_size(pruned_model)))
+
 
             # #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
             # clustering_params = {
@@ -182,8 +181,8 @@ def main():
             #     'cluster_centroids_init': tfmot.clustering.keras.CentroidInitialization.LINEAR
             # }
 
-            # clustered_model = cluster_weights(model.network, **clustering_params)
-            # model.network = clustered_model
+            # clustered_model = cluster_weights(model, **clustering_params)
+            # model = clustered_model
             # model.fit(dataset, 
             #                     epochs=config['epochs'][0], 
             #                     verbose=0,
@@ -222,7 +221,7 @@ def main():
         error = np.abs(np.divide((acc_pred - a), a))*100 # Percent Error for each component
         RSE_Call = np.sqrt(np.square(acc_pred - a))
 
-        params = np.sum([np.prod(v.get_shape().as_list()) for v in model.network.trainable_variables])
+        params = np.sum([np.prod(v.get_shape().as_list()) for v in model.trainable_variables])
         timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
         entries = {
             'timetag' : [timestamp],
