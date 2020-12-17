@@ -17,7 +17,7 @@ from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
-from GravNN.Visualization.Grid import Grid
+from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
@@ -25,93 +25,89 @@ from scipy.optimize import minimize, fmin_l_bfgs_b
 import tensorflow_probability as tfp
 
 np.random.seed(1234)
-#tf.set_random_seed(1234)
 
-#tf.compat.v1.disable_eager_execution()
-# physical_devices = tf.config.list_physical_devices('GPU') 
-# tf.config.experimental.set_memory_growth(physical_devices[0], True)
-
-class PhysicsInformedNN():
+class CustomModel(tf.keras.Model):
     # Initialize the class
-    def __init__(self, config=None):
+    def __init__(self, config, network):
+        super(CustomModel, self).__init__()
         self.config = config
+        self.network = network
 
-        # Initialize NN              
-        self.network = self.neural_net()
-
-        # tfconfig = tf.ConfigProto()
-        # tfconfig.gpu_options.allow_growth = True
-
-        # self.sess = tf.Session(config=tfconfig)
-        # self.sess.run(tf.global_variables_initializer())        
-        #self.saver = tf.train.Saver(max_to_keep=None)
-
-        self.loss = tf.keras.metrics.MeanSquaredError()
-        self.adam_optimizer = tf.keras.optimizers.Adam()
-        #self.network.compile(optimizer=self.adam_optimizer, loss=self.loss)
-
-        
-    def load_weights_biases(self, layers):        
-        weights = []
-        biases = []
-        with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
-            weights_init = pickle.load(f)
-            biases_init = pickle.load(f)
-        for l in range(0, len(layers)  - 1):
-            weights.append(tf.Variable(weights_init[l], dtype=tf.float32))
-            biases.append(tf.Variable(biases_init[l], dtype=tf.float32))  
-        return weights, biases
-    
-    def neural_net(self):
-        """
-        Define the NN which acts as the solution to the PDE
-        """
-        if self.config['init_file'][0] is not None:
-            model = self.load(self.config['init_file'][0])
-        else:
-            layers = self.config['layers'][0]
-            # generate NN  
-            self.inputs = tf.keras.Input(shape=(layers[0],))
-            x = self.inputs
-            for i in range(1,len(layers)-1):
-                x = tf.keras.layers.Dense(units=layers[i], 
-                                            activation=self.config['activation'][0], 
-                                            kernel_initializer='glorot_normal')(x)
-            self.outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                            activation='linear', 
-                                            kernel_initializer='glorot_normal')(x)
-            model = tf.keras.Model(inputs=self.inputs, outputs=self.outputs)
-        return model
-
-    def physics_constraints(self, x):
-        # PINN Constrains
+    @tf.function
+    def call(self, x, training=None):
+        # PINN Constraints
         if self.config['PINN_flag'][0]:
-            assert self.network.layers[-1].output_shape[1] == 1
-            with tf.GradientTape() as tape:
-                tape.watch(x)
-                U_pred = self.network(x)
-            output = -tape.gradient(U_pred, x)
-        else: 
-            output = self.network(x)
-            U_pred = tf.constant(0)#None
+            if self.config['basis'][0] == 'spherical':
+                # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
+                with tf.GradientTape() as tape:
+                    tape.watch(x)
+                    U_pred = self.network(x, training)
+                gradients = tape.gradient(U_pred, x)
+                # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
+                a0 = -gradients[:,0]
+                # In wiki article, theta is 0-180 deg (which has been phi in our definition)
+                theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
+                a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
+                a2 = -(1.0/x[:,0])*gradients[:,2]
 
-        return U_pred, output
-
-    def predict(self, x_test):
-        for x in x_test:
-            return self.physics_constraints(x)
+                #print(a2.shape)
+                a_pred = tf.concat([[a0], [a1], [a2]], 0)
+                a_pred = tf.reshape(a_pred, [-1, 3])
+            else:                
+                with tf.GradientTape() as tape:
+                    tape.watch(x)
+                    U_pred = self.network(x, training)
+                a_pred = -tape.gradient(U_pred, x)
+        else:  
+            a_pred = self.network(x, training)
+            U_pred = tf.constant(0.0)#None
+        return U_pred, a_pred
     
     @tf.function
-    def train_step(self, x, y):
+    def train_step(self, data):
+        x, y = data
         with tf.GradientTape() as tape:
-            U_pred, y_pred = self.physics_constraints(x)
-            dynamics_loss = tf.reduce_mean(tf.square((y - y_pred)))
-            #representation_loss = tf.reduce_mean(tf.square((u - U_pred)))
-            loss_result = dynamics_loss
-        gradients = tape.gradient(loss_result, self.network.trainable_variables)
-        self.adam_optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-        #print(loss)
-        return loss_result
+            U_pred, a_pred = self(x, training=True)
+            #a_pred = tf.where(tf.math.is_inf(a_pred), y, a_pred)
+            loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
+
+
+            # # Periodic boundary conditions 
+            # if self.config['basis'][0] == 'spherical':
+                
+            #     x_periodic = tf.add(x, [0, 2, 2])
+            #     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
+            #     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
+            #     loss += self.compiled_loss(y, a_pred_periodic)
+
+            #     x_periodic = tf.add(x, [0, -2, -2])
+            #     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
+            #     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
+            #     loss += self.compiled_loss(y, a_pred_periodic)
+
+            #     # 0 potential at infinity. 
+            #     x_infinite = tf.multiply(x, [1E308, 1, 1])
+            #     U_pred_infinite, a_pred_infinite = self(x_infinite, training=True)
+            #     a_pred_infinite = tf.where(tf.math.is_inf(a_pred_infinite), y, a_pred_infinite)
+            #     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
+            #     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
+
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        self.compiled_metrics.update_state(y, a_pred)
+        # Return a dict mapping metric names to current value
+        return {m.name: m.result() for m in self.metrics}
+        
+    @tf.function
+    def test_step(self, data):
+        x, y = data
+        U_pred, a_pred = self(x, training=False)
+        loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
+
+        self.compiled_metrics.update_state(y, a_pred)
+        # Return a dict mapping metric names to current value
+        return {m.name: m.result() for m in self.metrics}
 
     def optimize(self, dataset):
         #L-BFGS Optimization
@@ -120,14 +116,19 @@ class PhysicsInformedNN():
 
         sizes_w = []
         sizes_b = []
-        for i, width in enumerate(self.config['layers'][0]):
-            if i != 1:
-                sizes_w.append(int(width * self.config['layers'][0][1]))
-                sizes_b.append(int(width if i != 0 else self.config['layers'][0][1]))
-
+        for i, layer in enumerate(self.layers[0].layers):
+            if i != 0 and not 'dropout' in layer.name:
+                weights = layer.kernel.shape[0]
+                for j in range(1,len(layer.kernel.shape)):
+                    weights *= layer.kernel.shape[j]
+                sizes_w.append(int(weights))
+                sizes_b.append(int(layer.bias.shape[0]))
 
         def set_weights(model, w, sizes_w, sizes_b):
-            for i, layer in enumerate(model.layers[1:]):
+            i = 0
+            for layer in model.layers[0].layers[1:]:
+                if 'dropout' in layer.name:
+                    continue
                 start_weights = sum(sizes_w[:i]) + sum(sizes_b[:i])
                 end_weights = sum(sizes_w[:i+1]) + sum(sizes_b[:i])
                 weights = w[start_weights:end_weights]
@@ -136,6 +137,7 @@ class PhysicsInformedNN():
                 biases = w[end_weights:end_weights + sizes_b[i]]
                 weights_biases = [weights, biases]
                 layer.set_weights(weights_biases)
+                i += 1
 
         def get_weights(model):
             w = []
@@ -151,50 +153,38 @@ class PhysicsInformedNN():
         def flatten_variables(variables):
             variables_flat = []
             for v in variables:
+                # The gradient with respect to the final bias is non existant TODO: Figure out why. 
+                if v is None:
+                    v = 0.0
                 variables_flat.append(tf.reshape(v, [-1]))
             variables_flat = tf.concat(variables_flat, 0)
             return variables_flat
 
+        @tf.function
         def loss_and_gradient(params):
             with tf.GradientTape() as tape:
-                set_weights(self.network, params, sizes_w, sizes_b)
-                U_pred, y_pred = self.physics_constraints(x)
+                U_pred, y_pred = self(x)
+                y_pred = tf.where(tf.math.is_inf(y_pred), y, y_pred)
                 dynamics_loss = tf.reduce_mean(tf.square((y - y_pred)))
-            print(dynamics_loss.numpy())
-            gradients = tape.gradient(dynamics_loss, self.network.trainable_variables)
+            gradients = tape.gradient(dynamics_loss, self.trainable_variables)
+            return dynamics_loss, gradients 
+
+        def lgbfgs_loss_and_gradient(params):
+            set_weights(self, params, sizes_w, sizes_b)
+            loss, gradients = loss_and_gradient(params)
+            print(loss.numpy())
             grad_flat = flatten_variables(gradients)
-            return dynamics_loss, grad_flat
+            return loss, grad_flat
     
         # # SciPy optimization
-        params = flatten_variables(self.network.trainable_variables)
-        results = tfp.optimizer.lbfgs_minimize(loss_and_gradient,
+        params = flatten_variables(self.trainable_variables)
+        start_time = time.time()
+        results = tfp.optimizer.lbfgs_minimize(lgbfgs_loss_and_gradient,
                                                  params, 
-                                                 max_iterations=5000,
+                                                 max_iterations=50000,
                                                  parallel_iterations=multiprocessing.cpu_count(),
                                                  x_tolerance=1.0*np.finfo(float).eps)
-        print(results.converged)
-        set_weights(self.network, results.position, sizes_w, sizes_b)
-    
-    #@tf.function
-    def train(self, dataset, epochs, batch_size):
-        # SGD optimization
-        start = time.time()
-        for epoch in range(epochs):
-            loss = 0.0
-            for step, (x_batch_train, y_batch_train) in enumerate(dataset):
-                loss += self.train_step(x_batch_train, y_batch_train)
-            if epoch % 10 == 0:
-                print(
-                    f'Epoch {epoch}, '
-                    f'Loss: {loss.numpy():.{4}}, '
-                    f'Time: {time.time()-start:.{4}}, ')
-                start = time.time()
-        
-       
+        print("Converged: " + str(results.converged) +" ; In " + str(time.time() - start_time) + " seconds")
+        set_weights(self, results.position, sizes_w, sizes_b)
 
-
-    def save(self, path):
-        self.network.save(path)
         
-    def load(self, path):
-        return tf.keras.models.load_model(path)

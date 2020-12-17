@@ -124,53 +124,54 @@ class SphericalHarmonics(GravityModelBase):
             self.loadSH_csv()
         
 
-    def load_regression(self, reg_solution):
+    def load_regression(self, reg_solution, planet):
         self.file_directory += "_Regress"
-        self.mu = self.trajectory.celestial_body.mu
-        self.radEquator =self.trajectory.celestial_body.radius
+        self.mu = planet.mu
+        self.radEquator = planet.radius
+        self.C_lm = reg_solution.C_lm
+        self.S_lm = reg_solution.S_lm
 
-        reg_solution = np.array(reg_solution)
-        self.C_lm = []
-        self.S_lm = []
-        C_lm = []
-        S_lm = []
+        # self.C_lm = []
+        # self.S_lm = []
+        # C_lm = []
+        # S_lm = []
 
-        # Check if C00 is included as it should be equal to 1.0
-        C00_11_included = False
-        l = 2
-        included_coef = 3
-        if abs(reg_solution[0] - 1.0) < 10E-10:
-            C00_11_included = True
-            l = 0
-            included_coef = 0
-        else:
-            self.C_lm.append([1.0])
-            self.C_lm.append([0.0, 0.0])
-            self.S_lm.append([0.0])
-            self.S_lm.append([0.0, 0.0])
+        # # Check if C00 is included as it should be equal to 1.0
+        # C00_11_included = False
+        # l = 2
+        # included_coef = 3
+        # if abs(reg_solution.C_lm[0] - 1.0) < 10E-10:
+        #     C00_11_included = True
+        #     l = 0
+        #     included_coef = 0
+        # else:
+        #     self.C_lm.append([1.0])
+        #     self.C_lm.append([0.0, 0.0])
+        #     self.S_lm.append([0.0])
+        #     self.S_lm.append([0.0, 0.0])
 
 
-        # Separate C_lm and S_lm
-        for i in range(int(len(reg_solution)/2)):
-            C_lm.append(reg_solution[2*i])
-            S_lm.append(reg_solution[2*i + 1])
+        # # Separate C_lm and S_lm
+        # for i in range(int(len(reg_solution)/2)):
+        #     C_lm.append(reg_solution[2*i])
+        #     S_lm.append(reg_solution[2*i + 1])
         
-        # Format coefficients into row by degree
-        C_row = []
-        S_row  = []
-        for i in range(len(C_lm)):
-            N = (l+1)*(l+2)/2 - included_coef
-            C_row.append(C_lm[i])
-            S_row.append(S_lm[i])
-            if i >= N -1:
-                l += 1
-                self.C_lm.append(C_row)
-                self.S_lm.append(S_row)
-                C_row = []
-                S_row = []
+        # # Format coefficients into row by degree
+        # C_row = []
+        # S_row  = []
+        # for i in range(len(C_lm)):
+        #     N = (l+1)*(l+2)/2 - included_coef
+        #     C_row.append(C_lm[i])
+        #     S_row.append(S_lm[i])
+        #     if i >= N -1:
+        #         l += 1
+        #         self.C_lm.append(C_row)
+        #         self.S_lm.append(S_row)
+        #         C_row = []
+        #         S_row = []
 
-        if self.degree is None:
-            self.degree = l -2
+        # if self.degree is None:
+        #     self.degree = l -2
         
         return 
     

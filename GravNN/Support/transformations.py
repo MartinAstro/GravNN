@@ -13,10 +13,6 @@ def sphere2cart(data):
     Returns:
         [np.array]: [cartesian output dimension [3xM]]
     """
-    try:
-        data[:,0]
-    except:
-        data = np.array(data)
     r = data[:,0] #[0, inf]
     theta = data[:,1] * np.pi / 180.0 # [0, 360]
     phi = data[:,2]* np.pi / 180.0 # [0, 180]
@@ -25,7 +21,7 @@ def sphere2cart(data):
     y = r*np.sin(phi)*np.sin(theta)
     z = r*np.cos(phi)
 
-    return np.transpose(np.array([x,y,z]))
+    return np.column_stack((x,y,z))
 
 @njit(parallel=True,cache=True)
 def cart2sph(carts):
@@ -103,7 +99,7 @@ def invert_projection(positions, accelerations):
     Returns:
         np.array: acceleration in cartesian coordinates
     """
-    invert_acc = np.zeros(np.shape(accelerations))
+    invert_acc = np.zeros(accelerations.shape)
     for i in prange(0, len(positions)):
         theta = positions[i,1] * np.pi/180.0 - np.pi
         phi = positions[i,2] * np.pi/180.0 
@@ -122,5 +118,7 @@ def invert_projection(positions, accelerations):
                         phi_hat])
                                     
         NB = np.transpose(BN)
-        invert_acc[i,:] = np.dot(NB, accelerations[i])
+        invert_acc[i,:] = np.dot(NB, accelerations[i])#[np.dot(NB[0,:], accelerations[i]),
+                            #np.dot(NB[1,:], accelerations[i]),
+                            #np.dot(NB[2,:], accelerations[i])]
     return invert_acc

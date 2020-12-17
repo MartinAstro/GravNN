@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pickle
 
-from GravNN.Visualization.Grid import Grid
+from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
@@ -31,13 +31,18 @@ def main():
     # df_file = "sh_stats_world_R100.data"
     # trajectory = DHGridDist(planet, radius_min+100, degree=density_deg)
 
-    df_file = "sh_stats_world_R1000.data"
-    trajectory = DHGridDist(planet, radius_min+1000, degree=density_deg)
+    # df_file = "sh_stats_world_R1000.data"
+    # trajectory = DHGridDist(planet, radius_min+1000, degree=density_deg)
 
-    df_file = "sh_stats_world_R10000.data"
-    trajectory = DHGridDist(planet, radius_min+10000, degree=density_deg)
+    # df_file = "sh_stats_world_R10000.data"
+    # trajectory = DHGridDist(planet, radius_min+10000, degree=density_deg)
 
 
+    df_file = "sh_stats_LEO.data"
+    trajectory = DHGridDist(planet, planet.radius + 420000.0, degree=density_deg)
+
+    df_file = "sh_stats_GEO.data"
+    trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
 
 
 
@@ -59,6 +64,7 @@ def main():
         error_Call_m_C22 = np.abs(np.divide((Clm_a - Call_a),Call_a-Call_a_C22))*100 # Percent Error for each component
 
         RSE_Call = np.sqrt(np.square(Clm_a - Call_a))
+        RSE_norm_Call = np.linalg.norm(RSE_Call, axis=1)
         
         grid_true = Grid(trajectory=trajectory, accelerations=Call_a-Call_a_C22)
         grid_pred = Grid(trajectory=trajectory, accelerations=Clm_a-Call_a_C22)
@@ -84,9 +90,9 @@ def main():
                 'percent_a1_mean' : [np.mean(error_Call[:,1])], 
                 'percent_a2_mean' : [np.mean(error_Call[:,2])], 
 
-                'rse_mean' : [np.mean(RSE_Call)],
-                'rse_std' : [np.std(RSE_Call)],
-                'rse_median' : [np.median(RSE_Call)],
+                'rse_mean' : [np.mean(RSE_norm_Call)],
+                'rse_std' : [np.std(RSE_norm_Call)],
+                'rse_median' : [np.median(RSE_norm_Call)],
                 'rse_a0_mean' : [np.mean(RSE_Call[:,0])],
                 'rse_a1_mean' : [np.mean(RSE_Call[:,1])],
                 'rse_a2_mean' : [np.mean(RSE_Call[:,2])],

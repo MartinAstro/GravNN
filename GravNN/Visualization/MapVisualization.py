@@ -21,7 +21,7 @@ class MapVisualization(VisualizationBase):
             self.scale = 1.0
         pass
 
-    def new_map(self, grid, vlim=None, log_scale=False):
+    def new_map(self, grid, vlim=None, log_scale=False, alpha=None, cmap=None):
         tick_interval = [30,30] # [45, 45]
         yticks = np.linspace(-90, 90, num=180//tick_interval[1]+1, endpoint=True, dtype=int)
         xticks = np.linspace(0, 360, num=360//tick_interval[0]+1, endpoint=True, dtype=int)
@@ -36,10 +36,12 @@ class MapVisualization(VisualizationBase):
         ax = plt.gca()
         ax.set_xlabel("Longitude",  fontsize=9)
         ax.set_ylabel("Latitude",  fontsize=9)
-        plt.xticks(xloc,labels=xticks_labels, fontsize=6)
-        plt.yticks(yloc, labels=yticks_labels, fontsize=6)
-        # plt.xticks([])
-        # plt.yticks([])
+        try:
+            plt.xticks(xloc,labels=xticks_labels, fontsize=6)
+            plt.yticks(yloc, labels=yticks_labels, fontsize=6)
+        except:
+            plt.xticks([])
+            plt.yticks([])
         grid = np.transpose(grid) # imshow takes (MxN)
         if log_scale:
             if vlim is not None:
@@ -50,9 +52,9 @@ class MapVisualization(VisualizationBase):
             norm = None
 
         if vlim is not None:
-            im = plt.imshow(grid*self.scale, vmin=vlim[0], vmax=vlim[1], norm=norm)
+            im = plt.imshow(grid*self.scale, vmin=vlim[0], vmax=vlim[1], norm=norm, alpha=alpha, cmap=cmap)
         else:
-            im = plt.imshow(grid*self.scale, norm=norm)
+            im = plt.imshow(grid*self.scale, norm=norm, alpha=alpha, cmap=cmap)
         return im
 
 
@@ -71,7 +73,7 @@ class MapVisualization(VisualizationBase):
         # of ax and the padding between cax and ax will be fixed at 0.05 inch.
 
     def plot_grid(self, grid, label, vlim=None):
-        fig,ax = self.newFig()
+        fig, ax = self.newFig()
         im = self.new_map(grid, vlim)
         self.add_colorbar(im, label,vlim)
         return fig, ax

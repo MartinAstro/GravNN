@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 
-from GravNN.Visualization.Grid import Grid
+from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
@@ -32,6 +32,47 @@ def get_grid(degree, map_type='world'):
     Clm_a = Clm_r0_gm.load()
     return Grid(trajectory, Clm_a)
 
+def acceleration_histogram_masks(map_type):
+
+    grid_true = get_grid(1000, map_type)
+    grid_C00 = get_grid(0, map_type)
+    grid_C22 = get_grid(2, map_type)
+
+    grid_Call_m_C22 = grid_true - grid_C22
+
+    # Histogram on two scales
+    perturbation_distribution = grid_Call_m_C22.total.reshape((-1,))
+    mean = np.mean(perturbation_distribution)
+    sigma = np.std(perturbation_distribution)
+    outliers  = perturbation_distribution[perturbation_distribution > mean + 4*sigma]
+    compliment = perturbation_distribution[perturbation_distribution < mean + 4*sigma]
+
+    #sets up the axis and gets histogram data
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.hist(compliment, bins=100, color='g')
+    ax2.hist(outliers, bins=100, color='r')
+    plt.show()
+
+    ax1.hist([compliment, outliers], color=['g', 'r'])
+    n, bins, patches = ax1.hist([compliment, outliers])
+    ax1.cla() #clear the axis
+
+    #plots the histogram data
+    width = (bins[1] - bins[0]) * 0.4
+    bins_shifted = bins + width
+    ax1.bar(bins[:-1], n[0], width, align='edge', color=colors[0])
+    ax2.bar(bins_shifted[:-1], n[1], width, align='edge', color=colors[1])
+
+    #finishes the plot
+    ax1.set_ylabel("Count", color=colors[0])
+    ax2.set_ylabel("Count", color=colors[1])
+    ax1.tick_params('y', colors=colors[0])
+    ax2.tick_params('y', colors=colors[1])
+    plt.tight_layout()
+    plt.show()
+
+
 def acceleration_distribution_plots(map_type):
 
     grid_true = get_grid(1000, map_type)
@@ -41,42 +82,45 @@ def acceleration_distribution_plots(map_type):
     grid_C4040 = get_grid(40, map_type)
 
     # Primary Figures 
-
-    plt.figure()
+    map_vis.newFig()
     plt.hist(grid_true.total.reshape((-1,)), 100)
-    plt.xlabel("||a|| [m/s^2]")
+    plt.xlabel(r"$||a||$ [m/$s^2$]")
     plt.ylabel("Frequency")
     map_vis.save(plt.gcf(), directory + "a_norm_hist.pdf")
 
     grid_Call_m_C00 = grid_true - grid_C00
-    plt.figure()
+    map_vis.newFig()
     plt.hist(grid_Call_m_C00.total.reshape((-1,)), 100)
-    plt.xlabel("||a-a0|| [m/s^2]")
+    plt.xlabel(r"$||a-a_0||$ [m/$s^2$]")
+    plt.ylabel("Frequency")
 
     grid_Call_m_C22 = grid_true - grid_C22
-    plt.figure()
+    map_vis.newFig()
     plt.hist(grid_Call_m_C22.total.reshape((-1,)), 100)
-    plt.xlabel("||a-(a0 + grad(U_c22))|| [m/s^2]")
+    plt.xlabel(r"$||a-(a_0 + \nabla(U_{c_{22}}))||$ [m/$s^2$]")
     plt.ylabel("Frequency")
     map_vis.save(plt.gcf(), directory + "a_norm_m_grad_C22_hist.pdf")
 
 
-    grid_Call_m_C33 = grid_true - grid_C33
-    plt.figure()
-    plt.hist(grid_Call_m_C33.total.reshape((-1,)), 100)
-    plt.xlabel("||a-(a0 + grad(U_c33))|| [m/s^2]")
+    # grid_Call_m_C33 = grid_true - grid_C33
+    # plt.figure()
+    # plt.hist(grid_Call_m_C33.total.reshape((-1,)), 100)
+    # plt.xlabel(r"$||a-(a_0 + \text{grad}(U_{c_{33}}))||$ [m/$s^2$]")
+    # plt.ylabel("Frequency")
 
 
     # Supplimentary Figures 
 
-    plt.figure()
-    plt.hist(grid_C22.total.reshape((-1,)), 100)
-    plt.xlabel("||aC22|| [m/s^2]")
+    # plt.figure()
+    # plt.hist(grid_C22.total.reshape((-1,)), 100)
+    # plt.xlabel(r"$||a_{C22}||$ [m/$s^2$]")
+    # plt.ylabel("Frequency")
 
-    grid_Call_m_C4040 = grid_true - grid_C4040
-    plt.figure()
-    plt.hist(grid_Call_m_C4040.total.reshape((-1,)), 100)
-    plt.xlabel("||a-(a0 + grad(U_c4040))|| [m/s^2]")
+    # grid_Call_m_C4040 = grid_true - grid_C4040
+    # plt.figure()
+    # plt.hist(grid_Call_m_C4040.total.reshape((-1,)), 100)
+    # plt.xlabel(r"$||a-(a0 + grad(U_c4040))||$ [m/$s^2$]")
+    # plt.ylabel("Frequency")
 
 def cumulative_distribution():
     grid_true = get_grid(1000, map_type)
@@ -183,7 +227,13 @@ def acceleration_masks():
     grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
 
 
-map_vis = VisualizationBase(halt_formatting=True)
+map_vis = VisualizationBase(halt_formatting=False)
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.rc('font', size=12.0)
+
+#map_vis.fig_size = (3, 1.8)
 
 directory = os.path.abspath('.') +"/Plots/OneOff/"
 os.makedirs(directory, exist_ok=True)
@@ -191,10 +241,8 @@ os.makedirs(directory, exist_ok=True)
 def main():
     map_type = 'pacific'
     map_type = 'world'
-
-
-
-    acceleration_distribution_plots(map_type)
+    #acceleration_distribution_plots(map_type)
+    acceleration_histogram_masks(map_type)
     # acceleration_histogram_std()
     # cumulative_distribution()
     # acceleration_masks()

@@ -14,36 +14,28 @@ from numba import jit
 
 class StateObject(object):
 
-    def __init__(self, gravityModel, override=False):
+    def __init__(self, trajectory, accelerations, override=False):
 
-        self.N = gravityModel.trajectory.points 
 
-        # Generate shapes for grids
-        acc_cart = gravityModel.load(override=override)
+        self.positions = trajectory.positions
+        self.accelerations = accelerations
 
-        pos_sph = cart2sph(gravityModel.trajectory.positions)
-        pos_sph = check_fix_radial_precision_errors(pos_sph)
-        acc_sph = transformations.project_acceleration(pos_sph, acc_cart)
-
-        self.positions = pos_sph
-        self.accelerations = acc_sph
-
-        self.total = np.linalg.norm(self.accelerations,axis=1).reshape((self.N,))
-        self.r = self.accelerations[:,0].reshape((self.N,))
-        self.theta = self.accelerations[:,1].reshape((self.N,))
-        self.phi = self.accelerations[:,2].reshape((self.N,))
+        self.total = np.linalg.norm(self.accelerations,axis=1)
+        self.r = self.accelerations[:,0]
+        self.theta = self.accelerations[:,1]
+        self.phi = self.accelerations[:,2]
 
 
     def __sub__(self, other):
         newStateObj = deepcopy(self)
         newStateObj.accelerations -= other.accelerations
 
-        newStateObj.r =newStateObj.accelerations[:,0].reshape((newStateObj.N))
-        newStateObj.theta = newStateObj.accelerations[:,1].reshape((newStateObj.N))
-        newStateObj.phi = newStateObj.accelerations[:,2].reshape((newStateObj.N))
+        newStateObj.r =newStateObj.accelerations[:,0]
+        newStateObj.theta = newStateObj.accelerations[:,1]
+        newStateObj.phi = newStateObj.accelerations[:,2]
 
         #newStateObj.total = newStateObj.total - other.total
-        newStateObj.total = np.linalg.norm(newStateObj.accelerations,axis=1).reshape((newStateObj.N))
+        newStateObj.total = np.linalg.norm(newStateObj.accelerations,axis=1)
 
         return newStateObj
 
@@ -52,9 +44,9 @@ class StateObject(object):
 
         newStateObj.accelerations = np.divide(newStateObj.accelerations, other.accelerations)
 
-        newStateObj.r =newStateObj.accelerations[:,0].reshape((newStateObj.N))
-        newStateObj.theta = newStateObj.accelerations[:,1].reshape((newStateObj.N))
-        newStateObj.phi = newStateObj.accelerations[:,2].reshape((newStateObj.N))
+        newStateObj.r =newStateObj.accelerations[:,0]
+        newStateObj.theta = newStateObj.accelerations[:,1]
+        newStateObj.phi = newStateObj.accelerations[:,2]
 
         newStateObj.total =  np.divide(newStateObj.total, other.total)
         #np.linalg.norm(newStateObj.accelerations,axis=1).reshape((newStateObj.points))

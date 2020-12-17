@@ -1,11 +1,11 @@
 import numpy as np
 from numba import jit, prange, njit
 
-@njit 
+@njit(cache=True)
 def getK(x):
     return 1.0 if (x == 0) else 2.0
 
-@njit 
+@njit(cache=True)
 def compute_n_matrices(N):
     n1 = np.ones((N+2, N+2))*np.nan
     n2 = np.ones((N+2, N+2))*np.nan
@@ -23,7 +23,7 @@ def compute_n_matrices(N):
                 n2q[l][m] = np.sqrt(((l+m+2.0)*(l+m+1.0)*(2.0*l+1.0)*getK(m))/((2.0*l+3.0)*getK(m+1.0)))
     return n1, n2, n1q, n2q
 
-@njit 
+@njit(cache=True)
 def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
     for i in range(0, int(len(positions)/3)):

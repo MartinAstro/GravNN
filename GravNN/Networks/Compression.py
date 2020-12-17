@@ -1,36 +1,67 @@
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from GravNN.Networks.Model import CustomModel
+from GravNN.Networks.Callbacks import CustomCallback
 
-def physics_constraints(model, x, PINN=False):
-    # PINN Constraints
-    if PINN:
-        with tf.GradientTape() as tape:
-            tape.watch(x)
-            U_pred = model(x, training=True)
-        a_pred = -tape.gradient(U_pred, x)
-    else:  
-        a_pred = model(x, training=True)
-        U_pred = tf.constant(0.0)#None
-    return U_pred, a_pred
+def prune_model(model, dataset, config):
+    history = None
+    if config['sparsity'][0] is not None:
+        #Pruning https://blog.tensorflow.org/2019/05/tf-model-optimization-toolkit-pruning-API.html
+        pruning_schedule = tfmot.sparsity.keras.PolynomialDecay(
+                                initial_sparsity=0.00,
+                                final_sparsity=config['sparsity'][0],
+                                begin_step=0,
+                                end_step=config['fine_tuning_epochs'][0])
+        # pruning_schedule = tfmot.sparsity.keras.ConstantSparsity(
+        #                         target_sparsity=config['sparsity'][0],
+        #                         begin_step=0,
+        #                         frequency=10)
+        pruned_network = tfmot.sparsity.keras.prune_low_magnitude(model.network, pruning_schedule=pruning_schedule)
+        pruned_model = CustomModel(config, pruned_network)
+        pruned_model.compile(loss='mse', optimizer='adam')
 
-#@tf.function
-def pruning_training_loop(prunable_model, dataset, config):
-    prunable_model.compile(loss='mse', optimizer='adam')
+        callback = CustomCallback()
+        history = pruned_model.fit(dataset, 
+                    epochs=config['fine_tuning_epochs'][0], 
+                    verbose=0,
+                    callbacks=[callback,
+                                tfmot.sparsity.keras.UpdatePruningStep()])
+        history.history['time_delta'] = callback.time_delta
+        pruned_network = tfmot.sparsity.keras.strip_pruning(pruned_model.network)
+        pruned_model = CustomModel(config, pruned_network)
+        model = pruned_model
+    return model, history 
 
-    batches = 1
-    unused_arg = -1
 
-    step_callback = tfmot.sparsity.keras.UpdatePruningStep()
-    step_callback.set_model(prunable_model)
-    step_callback.on_train_begin() # run pruning callback
-    for _ in range(config['epochs'][0]):
-        for x,y in dataset:
-            step_callback.on_train_batch_begin(batch=unused_arg) # run pruning callback
-            with tf.GradientTape() as tape:
-                U_pred, a_pred = physics_constraints(prunable_model, x, config['PINN_flag'][0])
-                loss_result = prunable_model.compiled_loss(y, a_pred)
-            gradients = tape.gradient(loss_result, prunable_model.trainable_variables)
-            prunable_model.optimizer.apply_gradients(zip(gradients, prunable_model.trainable_variables))
-        step_callback.on_epoch_end(batch=unused_arg) # run pruning callback
+def cluster_model(model, dataset, config):
+    history = None
+    if config['num_w_clusters'][0] is not None:
+        #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
+        clustering_params = {
+            'number_of_clusters': config['num_w_clusters'][0],
+            'cluster_centroids_init': tfmot.clustering.keras.CentroidInitialization.LINEAR
+        }
 
-    return prunable_model
+        clustered_network = tfmot.clustering.keras.cluster_weights(model.network, **clustering_params)
+        clustered_model = CustomModel(config, clustered_network)
+        clustered_model.compile(loss='mse', optimizer='adam')
+
+        callback = CustomCallback()
+        history = clustered_model.fit(dataset, 
+                            epochs=config['fine_tuning_epochs'][0], 
+                            verbose=0,
+                            callbacks=[callback])
+        history.history['time_delta'] = callback.time_delta
+        clustered_network = tfmot.clustering.keras.strip_clustering(clustered_model.network)
+        model = CustomModel(config, clustered_network)
+    return model, history 
+
+
+def quantize_model(model, dataset, config):
+    history = None
+    if config['quantization'][0] is not None:
+        # Quantizations: https://blog.tensorflow.org/2020/04/quantization-aware-training-with-tensorflow-model-optimization-toolkit.html
+        qunatized_network = tfmot.quantization.keras.quantize_model(model.network)
+        model = CustomMoel(config, quantized_network)
+
+    return model, history 
