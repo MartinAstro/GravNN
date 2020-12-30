@@ -18,6 +18,7 @@ from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Support.Grid import Grid
+from GravNN.Networks import utils
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
@@ -187,4 +188,33 @@ class CustomModel(tf.keras.Model):
         print("Converged: " + str(results.converged) +" ; In " + str(time.time() - start_time) + " seconds")
         set_weights(self, results.position, sizes_w, sizes_b)
 
-        
+    
+    def model_size_stats(self):
+        size_stats = {
+            'params' : [utils.count_nonzero_params(self.network)],
+            'size' : [utils.get_gzipped_model_size(self)],
+        }
+        self.config.update(size_stats)
+
+    def save(self, df_file):
+        timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
+        self.directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
+        os.makedirs(self.directory, exist_ok=True)
+        self.network.save(self.directory + "network")
+        self.config['timetag'] = timestamp
+        self.config['history'] = [self.history.history]
+        self.config['id'] = [pd.Timestamp(timestamp).to_julian_date()]
+        self.model_size_stats()
+        utils.save_df_row(self.config, df_file)
+
+
+def load_config_and_model(model_id, df_file):
+    # Get the parameters and stats for a given run
+    config = utils.get_df_row(model_id, df_file)
+
+    # Reinitialize the model
+    network = tf.keras.models.load_model(os.path.abspath('.') +"/Plots/"+str(model_id)+"/network")
+    model = CustomModel(config, network)
+    model.compile(optimizer=config['optimizer'][0], loss='mse') #! Check that this compile is even necessary
+
+    return config, model

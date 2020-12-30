@@ -11,7 +11,8 @@ class SurfaceDist(TrajectoryBase):
     def __init__(self, celestial_body, obj_file):
         self.mesh = trimesh.load_mesh(obj_file)
         self.points = len(self.mesh.faces)
-        super().__init__(celestial_body)
+        self.celestial_body = celestial_body
+        super().__init__()
 
         pass
 

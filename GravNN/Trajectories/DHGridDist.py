@@ -11,7 +11,8 @@ class DHGridDist(TrajectoryBase):
         self.N_lon = 2*n
         self.N_lat = n
         self.points = self.N_lon*self.N_lat
-        super().__init__(celestial_body)
+        self.celestial_body = celestial_body
+        super().__init__()
         pass
 
     def generate_full_file_directory(self):

@@ -20,8 +20,12 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories.SurfaceDist import SurfaceDist
+
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Support.Grid import Grid
+from GravNN.Support.StateObject import StateObject
+
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
@@ -149,8 +153,7 @@ class PhysicsInformedNN:
     
     def callback(self, loss):
         print('Loss:', loss)
-        self.loss_LBFGSB.append(loss)    
-
+    
     def train(self, nIter):
         tf_dict = {self.x0_tf: self.x0, 
                     self.x1_tf: self.x1, 
@@ -159,9 +162,6 @@ class PhysicsInformedNN:
                     self.a1_tf: self.a1,
                     self.a2_tf: self.a2}
         
-        loss_adam = np.zeros((int(nIter/10),))
-        self.loss_LBFGSB = []
-
         start_time = time.time()
         for it in range(nIter):
             self.sess.run(self.train_op_Adam, tf_dict)
@@ -173,14 +173,11 @@ class PhysicsInformedNN:
                 print('It: %d, Loss: %.3e, Time: %.2f' % 
                       (it, loss_value, elapsed))
                 start_time = time.time()
-                loss_adam[int(it/10)] = loss_value
     
         self.optimizer.minimize(self.sess,
                                 feed_dict = tf_dict,
                                 fetches = [self.loss],
                                 loss_callback = self.callback)
-        
-        return loss_adam, self.loss_LBFGSB
     
     def predict(self, x0_star, x1_star, x2_star):
         tf_dict = {self.x0_tf: x0_star, 
@@ -196,13 +193,18 @@ class PhysicsInformedNN:
 
     
 if __name__ == "__main__": 
-    planet = Earth()
-    model_file = planet.sh_hf_file
+    # planet = Earth()
+    # model_file = planet.sh_hf_file
+    # density_deg = 180
+    # max_deg = 1000
+
+    planet = Bennu()
+    model_file = planet.obj_file
     density_deg = 180
     max_deg = 1000
 
     save = True
-    train = True
+    train = False
     
     # nn_df = pd.read_pickle('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\continuous_results.data')
     # configurations = {}
@@ -215,60 +217,53 @@ if __name__ == "__main__":
 
 
     configurations = {
-        # "config_1" : {
-        #     'N_train' : [40000],
-        #     'PINN_flag' : [False],
-        #     'epochs' : [200000], 
-        #     'radius_max' : [planet.radius + 10.0],
-        #     'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
-        #     'acc_noise' : [0.00],
-        #     'deg_removed' : [2],
-        #     'activation' : ['tanh'],
-        #     'init_file': [None],
-        #     'notes' : ['Begin Hyperparam Training']
-        # },
-        "config_2" : {
+        "config_nonPINN" : {
+            'N_train' : [40000],
+            'PINN_flag' : [False],
+            'epochs' : [200000], 
+            'radius_max' : [planet.radius + 10.0],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+            'acc_noise' : [0.00],
+            'deg_removed' : [0],
+            'activation' : ['tanh'],
+            'init_file': [2459167.2003125],
+            'notes' : ['1st Bennu--nonPINN']
+        },
+        "config_PINN" : {
             'N_train' : [40000],
             'PINN_flag' : [True],
             'epochs' : [200000], 
             'radius_max' : [planet.radius + 10.0],
             'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
             'acc_noise' : [0.00],
-            'deg_removed' : [2],
+            'deg_removed' : [0],
             'activation' : ['tanh'],
-            'init_file': [None],
-            'notes' : ['']
+            'init_file': [2459167.2552083335],
+            'notes' : ['1st Bennu--PINN']
         },
     }    
 
+    #gast==0.2.2
     for key, config in configurations.items():
         
         tf.reset_default_graph()
         radius_min = planet.radius
 
-        df_file = "continuous_results_v2.data"
+        df_file = "continuous_results_bennu.data"
 
         # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
         # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
 
         trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
-        map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
-
-        #df_file = "generalization_results.data"
-        #map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
-        #map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
+        #map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
+        map_trajectory =  SurfaceDist(planet,planet.obj_file)
 
 
-        Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-        accelerations = Call_r0_gm.load()
-
-        Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=trajectory)
-        accelerations_Clm = Clm_r0_gm.load()
-
-
+        polymodel = Polyhedral(planet, model_file, trajectory=trajectory)
+        a_unscaled = polymodel.load()
 
         x_unscaled = trajectory.positions # position (N x 3)
-        a_unscaled = accelerations - accelerations_Clm
+        #a_unscaled = accelerations - accelerations_Clm
         u = None # potential (N x 1)
 
         # Preprocessing (This is only necessary for the acceleration -- the position is taken care of in the first H of the NN)
@@ -300,7 +295,7 @@ if __name__ == "__main__":
 
         start = time.time()
         if train:
-            loss_adam, loss_LBFGSB = model.train(config['epochs'][0])
+            model.train(config['epochs'][0])
         time_delta = np.round(time.time() - start, 2)
                     
 
@@ -308,14 +303,9 @@ if __name__ == "__main__":
         ############################# Training Stats #########################
         ######################################################################    
 
-        Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=map_trajectory)
-        Call_a = Call_r0_gm.load()
-        
-        Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=map_trajectory)
-        Clm_a = Clm_r0_gm.load()
-
-        x = Call_r0_gm.positions # position (N x 3)
-        a = Call_a - Clm_a
+        polymodel = Polyhedral(planet, model_file, trajectory=map_trajectory)
+        x = map_trajectory.positions
+        a = polymodel.load()
 
         x = x_transformer.transform(x)
         a = a_transformer.transform(a)
@@ -339,9 +329,6 @@ if __name__ == "__main__":
         entries = {
             'timetag' : [timestamp],
             'trajectory' : [trajectory.__class__.__name__],
-            'map_trajectory' :[map_trajectory.__class__.__name__],
-            'map_radius' :[map_trajectory.radius],
-
             'radius_min' : [radius_min],
             'train_time' : [time_delta],
             'degree' : [max_deg],
@@ -368,22 +355,30 @@ if __name__ == "__main__":
         ############################# Testing Stats ##########################
         ######################################################################    
 
-        grid_true = Grid(trajectory=map_trajectory, accelerations=a)
-        grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
+        # grid_true = Grid(trajectory=map_trajectory, accelerations=a)
+        # grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
+
+        
+        grid_true = StateObject(trajectory=map_trajectory, accelerations=a)
+        grid_pred = StateObject(trajectory=map_trajectory, accelerations=acc_pred)
+
         diff = grid_pred - grid_true
        
-        # This ensures the same features are being evaluated independent of what degree is taken off at beginning
-        C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=map_trajectory)
-        C22_a = C22_r0_gm.load()
-        grid_C22 = Grid(trajectory=map_trajectory, accelerations=Call_a - C22_a)
+        poly_model_all =  Polyhedral(planet, model_file, trajectory=map_trajectory)
+        Call_a = poly_model_all.load()
 
-        two_sigma_mask = np.where(grid_C22.total > (np.mean(grid_C22.total) + 2*np.std(grid_C22.total)))
-        two_sigma_mask_compliment = np.where(grid_C22.total < (np.mean(grid_C22.total) + 2*np.std(grid_C22.total)))
+        # This ensures the same features are being evaluated independent of what degree is taken off at beginning
+        C00_r0_gm = SphericalHarmonics(planet.sh_obj_file, degree=0, trajectory=map_trajectory)
+        C00_a = C00_r0_gm.load()
+        grid_C00 = StateObject(trajectory=map_trajectory, accelerations=Call_a - C00_a)
+
+        two_sigma_mask = np.where(grid_C00.total > (np.mean(grid_C00.total) + 2*np.std(grid_C00.total)))
+        two_sigma_mask_compliment = np.where(grid_C00.total < (np.mean(grid_C00.total) + 2*np.std(grid_C00.total)))
         two_sig_features = diff.total[two_sigma_mask]
         two_sig_features_comp = diff.total[two_sigma_mask_compliment]
 
-        three_sigma_mask = np.where(grid_C22.total > (np.mean(grid_C22.total) + 3*np.std(grid_C22.total)))
-        three_sigma_mask_compliment = np.where(grid_C22.total < (np.mean(grid_C22.total) + 3*np.std(grid_C22.total)))
+        three_sigma_mask = np.where(grid_C00.total > (np.mean(grid_C00.total) + 3*np.std(grid_C00.total)))
+        three_sigma_mask_compliment = np.where(grid_C00.total < (np.mean(grid_C00.total) + 3*np.std(grid_C00.total)))
         three_sig_features = diff.total[three_sigma_mask]
         three_sig_features_comp = diff.total[three_sigma_mask_compliment]
 
@@ -413,29 +408,55 @@ if __name__ == "__main__":
         ############################# Plotting ###############################
         ######################################################################    
 
-        mapUnit = 'mGal'
-        map_vis = MapVisualization(mapUnit)
-        plt.rc('text', usetex=False)
+        cmap=plt.get_cmap('RdBu')
 
-        fig_true, ax = map_vis.plot_grid(grid_true.total, "True Grid [mGal]")
-        fig_pred, ax = map_vis.plot_grid(grid_pred.total, "NN Grid [mGal]")
-        fig_pert, ax = map_vis.plot_grid(diff.total, "Acceleration Difference [mGal]")
+        # Polyhedral Results
+        #totals = np.linalg.norm(grid_true.total)
+        minmax = MinMaxScaler()
+        totals_normalized = minmax.fit_transform(np.transpose(np.array([grid_true.total])))
 
-        map_vis.fig_size = (5*4,3.5*4)
-        fig, ax = map_vis.newFig()
-        vlim = [0, np.max(grid_true.total)*10000.0] 
-        plt.subplot(311)
-        im = map_vis.new_map(grid_true.total, vlim=vlim, log_scale=False)
-        map_vis.add_colorbar(im, '[mGal]', vlim)
+        #Predicted Results
+        #totals = np.linalg.norm(grid_pred.total)
+        totals_normalized = minmax.transform(np.transpose(np.array([grid_pred.total])))
+        for i in range(len(polymodel.mesh.faces)):
+            facet = polymodel.mesh.faces[i]
+            color = cmap(totals_normalized[i])[0]*255
+            color[3] = 255
+            polymodel.mesh.visual.face_colors[i] = color#trimesh.visual.random_color()
+        polymodel.mesh.show()
+
+        # Difference 
+        #totals = np.linalg.norm(diff.total)
+        totals_normalized = minmax.transform(np.transpose(np.array([diff.total])))
+        for i in range(len(polymodel.mesh.faces)):
+            facet = polymodel.mesh.faces[i]
+            color = cmap(totals_normalized[i])[0]*255
+            color[3] = 255
+            polymodel.mesh.visual.face_colors[i] = color#trimesh.visual.random_color()
+        polymodel.mesh.show()
+
+        # mapUnit = 'mGal'
+        # map_vis = MapVisualization(mapUnit)
+        # plt.rc('text', usetex=False)
+
+        # fig_true, ax = map_vis.plot_grid(grid_true.total, "True Grid [mGal]")
+        # fig_pred, ax = map_vis.plot_grid(grid_pred.total, "NN Grid [mGal]")
+        # fig_pert, ax = map_vis.plot_grid(diff.total, "Acceleration Difference [mGal]")
+
+        # map_vis.fig_size = (5*4,3.5*4)
+        # fig, ax = map_vis.newFig()
+        # vlim = [0, np.max(grid_true.total)*10000.0] 
+        # plt.subplot(311)
+        # im = map_vis.new_map(grid_true.total, vlim=vlim, log_scale=False)
+        # map_vis.add_colorbar(im, '[mGal]', vlim)
         
-        plt.subplot(312)
-        im = map_vis.new_map(grid_pred.total, vlim=vlim, log_scale=False)
-        map_vis.add_colorbar(im, '[mGal]', vlim)
+        # plt.subplot(312)
+        # im = map_vis.new_map(grid_pred.total, vlim=vlim, log_scale=False)
+        # map_vis.add_colorbar(im, '[mGal]', vlim)
         
-        plt.subplot(313)
-        im = map_vis.new_map(diff.total, vlim=vlim, log_scale=False)
-        map_vis.add_colorbar(im, '[mGal]', vlim)
-
+        # plt.subplot(313)
+        # im = map_vis.new_map(diff.total, vlim=vlim, log_scale=False)
+        # map_vis.add_colorbar(im, '[mGal]', vlim)
 
         ######################################################################
         ############################# Saving #################################
@@ -449,29 +470,24 @@ if __name__ == "__main__":
             except: 
                 df.to_pickle(df_file)
 
-            directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
-            os.makedirs(directory, exist_ok=True)
+        #     directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
+        #     os.makedirs(directory, exist_ok=True)
 
-            map_vis.save(fig_true, directory + "true.pdf")
-            map_vis.save(fig_pred, directory + "pred.pdf")
-            map_vis.save(fig_pert, directory + "diff.pdf")
-            map_vis.save(fig, directory + "all.pdf")
+        #     map_vis.save(fig_true, directory + "true.pdf")
+        #     map_vis.save(fig_pred, directory + "pred.pdf")
+        #     map_vis.save(fig_pert, directory + "diff.pdf")
+        #     map_vis.save(fig, directory + "all.pdf")
 
-            with open(directory + "network.data", 'wb') as f:
-                weights = []
-                biases = []
-                for i in range(len(model.weights)):
-                    weights.append(model.weights[i].eval(session=model.sess))
-                    biases.append(model.biases[i].eval(session=model.sess))
-                pickle.dump(weights, f)
-                pickle.dump(biases, f)
-            
-            if train:
-                with open(directory + "loss.data", 'wb') as f:
-                    pickle.dump(loss_adam, f)
-                    pickle.dump(loss_LBFGSB, f)
+        #     with open(directory + "network.data", 'wb') as f:
+        #         weights = []
+        #         biases = []
+        #         for i in range(len(model.weights)):
+        #             weights.append(model.weights[i].eval(session=model.sess))
+        #             biases.append(model.biases[i].eval(session=model.sess))
+        #         pickle.dump(weights, f)
+        #         pickle.dump(biases, f)
         
-        model.sess.close()
-        plt.close()
+        # model.sess.close()
+        # plt.close()
         #plt.show()
         

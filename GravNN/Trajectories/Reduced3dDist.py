@@ -15,7 +15,8 @@ class Reduced3dDist(TrajectoryBase):
         self.N_lon = int(2*n*self.reduction)
         self.N_lat = int(n*self.reduction)
         self.points = self.N_lon*self.N_lat*self.layers
-        super().__init__(celestial_body)
+        self.celestial_body = celestial_body
+        super().__init__()
         pass
 
     def generate_full_file_directory(self):

@@ -1,10 +1,9 @@
 numpy
 matplotlib
 numba
-umap-learn
-umap-learn[plot]
 pandas
-tensorflow-gpu==1.15
+tensorflow
 sklearn
 pyshtools
 trimesh
+sigfig

@@ -15,7 +15,8 @@ class UniformDist(TrajectoryBase):
             print("The total number of points changed to " + str(points) + ". N = " +str(N))
         self.radius = radius
         self.points = points
-        super().__init__(celestial_body)
+        self.celestial_body = celestial_body
+        super().__init__()
         pass
 
     def generate_full_file_directory(self):

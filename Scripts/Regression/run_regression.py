@@ -106,10 +106,10 @@ def main():
     rad = planet.radius
     mu = planet.mu
     regression = Regression.Regression(pos, 
-                                                                    acc, 
-                                                                    deg, 
-                                                                    rad, 
-                                                                    mu)
+                                        acc, 
+                                        deg, 
+                                        rad, 
+                                        mu)
     for deg in deg_list:
         regression = Regression.Regression(trajectory.positions.reshape(-1), 
                                                                             accelerations.reshape(-1), 

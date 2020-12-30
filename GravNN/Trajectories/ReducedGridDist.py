@@ -12,7 +12,8 @@ class ReducedGridDist(TrajectoryBase):
         self.N_lon = int(2*n*self.reduction)
         self.N_lat = int(n*self.reduction)
         self.points = self.N_lat*self.N_lon
-        super().__init__(celestial_body)
+        self.celestial_body = celestial_body
+        super().__init__()
         pass
 
     def generate_full_file_directory(self):

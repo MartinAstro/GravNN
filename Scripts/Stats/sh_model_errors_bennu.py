@@ -3,71 +3,62 @@ import pandas as pd
 import pickle
 
 from GravNN.Support.Grid import Grid
+from GravNN.Support.StateObject import StateObject
+
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+from GravNN.GravityModels.Polyhedral import Polyhedral
+
 from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Bennu
+
 from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.SurfaceDist import SurfaceDist
+
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 
 def main():
     
-    planet = Earth()
-    model_file = planet.sh_hf_file
+    planet = Bennu()
+    sh_file = planet.sh_obj_file
     density_deg = 180
-    max_deg = 1000
+    max_deg = 37
 
     radius_min = planet.radius
     
-    ###########################
-    #### Trajectories #########
-    ###########################
-    # df_file = "sh_stats_full_grid.data"
+    # df_file = "sh_stats_bennu_brillouin.data"
     # trajectory = DHGridDist(planet, radius_min, degree=density_deg)
 
-    # df_file = "sh_stats_reduced_grid.data"
-    # trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
+    df_file = "sh_stats_bennu_surface.data"
+    trajectory = SurfaceDist(planet, planet.obj_file)
 
-    # df_file = "sh_stats_world_R100.data"
-    # trajectory = DHGridDist(planet, radius_min+100, degree=density_deg)
-
-    # df_file = "sh_stats_world_R1000.data"
-    # trajectory = DHGridDist(planet, radius_min+1000, degree=density_deg)
-
-    # df_file = "sh_stats_world_R10000.data"
-    # trajectory = DHGridDist(planet, radius_min+10000, degree=density_deg)
-
-
-    df_file = "sh_stats_LEO.data"
-    trajectory = DHGridDist(planet, planet.radius + 420000.0, degree=density_deg)
-
-    df_file = "sh_stats_GEO.data"
-    trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
-
-
-
-    Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
+    # Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
+    # Call_a = Call_r0_gm.load()
+    Call_r0_gm = Polyhedral(planet, planet.obj_file, trajectory=trajectory)
     Call_a = Call_r0_gm.load()
 
-    C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
+    C22_r0_gm = SphericalHarmonics(sh_file, degree=0, trajectory=trajectory)
     Call_a_C22 = C22_r0_gm.load()
 
-    deg_list =  np.linspace(1, 100, 100,dtype=int)[1:]
-    deg_list = np.append(deg_list, [150, 200, 250, 300, 400, 500, 700, 900])
+    deg_list =  np.linspace(1, 37, 37,dtype=int)[1:]
     df_all = pd.DataFrame()
     for deg in deg_list:
 
-        Call_r0_gm = SphericalHarmonics(model_file, degree=deg, trajectory=trajectory)
+        Call_r0_gm = SphericalHarmonics(planet.sh_obj_file, degree=deg, trajectory=trajectory)
         Clm_a = Call_r0_gm.load()
         
         error_Call = np.abs(np.divide((Clm_a - Call_a),Call_a))*100 # Percent Error for each component
         error_Call_m_C22 = np.abs(np.divide((Clm_a - Call_a),Call_a-Call_a_C22))*100 # Percent Error for each component
 
         RSE_Call = np.sqrt(np.square(Clm_a - Call_a))
-        RSE_norm_Call = np.linalg.norm(RSE_Call, axis=1)
         
-        grid_true = Grid(trajectory=trajectory, accelerations=Call_a-Call_a_C22)
-        grid_pred = Grid(trajectory=trajectory, accelerations=Clm_a-Call_a_C22)
+        # grid_true = Grid(trajectory=trajectory, accelerations=Call_a-Call_a_C22)
+        # grid_pred = Grid(trajectory=trajectory, accelerations=Clm_a-Call_a_C22)
+
+                
+        grid_true = StateObject(trajectory=trajectory, accelerations=Call_a-Call_a_C22)
+        grid_pred = StateObject(trajectory=trajectory, accelerations=Clm_a-Call_a_C22)
         diff = grid_pred - grid_true
 
         two_sigma_mask = np.where(grid_true.total > np.mean(grid_true.total) + 2*np.std(grid_true.total))
@@ -90,9 +81,9 @@ def main():
                 'percent_a1_mean' : [np.mean(error_Call[:,1])], 
                 'percent_a2_mean' : [np.mean(error_Call[:,2])], 
 
-                'rse_mean' : [np.mean(RSE_norm_Call)],
-                'rse_std' : [np.std(RSE_norm_Call)],
-                'rse_median' : [np.median(RSE_norm_Call)],
+                'rse_mean' : [np.mean(RSE_Call)],
+                'rse_std' : [np.std(RSE_Call)],
+                'rse_median' : [np.median(RSE_Call)],
                 'rse_a0_mean' : [np.mean(RSE_Call[:,0])],
                 'rse_a1_mean' : [np.mean(RSE_Call[:,1])],
                 'rse_a2_mean' : [np.mean(RSE_Call[:,2])],

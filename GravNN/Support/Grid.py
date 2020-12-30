@@ -50,7 +50,7 @@ class Grid(object):
 
         newGrid.acceleration = np.divide(newGrid.acceleration, other.acceleration)
 
-        newGrid.r =newGrid.acceleration[:,0].reshape((newGrid.N_lon,newGrid.N_lat))
+        newGrid.r = newGrid.acceleration[:,0].reshape((newGrid.N_lon,newGrid.N_lat))
         newGrid.theta = newGrid.acceleration[:,1].reshape((newGrid.N_lon,newGrid.N_lat))
         newGrid.phi = newGrid.acceleration[:,2].reshape((newGrid.N_lon,newGrid.N_lat))
 

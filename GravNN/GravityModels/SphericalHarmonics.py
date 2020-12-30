@@ -18,6 +18,20 @@ def make_2D_array(lis):
         arr[i, :lengths[i]] = lis[i]
     return arr
 
+
+def get_sh_data(trajectory, gravity_file, max_deg, deg_removed=None):
+    Call_r0_gm = SphericalHarmonics(gravity_file, degree=int(max_deg), trajectory=trajectory)
+    accelerations = Call_r0_gm.load()
+
+    Clm_r0_gm = SphericalHarmonics(gravity_file, degree=int(deg_removed), trajectory=trajectory)
+    accelerations_Clm = Clm_r0_gm.load()
+
+    x = Call_r0_gm.positions # position (N x 3)
+    a = accelerations - accelerations_Clm
+    u = np.array([None for _ in range(len(a))]) # potential (N x 1)
+
+    return x, a, u
+
 class SphericalHarmonics(GravityModelBase):
     def __init__(self, sh_info, degree, trajectory=None):
         super().__init__()

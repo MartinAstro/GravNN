@@ -3,30 +3,33 @@ from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 
-class ReducedRandDist(TrajectoryBase):
-    def __init__(self, celestial_body, radiusBounds, points, degree, reduction=0.25):
-        self.radiusBounds = radiusBounds
-        self.degree = degree
-        self.reduction = reduction
+class GaussianDist(TrajectoryBase):
+    def __init__(self, celestial_body, radius_bounds, points, **kwargs):
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
             N = int(np.sqrt(points/2))
             points = 2*N**2
             print("The total number of points changed to " + str(points))
-        self.radiusBounds = radiusBounds
+        self.radius_bounds = radius_bounds
+
         self.points = points
         self.celestial_body = celestial_body
+
+        self.mu = kwargs['mu'][0]
+        self.sigma = kwargs['sigma'][0]
+
         super().__init__()
+
         pass
 
     def generate_full_file_directory(self):
-        self.trajectory_name = os.path.splitext(os.path.basename(__file__))[0] +  "/"  + \
-                self.celestial_body.body_name + \
-                "N_" + str(self.points) + \
-                "_Deg" +   str(self.degree) + \
-                "_RadBounds" + str(self.radiusBounds) + \
-                "_Reduct" +  str(self.reduction)
-        self.file_directory += self.trajectory_name +  "/"
+        self.trajectory_name =  os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
+                                                self.celestial_body.body_name + \
+                                                "N_" + str(self.points) + \
+                                                "_RadBounds" + str(self.radius_bounds) + \
+                                                '_mu' + str(self.mu) +\
+                                                '_sigma' + str(self.sigma)
+        self.file_directory  += self.trajectory_name +  "/"
         pass
     
     def generate(self):
@@ -35,21 +38,20 @@ class ReducedRandDist(TrajectoryBase):
         Y = []
         Z = []
         idx = 0
-
         X.extend(np.zeros((self.points,)).tolist())
         Y.extend(np.zeros((self.points,)).tolist())
         Z.extend(np.zeros((self.points,)).tolist())
 
-        # Shift to interesting feature
-        # theta -= np.pi/3 # Indonesia area
         for i in range(self.points):
-            phi = np.random.uniform(np.pi/2-(np.pi*self.reduction)/2, np.pi/2+(np.pi*self.reduction)/2)
-            theta = np.random.uniform(np.pi-(2*np.pi*self.reduction)/2, np.pi+(2*np.pi*self.reduction)/2) - np.pi/3
-            r = np.random.uniform(self.radiusBounds[0], self.radiusBounds[1])
+            phi = np.random.uniform(0, np.pi)
+            theta = np.random.uniform(0, 2*np.pi)
+            r = np.random.normal(self.mu, self.sigma)
+            while r > self.radius_bounds[1] or r < self.radius_bounds[0]:
+                r = np.random.normal(self.mu, self.sigma)
+
             X[idx] = r*np.sin(phi)*np.cos(theta)
             Y[idx] = r*np.sin(phi)*np.sin(theta)
             Z[idx] = r*np.cos(phi)
             idx += 1
-        self.positions = np.transpose(np.array([X, Y, Z]))
         self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))

@@ -9,6 +9,21 @@ from GravNN.CelestialBodies.Asteroids import Bennu
 from numba import jit, njit, prange
 
 
+
+def get_poly_data(trajectory, obj_file):
+    Call_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
+    accelerations = Call_r0_gm.load()
+
+    Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
+    accelerations_Clm = Clm_r0_gm.load()
+
+    x = Call_r0_gm.positions # position (N x 3)
+    a = accelerations - accelerations_Clm
+    u = np.array([None for _ in range(len(a))]) # potential (N x 1)
+
+    return u, x, a
+
+
 @njit(cache=True, parallel=True)
 def compute_edge_dyads(vertices, faces, edges_unique, face_adjacency_edges, face_normals, face_adjacency):
     edge_dyads = np.zeros((len(edges_unique),3,3)) # In order of unique edges 

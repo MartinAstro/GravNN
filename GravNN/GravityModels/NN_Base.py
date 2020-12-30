@@ -5,19 +5,18 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow.keras.backend as K
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Support.transformations import (cart2sph, invert_projection,
                                             project_acceleration, sphere2cart)
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.utils import class_weight
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Dense, Dropout, Input
-from tensorflow.keras.models import Model, Sequential, load_model
-from tensorflow.keras.optimizers import *
-from tensorflow.keras.regularizers import l1
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+# from tensorflow.keras.callbacks import EarlyStopping
+# from tensorflow.keras.layers import Dense, Dropout, Input
+# from tensorflow.keras.models import Model, Sequential, load_model
+# from tensorflow.keras.optimizers import *
+# from tensorflow.keras.regularizers import l1
+# from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 
 
 class NN_Base(GravityModelBase):

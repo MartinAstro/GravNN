@@ -2,31 +2,30 @@ import os
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks import utils
 from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import sphere2cart, cart2sph, invert_projection, project_acceleration
 import matplotlib.pyplot as plt
 import numpy as np
-class Plotting():
-    def __init__(self, model_file, map_trajectories, x_transformer, a_transformer, config, directory):
-        self.model_file = model_file
-        self.map_trajectories = map_trajectories
-        self.config = config
-        self.x_transformer = x_transformer
-        self.a_transformer = a_transformer
-        self.directory = directory
-        
-    def plot_maps(self,model):
-        for name, map_traj in self.map_trajectories.items():
-            Call_r0_gm = SphericalHarmonics(self.model_file, degree=int(self.config['max_deg'][0]), trajectory=map_traj)
-            Call_a = Call_r0_gm.load()
-            
-            Clm_r0_gm = SphericalHarmonics(self.model_file, degree=int(self.config['deg_removed'][0]), trajectory=map_traj)
-            Clm_a = Clm_r0_gm.load()
+import pandas as pd
+import tensorflow as tf
 
-            x = Call_r0_gm.positions # position (N x 3)
-            a = Call_a - Clm_a
+#TODO : Consider using subplot2grid to make more compact figures
+#TODO: Make data plotting routines, and model plotting routines
+class Plotting():
+    def __init__(self, model, config):
+        self.config = config
+        self.model = model
+        self.x_transformer = config['x_transformer'][0]
+        self.a_transformer = config['a_transformer'][0]
+        self.directory = os.path.abspath('.') +"/Plots/"+str(config['id'][0]) + "/"
+        self.vis =  VisualizationBase()
+
+    def plot_maps(self, map_trajectories):
+        for name, map_traj in map_trajectories.items():
+            model_file = map_traj.celestial_body.sh_hf_file
+            x, a, u = get_sh_data(map_traj, model_file, self.config['max_deg'][0], self.config['deg_removed'][0])
 
             if self.config['basis'][0] == 'spherical':
                 x = cart2sph(x)
@@ -36,7 +35,7 @@ class Plotting():
             x = self.x_transformer.transform(x)
             a = self.a_transformer.transform(a)
 
-            U_pred, acc_pred = model.predict(x.astype('float32'))
+            U_pred, acc_pred = self.model.predict(x.astype('float32'))
 
             x = self.x_transformer.inverse_transform(x)
             a = self.a_transformer.inverse_transform(a)
@@ -74,26 +73,50 @@ class Plotting():
             im = map_vis.new_map(diff.total, vlim=vlim, log_scale=False)
             map_vis.add_colorbar(im, '[mGal]', vlim)
 
-            if self.directory is not None:
-                os.makedirs(self.directory + name, exist_ok=True)
-                map_vis.save(fig_true, self.directory + name + "/true.pdf")
-                map_vis.save(fig_pred, self.directory + name + "/pred.pdf")
-                map_vis.save(fig_pert, self.directory + name + "/diff.pdf")
-                map_vis.save(fig, self.directory + name + "/all.pdf")
+            os.makedirs(self.directory + name, exist_ok=True)
+            map_vis.save(fig_true, self.directory + name + "/" + "true.pdf")
+            map_vis.save(fig_pred, self.directory + name + "/" + "pred.pdf")
+            map_vis.save(fig_pert, self.directory + name + "/" + "diff.pdf")
+            map_vis.save(fig, self.directory + name + "/" + "all.pdf")
 
 
-    def plot_history(self, histories, labels):
-        vis = VisualizationBase()
-        fig, ax = vis.newFig()
-        for i in range(len(histories)):
-            plt.plot(histories[i].epoch[50:], histories[i].history['loss'][50:], label=labels[i])
-            plt.plot(histories[i].epoch[50:], histories[i].history['val_loss'][50:], label=labels[i])
-
+    def plot_loss(self):
+        fig, ax = self.vis.newFig()
+        history = self.config['history'][0]
+        epochs = np.arange(0, len(history['loss']),1)
+        plt.plot(epochs[50:], history['loss'][50:])
+        plt.plot(epochs[50:], history['val_loss'][50:])
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
+        self.vis.save(fig, self.directory + "loss.pdf")
+        return fig
 
-        if self.directory is not None:
-            vis.save(fig, self.directory + "loss.pdf")
-
+    def plot_alt_curve(self, stat):
+        df = pd.read_pickle(self.directory + 'rse_alt.data')    
+        fig, ax = self.vis.newFig()
+        plt.plot(df.index/1000.0, df[stat])
+        plt.xlabel('Altitude [km]')
+        plt.ylabel('RSE')
+        self.vis.save(fig, self.directory + "altitude.pdf")
+        return fig
         
+    def plot_data_alt_curve(self, stat):
+        fig = self.plot_alt_curve(stat)
+        distribution = self.config['distribution'][0]
+        trajectory = distribution(self.config['planet'][0], [self.config['radius_min'][0], self.config['radius_max'][0]], self.config['N_dist'][0], **self.config)#points=1000000)
+        positions = cart2sph(trajectory.positions) - self.config['planet'][0].radius
+        ax1 = plt.gca()
+        ax1.tick_params('y', colors='r')
+        ax1.set_ylabel('RSE', color='r')
+        ax1.get_lines()[0].set_color('r')
 
+        ax2 = ax1.twinx()
+        plt.hist(positions[:,0]/1000.0, bins=100, alpha=0.5)
+        ax2.tick_params('y', colors='b')
+        ax2.set_ylabel('Frequency', color='b')
+        self.vis.save(fig, self.directory + "data_distribution.pdf")
+        return fig
+
+    def plot_model_graph(self):
+        dot_img_file = self.directory + 'model_graph.pdf'
+        tf.keras.utils.plot_model(self.model.network, to_file=dot_img_file, show_shapes=True)

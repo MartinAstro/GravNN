@@ -2,7 +2,7 @@
 import numpy as np
 from numpy.random import seed
 
-from GravNN.Visualization.Grid import Grid
+from GravNN.Support.Grid import Grid
 from GravNN.Trajectories.UniformDist import UniformDist
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from CelestialBodies.Planets import Earth

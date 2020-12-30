@@ -24,6 +24,7 @@ from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration, invert_projection
 from sklearn.preprocessing import MinMaxScaler
 
 np.random.seed(1234)
@@ -135,8 +136,8 @@ class PhysicsInformedNN:
 
             U = U_network[:,0:1]
             a0 = -tf.gradients(U, x0)[0]
-            a1 = -tf.gradients(U, x1)[0]
-            a2 = -tf.gradients(U, x2)[0]
+            a1 = -(1.0/x0)*tf.gradients(U, x1)[0]
+            a2 = -(1.0/x0)*(1.0/tf.sin(x1))*tf.gradients(U, x2)[0]
         else:
             a_network = self.neural_net(tf.concat([x0,x1,x2], 1), self.weights, self.biases)
             U = None
@@ -215,18 +216,18 @@ if __name__ == "__main__":
 
 
     configurations = {
-        # "config_1" : {
-        #     'N_train' : [40000],
-        #     'PINN_flag' : [False],
-        #     'epochs' : [200000], 
-        #     'radius_max' : [planet.radius + 10.0],
-        #     'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
-        #     'acc_noise' : [0.00],
-        #     'deg_removed' : [2],
-        #     'activation' : ['tanh'],
-        #     'init_file': [None],
-        #     'notes' : ['Begin Hyperparam Training']
-        # },
+        "config_1" : {
+            'N_train' : [40000],
+            'PINN_flag' : [False],
+            'epochs' : [200000], 
+            'radius_max' : [planet.radius + 10.0],
+            'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+            'acc_noise' : [0.00],
+            'deg_removed' : [2],
+            'activation' : ['tanh'],
+            'init_file': [None],
+            'notes' : ['Begin Hyperparam Training']
+        },
         "config_2" : {
             'N_train' : [40000],
             'PINN_flag' : [True],
@@ -246,7 +247,7 @@ if __name__ == "__main__":
         tf.reset_default_graph()
         radius_min = planet.radius
 
-        df_file = "continuous_results_v2.data"
+        df_file = "continuous_results_v2_spherical.data"
 
         # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
         # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
@@ -270,6 +271,11 @@ if __name__ == "__main__":
         x_unscaled = trajectory.positions # position (N x 3)
         a_unscaled = accelerations - accelerations_Clm
         u = None # potential (N x 1)
+
+        # Convert to spherical coordinates
+        x_unscaled = cart2sph(x_unscaled)
+        a_unscaled = project_acceleration(x_unscaled, a_unscaled)
+        x_unscaled[:,1:3] = np.deg2rad(x_unscaled[:,1:3])
 
         # Preprocessing (This is only necessary for the acceleration -- the position is taken care of in the first H of the NN)
         x_transformer = MinMaxScaler(feature_range=(-1,1))
@@ -316,6 +322,11 @@ if __name__ == "__main__":
 
         x = Call_r0_gm.positions # position (N x 3)
         a = Call_a - Clm_a
+
+        # Convert to spherical
+        x = cart2sph(x)
+        a = project_acceleration(x, a)
+        x[:,1:3] = np.deg2rad(x[:,1:3])
 
         x = x_transformer.transform(x)
         a = a_transformer.transform(a)
@@ -367,6 +378,12 @@ if __name__ == "__main__":
         ######################################################################
         ############################# Testing Stats ##########################
         ######################################################################    
+
+        # Undo these transformations because grid does them automatically
+        x[:,1:3] = np.rad2deg(x[:,1:3])
+        #x = np.array(x, dtype="float32")
+        #acc_pred = np.array(acc_pred,dtype="float32")
+        acc_pred = invert_projection(x, acc_pred)
 
         grid_true = Grid(trajectory=map_trajectory, accelerations=a)
         grid_pred = Grid(trajectory=map_trajectory, accelerations=acc_pred)
@@ -474,4 +491,4 @@ if __name__ == "__main__":
         model.sess.close()
         plt.close()
         #plt.show()
-        
+        print(config)
