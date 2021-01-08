@@ -4,25 +4,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 import trimesh
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
-from GravNN.CelestialBodies.Asteroids import Bennu
+from GravNN.CelestialBodies.Asteroids import Bennu, Eros
+from GravNN.GravityModels.PointMass import PointMass
 
 from numba import jit, njit, prange
-
+from GravNN.Support.ProgressBar import ProgressBar
 
 
 def get_poly_data(trajectory, obj_file):
     Call_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
     accelerations = Call_r0_gm.load()
 
-    Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
-    accelerations_Clm = Clm_r0_gm.load()
+    # Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
+    # accelerations_Clm = Clm_r0_gm.load()
 
     x = Call_r0_gm.positions # position (N x 3)
-    a = accelerations - accelerations_Clm
+    a = accelerations #- accelerations_Clm
     u = np.array([None for _ in range(len(a))]) # potential (N x 1)
 
-    return u, x, a
-
+    return x, a, u
 
 @njit(cache=True, parallel=True)
 def compute_edge_dyads(vertices, faces, edges_unique, face_adjacency_edges, face_normals, face_adjacency):
@@ -183,10 +183,14 @@ class Polyhedral(GravityModelBase):
         if positions is None:
             positions = self.trajectory.positions
 
+
+        bar = ProgressBar(positions.shape[0], enable=True)
         self.accelerations = np.zeros(positions.shape)
         for i in range(len(self.accelerations)):
             self.accelerations[i] = self.compute_acceleration(positions[i])      
-        
+            bar.update(i)
+        bar.markComplete()
+        bar.close()
         return self.accelerations
 
     def compute_acceleration(self, position):
@@ -203,19 +207,52 @@ class Polyhedral(GravityModelBase):
 
 
 def main():
-    density = 1260.0 #kg/m^3 bennu https://github.com/bbercovici/SBGAT/blob/master/SbgatCore/include/SbgatCore/Constants.hpp 
     import time 
     start = time.time()
-    asteroid = Bennu()
-    poly_model = Polyhedral(asteroid, asteroid.obj_file)
+    asteroid = Eros()
+    #poly_model = Polyhedral(asteroid, asteroid.obj_hf_file)
+    #poly_model = Polyhedral(asteroid, asteroid.obj_vhf_file)
+    poly_model = Polyhedral(asteroid, asteroid.model_50k)
     print(time.time() - start)
 
-    position = np.array([[1.,1.,1.],[1.,1.,1.]])*1E3 # Must be in meters
 
-    print(position)
+    timeList = []
+    position = np.ones((64,3))*1E4# Must be in meters
     start = time.time()
     print(poly_model.compute_acc(position))
-    print(time.time() - start)
+    stop = time.time() - start
+    timeList.append(stop)
+    print(stop)
+
+    position = np.ones((128,3))*1E4# Must be in meters
+    start = time.time()
+    poly_model.compute_acc(position)
+    stop = time.time() - start
+    timeList.append(stop)
+    print(stop)
+
+    position = np.ones((256,3))*1E4# Must be in meters
+    start = time.time()
+    poly_model.compute_acc(position)
+    stop = time.time() - start
+    timeList.append(stop)
+    print(stop)
+
+    # position = np.ones((512,3))*1E4# Must be in meters
+    # start = time.time()
+    # poly_model.compute_acc(position)
+    # stop = time.time() - start
+    # timeList.append(stop)
+    # print(stop)
+
+    # position = np.ones((1024,3))*1E4# Must be in meters
+    # start = time.time()
+    # poly_model.compute_acc(position)
+    # stop = time.time() - start
+    # timeList.append(stop)
+    # print(stop)
+
+    print(timeList)
 
 
 if __name__ == '__main__':

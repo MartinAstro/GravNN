@@ -3,7 +3,7 @@ import tensorflow_model_optimization as tfmot
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Callbacks import CustomCallback
 
-def prune_model(model, dataset, config):
+def prune_model(model, dataset, val_dataset, config):
     history = None
     if config['sparsity'][0] is not None:
         #Pruning https://blog.tensorflow.org/2019/05/tf-model-optimization-toolkit-pruning-API.html
@@ -22,6 +22,7 @@ def prune_model(model, dataset, config):
 
         callback = CustomCallback()
         history = pruned_model.fit(dataset, 
+                    validation_data=val_dataset,
                     epochs=config['fine_tuning_epochs'][0], 
                     verbose=0,
                     callbacks=[callback,
@@ -33,7 +34,7 @@ def prune_model(model, dataset, config):
     return model, history 
 
 
-def cluster_model(model, dataset, config):
+def cluster_model(model, dataset, val_dataset, config):
     history = None
     if config['num_w_clusters'][0] is not None:
         #Weight Clustering: https://blog.tensorflow.org/2020/08/tensorflow-model-optimization-toolkit-weight-clustering-api.html
@@ -48,6 +49,7 @@ def cluster_model(model, dataset, config):
 
         callback = CustomCallback()
         history = clustered_model.fit(dataset, 
+                            validation_data=val_dataset,
                             epochs=config['fine_tuning_epochs'][0], 
                             verbose=0,
                             callbacks=[callback])
@@ -57,7 +59,7 @@ def cluster_model(model, dataset, config):
     return model, history 
 
 
-def quantize_model(model, dataset, config):
+def quantize_model(model, dataset, val_dataset, config):
     history = None
     if config['quantization'][0] is not None:
         # Quantizations: https://blog.tensorflow.org/2020/04/quantization-aware-training-with-tensorflow-model-optimization-toolkit.html

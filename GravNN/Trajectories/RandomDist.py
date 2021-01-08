@@ -4,13 +4,14 @@ import pathlib
 import numpy as np
 
 class RandomDist(TrajectoryBase):
-    def __init__(self, celestial_body, radiusBounds, points):
+    def __init__(self, celestial_body, radius_bounds, points, **kwargs):
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
             N = int(np.sqrt(points/2))
             points = 2*N**2
             print("The total number of points changed to " + str(points))
-        self.radiusBounds = radiusBounds
+        self.radius_bounds = radius_bounds
+
         self.points = points
         self.celestial_body = celestial_body
 
@@ -22,7 +23,7 @@ class RandomDist(TrajectoryBase):
         self.trajectory_name =  os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
                                                 self.celestial_body.body_name + \
                                                 "N_" + str(self.points) + \
-                                                "_RadBounds" + str(self.radiusBounds)
+                                                "_RadBounds" + str(self.radius_bounds)
         self.file_directory  += self.trajectory_name +  "/"
         pass
     
@@ -39,7 +40,7 @@ class RandomDist(TrajectoryBase):
         for i in range(self.points):
             phi = np.random.uniform(0, np.pi)
             theta = np.random.uniform(0, 2*np.pi)
-            r = np.random.uniform(self.radiusBounds[0], self.radiusBounds[1])
+            r = np.random.uniform(self.radius_bounds[0], self.radius_bounds[1])
             X[idx] = r*np.sin(phi)*np.cos(theta)
             Y[idx] = r*np.sin(phi)*np.sin(theta)
             Z[idx] = r*np.cos(phi)

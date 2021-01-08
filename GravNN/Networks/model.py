@@ -38,27 +38,27 @@ class CustomModel(tf.keras.Model):
     def call(self, x, training=None):
         # PINN Constraints
         if self.config['PINN_flag'][0]:
-            if self.config['basis'][0] == 'spherical':
-                # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
-                with tf.GradientTape() as tape:
-                    tape.watch(x)
-                    U_pred = self.network(x, training)
-                gradients = tape.gradient(U_pred, x)
-                # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
-                a0 = -gradients[:,0]
-                # In wiki article, theta is 0-180 deg (which has been phi in our definition)
-                theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
-                a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
-                a2 = -(1.0/x[:,0])*gradients[:,2]
+            # if self.config['basis'][0] == 'spherical':
+            #     # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
+            #     with tf.GradientTape() as tape:
+            #         tape.watch(x)
+            #         U_pred = self.network(x, training)
+            #     gradients = tape.gradient(U_pred, x)
+            #     # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
+            #     a0 = -gradients[:,0]
+            #     # In wiki article, theta is 0-180 deg (which has been phi in our definition)
+            #     theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
+            #     a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
+            #     a2 = -(1.0/x[:,0])*gradients[:,2]
 
-                #print(a2.shape)
-                a_pred = tf.concat([[a0], [a1], [a2]], 0)
-                a_pred = tf.reshape(a_pred, [-1, 3])
-            else:                
-                with tf.GradientTape() as tape:
-                    tape.watch(x)
-                    U_pred = self.network(x, training)
-                a_pred = -tape.gradient(U_pred, x)
+            #     #print(a2.shape)
+            #     a_pred = tf.concat([[a0], [a1], [a2]], 0)
+            #     a_pred = tf.reshape(a_pred, [-1, 3])
+            # else:                
+            with tf.GradientTape() as tape:
+                tape.watch(x)
+                U_pred = self.network(x, training)
+            a_pred = -tape.gradient(U_pred, x)
         else:  
             a_pred = self.network(x, training)
             U_pred = tf.constant(0.0)#None
@@ -71,6 +71,9 @@ class CustomModel(tf.keras.Model):
             U_pred, a_pred = self(x, training=True)
             #a_pred = tf.where(tf.math.is_inf(a_pred), y, a_pred)
             loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
+            
+            # TODO: Put in mixed precision training
+            scaled_loss = self.optimizer.get_scaled_loss(loss)
 
 
             # # Periodic boundary conditions 
@@ -93,8 +96,11 @@ class CustomModel(tf.keras.Model):
             #     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
             #     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
 
+        # TODO: Put in mixed precision training
+        scaled_gradients = tape.gradient(scaled_loss, self.trainable_variables)
+        gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
 
-        gradients = tape.gradient(loss, self.trainable_variables)
+        #gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         self.compiled_metrics.update_state(y, a_pred)
         # Return a dict mapping metric names to current value
@@ -111,6 +117,12 @@ class CustomModel(tf.keras.Model):
         return {m.name: m.result() for m in self.metrics}
 
     def optimize(self, dataset):
+        
+        class History:
+            def __init__(self):
+                self.history = []
+        
+        self.history = History()
         #L-BFGS Optimization
         x = np.concatenate([x for x, y in dataset], axis=0)
         y = np.concatenate([y for x, y in dataset], axis=0)
@@ -174,6 +186,7 @@ class CustomModel(tf.keras.Model):
             set_weights(self, params, sizes_w, sizes_b)
             loss, gradients = loss_and_gradient(params)
             print(loss.numpy())
+            self.history.history.append(loss.numpy())
             grad_flat = flatten_variables(gradients)
             return loss, grad_flat
     
@@ -182,9 +195,9 @@ class CustomModel(tf.keras.Model):
         start_time = time.time()
         results = tfp.optimizer.lbfgs_minimize(lgbfgs_loss_and_gradient,
                                                  params, 
-                                                 max_iterations=50000,
-                                                 parallel_iterations=multiprocessing.cpu_count(),
-                                                 x_tolerance=1.0*np.finfo(float).eps)
+                                                 max_iterations=self.config['optimize_epochs'][0])#,
+                                                 #parallel_iterations=multiprocessing.cpu_count(),
+                                                 #x_tolerance=1.0*np.finfo(float).eps)
         print("Converged: " + str(results.converged) +" ; In " + str(time.time() - start_time) + " seconds")
         set_weights(self, results.position, sizes_w, sizes_b)
 

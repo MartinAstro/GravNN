@@ -11,11 +11,13 @@ from numba import jit, njit, prange
 class PointMass(GravityModelBase):
     def __init__(self, celestial_body, trajectory=None): 
         super().__init__()
+        self.configure(trajectory)
+
         self.celestial_body = celestial_body
         self.mu = celestial_body.mu
 
     def generate_full_file_directory(self):
-        self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "_" + os.path.basename(self.obj_file).split('.')[0] + "/"
+        self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "_PointMass" + "/"
         pass
 
 
@@ -32,7 +34,7 @@ class PointMass(GravityModelBase):
 
     def compute_acceleration(self, position):
         G = 6.67408*1E-11 #m^3/(kg s^2)
-        acc = -self.mu*np.square(np.pow(positions,-2))
+        acc = -self.mu*np.square(np.power(position,-2))
         return acc
 
 

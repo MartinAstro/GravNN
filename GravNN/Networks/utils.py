@@ -35,7 +35,9 @@ def check_config_combos(config):
     if config['network_type'][0].__class__.__name__ == "InceptionNet":
         assert len(config['layers'][0][1]) != 0, "Inception network requires layers with multiple sizes, i.e. [[3, [3,7,11], [3,7,11], 1]]"
 
+
 def format_config_combos(config):
+    # Ensure distributions don't have irrelevant parameters defined
     if config['distribution'][0] == GaussianDist:
         config['invert'] = [None]
         config['scale_parameter'] = [None]
@@ -69,7 +71,8 @@ def update_df_row(model_id, df_file, entries):
     entries.update({"timetag" : [timestamp]})
     dictionary = dict(sorted(entries.items(), key = lambda kv: kv[0]))
     df = pd.DataFrame.from_dict(dictionary).set_index('timetag')
-    original_df = original_df.combine_first(df)#, sort=True) # join, merge_ordered also viable
+    original_df = original_df.combine_first(df)
+    original_df.update(df)#, sort=True) # join, merge_ordered also viable
     original_df.to_pickle(df_file)
     return 
 

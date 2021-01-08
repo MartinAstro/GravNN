@@ -37,8 +37,8 @@ class MapVisualization(VisualizationBase):
         ax.set_xlabel("Longitude",  fontsize=9)
         ax.set_ylabel("Latitude",  fontsize=9)
         try:
-            plt.xticks(xloc,labels=xticks_labels, fontsize=6)
-            plt.yticks(yloc, labels=yticks_labels, fontsize=6)
+            plt.xticks(xloc,labels=xticks_labels, fontsize=8)
+            plt.yticks(yloc, labels=yticks_labels, fontsize=8)
         except:
             plt.xticks([])
             plt.yticks([])

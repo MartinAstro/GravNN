@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -17,6 +18,7 @@ class VisualizationBase(ABC):
             plt.rc('text', usetex=True)
             plt.rc('font', family='serif')
             plt.rc('font', size= 8.0)
+            mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'purple',  'cyan',  'lime', 'salmon', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
         
          # ~ 5:3 aspect ratio
         golden_ratio = (5**.5 - 1) / 2
@@ -43,7 +45,9 @@ class VisualizationBase(ABC):
 
         return fig, ax
 
-    def newFig(self, fig_size=(5,3.5)):
+    def newFig(self, fig_size=None):
+        if fig_size is None:
+            fig_size = self.fig_size
         fig = plt.figure(num=None, figsize=fig_size, dpi=200)
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=8)

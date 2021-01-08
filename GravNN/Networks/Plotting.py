@@ -84,8 +84,9 @@ class Plotting():
         fig, ax = self.vis.newFig()
         history = self.config['history'][0]
         epochs = np.arange(0, len(history['loss']),1)
-        plt.plot(epochs[50:], history['loss'][50:])
-        plt.plot(epochs[50:], history['val_loss'][50:])
+        start = 100
+        plt.plot(epochs[start:], history['loss'][start:])
+        plt.plot(epochs[start:], history['val_loss'][start:])
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         self.vis.save(fig, self.directory + "loss.pdf")
@@ -94,8 +95,8 @@ class Plotting():
     def plot_alt_curve(self, stat):
         df = pd.read_pickle(self.directory + 'rse_alt.data')    
         fig, ax = self.vis.newFig()
-        plt.plot(df.index/1000.0, df[stat])
-        plt.xlabel('Altitude [km]')
+        plt.plot(df.index, df[stat])
+        plt.xlabel('Altitude [m]')
         plt.ylabel('RSE')
         self.vis.save(fig, self.directory + "altitude.pdf")
         return fig
@@ -111,7 +112,7 @@ class Plotting():
         ax1.get_lines()[0].set_color('r')
 
         ax2 = ax1.twinx()
-        plt.hist(positions[:,0]/1000.0, bins=100, alpha=0.5)
+        plt.hist(positions[:,0], bins=100, alpha=0.5)
         ax2.tick_params('y', colors='b')
         ax2.set_ylabel('Frequency', color='b')
         self.vis.save(fig, self.directory + "data_distribution.pdf")

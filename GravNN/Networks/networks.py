@@ -6,12 +6,17 @@ def TraditionalNet(layers, activation, **kwargs):
     for i in range(1,len(layers)-1):
         x = tf.keras.layers.Dense(units=layers[i], 
                                     activation=activation, 
-                                    kernel_initializer='glorot_normal')(x)
+                                    kernel_initializer='glorot_normal',
+                                    )(x)
+                                    #dtype=kwargs['dtype'])(x)
         if 'dropout' in kwargs:
-            x = tf.keras.layers.Dropout(kwargs['dropout'])(x)
+            if kwargs['dropout'] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs['dropout'])(x)
     outputs = tf.keras.layers.Dense(units=layers[-1], 
                                     activation='linear', 
-                                    kernel_initializer='glorot_normal')(x)
+                                    kernel_initializer='glorot_normal',
+                                    dtype='float32'
+                                    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 

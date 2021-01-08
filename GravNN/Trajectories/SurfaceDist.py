@@ -10,8 +10,9 @@ class SurfaceDist(TrajectoryBase):
 
     def __init__(self, celestial_body, obj_file):
         self.mesh = trimesh.load_mesh(obj_file)
-        self.points = len(self.mesh.faces)
+        self.points = len(self.mesh.faces)# + self.mesh.vertices)
         self.celestial_body = celestial_body
+        self.obj_file = obj_file
         super().__init__()
 
         pass
@@ -40,5 +41,11 @@ class SurfaceDist(TrajectoryBase):
             Y[i] = face_c[1]
             Z[i] = face_c[2]
 
+        # N = len(self.mesh.faces)
+        # for i in range(0, len(self.mesh.vertices)):
+        #     vertex = self.mesh.vertices[i]
+        #     X[N + i] = vertex[0]
+        #     Y[N + i] = vertex[1]
+        #     Z[N + i] = vertex[2]
         self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))

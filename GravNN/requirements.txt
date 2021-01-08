@@ -7,3 +7,5 @@ sklearn
 pyshtools
 trimesh
 sigfig
+tqdm
+colorama
