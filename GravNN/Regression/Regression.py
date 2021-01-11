@@ -74,8 +74,14 @@ class Regression:
             self.rho[n] = beta*self.rho[n-1]
         
     def perform_regression(self):
+        remove_deg = False
+
         Q = self.N + 1 # Total Indicies Needed to store all coefficients
-        M = np.zeros((self.P,Q*(Q+1) - 2*(2+1)))
+        if remove_deg:
+            M = np.zeros((self.P,Q*(Q+1) - 2*(2+1)))
+        else: 
+            M = np.zeros((self.P,Q*(Q+1)))
+
    
         for p in range(0, int(self.P/3)):
             rVal = self.rVec[3*p:3*(p+1)]
@@ -89,7 +95,8 @@ class Regression:
             self.populate_variables(x, y, z)
             
             # NOTE: NO ESTIMATION OF C00, C10, C11 -- THESE ARE DETERMINED ALREADY
-            for n in range(2,self.N+1):
+            start = 2 if remove_deg else 0
+            for n in range(start,self.N+1):
             
                 for m in range(0,n+1):
                 
@@ -119,9 +126,13 @@ class Regression:
                     f_Snm_2 = (self.rho[n+2]/self.a)*(m*self.A[n,m]*iTerm - t*c2*self.A[n+1,m+1]*self.iM[m])
                     f_Snm_3 = (self.rho[n+2]/self.a)*(c1*self.A[n,m+1] - u*c2*self.A[n+1,m+1])*self.iM[m]
                     
-                    idx = n - 2 # The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
+                    #idx = n - 2 # The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
                     #idx = n
-                    degIdx = n*(n+1) - (2*(2+1))
+                    if remove_deg: 
+                        degIdx = n*(n+1) - (2*(2+1))
+                    else:
+                        degIdx = n*(n+1)
+
                     M[3*p + 0, degIdx + 2*m + 0] = f_Cnm_1 # X direction
                     M[3*p + 0, degIdx + 2*m + 1] = f_Snm_1
                     M[3*p + 1, degIdx + 2*m + 0] = f_Cnm_2 # Y direction
@@ -145,7 +156,13 @@ def main():
     acceleration = gravity_model.load()
     positions = trajectory.positions
 
-    regressor = Regression(10, planet.radius*2, planet.mu, positions.reshape((-1,)), acceleration.reshape((-1,)))
+    print(len(acceleration))
+
+    # x, a, u = get_sh_data(trajectory,planet.sh_hf_file, 1000, 2)
+    # positions = x
+    # acceleration = a
+
+    regressor = Regression(5, planet.radius, planet.mu, positions.reshape((-1,)), acceleration.reshape((-1,)))
     regressor.perform_regression()
 
 
