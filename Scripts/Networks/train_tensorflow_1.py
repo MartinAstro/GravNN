@@ -89,7 +89,7 @@ class PhysicsInformedNN:
         num_layers = len(layers) 
 
         if self.config['init_file'][0] is not None:
-            with open(os.path.abspath('.') +"/Plots/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
+            with open(os.path.abspath('.') +"/Data/Networks/"+str(self.config['init_file'][0])+"/network.data", 'rb') as f:
                 weights_init = pickle.load(f)
                 biases_init = pickle.load(f)
             
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         tf.reset_default_graph()
         radius_min = planet.radius
 
-        df_file = "continuous_results_v2.data"
+        df_file = "Data/Dataframes/continuous_results_v2.data"
 
         # trajectory = ReducedRandDist(planet, [radius_min, config['radius_max'][0]], points=15488*4, degree=density_deg, reduction=0.25)
         # map_trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         trajectory = RandomDist(planet, [radius_min, config['radius_max'][0]], points=259200)
         map_trajectory =  DHGridDist(planet, radius_min, degree=density_deg)
 
-        #df_file = "generalization_results.data"
+        #df_file = "Data/Dataframes/generalization_results.data"
         #map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
         #map_trajectory =  DHGridDist(planet, radius_min+100, degree=density_deg)
 

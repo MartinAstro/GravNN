@@ -4,24 +4,22 @@ from GravNN.Support.Regression import regress
 from GravNN.Trajectories.UniformDist import UniformDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.CelestialBodies.Planets import Earth
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 
 def main():
+
     planet = Earth()
-    trajectory = UniformDist(planet, planet.radius, 100)
-    #trajectory = RandomDist(planet, [planet.radius+100, planet.radius+500], 10000) 
+    trajectory = DHGridDist(planet, planet.radius, 45)
+    x, a, u = get_sh_data(trajectory,planet.sh_hf_file, 180,-1)
+    
+    regressor = Regression(5, planet, x, a)
+    coefficients = regressor.perform_regression()
+    regressor.save('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\GravNN\\Files\\GravityModels\\Regressed\\test.csv')
+    print(coefficients)
 
-    # Full fidelity model
-    max_deg = 3
-    gravityModel = SphericalHarmonics(planet.sh_file, degree=max_deg, trajectory=trajectory)
-    accelerations = gravityModel.load()
-    coef = regress(trajectory.positions, accelerations, max_deg, planet)
-    #regressor = Regression(trajectory.positions, accelerations, max_degree, planet.radius, planet.mu)
 
-    # Regressor.regress(r, a, deg, planet)
-        # Check that regression degree is the same as before, else increase the matrices to be the right size
-        # Generate inversion matrix
-        # Populate entries in matrix
-        # Perform inversion 
 
 if __name__ == "__main__":
     main()

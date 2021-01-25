@@ -72,8 +72,9 @@ class CustomModel(tf.keras.Model):
             #a_pred = tf.where(tf.math.is_inf(a_pred), y, a_pred)
             loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
             
-            # TODO: Put in mixed precision training
-            scaled_loss = self.optimizer.get_scaled_loss(loss)
+            if self.config['mixedPrecision'][0] == True:
+                # TODO: Put in mixed precision training
+                scaled_loss = self.optimizer.get_scaled_loss(loss)
 
 
             # # Periodic boundary conditions 
@@ -97,10 +98,12 @@ class CustomModel(tf.keras.Model):
             #     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
 
         # TODO: Put in mixed precision training
-        scaled_gradients = tape.gradient(scaled_loss, self.trainable_variables)
-        gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
+        if self.config['mixedPrecision'][0] == True:
+            scaled_gradients = tape.gradient(scaled_loss, self.trainable_variables)
+            gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
+        else:
+            gradients = tape.gradient(loss, self.trainable_variables)
 
-        #gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         self.compiled_metrics.update_state(y, a_pred)
         # Return a dict mapping metric names to current value
@@ -211,7 +214,7 @@ class CustomModel(tf.keras.Model):
 
     def save(self, df_file):
         timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
-        self.directory = os.path.abspath('.') +"/Plots/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
+        self.directory = os.path.abspath('.') +"/Data/Networks/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
         os.makedirs(self.directory, exist_ok=True)
         self.network.save(self.directory + "network")
         self.config['timetag'] = timestamp
@@ -226,7 +229,7 @@ def load_config_and_model(model_id, df_file):
     config = utils.get_df_row(model_id, df_file)
 
     # Reinitialize the model
-    network = tf.keras.models.load_model(os.path.abspath('.') +"/Plots/"+str(model_id)+"/network")
+    network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/network")
     model = CustomModel(config, network)
     model.compile(optimizer=config['optimizer'][0], loss='mse') #! Check that this compile is even necessary
 

@@ -5,8 +5,9 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Grid import Grid
@@ -16,31 +17,27 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def main():
     
-    planet = Earth()
-    model_file = planet.sh_hf_file
+    planet = Bennu()
+    obj_file = planet.obj_hf_file
+    sh_file = planet.sh_obj_file
     density_deg = 180
-    max_deg = 1000
 
-    radius_min = planet.radius
-    
-    df_file = "sh_stats_full_grid.data"
-    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-
-    # df_file = "sh_stats_reduced_grid.data"
-    trajectory = ReducedGridDist(planet, radius_min, degree=density_deg, reduction=0.25)
+    trajectory = DHGridDist(planet, planet.radius, degree=density_deg)
     map_trajectory = trajectory
 
-    Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-    Call_a = Call_r0_gm.load()
+    poly_gm = Polyhedral(planet, obj_file, trajectory)
+    acc_poly = poly_gm.load()
 
-    Clm_r0_gm = SphericalHarmonics(model_file, degree=100, trajectory=trajectory)
-    Clm_a = Clm_r0_gm.load()
-    
-    C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=map_trajectory)
-    C22_a = C22_r0_gm.load()
-        
-    grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
-    grid_pred = Grid(trajectory=trajectory, accelerations=Clm_a-C22_a)
+    max_deg = 9
+    Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
+    acc_sh = Call_r0_gm.load()
+
+    max_deg = 0
+    Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
+    acc_sh_point_mass = Call_r0_gm.load()
+
+    grid_true = Grid(trajectory=trajectory, accelerations=acc_poly-acc_sh_point_mass)
+    grid_pred = Grid(trajectory=trajectory, accelerations=acc_sh-acc_sh_point_mass)
     diff = grid_pred - grid_true
     
     mapUnit = 'mGal'
@@ -63,7 +60,8 @@ def main():
     
     directory = os.path.abspath('.') +"/Plots/OneOff/"
     os.makedirs(directory, exist_ok=True)
-    map_vis.save(fig, directory + "Example_SH_Diff_Map.pdf")
+    #map_vis.save(fig, directory + "Bennu_SH_Brillouin_Diff.pdf")
 
+    plt.show()
 if __name__ == "__main__":
     main()

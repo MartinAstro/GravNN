@@ -110,9 +110,9 @@ class SphericalHarmonics(GravityModelBase):
             for gravRow in gravReader:
                 #TODO: Check if this results in correct behavior
                 if self.degree is not None:
-                    if(int(gravRow[0]) > self.degree + 2):# if loading coefficients beyond the maximum desired (+2 for purposes of the algorithm)
+                    if(int(float(gravRow[0])) > self.degree + 2):# if loading coefficients beyond the maximum desired (+2 for purposes of the algorithm)
                         break
-                while int(gravRow[0]) > currDeg:
+                while int(float(gravRow[0])) > currDeg:
                     if (len(clmRow) < currDeg + 1):
                         clmRow.extend([0.0] * (currDeg + 1 - len(clmRow)))
                         slmRow.extend([0.0] * (currDeg + 1 - len(slmRow)))
@@ -123,7 +123,9 @@ class SphericalHarmonics(GravityModelBase):
                     currDeg += 1
                 clmRow.append(float(gravRow[2]))
                 slmRow.append(float(gravRow[3]))
-                
+            
+            clmList.append(clmRow)
+            slmList.append(slmRow)
             if self.degree is None:
                 self.degree = currDeg -2
             

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 import pickle
 
 from GravNN.Support.Grid import Grid
@@ -11,33 +12,66 @@ from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
+from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.RandomDist import RandomDist
+from GravNN.CelestialBodies.Planets import Earth
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
+from GravNN.Networks.Data import training_validation_split
+from GravNN.Support.StateObject import StateObject
+from GravNN.Regression.Regression import Regression
+
+
+
+np.random.seed(1234)
+tf.random.set_seed(0)
+
+def get_regress_data(model_file):
+    # Generate the data
+    planet = Earth()
+    trajectory = RandomDist(planet, [planet.radius, planet.radius+420000.0], 1000000)
+    x, a, u = get_sh_data(trajectory,planet.sh_hf_file, 1000, 2)
+    x, a, u, x_val, a_val, u_val = training_validation_split(x, a, u, 9500, 500)
+    return x, a
+
+def regress_model(x, a, max_deg):
+    planet = Earth()
+    grav_file = 'C:\\Users\\John\\Documents\\Research\\ML_Gravity\\GravNN\\Files\\GravityModels\\Regressed\\regress_' + str(max_deg) + ".csv"
+    regressor = Regression(max_deg, planet, x, a)
+    coefficients = regressor.perform_regression(remove_deg=True)
+    regressor.save(grav_file)
+
+
+
 def main():
     
     planet = Earth()
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
-    
-    df_file = "Data/Dataframes/sh_stats_Brillouin.data"
-    trajectory = DHGridDist(planet,  planet.radius, degree=density_deg)
+    model_deg = 33
 
-    # df_file = "Data/Dataframes/sh_stats_LEO.data"
-    # trajectory = DHGridDist(planet, planet.radius + 420000.0, degree=density_deg)
-
-    # df_file = "Data/Dataframes/sh_stats_GEO.data"
-    # trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
-
+    # * Generate the true acceleration
+    df_file = "Data/Dataframes/sh_regress_stats_"+str(model_deg)+"_Brillouin.data"
+    trajectory = DHGridDist(planet, planet.radius, degree=density_deg)
     x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
-    grid_true = Grid(trajectory=trajectory, accelerations=a)
+    grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
-    deg_list =  np.linspace(1, 100, 100,dtype=int)[1:]
-    deg_list = np.append(deg_list, [110, 150, 200, 215, 250, 300, 400, 500, 700, 900])
+
+
+    deg_list =  np.arange(3, model_deg, 1, dtype=int)
     df_all = pd.DataFrame()
-    for deg in deg_list:
-        
-        x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=2)
 
-        grid_pred = Grid(trajectory=trajectory, accelerations=a)
+    x_regress = x
+    a_regress = a
+    
+    for deg in deg_list:
+
+        #* Predict the value at the training data 
+        x_est, a_est, u_est = get_sh_data(trajectory, 'C:\\Users\\John\\Documents\\Research\\ML_Gravity\\GravNN\\Files\\GravityModels\\Regressed\\regress_' + str(deg) +'.csv', max_deg=deg, deg_removed=2)
+        grid_pred = StateObject(trajectory=trajectory, accelerations=a_est)
+
+
+        #* Difference and stats
         diff = grid_pred - grid_true
     
         # This ensures the same features are being evaluated independent of what degree is taken off at beginning
@@ -71,3 +105,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

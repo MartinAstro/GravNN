@@ -20,10 +20,13 @@ class Eros():
     def __init__(self, gravityModel=None):
         self.body_name = "eros"
         self.density =  2670.0  # kg/m^3 https://ssd.jpl.nasa.gov/sbdb.cgi#top
-        self.radius = 16840.0/2.0 # meters (diameter / 2)
+        self.radius = np.linalg.norm(np.array([34.4, 11.2, 11.2])*1E3)/2  #34400.0/2.0# 16840.0 is *mean* diameter # meters (diameter / 2)
 
         G = 6.67430*10**-11
         #self.mu = G*7.329*10**10 # self.density*(4./3.)*np.pi*self.radius**3*G
+        self.model_3k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_3k_poly.stl"    
+        self.model_6k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_6k_poly.stl"    
+        self.model_12k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_12k_poly.stl"    
 
         self.model_25k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_25k_poly.stl"    
         self.model_50k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Gaskell_50k_poly.obj"  

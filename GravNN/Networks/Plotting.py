@@ -19,7 +19,7 @@ class Plotting():
         self.model = model
         self.x_transformer = config['x_transformer'][0]
         self.a_transformer = config['a_transformer'][0]
-        self.directory = os.path.abspath('.') +"/Plots/"+str(config['id'][0]) + "/"
+        self.directory = os.path.abspath('.') +"/Data/Networks/"+str(config['id'][0]) + "/"
         self.vis =  VisualizationBase()
 
     def plot_maps(self, map_trajectories):
@@ -95,8 +95,8 @@ class Plotting():
     def plot_alt_curve(self, stat):
         df = pd.read_pickle(self.directory + 'rse_alt.data')    
         fig, ax = self.vis.newFig()
-        plt.plot(df.index, df[stat])
-        plt.xlabel('Altitude [m]')
+        plt.plot(df.index/1000.0, df[stat])
+        plt.xlabel('Altitude [km]')
         plt.ylabel('RSE')
         self.vis.save(fig, self.directory + "altitude.pdf")
         return fig

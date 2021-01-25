@@ -97,8 +97,11 @@ class Analysis():
         return stats
 
     def compute_alt_stats(self, planet, density_deg):
+        #alt_list = np.linspace(0, 500000, 100, dtype=float) # Every 0.5 kilometers above surface
+        #window = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25, 35, 45, 100, 200, 300, 400]) # Close to surface distribution
         alt_list = np.linspace(0, 500000, 100, dtype=float) # Every 0.5 kilometers above surface
-        window = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25, 35, 45, 100, 200, 300, 400]) # Close to surface distribution
+        alt_list = alt_list[::2]
+        window = np.array([0, 5, 10, 15, 25, 35, 45, 100, 200, 300, 400]) # Close to surface distribution
         LEO_window_upper = window + 420000 # Window around LEO
         LEO_window_lower = -1.0*window + 420000
         alt_list = np.concatenate([alt_list, window, LEO_window_lower, LEO_window_upper])
@@ -163,11 +166,11 @@ class Analysis():
         return df_all
 
 
-    def compute_bennu_rse_stats(self, test_trajectories):
+    def compute_asteroid_rse_stats(self, test_trajectories):
         stats = {}
 
         for name, map_traj in test_trajectories.items():
-            model_file = map_traj.celestial_body.obj_hf_file
+            model_file = map_traj.celestial_body.model_25k
             x, a, u = get_poly_data(map_traj, model_file)
 
             if self.config['basis'][0] == 'spherical':
@@ -238,14 +241,14 @@ class Analysis():
             #stats.update(sh_stats)
         return stats
 
-    def compute_bennu_alt_stats(self, planet, density_deg):
-        alt_list = np.linspace(0, 1500, 10, dtype=float) # Every 0.5 kilometers above surface
+    def compute_asteroid_alt_stats(self, planet, density_deg):
+        alt_list = np.arange(0, 10000, 1000, dtype=float) # Every 0.5 kilometers above surface
         alt_list = np.sort(np.unique(alt_list))
         stats = {}
         df_all = pd.DataFrame()
         for alt in alt_list: 
             trajectory = DHGridDist(planet, planet.radius + alt, degree=density_deg)
-            model_file = trajectory.celestial_body.obj_hf_file
+            model_file = trajectory.celestial_body.model_25k
             x, a, u = get_poly_data(trajectory, model_file)
 
             if self.config['basis'][0] == 'spherical':

@@ -17,7 +17,6 @@ import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Bennu
-from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Networks import utils
@@ -32,7 +31,6 @@ from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.RandomAsteroidDist import RandomAsteroidDist
 from GravNN.Trajectories.ExponentialDist import ExponentialDist
 from GravNN.Trajectories.GaussianDist import GaussianDist
 
@@ -44,69 +42,42 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-
+np.random.seed(1234)
+tf.random.set_seed(0)
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-# TODO: Put in mixed precision training
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_policy(policy)
-print('Compute dtype: %s' % policy.compute_dtype)
-print('Variable dtype: %s' % policy.variable_dtype)
-
-
-#tf.keras.backend.set_floatx('float16')
-
-
-np.random.seed(1234)
-tf.random.set_seed(0)
-
-
 def main():
     #df_file = 'Data/Dataframes/temp.data'
-
-    # *Original Analyses
+    #df_file = 'Data/Dataframes/param_study.data'
+    #df_file = "Data/Dataframes/tensorflow_2_results.data"
+    #df_file = "Data/Dataframes/tensorflow_2_ablation.data"
     #df_file = 'Data/Dataframes/N_1000000_study.data'
-    #df_file = 'Data/Dataframes/N_1000000_PINN_study.data'
+    df_file = 'Data/Dataframes/N_1000000_PINN_study.data'
     #df_file = 'Data/Dataframes/N_1000000_exp_norm_study.data'
     #df_file = 'Data/Dataframes/N_1000000_exp_norm_sph_study.data'
 
+    #df_file = 'Data/Dataframes/N_1000000_bennu_study.data'
+    df_file = 'Data/Dataframes/N_1000000_bennu_PINN_study.data'
 
-    # *Small Sample Size
-    # df_file = 'Data/Dataframes/N_10000_rand_study.data'
-    # df_file = 'Data/Dataframes/N_10000_exp_study.data'
-
-    # df_file = 'Data/Dataframes/N_10000_rand_PINN_study.data'
-    # df_file = 'Data/Dataframes/N_10000_exp_PINN_study.data'
-
-    # df_file = 'Data/Dataframes/N_10000_rand_spherical_study.data'
-
-    df_file = 'Data/Dataframes/N_100000_rand_eros_study.data'
-    df_file = 'Data/Dataframes/N_100000_rand_eros_PINN_study.data'
-
-    df_file = 'Data/Dataframes/N_100000_rand_eros_study_v2.data'
-    #df_file = 'Data/Dataframes/N_100000_rand_eros_PINN_study_v2.data'
 
 
     inception_layer = [3, 7, 11]
     dense_layer = [10, 10, 10]
     data_config = {
-        'planet' : [Eros()],
-        'grav_file' : [Eros().model_25k],
-        'distribution' : [RandomAsteroidDist],
+        'planet' : [Bennu()],
+        'grav_file' : [Bennu().obj_hf_file],
+        'distribution' : [RandomDist],
         'N_dist' : [1000000],
         'N_train' : [40000], 
         'N_val' : [4000],
-        'radius_min' : [0],
-        'radius_max' : [Eros().radius + 10000.0],
+        'radius_min' : [Bennu().radius],
+        'radius_max' : [Bennu().radius + 1000.0],
         'acc_noise' : [0.00],
         'basis' : [None],# ['spherical'],
         'deg_removed' : [0],
         'include_U' : [False],
-        'mixedPrecision' : [True],
-        'dtype' :['float32'],
         'max_deg' : [1000], 
         'sh_truth' : ['sh_stats_']
     }
@@ -129,19 +100,19 @@ def main():
     # InceptionNet -- 'layers' : [[3, inception_layer, inception_layer, inception_layer, inception_layer, 1]],
 
 
-
     config = {}
     config.update(data_config)
     config.update(network_config)
 
+    orbit = 420000.0 # Earth LEO
+    orbit = 1000.0 # Bennu Survey A 
 
-    config['PINN_flag'] = [False]
-    config['N_dist'] = [100000] 
-    config['N_train'] = [95000] 
-    config['N_val'] = [5000] 
+    config['PINN_flag'] = [True]
+    config['N_dist'] = [1000000] 
+    config['N_train'] = [950000] 
+    config['N_val'] = [50000] 
     config['batch_size'] = [40000]
     config['epochs'] = [100000]
-    #config['basis'] = ['spherical']
    
     config_1 = copy.deepcopy(config)
     config_1.update({'layers' : [[3, 80, 80, 80, 80, 80, 80, 80, 80, 1]]})
@@ -153,28 +124,19 @@ def main():
     config_3.update({'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 1]]})
 
     config_4 = copy.deepcopy(config)
-    config_4.update({'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]})
+    config_4.update({'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]})
 
     config_5 = copy.deepcopy(config)
-    config_5.update({'layers' : [[3, 15, 15, 15, 15, 15, 15, 15, 15, 1]]})
-
-    config_6 = copy.deepcopy(config)
-    config_6.update({'layers' : [[3, 10, 10, 10, 10, 10, 10, 10, 10, 1]]})
-    
-    config_7 = copy.deepcopy(config)
-    config_7.update({'layers' : [[3, 5, 5, 5, 5, 5, 5, 5, 5, 1]]})
+    config_5.update({'layers' : [[3, 10, 10, 10, 10, 10, 10, 10, 10, 1]]})
    
     configurations = {
          #"original" : config,
 
-          #"1" : config_1,
-        #  "2" : config_2,
-          #"3" : config_3,
-          "4" : config_4,
-        #  "5" : config_5,
-        #  "6" : config_6,
-        #  "7" : config_7,
-
+         #"1" : config_1,
+         "2" : config_2,
+         "3" : config_3,
+         "4" : config_4,
+         "5" : config_5,
 
           }  
 
@@ -186,8 +148,9 @@ def main():
         
         
         # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
-        trajectory = config['distribution'][0](config['planet'][0], config['grav_file'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)#points=1000000)
+        trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)#points=1000000)
         #x_unscaled, a_unscaled, u_unscaled = get_sh_data(trajectory, config['grav_file'][0],config['max_deg'][0], config['deg_removed'][0])
+        
         x_unscaled, a_unscaled, u_unscaled = get_poly_data(trajectory, config['grav_file'][0])
 
 
@@ -220,17 +183,11 @@ def main():
         dataset = generate_dataset(x_train, a_train, config['batch_size'][0])
         val_dataset = generate_dataset(x_val, a_val, config['batch_size'][0])
 
-        network = config['network_type'][0](config['layers'][0], config['activation'][0], dropout=config['dropout'][0], dtype=config['dtype'][0])
+        network = config['network_type'][0](config['layers'][0], config['activation'][0], dropout=config['dropout'][0])
         model = CustomModel(config, network)
         callback = CustomCallback()
-        tensorboard = tf.keras.callbacks.TensorBoard(log_dir='logs', histogram_freq=100, write_graph=True,
-                                        write_images=False, update_freq='epoch', profile_batch=2,
-                                        embeddings_freq=0, embeddings_metadata=None)
-
 
         optimizer = config['optimizer'][0]
-        # TODO: Put in mixed precision training
-        optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
 
         model.compile(optimizer=optimizer, loss="mse")#, run_eagerly=True)#, metrics=["mae"])
 
@@ -245,7 +202,6 @@ def main():
 
         # TODO: Save extra parameters like optimizer.learning_rate
         # Save network and config information
-        model.config['time_delta'] = [callback.time_delta]
         model.config['x_transformer'][0] = x_transformer
         model.config['a_transformer'][0] = a_transformer
         model.save(df_file)

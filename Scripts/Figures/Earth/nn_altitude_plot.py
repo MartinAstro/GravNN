@@ -27,8 +27,8 @@ def main():
     planet = Earth()
     statistic = 'rse_mean'
 
-    #df_file = 'N_1000000_study.data'
-    df_file = 'N_1000000_exp_norm_study.data'
+    #df_file = 'Data/Dataframes/N_1000000_study.data'
+    df_file = 'Data/Dataframes/N_1000000_exp_norm_study.data'
     df = pd.read_pickle(df_file)
     ids = df['id'].values
 
@@ -49,7 +49,7 @@ def main():
     vis = VisualizationBase()
     fig, ax = vis.newFig()
 
-    df_file = 'sh_stats_altitude.data'
+    df_file = 'Data/Dataframes/sh_stats_altitude.data'
     sh_df = pd.read_pickle(df_file)
 
     ax.plot(sh_df.index/1000.0, sh_df['deg_2_'+statistic], linestyle='--')

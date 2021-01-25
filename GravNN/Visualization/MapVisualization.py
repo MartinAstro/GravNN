@@ -20,11 +20,12 @@ class MapVisualization(VisualizationBase):
         elif unit == "m/s^2":
             self.scale = 1.0
         pass
+        self.tick_interval = [30,30]
+        self.unit = unit
 
     def new_map(self, grid, vlim=None, log_scale=False, alpha=None, cmap=None):
-        tick_interval = [30,30] # [45, 45]
-        yticks = np.linspace(-90, 90, num=180//tick_interval[1]+1, endpoint=True, dtype=int)
-        xticks = np.linspace(0, 360, num=360//tick_interval[0]+1, endpoint=True, dtype=int)
+        yticks = np.linspace(-90, 90, num=180//self.tick_interval[1]+1, endpoint=True, dtype=int)
+        xticks = np.linspace(0, 360, num=360//self.tick_interval[0]+1, endpoint=True, dtype=int)
         xloc = np.linspace(0, len(grid)-1, num=len(xticks), endpoint=True, dtype=int)
         yloc = np.linspace(0, len(grid[0]), num=len(yticks), endpoint=True, dtype=int)
         
@@ -34,11 +35,11 @@ class MapVisualization(VisualizationBase):
         yticks_labels = [ r'$' + str(ytick) + r'^\circ$' for ytick in yticks]
 
         ax = plt.gca()
-        ax.set_xlabel("Longitude",  fontsize=9)
-        ax.set_ylabel("Latitude",  fontsize=9)
+        ax.set_xlabel("Longitude",  fontsize=11)
+        ax.set_ylabel("Latitude",  fontsize=11)
         try:
-            plt.xticks(xloc,labels=xticks_labels, fontsize=8)
-            plt.yticks(yloc, labels=yticks_labels, fontsize=8)
+            plt.xticks(xloc,labels=xticks_labels, fontsize=11)
+            plt.yticks(yloc, labels=yticks_labels, fontsize=11)
         except:
             plt.xticks([])
             plt.yticks([])
@@ -65,7 +66,11 @@ class MapVisualization(VisualizationBase):
         cax = divider.append_axes("right", size="5%", pad=0.05)
         if vlim is not None:
             t = np.linspace(vlim[0], vlim[1], 5)
-            cBar = plt.colorbar(im,  cax=cax, ticks=t, format='$%.4f$', extend=extend)
+            if self.unit == 'mGal':
+                cBar = plt.colorbar(im,  cax=cax, ticks=t, format='$%.2f$', extend=extend)
+            else:
+                cBar = plt.colorbar(im,  cax=cax, ticks=t, format='$%.4f$', extend=extend)
+
         else:
             cBar = plt.colorbar(im, cax=cax)
         cBar.ax.set_ylabel(label)

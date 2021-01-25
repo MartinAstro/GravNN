@@ -12,6 +12,7 @@ GravNN/C_Algorithms/.vscode/*
 **/*.zip
 **/hyper_*
 **/Hyperparams
+Data/*
 Notes/*
 Plots/*
 Scripts/logs/*

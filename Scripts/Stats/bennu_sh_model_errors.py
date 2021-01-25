@@ -3,46 +3,54 @@ import pandas as pd
 import pickle
 
 from GravNN.Support.Grid import Grid
+from GravNN.Support.StateObject import StateObject
+
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
+from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
+
 from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Bennu
+
 from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.SurfaceDist import SurfaceDist
+
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
 def main():
     
-    planet = Earth()
-    model_file = planet.sh_hf_file
+    planet = Bennu()
+    sh_file = planet.sh_obj_file
     density_deg = 180
-    max_deg = 1000
+    max_deg = 37
+
+    radius_min = planet.radius
     
-    df_file = "Data/Dataframes/sh_stats_Brillouin.data"
-    trajectory = DHGridDist(planet,  planet.radius, degree=density_deg)
+    # df_file = "Data/Dataframes/sh_stats_bennu_brillouin.data"
+    # trajectory = DHGridDist(planet, radius_min, degree=density_deg)
 
-    # df_file = "Data/Dataframes/sh_stats_LEO.data"
-    # trajectory = DHGridDist(planet, planet.radius + 420000.0, degree=density_deg)
+    df_file = "Data/Dataframes/sh_stats_bennu_surface.data"
+    trajectory = SurfaceDist(planet, planet.obj_hf_file)
 
-    # df_file = "Data/Dataframes/sh_stats_GEO.data"
-    # trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
+    x, a , u = get_poly_data(trajectory, planet.obj_hf_file)
 
-    x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
-    grid_true = Grid(trajectory=trajectory, accelerations=a)
+    state_true = StateObject(trajectory=trajectory, accelerations=a)
 
-    deg_list =  np.linspace(1, 100, 100,dtype=int)[1:]
-    deg_list = np.append(deg_list, [110, 150, 200, 215, 250, 300, 400, 500, 700, 900])
+
+    deg_list =  np.linspace(1, 37, 37,dtype=int)[1:]
     df_all = pd.DataFrame()
-    for deg in deg_list:
-        
-        x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=2)
 
-        grid_pred = Grid(trajectory=trajectory, accelerations=a)
-        diff = grid_pred - grid_true
+    for deg in deg_list:
+
+        x, a, u = get_sh_data(trajectory, sh_file, max_deg=deg, deg_removed=0)
+
+        state_pred = StateObject(trajectory=trajectory, accelerations=a)
+        diff = state_pred - state_true
     
         # This ensures the same features are being evaluated independent of what degree is taken off at beginning
-        two_sigma_mask, two_sigma_mask_compliment = sigma_mask(grid_true.total, 2)
-        three_sigma_mask, three_sigma_mask_compliment = sigma_mask(grid_true.total, 3)
+        two_sigma_mask, two_sigma_mask_compliment = sigma_mask(state_true.total, 2)
+        three_sigma_mask, three_sigma_mask_compliment = sigma_mask(state_true.total, 3)
 
         rse_stats = mean_std_median(diff.total, prefix='rse')
         sigma_2_stats = mean_std_median(diff.total, two_sigma_mask, "sigma_2")
@@ -65,7 +73,7 @@ def main():
         
         df = pd.DataFrame().from_dict(entries).set_index('deg')
         df_all = df_all.append(df)
-    
+
     df_all.to_pickle(df_file)
 
 
