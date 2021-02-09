@@ -15,6 +15,9 @@ import pandas as pd
 import scipy.io
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from tensorboard.plugins.hparams import api as hp
+
+
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Networks.Configs.Default_Configs import (get_default_earth_config,
@@ -63,17 +66,64 @@ print('Variable dtype: %s' % policy.variable_dtype)
 np.random.seed(1234)
 tf.random.set_seed(0)
 
+def load_hparams_to_config(hparams, config):
+    for key, value in hparams.iteritems():
+        config[key] = [value]
+    config['layers'][0][1:-1] = hparams['num_units']
+    return config
 
 def main():
 
     df_file = 'Data/Dataframes/temp_spherical.data'
-    configurations = get_fast_earth_pinn_config()
+    configurations = get_fast_earth_config()
 
+    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
+    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
+    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'leaky_relu'])) 
+    HP_ACTIVATION_PARAM = hp.HParam('act_slope', hp.Discrete([0.01, 0.05, 0.1]))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8192, 32768, 131072]))
+    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([80000, 87500, 95000]))
     #config['PINN_flag'] = [False]
     #config['basis'] = ['spherical']
-   
+
+    for num_units in HP_NUM_UNITS.domain.values:
+        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+            for optimizer in HP_OPTIMIZER.domain.values:
+                for batch_size in HP_BATCH_SIZE.domain.values:
+                    for data_size in HP_DATA_SIZE.domain.values:
+                        for activation in HP_ACTIVATION.domain.values:
+                            hparams = {
+                                HP_NUM_UNITS: num_units,
+                                HP_DROPOUT: dropout_rate,
+                                HP_OPTIMIZER: optimizer,
+                                HP_BATCH_SIZE: batch_size,
+                                HP_DATA_SIZE: data_size,
+                                HP_ACTIVATION_PARAM : activation
+                            }
+                            if activation == 'leaky_relu':
+                                for act_param in HP_ACTIVATION_PARAM.domain.values:
+                                    hparams.update({HP_ACTIVATION_PARAM : act_param})
+                                     run_name = "run-%d" % session_num
+                                    print('--- Starting trial: %s' % run_name)
+                                    print({h.name: hparams[h] for h in hparams})
+                                    run(df_file, 'logs/hparam_tuning/' + run_name, config, hparams)
+                                    session_num += 1
+                            else:
+                                run_name = "run-%d" % session_num
+                                print('--- Starting trial: %s' % run_name)
+                                print({h.name: hparams[h] for h in hparams})
+                                run(df_file, 'logs/hparam_tuning/' + run_name, config, hparams)
+                                session_num += 1
+                           
+
+
+def run(df_file, file_name, config, hparams):
+    
     for key, config in configurations.items():
+        config = load_hparams_to_config(hparams, config)
         tf.keras.backend.clear_session()
+
         #config['basis'] = ['spherical']
 
         utils.check_config_combos(config)
@@ -121,12 +171,13 @@ def main():
         network = config['network_type'][0](config['layers'][0], config['activation'][0], dropout=config['dropout'][0])
         model = CustomModel(config, network)
         callback = CustomCallback()
-        tensorboard = tf.keras.callbacks.TensorBoard(log_dir='logs', histogram_freq=100, write_graph=True,
+        tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True,
                                         write_images=False, update_freq='epoch', profile_batch=2,
                                         embeddings_freq=0, embeddings_metadata=None)
+        hyper_params = hp.KerasCallback(logdir, hparams)
 
 
-        optimizer = config['optimizer'][0]
+        optimizer = hparams[HP_OPTIMIZER] #config['optimizer'][0]
         # TODO: Put in mixed precision training
         optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
 
@@ -136,7 +187,7 @@ def main():
                             epochs=config['epochs'][0], 
                             verbose=0,
                             validation_data=val_dataset,
-                            callbacks=[callback])#,
+                            callbacks=[callback, tensorboard, hyper_params])#,
                                         #early_stop])
         history.history['time_delta'] = callback.time_delta
         model.history = history
@@ -147,8 +198,6 @@ def main():
         model.config['x_transformer'][0] = x_transformer
         model.config['a_transformer'][0] = a_transformer
         model.save(df_file)
-
-        plt.close()
 
 
 

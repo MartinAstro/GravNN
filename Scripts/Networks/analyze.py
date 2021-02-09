@@ -31,6 +31,7 @@ from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import (cart2sph, project_acceleration,
                                             sphere2cart)
 from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.FibonacciDist import FibonacciDist
 from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.Trajectories.SurfaceDist import SurfaceDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
@@ -49,41 +50,32 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 def main():
 
 
-    # df_file = "Data/Dataframes/temp.data"
-
-
-    # df_file = 'Data/Dataframes/N_1000000_study.data'
-
-    # df_file = 'Data/Dataframes/N_1000000_rand_study.data'
-    # df_file = "Data/Dataframes/N_1000000_exp_norm_study.data"
-
-    # df_file = 'Data/Dataframes/N_1000000_PINN_study.data'
-    # df_file = 'Data/Dataframes/N_1000000_PINN_study_opt.data'
-
-
-    # Small Datasets
-    df_file = 'Data/Dataframes/N_10000_rand_study.data'
-    # df_file = "Data/Dataframes/N_10000_exp_study.data"
-
-    df_file = 'Data/Dataframes/N_10000_rand_PINN_study.data'
-    df_file = "Data/Dataframes/N_10000_exp_PINN_study.data"
-
-    # # Spherical Dataset
-    # df_file = 'Data/Dataframes/N_10000_rand_spherical_study.data'
-
-    df_file = 'Data/Dataframes/N_1000000_exp_PINN_study.data'
-
+    df_file = "Data/Dataframes/temp_spherical.data"
 
     df = pd.read_pickle(df_file)#[5:]
     ids = df['id'].values
 
+    points = 64800
+
     planet = Earth()
-    density_deg = 180# 180
+    alt_list = np.arange(0, 500000, 10000, dtype=float)
+    window = np.array([0, 5, 10, 15, 25, 35, 45, 100, 200, 300, 400]) 
+    alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])
+    altitudes = np.sort(np.unique(alt_list))
     test_trajectories = {
-        "Brillouin" : DHGridDist(planet, planet.radius, degree=density_deg),
-        "LEO" : DHGridDist(planet, planet.radius+420000.0, degree=density_deg),
+        "Brillouin" : FibonacciDist(planet, planet.radius, points),
+        #"LEO" : FibonacciDist(planet, planet.radius+420000.0, points),
         }
     
+    # #* Asteroid config
+    # planet = Eros()
+    # altitudes = np.arange(0, 10000, 1000, dtype=float) 
+    # test_trajectories = {
+    #     "Brillouin" : DHGridDist(planet, planet.radius, degree=density_deg),
+    #     "Surface" : SurfaceDist(planet, planet.model_25k),
+    #     "LBO" : DHGridDist(planet, planet.radius+10000.0, degree=density_deg),
+    #     }
+
     for model_id in ids:
         tf.keras.backend.clear_session()
 
@@ -92,11 +84,9 @@ def main():
 
         # Analyze the model
         analyzer = Analysis(model, config)
-
-
         rse_entries = analyzer.compute_rse_stats(test_trajectories)
         utils.update_df_row(model_id, df_file, rse_entries)
-        alt_df = analyzer.compute_alt_stats(planet, density_deg)
+        alt_df = analyzer.compute_alt_stats(planet, altitudes, points)
         alt_df.to_pickle(alt_df_file)
 
 

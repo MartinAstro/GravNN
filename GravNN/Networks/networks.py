@@ -3,6 +3,8 @@ import tensorflow as tf
 def TraditionalNet(layers, activation, **kwargs):
     inputs = tf.keras.Input(shape=(layers[0],))
     x = inputs
+    if kwargs['activation'] == 'leaky_relu':
+        activation = tf.keras.layers.LeakyReLU(alpha=kwargs['act_slope'])
     for i in range(1,len(layers)-1):
         x = tf.keras.layers.Dense(units=layers[i], 
                                     activation=activation, 

@@ -15,9 +15,9 @@ from numba import njit, prange
 #     Z_inst = r*np.cos(phi)
 
 class RandomAsteroidDist(TrajectoryBase):
-    def __init__(self, celestial_body, shape_model, radius_bounds, points, **kwargs):
+    def __init__(self, celestial_body, radius_bounds, points, **kwargs):
         self.radius_bounds = radius_bounds
-        self.shape_model = trimesh.load_mesh(shape_model)
+        self.shape_model = trimesh.load_mesh(kwargs['grav_file'][0])
         self.model_file = shape_model
         self.points = points
         self.celestial_body = celestial_body

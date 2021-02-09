@@ -44,11 +44,9 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # * gca().get_lines()[n].get_xydata() lets you get the data from a curve
 def main():
     planet = Earth()
-    df_file = 'Data/Dataframes/temp.data'
-    # df_file = 'Data/Dataframes/N_1000000_study.data'
-    df_file = 'Data/Dataframes/N_1000000_exp_norm_study.data'
+    df_file = 'Data/Dataframes/temp_spherical.data'
 
-    df = pd.read_pickle(df_file).sort_values(by='params')[:2]
+    df = pd.read_pickle(df_file).sort_values(by='params')[1:]##[:2]
     ids = df['id'].values
 
     for id_value in ids:
@@ -66,7 +64,7 @@ def main():
         density_deg = 180
         test_trajectories = {
             "Brillouin" : DHGridDist(planet, planet.radius, degree=density_deg),
-            "LEO" : DHGridDist(planet, planet.radius+420000.0, degree=density_deg),
+            #"LEO" : DHGridDist(planet, planet.radius+420000.0, degree=density_deg),
             #"GEO" : DHGridDist(planet, planet.radius+35786000.0, degree=density_deg)
         }
 
@@ -79,7 +77,7 @@ def main():
         #plotter.plot_data_alt_curve('rse_median')
         #plotter.plot_model_graph()
         
-        #plt.show()
+        plt.show()
         plt.close()
 
 
