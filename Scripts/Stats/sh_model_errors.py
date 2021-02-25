@@ -3,11 +3,13 @@ import pandas as pd
 import pickle
 
 from GravNN.Support.Grid import Grid
+from GravNN.Support.StateObject import StateObject
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories.FibonacciDist import FibonacciDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
@@ -18,8 +20,13 @@ def main():
     density_deg = 180
     max_deg = 1000
     
+    points = 64800
     df_file = "Data/Dataframes/sh_stats_Brillouin.data"
+    trajectory = FibonacciDist(planet, planet.radius, points)
+
+    df_file = "Data/Dataframes/sh_stats_DH_Brillouin.data"
     trajectory = DHGridDist(planet,  planet.radius, degree=density_deg)
+
 
     # df_file = "Data/Dataframes/sh_stats_LEO.data"
     # trajectory = DHGridDist(planet, planet.radius + 420000.0, degree=density_deg)
@@ -28,7 +35,7 @@ def main():
     # trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
 
     x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
-    grid_true = Grid(trajectory=trajectory, accelerations=a)
+    grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
     deg_list =  np.linspace(1, 100, 100,dtype=int)[1:]
     deg_list = np.append(deg_list, [110, 150, 200, 215, 250, 300, 400, 500, 700, 900])
@@ -37,7 +44,7 @@ def main():
         
         x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=2)
 
-        grid_pred = Grid(trajectory=trajectory, accelerations=a)
+        grid_pred = StateObject(trajectory=trajectory, accelerations=a)
         diff = grid_pred - grid_true
     
         # This ensures the same features are being evaluated independent of what degree is taken off at beginning

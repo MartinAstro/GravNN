@@ -38,9 +38,9 @@ def main():
         else:
             sh_df = pd.read_pickle(file_name)
 
-        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['rse_mean'], label=r'MSE($\mathcal{A}$)')
-        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['sigma_2_mean'], label=r'MSE($\mathcal{F}$)')
-        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['sigma_2_c_mean'], label=r'MSE($\mathcal{C}$)')
+        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['rse_mean'], label=r'MRSE($\mathcal{A}$)')
+        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['sigma_2_mean'], label=r'MRSE($\mathcal{F}$)')
+        plt.semilogx(sh_df.index*(sh_df.index+1), sh_df['sigma_2_c_mean'], label=r'MRSE($\mathcal{C}$)')
 
         plt.ylabel('Mean RSE')
         plt.xlabel("Parameters")
@@ -56,49 +56,49 @@ def main():
         plt.semilogx(sub_df['params'], sub_df[orbit_name+'_sigma_2_c_mean'], linestyle=linestyle, marker=marker)
         plt.legend()
 
-    sh_pareto_curve('sh_stats_Brillouin.data', max_deg=None)
+    sh_pareto_curve('Data/Dataframes/sh_stats_DH_Brillouin.data', max_deg=None)
     plt.legend()
     vis.save(fig, "Brill_Params.pdf")
 
     # ! Neural Network Results
-    nn_pareto_curve('N_1000000_Rand_Study.data', orbit_name='Brillouin', linestyle='--')
+    nn_pareto_curve('Data/Dataframes/N_1000000_Rand_Study.data', orbit_name='Brillouin', linestyle='--')
     vis.save(fig, "NN_Brill_Params.pdf")
 
     # ! PINN Neural Network Results
-    nn_pareto_curve('N_1000000_PINN_study.data', orbit_name='Brillouin', marker='o')
+    nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study.data', orbit_name='Brillouin', marker='o')
     vis.save(fig, "NN_Brill_PINN_Params.pdf")
 
     # # ! Optimized PINN Neural Network Results
-    # nn_pareto_curve('N_1000000_PINN_study_opt.data', orbit_name='Brillouin', marker='v')
+    # nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study_opt.data', orbit_name='Brillouin', marker='v')
     # vis.save(fig, "NN_Brill_PINN_Opt_Params.pdf")
 
 
     # JUST NN Representations
     # fig, ax = vis.newFig(fig_size=vis.full_page)
 
-    # sh_pareto_curve('sh_regress_stats_Brillouin.data')
+    # sh_pareto_curve('Data/Dataframes/sh_regress_stats_Brillouin.data')
 
     # # ! Neural Network Results
-    # nn_pareto_curve('N_10000_rand_study.data', orbit_name='Brillouin', linestyle='--')
+    # nn_pareto_curve('Data/Dataframes/N_10000_rand_study.data', orbit_name='Brillouin', linestyle='--')
 
     # # ! PINN Neural Network Results
-    # nn_pareto_curve('N_10000_rand_PINN_study.data', orbit_name='Brillouin', marker='o')
+    # nn_pareto_curve('Data/Dataframes/N_10000_rand_PINN_study.data', orbit_name='Brillouin', marker='o')
     # vis.save(fig, "NN_Brill_Traditional_v_PINN.pdf")
 
 
     # * LEO Orbit
-    # sh_pareto_curve('sh_stats_LEO.data')
+    # sh_pareto_curve('Data/Dataframes/sh_stats_LEO.data')
 
     # # ! Neural Network Results
-    # nn_pareto_curve('N_1000000_Rand_Study.data', orbit_name='LEO', linestyle='--')
+    # nn_pareto_curve('Data/Dataframes/N_1000000_Rand_Study.data', orbit_name='LEO', linestyle='--')
     # vis.save(fig, "NN_LEO_Params.pdf")
 
     # # ! PINN Neural Network Results
-    # nn_pareto_curve('N_1000000_PINN_study.data', orbit_name='LEO', marker='o')
+    # nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study.data', orbit_name='LEO', marker='o')
     # vis.save(fig, "NN_LEO_PINN_Params.pdf")
 
     # # ! Optimized PINN Neural Network Results
-    # nn_pareto_curve('N_1000000_PINN_study_opt.data', orbit_name='LEO', marker='v')
+    # nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study_opt.data', orbit_name='LEO', marker='v')
     # vis.save(fig, "NN_LEO_PINN_Opt_Params.pdf")
 
 

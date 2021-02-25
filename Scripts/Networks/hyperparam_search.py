@@ -2,6 +2,7 @@
 import os
 
 os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+os.environ["TF_GPU_THREAD_MODE"] ='gpu_private'
 
 import copy
 import pickle
@@ -50,6 +51,7 @@ from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from GravNN.Networks.Activations import bent_identity
 
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
@@ -62,69 +64,103 @@ mixed_precision.set_policy(policy)
 print('Compute dtype: %s' % policy.compute_dtype)
 print('Variable dtype: %s' % policy.variable_dtype)
 
+tf.profiler.experimental.server.start(6009)
 
 np.random.seed(1234)
 tf.random.set_seed(0)
 
 def load_hparams_to_config(hparams, config):
-    for key, value in hparams.iteritems():
-        config[key] = [value]
-    config['layers'][0][1:-1] = hparams['num_units']
+    for key, value in hparams.items():
+        name = key.name
+        config[name] = [value]
+
+    if config['activation'][0] == 'bent_identity':
+        config['activation'] = [bent_identity]
+    
+    if config['optimizer'][0] == 'adam':
+        config['optimizer'][0] = tf.keras.optimizers.Adam()
+
+        
+    if config['optimizer'][0] == 'rmsprop':
+        config['optimizer'][0] = tf.keras.optimizers.RMSprop()
+    
+    for i in range(1, len(config['layers'][0])-1):
+        config['layers'][0][i] = config['num_units'][0]
+    #config['layers'][0][1:len(config['layers'][0])-1] = config['num_units']
     return config
 
 def main():
 
-    df_file = 'Data/Dataframes/temp_spherical.data'
-    configurations = get_fast_earth_config()
+    device_name = tf.test.gpu_device_name()
+    if not device_name:
+        raise SystemError('GPU device not found')
+    print('Found GPU at: {}'.format(device_name))
+
+    df_file = 'Data/Dataframes/hyperparameter_v1.data'
+    configurations = {"Default" : get_default_earth_config() }
 
     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
     HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
     HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
-    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'leaky_relu'])) 
-    HP_ACTIVATION_PARAM = hp.HParam('act_slope', hp.Discrete([0.01, 0.05, 0.1]))
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8192, 32768, 131072]))
-    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([80000, 87500, 95000]))
-    #config['PINN_flag'] = [False]
-    #config['basis'] = ['spherical']
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([2048, 131072]))
+    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([500000, 950000]))
+    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([5000, 10000]))
 
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
-                for batch_size in HP_BATCH_SIZE.domain.values:
-                    for data_size in HP_DATA_SIZE.domain.values:
-                        for activation in HP_ACTIVATION.domain.values:
-                            hparams = {
-                                HP_NUM_UNITS: num_units,
-                                HP_DROPOUT: dropout_rate,
-                                HP_OPTIMIZER: optimizer,
-                                HP_BATCH_SIZE: batch_size,
-                                HP_DATA_SIZE: data_size,
-                                HP_ACTIVATION_PARAM : activation
-                            }
-                            if activation == 'leaky_relu':
-                                for act_param in HP_ACTIVATION_PARAM.domain.values:
-                                    hparams.update({HP_ACTIVATION_PARAM : act_param})
-                                     run_name = "run-%d" % session_num
-                                    print('--- Starting trial: %s' % run_name)
-                                    print({h.name: hparams[h] for h in hparams})
-                                    run(df_file, 'logs/hparam_tuning/' + run_name, config, hparams)
-                                    session_num += 1
-                            else:
+
+    
+    df_file = 'Data/Dataframes/hyperparameter_v2.data'
+    directory = 'logs/hparam_tuning/'
+
+    df_file = 'Data/Dataframes/useless_board.data'
+    directory = 'logs/useless/'
+
+    
+    df_file = 'Data/Dataframes/hyperparameter_v3.data'
+    directory = 'logs/hparam_tuning_v3/'
+
+
+    configurations = {"Default" : get_default_earth_config() }
+    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
+    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
+    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768, 131072]))
+
+    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([125000, 250000, 500000]))
+    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([2500, 5000, 7500]))
+
+
+    session_num = 0
+    for epochs in HP_EPOCHS.domain.values:
+        for num_units in HP_NUM_UNITS.domain.values:
+            for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+                for optimizer in HP_OPTIMIZER.domain.values:
+                    for batch_size in HP_BATCH_SIZE.domain.values:
+                        for data_size in HP_DATA_SIZE.domain.values:
+                            for activation in HP_ACTIVATION.domain.values:
+                                hparams = {
+                                    HP_EPOCHS : epochs,
+                                    HP_NUM_UNITS: num_units,
+                                    HP_DROPOUT: dropout_rate,
+                                    HP_OPTIMIZER: optimizer,
+                                    HP_BATCH_SIZE: batch_size,
+                                    HP_DATA_SIZE: data_size,
+                                    HP_ACTIVATION: activation
+                                }
                                 run_name = "run-%d" % session_num
                                 print('--- Starting trial: %s' % run_name)
                                 print({h.name: hparams[h] for h in hparams})
-                                run(df_file, 'logs/hparam_tuning/' + run_name, config, hparams)
+                                run(df_file, directory + run_name, configurations, hparams)
                                 session_num += 1
-                           
+                            
 
 
-def run(df_file, file_name, config, hparams):
+def run(df_file, file_name, configurations, hparams):
     
     for key, config in configurations.items():
         config = load_hparams_to_config(hparams, config)
         tf.keras.backend.clear_session()
-
-        #config['basis'] = ['spherical']
 
         utils.check_config_combos(config)
         config = utils.format_config_combos(config)
@@ -168,16 +204,23 @@ def run(df_file, file_name, config, hparams):
         dataset = generate_dataset(x_train, a_train, config['batch_size'][0])
         val_dataset = generate_dataset(x_val, a_val, config['batch_size'][0])
 
-        network = config['network_type'][0](config['layers'][0], config['activation'][0], dropout=config['dropout'][0])
+
+        if config['init_file'][0] is not None:
+            network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
+        else:
+            network = config['network_type'][0](**config)        
+        
         model = CustomModel(config, network)
+
         callback = CustomCallback()
-        tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True,
-                                        write_images=False, update_freq='epoch', profile_batch=2,
-                                        embeddings_freq=0, embeddings_metadata=None)
-        hyper_params = hp.KerasCallback(logdir, hparams)
+        # tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True,
+        #                                 write_images=False, update_freq='epoch', profile_batch=2,
+        #                                 embeddings_freq=0, embeddings_metadata=None)
+        tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True)#, profile_batch='35,50')
+        hyper_params = hp.KerasCallback(file_name, hparams)
 
 
-        optimizer = hparams[HP_OPTIMIZER] #config['optimizer'][0]
+        optimizer = config['optimizer'][0]
         # TODO: Put in mixed precision training
         optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
 
@@ -187,7 +230,7 @@ def run(df_file, file_name, config, hparams):
                             epochs=config['epochs'][0], 
                             verbose=0,
                             validation_data=val_dataset,
-                            callbacks=[callback, tensorboard, hyper_params])#,
+                            callbacks=[callback, tensorboard, hyper_params])# tensorboard, hyper_params])#,
                                         #early_stop])
         history.history['time_delta'] = callback.time_delta
         model.history = history

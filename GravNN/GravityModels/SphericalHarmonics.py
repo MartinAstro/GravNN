@@ -21,10 +21,17 @@ def make_2D_array(lis):
 
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
-    Call_r0_gm = SphericalHarmonics(gravity_file, degree=int(kwargs['max_deg'][0]), trajectory=trajectory)
+    try:
+        max_deg = int(kwargs['max_deg'][0])
+        deg_removed = int(kwargs['deg_removed'][0])
+    except:
+        max_deg = int(kwargs['max_deg'])
+        deg_removed = int(kwargs['deg_removed'])
+
+    Call_r0_gm = SphericalHarmonics(gravity_file, degree=max_deg, trajectory=trajectory)
     accelerations = Call_r0_gm.load()
 
-    Clm_r0_gm = SphericalHarmonics(gravity_file, degree=int(kwargs['deg_removed'][0]), trajectory=trajectory)
+    Clm_r0_gm = SphericalHarmonics(gravity_file, degree=deg_removed, trajectory=trajectory)
     accelerations_Clm = Clm_r0_gm.load()
 
     x = Call_r0_gm.positions # position (N x 3)

@@ -45,8 +45,12 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 def main():
     planet = Earth()
     df_file = 'Data/Dataframes/temp_spherical.data'
+    df_file = 'Data/Dataframes/new_pinn_constraints.data'
+    df_file = 'Data/Dataframes/new_temp.data'
+    df_file = 'Data/Dataframes/new_temp_small.data'
+    df_file = 'Data/Dataframes/new_temp_long.data'
 
-    df = pd.read_pickle(df_file).sort_values(by='params')[1:]##[:2]
+    df = pd.read_pickle(df_file)#[3:]#.sort_values(by='params')[2:]##[:2]
     ids = df['id'].values
 
     for id_value in ids:
@@ -69,7 +73,7 @@ def main():
         }
 
         # plot standard metrics (loss, maps) the model
-        plotter.plot_maps(test_trajectories)
+        #plotter.plot_maps(test_trajectories)
         plotter.plot_loss()
 
         # plot optional metrics (altitude plot)
@@ -77,8 +81,8 @@ def main():
         #plotter.plot_data_alt_curve('rse_median')
         #plotter.plot_model_graph()
         
-        plt.show()
-        plt.close()
+    plt.show()
+    plt.close()
 
 
 

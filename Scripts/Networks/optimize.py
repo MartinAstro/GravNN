@@ -72,7 +72,7 @@ def main():
         tf.keras.backend.clear_session()
 
         config, model = load_config_and_model(model_id, df_in_file)
-        config['mixedPrecision'] = [False]
+        config['mixed_precision'] = [False]
         utils.check_config_combos(config)
         config = utils.format_config_combos(config)
         config.update(compression_config)

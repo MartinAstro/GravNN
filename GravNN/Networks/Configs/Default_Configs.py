@@ -62,13 +62,13 @@ def get_default_earth_config():
         'basis' : [None],# ['spherical'],
         'deg_removed' : [2],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'max_deg' : [1000], 
-        'sh_truth' : ['sh_stats_']
+        'analytic_truth' : ['sh_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [False],
+        'PINN_flag' : ['none'],
         'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],#'2459192.4530671295'],
@@ -82,7 +82,7 @@ def get_default_earth_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return {"Default" : config}
+    return config
 
 
 def get_default_eros_config():
@@ -99,14 +99,14 @@ def get_default_eros_config():
         'basis' : [None],
         'deg_removed' : [0],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'dtype' :['float32'],
         'max_deg' : [1000], 
         'analytic_truth' : ['poly_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [False],
+        'PINN_flag' : ['none'],
         'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -121,6 +121,81 @@ def get_default_eros_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return {"Default" : config}
+    return config
 
 
+
+def get_default_earth_pinn_config():
+    data_config = {
+        'planet' : [Earth()],
+        'grav_file' : [Earth().sh_hf_file],
+        'distribution' : [RandomDist],
+        'N_dist' : [1000000],
+        'N_train' : [95000], 
+        'N_val' : [50000],
+        'radius_min' : [Earth().radius],
+        'radius_max' : [Earth().radius + 420000.0],
+        'acc_noise' : [0.00],
+        'basis' : [None],# ['spherical'],
+        'deg_removed' : [2],
+        'include_U' : [False],
+        'mixed_precision' : [True],
+        'max_deg' : [1000], 
+        'analytic_truth' : ['sh_stats_']
+    }
+    network_config = {
+        'network_type' : [TraditionalNet],
+        'PINN_flag' : ['gradient'],
+        'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 1]],
+        'activation' : ['tanh'],
+        'init_file' : [None],#'2459192.4530671295'],
+        'epochs' : [100000],
+        'optimizer' : [tf.keras.optimizers.Adam()], #(learning_rate=config['lr_scheduler'][0])
+        'batch_size' : [40000],
+        'dropout' : [0.0], 
+        'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+    }
+    config = {}
+    config.update(data_config)
+    config.update(network_config)
+    return config
+
+
+def get_default_eros_pinn_config():
+    data_config = {
+        'planet' : [Eros()],
+        'grav_file' : [Eros().model_25k],
+        'distribution' : [RandomAsteroidDist],
+        'N_dist' : [100000],
+        'N_train' : [95000], 
+        'N_val' : [5000],
+        'radius_min' : [0],
+        'radius_max' : [Eros().radius + 10000.0],
+        'acc_noise' : [0.00],
+        'basis' : [None],
+        'deg_removed' : [0],
+        'include_U' : [False],
+        'mixed_precision' : [True],
+        'dtype' :['float32'],
+        'max_deg' : [1000], 
+        'analytic_truth' : ['poly_stats_']
+    }
+    network_config = {
+        'network_type' : [TraditionalNet],
+        'PINN_flag' : ['gradient'],
+        'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 1]],
+        'activation' : ['tanh'],
+        'init_file' : [None],
+        'epochs' : [100000],
+        'optimizer' : [tf.keras.optimizers.Adam()],
+        'batch_size' : [40000],
+        'dropout' : [0.0], 
+        'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+    }
+
+    config = {}
+    config.update(data_config)
+    config.update(network_config)
+    return config

@@ -1,10 +1,11 @@
 import tensorflow as tf
 
-def TraditionalNet(layers, activation, **kwargs):
+def TraditionalNet(**kwargs):
+    layers = kwargs['layers'][0]
+    activation = kwargs['activation'][0]
+
     inputs = tf.keras.Input(shape=(layers[0],))
     x = inputs
-    if kwargs['activation'] == 'leaky_relu':
-        activation = tf.keras.layers.LeakyReLU(alpha=kwargs['act_slope'])
     for i in range(1,len(layers)-1):
         x = tf.keras.layers.Dense(units=layers[i], 
                                     activation=activation, 
@@ -12,8 +13,8 @@ def TraditionalNet(layers, activation, **kwargs):
                                     )(x)
                                     #dtype=kwargs['dtype'])(x)
         if 'dropout' in kwargs:
-            if kwargs['dropout'] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'])(x)
+            if kwargs['dropout'][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
     outputs = tf.keras.layers.Dense(units=layers[-1], 
                                     activation='linear', 
                                     kernel_initializer='glorot_normal',

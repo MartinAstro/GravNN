@@ -35,7 +35,7 @@ class Plotting():
             x = self.x_transformer.transform(x)
             a = self.a_transformer.transform(a)
 
-            U_pred, acc_pred = self.model.predict(x.astype('float32'))
+            U_pred, acc_pred, laplace, curl = self.model.predict(x.astype('float32'))
 
             x = self.x_transformer.inverse_transform(x)
             a = self.a_transformer.inverse_transform(a)

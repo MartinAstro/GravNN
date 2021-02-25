@@ -39,9 +39,9 @@ def main():
         else:
             sh_df = pd.read_pickle(file_name)
 
-        plt.semilogx(sh_df.index, sh_df['rse_mean'], label=r"MSE($\mathcal{A'}$)")
-        plt.semilogx(sh_df.index, sh_df["sigma_2_mean"], label=r"MSE($\mathcal{F'}$)")
-        plt.semilogx(sh_df.index, sh_df["sigma_2_c_mean"], label=r"MSE($\mathcal{C'}$)")
+        plt.semilogx(sh_df.index, sh_df['rse_mean'], label=r"MRSE($\mathcal{A'}$)")
+        plt.semilogx(sh_df.index, sh_df["sigma_2_mean"], label=r"MRSE($\mathcal{F'}$)")
+        plt.semilogx(sh_df.index, sh_df["sigma_2_c_mean"], label=r"MRSE($\mathcal{C'}$)")
 
         plt.ylabel("Mean RSE")
         plt.xlabel("Parameters")
@@ -57,15 +57,15 @@ def main():
         plt.semilogx(sub_df['params'], sub_df[orbit_name+'_sigma_2_c_mean'], linestyle=linestyle, marker=marker)
         plt.legend()
 
-    sh_pareto_curve('poly_stats_eros_brillouin.data', max_deg=None)
+    sh_pareto_curve('Data/Dataframes/poly_stats_eros_brillouin.data', max_deg=None)
     vis.save(fig, "Eros_Brill_Params.pdf")
 
     # ! Neural Network Results
-    nn_pareto_curve('N_100000_rand_eros_study_v2.data', orbit_name='Brillouin', linestyle='--')
+    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_study_v2.data', orbit_name='Brillouin', linestyle='--')
     vis.save(fig, "NN_Eros_Brill_Params.pdf")
 
     # ! PINN Neural Network Results
-    nn_pareto_curve('N_100000_rand_eros_PINN_study_v2.data', orbit_name='Brillouin', marker='o')
+    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_PINN_study_v2.data', orbit_name='Brillouin', marker='o')
     vis.save(fig, "NN_Eros_Brill_PINN_Params.pdf")
     #plt.show()
     #plt.close()
@@ -73,19 +73,19 @@ def main():
 
 
     
-    # * Surface
-    fig, ax = vis.newFig(fig_size=vis.full_page)
+    # # * Surface
+    # fig, ax = vis.newFig(fig_size=vis.full_page)
 
-    sh_pareto_curve('poly_stats_eros_surface.data', max_deg=None)
-    vis.save(fig, "Eros_Surface_Params.pdf")
+    # sh_pareto_curve('poly_stats_eros_surface.data', max_deg=None)
+    # vis.save(fig, "Eros_Surface_Params.pdf")
 
-    # ! Neural Network Results
-    nn_pareto_curve('N_100000_rand_eros_study_v2.data', orbit_name='Surface', linestyle='--')
-    vis.save(fig, "NN_Eros_Surface_Params.pdf")
+    # # ! Neural Network Results
+    # nn_pareto_curve('N_100000_rand_eros_study_v2.data', orbit_name='Surface', linestyle='--')
+    # vis.save(fig, "NN_Eros_Surface_Params.pdf")
 
-    # ! PINN Neural Network Results
-    nn_pareto_curve('N_100000_rand_eros_PINN_study_v2.data', orbit_name='Surface', marker='o')
-    vis.save(fig, "NN_Eros_Surface_PINN_Params.pdf")
+    # # ! PINN Neural Network Results
+    # nn_pareto_curve('N_100000_rand_eros_PINN_study_v2.data', orbit_name='Surface', marker='o')
+    # vis.save(fig, "NN_Eros_Surface_PINN_Params.pdf")
 
 
 

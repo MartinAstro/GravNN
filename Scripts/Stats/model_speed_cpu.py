@@ -82,7 +82,7 @@ def time_models_in_df(df_file, column_name):
     for model_id in ids:
         tf.keras.backend.clear_session()
         config, model = load_config_and_model(model_id, df_file)
-        #config['mixedPrecision'] = False
+        #config['mixed_precision'] = False
         params, delta = time_network(positions, config, model)
         total_params.append(params)
         time.append(delta)

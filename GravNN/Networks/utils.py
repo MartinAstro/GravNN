@@ -28,7 +28,7 @@ def count_nonzero_params(model):
     return params.numpy()
 
 def check_config_combos(config):
-    if config['PINN_flag'][0] == True:
+    if config['PINN_flag'][0] != "none":
         assert config['layers'][0][-1] == 1, "If PINN, the final layer must have one output (the potential, U)"
     else:
         assert config['layers'][0][-1] == 3, "If not PINN, the final layer must have three outputs (the acceleration vector, a)"

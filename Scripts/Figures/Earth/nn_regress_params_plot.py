@@ -36,9 +36,9 @@ def main():
         sh_df = pd.read_pickle(file_name)
         if max_index is not None:
             sh_df = sh_df.loc[:str(max_index)]
-        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['rse_mean'], label=r'MSE($\mathcal{A}$)')
-        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['sigma_2_mean'], label=r'MSE($\mathcal{F}$)')
-        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['sigma_2_c_mean'], label=r'MSE($\mathcal{C}$)')
+        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['rse_mean'], label=r'MRSE($\mathcal{A}$)')
+        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['sigma_2_mean'], label=r'MRSE($\mathcal{F}$)')
+        plt.loglog(sh_df.index*(sh_df.index+1), sh_df['sigma_2_c_mean'], label=r'MRSE($\mathcal{C}$)')
 
         plt.ylabel('Mean RSE')
         plt.xlabel("Parameters")
@@ -57,15 +57,15 @@ def main():
     #sh_pareto_curve('sh_regress_stats_Brillouin.data')
     #sh_pareto_curve('sh_stats_Brillouin.data', max_index=33)
 
-    sh_pareto_curve('sh_regress_stats_33_Brillouin.data')
-    #sh_pareto_curve('sh_regress_stats_33_Random.data')
+    sh_pareto_curve('Data/Dataframes/sh_regress_stats_33_Brillouin.data')
+    #sh_pareto_curve('Data/Dataframes/sh_regress_stats_33_Random.data')
 
     # # ! Neural Network Results
-    nn_pareto_curve('N_10000_rand_study.data', orbit_name='Brillouin', linestyle='--')
+    nn_pareto_curve('Data/Dataframes/N_10000_rand_study.data', orbit_name='Brillouin', linestyle='--')
     vis.save(fig, "NN_Regress_Brill_Params.pdf")
 
     # # # ! PINN Neural Network Results
-    nn_pareto_curve('N_10000_rand_PINN_study.data', orbit_name='Brillouin', marker='o')
+    nn_pareto_curve('Data/Dataframes/N_10000_rand_PINN_study.data', orbit_name='Brillouin', marker='o')
     vis.save(fig, "NN_Regress_Brill_PINN_Params.pdf")
 
     

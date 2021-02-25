@@ -62,13 +62,13 @@ def get_fast_earth_config():
         'basis' : [None],
         'deg_removed' : [2],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [False],
+        'PINN_flag' : ['none'],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -82,7 +82,7 @@ def get_fast_earth_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return {"Fast" : config}
+    return config
 
 def get_fast_eros_config():
     data_config = {
@@ -98,14 +98,14 @@ def get_fast_eros_config():
         'basis' : [None],
         'deg_removed' : [0],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'dtype' :['float32'],
         'max_deg' : [1000], 
         'analytic_truth' : ['poly_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [False],
+        'PINN_flag' : ['none'],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -120,7 +120,7 @@ def get_fast_eros_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return  {"Fast" : config}
+    return  config
 
 def get_fast_earth_pinn_config():
     data_config = {
@@ -136,13 +136,13 @@ def get_fast_earth_pinn_config():
         'basis' : [None],
         'deg_removed' : [2],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [True],
+        'PINN_flag' : ['gradient'],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -156,7 +156,7 @@ def get_fast_earth_pinn_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return {"Fast" : config}
+    return config
 
 def get_fast_eros_pinn_config():
     data_config = {
@@ -172,14 +172,14 @@ def get_fast_eros_pinn_config():
         'basis' : [None],
         'deg_removed' : [0],
         'include_U' : [False],
-        'mixedPrecision' : [True],
+        'mixed_precision' : [True],
         'dtype' :['float32'],
         'max_deg' : [1000], 
         'analytic_truth' : ['poly_stats_']
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : [True],
+        'PINN_flag' : ['gradient'],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -194,4 +194,4 @@ def get_fast_eros_pinn_config():
     config = {}
     config.update(data_config)
     config.update(network_config)
-    return  {"Fast" : config}
+    return  config

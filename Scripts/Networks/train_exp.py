@@ -101,7 +101,7 @@ def main():
         'include_U' : [False],
         'max_deg' : [1000], 
         'dtype' : ['float32'],
-        'mixedPrecision' :[True],
+        'mixed_precision' :[True],
         'sh_truth' : ['sh_stats_']
     }
     network_config = {

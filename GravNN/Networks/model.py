@@ -27,95 +27,153 @@ import tensorflow_probability as tfp
 
 np.random.seed(1234)
 
+
+
+#def compute_spherical_gradient():
+    # if self.config['basis'][0] == 'spherical':
+    #     # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
+    #     with tf.GradientTape() as tape:
+    #         tape.watch(x)
+    #         U_pred = self.network(x, training)
+    #     gradients = tape.gradient(U_pred, x)
+    #     # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
+    #     a0 = -gradients[:,0]
+    #     # In wiki article, theta is 0-180 deg (which has been phi in our definition)
+    #     theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
+    #     a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
+    #     a2 = -(1.0/x[:,0])*gradients[:,2]
+
+    #     #print(a2.shape)
+    #     a_pred = tf.concat([[a0], [a1], [a2]], 0)
+    #     a_pred = tf.reshape(a_pred, [-1, 3])
+    # else:   
+    # 
+
+# # Periodic boundary conditions 
+# if self.config['basis'][0] == 'spherical':
+    
+#     x_periodic = tf.add(x, [0, 2, 2])
+#     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
+#     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
+#     loss += self.compiled_loss(y, a_pred_periodic)
+
+#     x_periodic = tf.add(x, [0, -2, -2])
+#     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
+#     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
+#     loss += self.compiled_loss(y, a_pred_periodic)
+
+#     # 0 potential at infinity. 
+#     x_infinite = tf.multiply(x, [1E308, 1, 1])
+#     U_pred_infinite, a_pred_infinite = self(x_infinite, training=True)
+#     a_pred_infinite = tf.where(tf.math.is_inf(a_pred_infinite), y, a_pred_infinite)
+#     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
+#     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
+
+
+#@tf.function(experimental_compile=True)
+def no_pinn_constraint(f, x, training):
+    u = tf.constant(0.0)#None
+    u_x = f(x, training)
+    laplacian = tf.zeros_like(u_x, dtype=tf.float32)
+    curl = tf.zeros_like(u_x, dtype=tf.float32)
+    return u, u_x, laplacian, curl
+
+#@tf.function(experimental_compile=True)
+def pinn_constraint_gradient(f, x, training):
+    with tf.GradientTape() as tape:
+        tape.watch(x)
+        u = f(x, training)
+    u_x = tape.gradient(u, x)
+    laplacian = tf.zeros_like(u, dtype=tf.float16)
+    curl = tf.zeros_like(u_x, dtype=tf.float16)
+    return u, tf.multiply(-1.0,u_x), laplacian, curl
+
+#@tf.function(experimental_compile=True)
+def pinn_constraints_laplacian(f, x, training):
+    with tf.GradientTape(persistent=True) as g1:
+        g1.watch(x)
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = f(x, training) # shape = (k,) #! evaluate network                
+        u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
+    u_xx = g1.batch_jacobian(u_x, x)
+    
+    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1)
+    curl = tf.zeros_like(u_x, dtype=tf.float16)
+
+    return u, tf.multiply(-1.0,u_x), laplacian, curl
+
+
+#@tf.function(experimental_compile=True)
+def pinn_constraints_conservative_field(f, x, training):
+    with tf.GradientTape(persistent=True) as g1:
+        g1.watch(x)
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = f(x, training) # shape = (k,) #! evaluate network                
+        u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
+    u_xx = g1.batch_jacobian(-u_x, x)
+    
+    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1)
+
+    curl_x = tf.math.subtract(u_xx[:,2,1], u_xx[:,1,2])
+    curl_y = tf.math.subtract(u_xx[:,0,2], u_xx[:,2,0])
+    curl_z = tf.math.subtract(u_xx[:,1,0], u_xx[:,0,1])
+
+    curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
+
+    return u,  tf.multiply(-1.0,u_x), laplacian, curl
+
 class CustomModel(tf.keras.Model):
     # Initialize the class
     def __init__(self, config, network):
         super(CustomModel, self).__init__()
         self.config = config
         self.network = network
+        if self.config['PINN_flag'][0] == "none":
+            self.eval = no_pinn_constraint
+        elif self.config['PINN_flag'][0] == "gradient":
+            self.eval = pinn_constraint_gradient
+        elif self.config['PINN_flag'][0] == "laplacian":
+            self.eval = pinn_constraints_laplacian
+        elif self.config['PINN_flag'][0] == "conservative":
+            self.eval = pinn_constraints_conservative_field
+        else:
+            exit("No PINN setting")
 
-    @tf.function
+        self.mixed_precision = tf.Variable(self.config['mixed_precision'][0], dtype=tf.bool)
+
+    #@tf.function(experimental_compile=True)
     def call(self, x, training=None):
-        # PINN Constraints
-        if self.config['PINN_flag'][0]:
-            # if self.config['basis'][0] == 'spherical':
-            #     # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
-            #     with tf.GradientTape() as tape:
-            #         tape.watch(x)
-            #         U_pred = self.network(x, training)
-            #     gradients = tape.gradient(U_pred, x)
-            #     # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
-            #     a0 = -gradients[:,0]
-            #     # In wiki article, theta is 0-180 deg (which has been phi in our definition)
-            #     theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
-            #     a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
-            #     a2 = -(1.0/x[:,0])*gradients[:,2]
-
-            #     #print(a2.shape)
-            #     a_pred = tf.concat([[a0], [a1], [a2]], 0)
-            #     a_pred = tf.reshape(a_pred, [-1, 3])
-            # else:                
-            with tf.GradientTape() as tape:
-                tape.watch(x)
-                U_pred = self.network(x, training)
-            a_pred = -tape.gradient(U_pred, x)
-        else:  
-            a_pred = self.network(x, training)
-            U_pred = tf.constant(0.0)#None
-        return U_pred, a_pred
+        return self.eval(self.network, x, training)
     
-    @tf.function
+    @tf.function(experimental_compile=True)
     def train_step(self, data):
         x, y = data
+        laplacian_truth = tf.zeros_like(x[:,0])
+        curl_truth = tf.zeros_like(y)
         with tf.GradientTape() as tape:
-            U_pred, a_pred = self(x, training=True)
-            #a_pred = tf.where(tf.math.is_inf(a_pred), y, a_pred)
-            loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
-            
-            if self.config['mixedPrecision'][0] == True:
-                # TODO: Put in mixed precision training
-                scaled_loss = self.optimizer.get_scaled_loss(loss)
-
-
-            # # Periodic boundary conditions 
-            # if self.config['basis'][0] == 'spherical':
-                
-            #     x_periodic = tf.add(x, [0, 2, 2])
-            #     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
-            #     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
-            #     loss += self.compiled_loss(y, a_pred_periodic)
-
-            #     x_periodic = tf.add(x, [0, -2, -2])
-            #     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
-            #     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
-            #     loss += self.compiled_loss(y, a_pred_periodic)
-
-            #     # 0 potential at infinity. 
-            #     x_infinite = tf.multiply(x, [1E308, 1, 1])
-            #     U_pred_infinite, a_pred_infinite = self(x_infinite, training=True)
-            #     a_pred_infinite = tf.where(tf.math.is_inf(a_pred_infinite), y, a_pred_infinite)
-            #     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
-            #     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
+            U_pred, a_pred, laplacian, curl = self(x, training=True)
+            loss = self.compiled_loss((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))#, regularization_losses=self.losses)
+            loss = tf.cond(self.mixed_precision, lambda: self.optimizer.get_scaled_loss(loss), lambda : loss)
 
         # TODO: Put in mixed precision training
-        if self.config['mixedPrecision'][0] == True:
-            scaled_gradients = tape.gradient(scaled_loss, self.trainable_variables)
-            gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = tf.cond(self.mixed_precision, lambda:  self.optimizer.get_unscaled_gradients(gradients), lambda : gradients)
 
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.compiled_metrics.update_state(y, a_pred)
+        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
         # Return a dict mapping metric names to current value
         return {m.name: m.result() for m in self.metrics}
         
-    @tf.function
+    @tf.function(experimental_compile=True)
     def test_step(self, data):
         x, y = data
-        U_pred, a_pred = self(x, training=False)
-        loss = self.compiled_loss(y, a_pred)#, regularization_losses=self.losses)
-
-        self.compiled_metrics.update_state(y, a_pred)
+        laplacian_truth = tf.zeros_like(x[:,0])
+        curl_truth = tf.zeros_like(y)
+        U_pred, a_pred, laplacian, curl = self(x, training=False)
+        loss = self.compiled_loss((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
+        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
         # Return a dict mapping metric names to current value
         return {m.name: m.result() for m in self.metrics}
 
@@ -176,7 +234,7 @@ class CustomModel(tf.keras.Model):
             variables_flat = tf.concat(variables_flat, 0)
             return variables_flat
 
-        @tf.function
+        @tf.function(experimental_compile=True)
         def loss_and_gradient(params):
             with tf.GradientTape() as tape:
                 U_pred, y_pred = self(x)
@@ -220,6 +278,14 @@ class CustomModel(tf.keras.Model):
         self.config['timetag'] = timestamp
         self.config['history'] = [self.history.history]
         self.config['id'] = [pd.Timestamp(timestamp).to_julian_date()]
+        try:
+            self.config['activation'] = [self.config['activation'][0].__name__]
+        except:
+            pass
+        try:
+            self.config['optimizer'] = [self.config['optimizer'][0].__module__]
+        except:
+            pass
         self.model_size_stats()
         utils.save_df_row(self.config, df_file)
 

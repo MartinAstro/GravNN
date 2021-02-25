@@ -51,6 +51,10 @@ def main():
 
 
     df_file = "Data/Dataframes/temp_spherical.data"
+    df_file = 'Data/Dataframes/new_pinn_constraints.data'
+    df_file = 'Data/Dataframes/new_temp.data'
+    df_file = 'Data/Dataframes/new_temp_small.data'
+    df_file = 'Data/Dataframes/new_temp_long.data'
 
     df = pd.read_pickle(df_file)#[5:]
     ids = df['id'].values
@@ -86,8 +90,8 @@ def main():
         analyzer = Analysis(model, config)
         rse_entries = analyzer.compute_rse_stats(test_trajectories)
         utils.update_df_row(model_id, df_file, rse_entries)
-        alt_df = analyzer.compute_alt_stats(planet, altitudes, points)
-        alt_df.to_pickle(alt_df_file)
+        # alt_df = analyzer.compute_alt_stats(planet, altitudes, points)
+        # alt_df.to_pickle(alt_df_file)
 
 
 if __name__ == '__main__':

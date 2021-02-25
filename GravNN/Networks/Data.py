@@ -27,10 +27,11 @@ def generate_dataset(x, y, batch_size):
     x = x.astype('float32')
     y = y.astype('float32')
     dataset = tf.data.Dataset.from_tensor_slices((x, y))
-    dataset = dataset.shuffle(1000, seed=1234)
+    #dataset = dataset.shuffle(1000, seed=1234)
     dataset = dataset.batch(batch_size)
     dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.cache()
+
     #Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
     return dataset
