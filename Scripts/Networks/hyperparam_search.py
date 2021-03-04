@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+#import tensorflow_model_optimization as tfmot
 from tensorboard.plugins.hparams import api as hp
 
 

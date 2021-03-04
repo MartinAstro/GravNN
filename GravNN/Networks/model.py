@@ -23,7 +23,7 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
 from scipy.optimize import minimize, fmin_l_bfgs_b
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 
 np.random.seed(1234)
 
@@ -72,9 +72,9 @@ np.random.seed(1234)
 
 #@tf.function(experimental_compile=True)
 def no_pinn_constraint(f, x, training):
-    u = tf.constant(0.0)#None
     u_x = f(x, training)
-    laplacian = tf.zeros_like(u_x, dtype=tf.float32)
+    u = tf.zeros_like(u_x, dtype=tf.float32)[:,0:1]
+    laplacian = tf.zeros_like(u_x, dtype=tf.float32)[:,0:1]
     curl = tf.zeros_like(u_x, dtype=tf.float32)
     return u, u_x, laplacian, curl
 
@@ -141,7 +141,8 @@ class CustomModel(tf.keras.Model):
         else:
             exit("No PINN setting")
 
-        self.mixed_precision = tf.Variable(self.config['mixed_precision'][0], dtype=tf.bool)
+        self.mixed_precision = tf.constant(self.config['mixed_precision'][0], dtype=tf.bool)
+        self.use_potential = tf.constant(self.config['use_potential'][0], dtype=tf.bool)
 
     #@tf.function(experimental_compile=True)
     def call(self, x, training=None):
@@ -150,31 +151,35 @@ class CustomModel(tf.keras.Model):
     @tf.function(experimental_compile=True)
     def train_step(self, data):
         x, y = data
-        laplacian_truth = tf.zeros_like(x[:,0])
-        curl_truth = tf.zeros_like(y)
+        U_dummy = tf.zeros_like(x[:,0:1])
+        laplacian_truth = tf.zeros_like(x[:,0:1])
+        curl_truth = tf.zeros_like(x)
         with tf.GradientTape() as tape:
             U_pred, a_pred, laplacian, curl = self(x, training=True)
-            loss = self.compiled_loss((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))#, regularization_losses=self.losses)
-            loss = tf.cond(self.mixed_precision, lambda: self.optimizer.get_scaled_loss(loss), lambda : loss)
+            y_hat = tf.cond(self.use_potential, lambda: tf.concat([U_pred, a_pred],1), lambda : tf.concat([U_dummy, a_pred],1)) # Determine if the potential will be included in solution
+            loss = self.compiled_loss((y, laplacian_truth, curl_truth), (y_hat, laplacian, curl))
+            loss = self.optimizer.get_scaled_loss(loss)
 
-        # TODO: Put in mixed precision training
         gradients = tape.gradient(loss, self.trainable_variables)
-        gradients = tf.cond(self.mixed_precision, lambda:  self.optimizer.get_unscaled_gradients(gradients), lambda : gradients)
+        gradients = self.optimizer.get_unscaled_gradients(gradients)
 
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
-        # Return a dict mapping metric names to current value
+        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (y_hat, laplacian, curl))
+
         return {m.name: m.result() for m in self.metrics}
         
     @tf.function(experimental_compile=True)
     def test_step(self, data):
         x, y = data
-        laplacian_truth = tf.zeros_like(x[:,0])
-        curl_truth = tf.zeros_like(y)
-        U_pred, a_pred, laplacian, curl = self(x, training=False)
-        loss = self.compiled_loss((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
-        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (a_pred, laplacian, curl))
-        # Return a dict mapping metric names to current value
+        U_dummy = tf.zeros_like(x[:,0:1])
+        laplacian_truth = tf.zeros_like(x[:,0:1])
+        curl_truth = tf.zeros_like(x)
+
+        U_pred, a_pred, laplacian, curl = self(x, training=True)
+        y_hat = tf.cond(self.use_potential, lambda: tf.concat([U_pred, a_pred],1), lambda : tf.concat([U_dummy, a_pred],1)) # Determine if the potential will be included in solution
+        loss = self.compiled_loss((y, laplacian_truth, curl_truth), (y_hat, laplacian, curl))
+        self.compiled_metrics.update_state((y, laplacian_truth, curl_truth), (y_hat, laplacian, curl))
+
         return {m.name: m.result() for m in self.metrics}
 
     def optimize(self, dataset):
@@ -254,9 +259,9 @@ class CustomModel(tf.keras.Model):
         # # SciPy optimization
         params = flatten_variables(self.trainable_variables)
         start_time = time.time()
-        results = tfp.optimizer.lbfgs_minimize(lgbfgs_loss_and_gradient,
-                                                 params, 
-                                                 max_iterations=self.config['optimize_epochs'][0])#,
+        # results = tfp.optimizer.lbfgs_minimize(lgbfgs_loss_and_gradient,
+        #                                          params, 
+        #                                          max_iterations=self.config['optimize_epochs'][0])#,
                                                  #parallel_iterations=multiprocessing.cpu_count(),
                                                  #x_tolerance=1.0*np.finfo(float).eps)
         print("Converged: " + str(results.converged) +" ; In " + str(time.time() - start_time) + " seconds")

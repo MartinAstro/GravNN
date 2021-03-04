@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+##import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Networks.Configs.Default_Configs import *
@@ -47,8 +47,11 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from GravNN.Networks.Activations import leaky_relu, bent_identity
 
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+tf.config.run_functions_eagerly(True)
+
+if sys.platform == 'win32':
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 # # TODO: Put in mixed precision training
 # from tensorflow.keras.mixed_precision import experimental as mixed_precision
@@ -95,17 +98,22 @@ def train_network(filename, config):
     # Preprocessing
     x_transformer = config['x_transformer'][0]
     a_transformer = config['a_transformer'][0]
+    u_transformer = config['u_transformer'][0]
 
     x_train = x_transformer.fit_transform(x_train)
     a_train = a_transformer.fit_transform(a_train)
+    u_train = u_transformer.fit_transform(u_train)
 
     x_val = x_transformer.transform(x_val)
     a_val = a_transformer.transform(a_val)
-    
-    # Add Noise if interested
+    u_val = u_transformer.transform(u_val)
 
-    dataset = generate_dataset(x_train, a_train, config['batch_size'][0])
-    val_dataset = generate_dataset(x_val, a_val, config['batch_size'][0])
+    # Decide to train with potential or not
+    y_train = np.hstack([u_train, a_train]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_train)), a_train])
+    y_val = np.hstack([u_val, a_val]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_val)), a_val])
+
+    dataset = generate_dataset(x_train, y_train, config['batch_size'][0])
+    val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
 
 
 
@@ -119,6 +127,9 @@ def train_network(filename, config):
     optimizer = config['optimizer'][0]
     if config['mixed_precision'][0]:
         optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
+    else:
+        optimizer.get_scaled_loss = lambda x: x
+        optimizer.get_unscaled_gradients = lambda x: x
     model.compile(optimizer=optimizer, loss="mse", run_eagerly=False)#, run_eagerly=True)#, metrics=["mae"])
 
     callback = CustomCallback()
@@ -144,20 +155,8 @@ def train_network(filename, config):
 
 
 def main():
-    df_file = 'Data/Dataframes/temp_spherical.data'
-    configurations = {"fast" : get_fast_earth_config()}
-
-    df_file = 'Data/Dataframes/new_pinn_constraints.data'
-    configurations = {"fast" : get_fast_earth_pinn_config()}
-
-    df_file = 'Data/Dataframes/new_temp.data'
-
-    df_file = 'Data/Dataframes/new_temp_small.data'
-    df_file = 'Data/Dataframes/new_temp_long.data'
-    df_file = 'Data/Dataframes/dummy.data'
-
     configurations = {"default" : get_default_earth_pinn_config()}
-
+    configurations = {"fast" : get_fast_earth_config()}
     df_file = "Data/Dataframes/useless.data"
 
     #config['PINN_flag'] = [False]
@@ -166,21 +165,25 @@ def main():
     for key, config in configurations.items():
         #config['basis'] = ['spherical']
         #config['init_file'] = [2459255.2569212965]
-        config['PINN_flag'] = ['gradient']
+        config['N_dist'] = [100000]
+        config['N_val'] = [1000]
+
+        config['PINN_flag'] = ['none']
 
         #config['activation'] = [leaky_relu(act_slope=0.05)]
         #config['act_slope'] = [0.05]
         #config['activation'] = [bent_identity]
 
-        config['epochs'] = [50000]
+        config['epochs'] = [5000]
         config['mixed_precision'] = [False]
+        config['use_potential'] = [False]
         #config['N_train'] = [9500]
         # config['epochs'] = [200]
         # config['N_train'] = [2000]
         # config['N_test'] = [100]
 
         #config['batch_size'] = [131072]
-        config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
+        config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
         #config['batch_size'] = [int(config['batch_size'][0]/64)]
         #config['mixed_precision']=[False]
         train_network(df_file, config)

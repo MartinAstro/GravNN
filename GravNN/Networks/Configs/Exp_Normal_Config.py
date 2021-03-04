@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+#import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks import utils

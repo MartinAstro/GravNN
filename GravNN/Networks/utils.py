@@ -3,7 +3,7 @@ import zipfile
 import tempfile
 import pandas as pd
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+#import tensorflow_model_optimization as tfmot
 from GravNN.Trajectories.ExponentialDist import ExponentialDist
 from GravNN.Trajectories.GaussianDist import GaussianDist
 
