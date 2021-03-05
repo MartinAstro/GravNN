@@ -292,11 +292,24 @@ class CustomModel(tf.keras.Model):
 
 def load_config_and_model(model_id, df_file):
     # Get the parameters and stats for a given run
-    config = utils.get_df_row(model_id, df_file)
+    # If the dataframe hasn't been loaded
+    if type(df_file) == str:
+        config = utils.get_df_row(model_id, df_file)
+    else:
+        # If the dataframe has already been loaded
+        config = df_file[model_id == df_file['id']].to_dict()
+        for key, value in config.items():
+            config[key] = list(value.values())
 
     # Reinitialize the model
-    network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/network")
+    network = tf.keras.models.load_model(os.path.join(os.path.abspath('.'), "/Data/Networks/"+str(model_id)+"/network"))
     model = CustomModel(config, network)
-    model.compile(optimizer=config['optimizer'][0], loss='mse') #! Check that this compile is even necessary
+    if 'adam' in config['optimizer'][0]:
+        optimizer = tf.keras.optimizers.Adam()
+    elif 'rms' in config['optimizer'][0]:
+        optimizer = tf.keras.optimizers.RMSprop()
+    else:
+        exit("No Optimizer Found")
+    model.compile(optimizer=optimizer, loss='mse') #! Check that this compile is even necessary
 
     return config, model

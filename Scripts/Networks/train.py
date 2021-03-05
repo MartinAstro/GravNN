@@ -2,6 +2,7 @@
 import os
 
 os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
 import copy
 import pickle
@@ -51,12 +52,12 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 # # TODO: Put in mixed precision training
-# from tensorflow.keras.mixed_precision import experimental as mixed_precision
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
-# policy = mixed_precision.Policy('mixed_float16')
-# mixed_precision.set_policy(policy)
-# print('Compute dtype: %s' % policy.compute_dtype)
-# print('Variable dtype: %s' % policy.variable_dtype)
+policy = mixed_precision.Policy('mixed_float16')
+mixed_precision.set_policy(policy)
+print('Compute dtype: %s' % policy.compute_dtype)
+print('Variable dtype: %s' % policy.variable_dtype)
 
 
 np.random.seed(1234)
@@ -156,9 +157,10 @@ def main():
     df_file = 'Data/Dataframes/new_temp_long.data'
     df_file = 'Data/Dataframes/dummy.data'
 
-    configurations = {"default" : get_default_earth_pinn_config()}
+    configurations = {"default" : get_default_earth_config()}
 
     df_file = "Data/Dataframes/useless.data"
+    df_file = "Data/Dataframes/basis_test.data"
 
     #config['PINN_flag'] = [False]
     #config['basis'] = ['spherical']
@@ -166,21 +168,24 @@ def main():
     for key, config in configurations.items():
         #config['basis'] = ['spherical']
         #config['init_file'] = [2459255.2569212965]
-        config['PINN_flag'] = ['gradient']
+        #config['PINN_flag'] = ['gradient']
 
         #config['activation'] = [leaky_relu(act_slope=0.05)]
         #config['act_slope'] = [0.05]
         #config['activation'] = [bent_identity]
 
         config['epochs'] = [50000]
-        config['mixed_precision'] = [False]
+        config['mixed_precision'] = [True]
+        config['layers'] = [True]
+        config['dropout'] = [[0, 0.1, 0.05, 0.01, 0, 0, 0, 0]]
+
         #config['N_train'] = [9500]
         # config['epochs'] = [200]
         # config['N_train'] = [2000]
         # config['N_test'] = [100]
 
         #config['batch_size'] = [131072]
-        config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
+        config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
         #config['batch_size'] = [int(config['batch_size'][0]/64)]
         #config['mixed_precision']=[False]
         train_network(df_file, config)

@@ -54,7 +54,7 @@ def main():
     df_file = 'Data/Dataframes/new_pinn_constraints.data'
     df_file = 'Data/Dataframes/new_temp.data'
     df_file = 'Data/Dataframes/new_temp_small.data'
-    df_file = 'Data/Dataframes/new_temp_long.data'
+    df_file = 'Data/Dataframes/hyperparameter_v3.data'
 
     df = pd.read_pickle(df_file)#[5:]
     ids = df['id'].values
@@ -84,15 +84,17 @@ def main():
         tf.keras.backend.clear_session()
 
         alt_df_file = os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/rse_alt.data"
-        config, model = load_config_and_model(model_id, df_file)
+        config, model = load_config_and_model(model_id, df)
+        #config, model = load_config_and_model(model_id, df_file)
 
         # Analyze the model
         analyzer = Analysis(model, config)
         rse_entries = analyzer.compute_rse_stats(test_trajectories)
-        utils.update_df_row(model_id, df_file, rse_entries)
+        #utils.update_df_row(model_id, df_file, rse_entries)
+        df = utils.update_df_row(model_id, df, rse_entries, save=False)
         # alt_df = analyzer.compute_alt_stats(planet, altitudes, points)
         # alt_df.to_pickle(alt_df_file)
-
+    df.to_pickle(df_file)
 
 if __name__ == '__main__':
     main()

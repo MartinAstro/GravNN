@@ -1,5 +1,30 @@
 import tensorflow as tf
 
+def CustomNet(**kwargs):
+    layers = kwargs['layers'][0]
+    activation = kwargs['activation'][0]
+
+    inputs = tf.keras.Input(shape=(layers[0],))
+    x = inputs
+    for i in range(1,len(layers)-1):
+        x = tf.keras.layers.Dense(units=layers[i], 
+                                    activation=activation, 
+                                    kernel_initializer='glorot_normal',
+                                    )(x)
+                                    #dtype=kwargs['dtype'])(x)
+        # dropout layers
+        if kwargs['dropout'][0][i] != 0.0:
+            x = tf.keras.layers.Dropout(kwargs['dropout'][0][i])(x)
+
+    outputs = tf.keras.layers.Dense(units=layers[-1], 
+                                    activation='linear', 
+                                    kernel_initializer='glorot_normal',
+                                    dtype='float32'
+                                    )(x)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+
 def TraditionalNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]

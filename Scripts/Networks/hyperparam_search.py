@@ -3,6 +3,7 @@ import os
 
 os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
 os.environ["TF_GPU_THREAD_MODE"] ='gpu_private'
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
 import copy
 import pickle
@@ -107,8 +108,6 @@ def main():
     HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([500000, 950000]))
     HP_EPOCHS = hp.HParam('epochs', hp.Discrete([5000, 10000]))
 
-
-    
     df_file = 'Data/Dataframes/hyperparameter_v2.data'
     directory = 'logs/hparam_tuning/'
 
@@ -116,43 +115,73 @@ def main():
     directory = 'logs/useless/'
 
     
-    df_file = 'Data/Dataframes/hyperparameter_v3.data'
-    directory = 'logs/hparam_tuning_v3/'
+    # df_file = 'Data/Dataframes/hyperparameter_v3.data'
+    # directory = 'logs/hparam_tuning_v3/'
 
+    # configurations = {"Default" : get_default_earth_config() }
+    # HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
+    # HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
+    # HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768, 131072]))
+
+    # HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([125000, 250000, 500000]))
+    # HP_EPOCHS = hp.HParam('epochs', hp.Discrete([2500, 5000, 7500]))
+
+    # session_num = 0
+    # for epochs in HP_EPOCHS.domain.values:
+    #     for num_units in HP_NUM_UNITS.domain.values:
+    #         for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+    #             for optimizer in HP_OPTIMIZER.domain.values:
+    #                 for batch_size in HP_BATCH_SIZE.domain.values:
+    #                     for data_size in HP_DATA_SIZE.domain.values:
+    #                         for activation in HP_ACTIVATION.domain.values:
+    #                             hparams = {
+    #                                 HP_EPOCHS : epochs,
+    #                                 HP_NUM_UNITS: num_units,
+    #                                 HP_DROPOUT: dropout_rate,
+    #                                 HP_OPTIMIZER: optimizer,
+    #                                 HP_BATCH_SIZE: batch_size,
+    #                                 HP_DATA_SIZE: data_size,
+    #                                 HP_ACTIVATION: activation
+    #                             }
+    #                             run_name = "run-%d" % session_num
+    #                             print('--- Starting trial: %s' % run_name)
+    #                             print({h.name: hparams[h] for h in hparams})
+    #                             run(df_file, directory + run_name, configurations, hparams)
+    #                             session_num += 1
+                            
+
+    df_file = 'Data/Dataframes/hyperparameter_v4.data'
+    directory = 'logs/hparam_tuning_v4/'
 
     configurations = {"Default" : get_default_earth_config() }
     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
-    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
-    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
-    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768, 131072]))
-
-    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([125000, 250000, 500000]))
-    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([2500, 5000, 7500]))
-
+    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([1E-2, 1E-3, 1E-4]))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768]))
+    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([250000, 500000]))
+    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([1250, 2500]))
 
     session_num = 0
     for epochs in HP_EPOCHS.domain.values:
         for num_units in HP_NUM_UNITS.domain.values:
-            for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-                for optimizer in HP_OPTIMIZER.domain.values:
-                    for batch_size in HP_BATCH_SIZE.domain.values:
-                        for data_size in HP_DATA_SIZE.domain.values:
-                            for activation in HP_ACTIVATION.domain.values:
-                                hparams = {
-                                    HP_EPOCHS : epochs,
-                                    HP_NUM_UNITS: num_units,
-                                    HP_DROPOUT: dropout_rate,
-                                    HP_OPTIMIZER: optimizer,
-                                    HP_BATCH_SIZE: batch_size,
-                                    HP_DATA_SIZE: data_size,
-                                    HP_ACTIVATION: activation
-                                }
-                                run_name = "run-%d" % session_num
-                                print('--- Starting trial: %s' % run_name)
-                                print({h.name: hparams[h] for h in hparams})
-                                run(df_file, directory + run_name, configurations, hparams)
-                                session_num += 1
+            for learning_rate in HP_LEARNING_RATE.domain.values:
+                for batch_size in HP_BATCH_SIZE.domain.values:
+                    for data_size in HP_DATA_SIZE.domain.values:
+                        for activation in HP_ACTIVATION.domain.values:
+                            hparams = {
+                                HP_EPOCHS : epochs,
+                                HP_NUM_UNITS: num_units,
+                                HP_LEARNING_RATE: learning_rate,
+                                HP_BATCH_SIZE: batch_size,
+                                HP_DATA_SIZE: data_size,
+                                HP_ACTIVATION: activation
+                            }
+                            run_name = "run-%d" % session_num
+                            print('--- Starting trial: %s' % run_name)
+                            print({h.name: hparams[h] for h in hparams})
+                            run(df_file, directory + run_name, configurations, hparams)
+                            session_num += 1
                             
 
 

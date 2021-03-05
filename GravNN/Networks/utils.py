@@ -65,16 +65,20 @@ def get_df_row(model_id, df_file):
         config[key] = list(value.values())
     return config
 
-def update_df_row(model_id, df_file, entries):
-    original_df = pd.read_pickle(df_file)
+def update_df_row(model_id, df_file, entries, save=True):
+    if type(df_file) == str:
+        original_df = pd.read_pickle(df_file)
+    else:
+        original_df = df_file
     timestamp = pd.to_datetime(model_id, unit = 'D', origin = 'julian').round('s').ctime()
     entries.update({"timetag" : [timestamp]})
     dictionary = dict(sorted(entries.items(), key = lambda kv: kv[0]))
     df = pd.DataFrame.from_dict(dictionary).set_index('timetag')
     original_df = original_df.combine_first(df)
     original_df.update(df)#, sort=True) # join, merge_ordered also viable
-    original_df.to_pickle(df_file)
-    return 
+    if save:
+        original_df.to_pickle(df_file)
+    return original_df
 
 def save_df_column(entries, index_name, column_name, df_file):
     # ! This doesn't add a column -- fix this
