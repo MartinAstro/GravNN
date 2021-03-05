@@ -2,7 +2,7 @@ numpy
 matplotlib
 numba
 pandas
-tensorflow==2.1
+tensorflow==2.4
 sklearn
 pyshtools
 trimesh
@@ -10,4 +10,4 @@ sigfig
 tqdm
 colorama
 tensorflow_model_optimization
-tensorflow_probability==0.8
+#tensorflow_probability==0.8

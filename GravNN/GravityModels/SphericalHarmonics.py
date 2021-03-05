@@ -2,10 +2,13 @@ import csv
 import os, sys
 import numpy as np
 import json
-#from GravNN.build.PinesAlgorithm import PinesAlgorithm
+from numba import njit
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 from GravNN.GravityModels.PinesAlgorithm import compute_acc_parallel, compute_n_matrices
+from GravNN.Support.transformations import cart2sph
+from scipy.special import lpmn
+
 
 def make_2D_array(lis):
     """Funciton to get 2D array from a list of lists"""
@@ -18,6 +21,23 @@ def make_2D_array(lis):
         arr[i, :lengths[i]] = lis[i]
     return arr
 
+def get_normalization(l, m):
+    N = np.zeros((l+1, l+1))
+    for i in range(0, l+1):
+        for j in range(0, i+1):
+            if j == 0:
+                N[i,j] = np.sqrt(2.0*i+1)
+            else:
+                N[i,j] = np.sqrt((2*(2*i+1)*np.math.factorial(i-j))/(np.math.factorial(i+j)))
+    return N
+
+#@njit(cache=True)
+def get_potential(legendre, l, m, Nlm, Clm, Slm, R, mu, r, lambda_, phi_):
+    U = 0.0 # Potential
+    for i in range(0, l+1):
+        for j in range(0, i+1):
+            U += mu/r*(R/r)**i *Nlm[i,j] * legendre[0][j,i] * (Clm[i,j]*np.cos(j*lambda_) + Slm[i,j]*np.sin(j*lambda_))
+    return U
 
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
@@ -36,7 +56,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
     x = Call_r0_gm.positions # position (N x 3)
     a = accelerations - accelerations_Clm
-    u = np.array([None for _ in range(len(a))]) # potential (N x 1)
+    u = np.array([None for _ in range(len(a))]).reshape((len(a),1)) # potential (N x 1)
 
     return x, a, u
 
@@ -61,7 +81,7 @@ class SphericalHarmonics(GravityModelBase):
         if type(sh_info) == str:
             self.loadSH()
         else:
-            self.load_regression(sh_info)
+            self.load_regression(sh_info,planet=None)
                 
         pass
 
@@ -154,50 +174,24 @@ class SphericalHarmonics(GravityModelBase):
         self.radEquator = planet.radius
         self.C_lm = reg_solution.C_lm
         self.S_lm = reg_solution.S_lm
-
-        # self.C_lm = []
-        # self.S_lm = []
-        # C_lm = []
-        # S_lm = []
-
-        # # Check if C00 is included as it should be equal to 1.0
-        # C00_11_included = False
-        # l = 2
-        # included_coef = 3
-        # if abs(reg_solution.C_lm[0] - 1.0) < 10E-10:
-        #     C00_11_included = True
-        #     l = 0
-        #     included_coef = 0
-        # else:
-        #     self.C_lm.append([1.0])
-        #     self.C_lm.append([0.0, 0.0])
-        #     self.S_lm.append([0.0])
-        #     self.S_lm.append([0.0, 0.0])
-
-
-        # # Separate C_lm and S_lm
-        # for i in range(int(len(reg_solution)/2)):
-        #     C_lm.append(reg_solution[2*i])
-        #     S_lm.append(reg_solution[2*i + 1])
-        
-        # # Format coefficients into row by degree
-        # C_row = []
-        # S_row  = []
-        # for i in range(len(C_lm)):
-        #     N = (l+1)*(l+2)/2 - included_coef
-        #     C_row.append(C_lm[i])
-        #     S_row.append(S_lm[i])
-        #     if i >= N -1:
-        #         l += 1
-        #         self.C_lm.append(C_row)
-        #         self.S_lm.append(S_row)
-        #         C_row = []
-        #         S_row = []
-
-        # if self.degree is None:
-        #     self.degree = l -2
         
         return 
+
+    def compute_potential(self, positions=None):
+        "Compute the potential for an existing trajectory or provided set of positions"
+        if positions is None:
+            positions = self.trajectory.positions
+        
+        positions_sph = cart2sph(positions) # [r, lambda, phi]
+        self.potential = np.zeros((len(positions),))
+        l = self.degree
+        m = l
+        Nlm = get_normalization(l,m)
+        for i in range(len(positions)):
+            legendre = lpmn(m, l, np.sin(positions_sph[i,2]))
+            self.potential[i] = get_potential(legendre, l, m, Nlm, self.C_lm, self.S_lm, self.radEquator, self.mu, positions_sph[i,0], np.deg2rad(positions_sph[i,1]), np.deg2rad(positions_sph[i,2]))
+        return self.potential
+
     
     def compute_acc(self, positions=None):
         "Compute the acceleration for an existing trajectory or provided set of positions"
@@ -211,4 +205,5 @@ class SphericalHarmonics(GravityModelBase):
         
         self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
         return self.accelerations
+
 

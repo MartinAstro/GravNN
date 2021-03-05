@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+#import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
@@ -45,8 +45,10 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 np.random.seed(1234)
 tf.random.set_seed(0)
 
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+
+if sys.platform == 'win32':
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 def get_fast_earth_config():
     data_config = {
@@ -64,7 +66,8 @@ def get_fast_earth_config():
         'include_U' : [False],
         'mixed_precision' : [True],
         'max_deg' : [1000], 
-        'analytic_truth' : ['sh_stats_']
+        'analytic_truth' : ['sh_stats_'],
+        'use_potential' : [False]
     }
     network_config = {
         'network_type' : [TraditionalNet],
@@ -77,7 +80,8 @@ def get_fast_earth_config():
         'batch_size' : [65536],# 2^16
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))]
     }
     config = {}
     config.update(data_config)

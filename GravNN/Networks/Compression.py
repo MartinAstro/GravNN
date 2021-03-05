@@ -1,5 +1,5 @@
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
+#import tensorflow_model_optimization as tfmot
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Callbacks import CustomCallback
 
