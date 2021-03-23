@@ -51,3 +51,22 @@ def get_default_eros_suite():
           "3" : config_3,
           }  
     return configurations
+
+
+def get_default_moon_suite():
+    config = get_default_moon_config()
+    config_1 = copy.deepcopy(config)
+    config_1.update({'layers' : [[3, 80, 80, 80, 80, 80, 80, 80, 80, 3]]})
+    
+    config_2 = copy.deepcopy(config)
+    config_2.update({'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 3]]})
+
+    config_3 = copy.deepcopy(config)
+    config_3.update({'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]})
+
+    configurations = {
+          "1" : config_1,
+          "2" : config_2,
+          "3" : config_3,
+          }  
+    return configurations

@@ -80,13 +80,17 @@ class Plotting():
             map_vis.save(fig, self.directory + name + "/" + "all.pdf")
 
 
-    def plot_loss(self):
+    def plot_loss(self, log=False):
         fig, ax = self.vis.newFig()
         history = self.config['history'][0]
         epochs = np.arange(0, len(history['loss']),1)
         start = 100
-        plt.plot(epochs[start:], history['loss'][start:])
-        plt.plot(epochs[start:], history['val_loss'][start:])
+        if log == False:
+            plt.plot(epochs[start:], history['loss'][start:])
+            plt.plot(epochs[start:], history['val_loss'][start:])
+        else:
+            plt.semilogy(epochs[start:], history['loss'][start:])
+            plt.semilogy(epochs[start:], history['val_loss'][start:])
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         self.vis.save(fig, self.directory + "loss.pdf")

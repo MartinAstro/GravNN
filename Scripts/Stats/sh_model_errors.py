@@ -7,25 +7,31 @@ from GravNN.Support.StateObject import StateObject
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.FibonacciDist import FibonacciDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
 def main():
-    
-    planet = Earth()
-    model_file = planet.sh_hf_file
     density_deg = 180
-    max_deg = 1000
-    
-    points = 64800
-    df_file = "Data/Dataframes/sh_stats_Brillouin.data"
+    max_deg = 1000   
+    points = 250000
+
+    df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
+    planet = Moon()
+    model_file = planet.sh_hf_file
+
+    # df_file = "Data/Dataframes/sh_stats_Brillouin.data"
+    # planet = Earth()
+    # model_file = planet.sh_hf_file
+
+
     trajectory = FibonacciDist(planet, planet.radius, points)
 
-    df_file = "Data/Dataframes/sh_stats_DH_Brillouin.data"
-    trajectory = DHGridDist(planet,  planet.radius, degree=density_deg)
+
+    # df_file = "Data/Dataframes/sh_stats_DH_Brillouin.data"
+    # trajectory = DHGridDist(planet,  planet.radius, degree=density_deg)
 
 
     # df_file = "Data/Dataframes/sh_stats_LEO.data"
@@ -37,8 +43,8 @@ def main():
     x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
     grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
-    deg_list =  np.linspace(1, 100, 100,dtype=int)[1:]
-    deg_list = np.append(deg_list, [110, 150, 200, 215, 250, 300, 400, 500, 700, 900])
+    deg_list =  np.linspace(1, 150, 150,dtype=int)[1:]
+    deg_list = np.append(deg_list, [175, 200, 215, 250, 300, 400, 500, 700, 900])
     df_all = pd.DataFrame()
     for deg in deg_list:
         

@@ -15,7 +15,7 @@ import pandas as pd
 import scipy.io
 import tensorflow as tf
 #import tensorflow_model_optimization as tfmot
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks import utils
 from GravNN.Networks.Plotting import Plotting
@@ -50,6 +50,8 @@ def main():
     df_file = 'Data/Dataframes/new_temp_small.data'
     df_file = 'Data/Dataframes/new_temp_long.data'
 
+    df_file = 'Data/Dataframes/moon_test.data'
+
     df = pd.read_pickle(df_file)#[3:]#.sort_values(by='params')[2:]##[:2]
     ids = df['id'].values
 
@@ -64,7 +66,7 @@ def main():
 
 
         plotter = Plotting(model, config)
-
+        planet = config['planet'][0]
         density_deg = 180
         test_trajectories = {
             "Brillouin" : DHGridDist(planet, planet.radius, degree=density_deg),
@@ -74,7 +76,7 @@ def main():
 
         # plot standard metrics (loss, maps) the model
         #plotter.plot_maps(test_trajectories)
-        plotter.plot_loss()
+        plotter.plot_loss(log=True)
 
         # plot optional metrics (altitude plot)
         #plotter.plot_alt_curve('rse_median')

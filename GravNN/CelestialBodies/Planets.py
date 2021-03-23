@@ -16,5 +16,5 @@ class Moon():
         self.radius = 1738100.0 # meters
         self.mu =  4.902799E12  # meters^3/s^2
         self.gravModel = gravityModel
-        self.sh_file = os.path.dirname(os.path.realpath(__file__)) + "/../Files/GravityModels/GRAIL_1200a_sha.txt"
+        self.sh_hf_file = os.path.dirname(os.path.realpath(__file__)) + "/../Files/GravityModels/gggrx_1200a_sha.txt"
 

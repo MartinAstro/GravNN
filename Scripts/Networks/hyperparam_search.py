@@ -22,10 +22,8 @@ from tensorboard.plugins.hparams import api as hp
 
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Networks.Configs.Default_Configs import (get_default_earth_config,
-                                            get_default_eros_config)
-from GravNN.Networks.Configs.Fast_Configs import (get_fast_earth_config,
-                                         get_fast_eros_config)
+from GravNN.Networks.Configs.Default_Configs import *
+from GravNN.Networks.Configs.Fast_Configs import *
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                      get_sh_data)
@@ -54,18 +52,24 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from GravNN.Networks.Activations import bent_identity
 
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+#tf.config.run_functions_eagerly(True)
+mixed_precision_flag = True
 
-# TODO: Put in mixed precision training
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
+if sys.platform == 'win32':
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_policy(policy)
-print('Compute dtype: %s' % policy.compute_dtype)
-print('Variable dtype: %s' % policy.variable_dtype)
+# # # TODO: Put in mixed precision training
+if mixed_precision_flag:
+    from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
-tf.profiler.experimental.server.start(6009)
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_policy(policy)
+    print('Compute dtype: %s' % policy.compute_dtype)
+    print('Variable dtype: %s' % policy.variable_dtype)
+
+
+#tf.profiler.experimental.server.start(6009)
 
 np.random.seed(1234)
 tf.random.set_seed(0)
@@ -78,15 +82,27 @@ def load_hparams_to_config(hparams, config):
     if config['activation'][0] == 'bent_identity':
         config['activation'] = [bent_identity]
     
-    if config['optimizer'][0] == 'adam':
-        config['optimizer'][0] = tf.keras.optimizers.Adam()
+    try:
+        if 'adam' in config['optimizer'][0]:
+            config['optimizer'][0] = tf.keras.optimizers.Adam()
+    except:
+        pass
 
+    try: 
+        if 'rmsprop' in config['optimizer'][0]:
+            config['optimizer'][0] = tf.keras.optimizers.RMSprop()
+    except:
+        pass
         
-    if config['optimizer'][0] == 'rmsprop':
-        config['optimizer'][0] = tf.keras.optimizers.RMSprop()
+    if 'num_units' in config:
+        for i in range(1, len(config['layers'][0])-1):
+            config['layers'][0][i] = config['num_units'][0]
     
-    for i in range(1, len(config['layers'][0])-1):
-        config['layers'][0][i] = config['num_units'][0]
+    if config['network_type'][0] == 'traditional':
+        config['network_type'] = [TraditionalNet]
+    
+    if config['network_type'][0] == 'resnet':
+        config['network_type'] = [ResNet]
     #config['layers'][0][1:len(config['layers'][0])-1] = config['num_units']
     return config
 
@@ -97,22 +113,22 @@ def main():
         raise SystemError('GPU device not found')
     print('Found GPU at: {}'.format(device_name))
 
-    df_file = 'Data/Dataframes/hyperparameter_v1.data'
-    configurations = {"Default" : get_default_earth_config() }
+    # df_file = 'Data/Dataframes/hyperparameter_v1.data'
+    # configurations = {"Default" : get_default_earth_config() }
 
-    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
-    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
-    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
-    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([2048, 131072]))
-    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([500000, 950000]))
-    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([5000, 10000]))
+    # HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
+    # HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.0, 0.1))
+    # HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'rmsprop']))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'bent_identity'])) 
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([2048, 131072]))
+    # HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([500000, 950000]))
+    # HP_EPOCHS = hp.HParam('epochs', hp.Discrete([5000, 10000]))
 
-    df_file = 'Data/Dataframes/hyperparameter_v2.data'
-    directory = 'logs/hparam_tuning/'
+    # df_file = 'Data/Dataframes/hyperparameter_v2.data'
+    # directory = 'logs/hparam_tuning/'
 
-    df_file = 'Data/Dataframes/useless_board.data'
-    directory = 'logs/useless/'
+    # df_file = 'Data/Dataframes/useless_board.data'
+    # directory = 'logs/useless/'
 
     
     # df_file = 'Data/Dataframes/hyperparameter_v3.data'
@@ -152,47 +168,134 @@ def main():
     #                             session_num += 1
                             
 
-    df_file = 'Data/Dataframes/hyperparameter_v4.data'
-    directory = 'logs/hparam_tuning_v4/'
+    # df_file = 'Data/Dataframes/hyperparameter_v4.data'
+    # directory = 'logs/hparam_tuning_v4/'
 
-    configurations = {"Default" : get_default_earth_config() }
-    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
-    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([1E-2, 1E-3, 1E-4]))
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768]))
-    HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([250000, 500000]))
-    HP_EPOCHS = hp.HParam('epochs', hp.Discrete([1250, 2500]))
+    # configurations = {"Default" : get_default_earth_config() }
+    # HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([20, 40, 80]))
+    # HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([1E-2, 1E-3, 1E-4]))
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([8196, 32768]))
+    # HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([250000, 500000]))
+    # HP_EPOCHS = hp.HParam('epochs', hp.Discrete([1250, 2500]))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['gelu', 'elu', 'relu', 'swish']))
 
-    session_num = 0
-    for epochs in HP_EPOCHS.domain.values:
-        for num_units in HP_NUM_UNITS.domain.values:
-            for learning_rate in HP_LEARNING_RATE.domain.values:
-                for batch_size in HP_BATCH_SIZE.domain.values:
-                    for data_size in HP_DATA_SIZE.domain.values:
-                        for activation in HP_ACTIVATION.domain.values:
-                            hparams = {
-                                HP_EPOCHS : epochs,
-                                HP_NUM_UNITS: num_units,
-                                HP_LEARNING_RATE: learning_rate,
-                                HP_BATCH_SIZE: batch_size,
-                                HP_DATA_SIZE: data_size,
-                                HP_ACTIVATION: activation
-                            }
-                            run_name = "run-%d" % session_num
-                            print('--- Starting trial: %s' % run_name)
-                            print({h.name: hparams[h] for h in hparams})
-                            run(df_file, directory + run_name, configurations, hparams)
-                            session_num += 1
+    # session_num = 0
+    # for epochs in HP_EPOCHS.domain.values:
+    #     for num_units in HP_NUM_UNITS.domain.values:
+    #         for learning_rate in HP_LEARNING_RATE.domain.values:
+    #             for batch_size in HP_BATCH_SIZE.domain.values:
+    #                 for data_size in HP_DATA_SIZE.domain.values:
+    #                     for activation in HP_ACTIVATION.domain.values:
+    #                         hparams = {
+    #                             HP_EPOCHS : epochs,
+    #                             HP_NUM_UNITS: num_units,
+    #                             HP_LEARNING_RATE: learning_rate,
+    #                             HP_BATCH_SIZE: batch_size,
+    #                             HP_DATA_SIZE: data_size,
+    #                             HP_ACTIVATION: activation
+    #                         }
+    #                         run_name = "run-%d" % session_num
+    #                         print('--- Starting trial: %s' % run_name)
+    #                         print({h.name: hparams[h] for h in hparams})
+    #                         run(df_file, directory + run_name, configurations, hparams)
+    #                         session_num += 1
                             
+    df_file = 'Data/Dataframes/hyperparameter_moon_v1.data'
+    directory = 'logs/hyperparameter_moon_v1/'
+
+    # configurations = {"Default" : get_default_moon_config() }
+    # configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+    # configurations['Default']['N_dist'] =  [55000]
+    # configurations['Default']['N_train'] =  [50000]
+    # configurations['Default']['N_val'] =  [4450]
+    # configurations['Default']['radius_max'] = [Moon().radius + 5000]
+    # configurations['Default']['epochs'] = [50000]
+
+
+    # HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-3, 5E-4, 5E-5]))
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([2048, 8196, 32768]))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'gelu', 'relu', 'swish']))
+    # HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_uniform', 'glorot_normal']))
+    # HP_NETWORK = hp.HParam('network_type', hp.Discrete(['traditional', 'resnet']))
+
+
+    # Just Batch Size
+    df_file = 'Data/Dataframes/hyperparameter_moon_v2.data'
+    directory = 'logs/hyperparameter_moon_v2/'
+
+
+    configurations = {"Default" : get_default_moon_config() }
+    configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+    configurations['Default']['N_dist'] =  [55000]
+    configurations['Default']['N_train'] =  [50000]
+    configurations['Default']['N_val'] =  [4450]
+    configurations['Default']['radius_max'] = [Moon().radius + 5000]
+    configurations['Default']['epochs'] = [50000]
+
+
+
+    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-5]))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh']))
+    HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal']))
+    HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet']))
+
+    
+    # More comprehensive Batch Size
+    df_file = 'Data/Dataframes/hyperparameter_moon_v3.data'
+    directory = 'logs/hyperparameter_moon_v3/'
+
+
+    configurations = {"Default" : get_default_moon_config() }
+    configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+    configurations['Default']['N_dist'] =  [55000]
+    configurations['Default']['N_train'] =  [50000]
+    configurations['Default']['N_val'] =  [4450]
+    configurations['Default']['radius_max'] = [Moon().radius + 5000]
+    configurations['Default']['epochs'] = [50000]
+
+
+
+    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-3, 5E-5]))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'gelu']))
+    HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal', 'glorot_uniform']))
+    HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet', 'traditional']))
+
+
+    # Maybe preprocessing
+    # Maybe weight initialization
+    session_num = 0
+    for learning_rate in HP_LEARNING_RATE.domain.values:
+        for batch_size in HP_BATCH_SIZE.domain.values:
+            for activation in HP_ACTIVATION.domain.values:
+                for initializer in HP_INITIALIZER.domain.values:
+                    for network in HP_NETWORK.domain.values:
+                        hparams = {
+                            HP_LEARNING_RATE: learning_rate,
+                            HP_BATCH_SIZE: batch_size,
+                            HP_ACTIVATION: activation,
+                            HP_INITIALIZER : initializer,
+                            HP_NETWORK : network
+                        }
+                        run_name = "run-%d" % session_num
+                        print('--- Starting trial: %s' % run_name)
+                        print({h.name: hparams[h] for h in hparams})
+                        run(df_file, directory + run_name, configurations, hparams)
+                        session_num += 1
 
 
 def run(df_file, file_name, configurations, hparams):
     
-    for key, config in configurations.items():
-        config = load_hparams_to_config(hparams, config)
+    for key, config_original in configurations.items():
         tf.keras.backend.clear_session()
+        config = copy.deepcopy(config_original)
+
+        config = load_hparams_to_config(hparams, config)
 
         utils.check_config_combos(config)
         config = utils.format_config_combos(config)
+        print(config)
         
         
         # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
@@ -221,17 +324,23 @@ def run(df_file, file_name, configurations, hparams):
         # Preprocessing
         x_transformer = config['x_transformer'][0]
         a_transformer = config['a_transformer'][0]
+        u_transformer = config['u_transformer'][0]
 
         x_train = x_transformer.fit_transform(x_train)
         a_train = a_transformer.fit_transform(a_train)
+        u_train = u_transformer.fit_transform(u_train)
 
         x_val = x_transformer.transform(x_val)
         a_val = a_transformer.transform(a_val)
-        
-        # Add Noise if interested
+        u_val = u_transformer.transform(u_val)
 
-        dataset = generate_dataset(x_train, a_train, config['batch_size'][0])
-        val_dataset = generate_dataset(x_val, a_val, config['batch_size'][0])
+        # Decide to train with potential or not
+        y_train = np.hstack([u_train, a_train]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_train)), a_train])
+        y_val = np.hstack([u_val, a_val]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_val)), a_val])
+
+
+        dataset = generate_dataset(x_train, y_train, config['batch_size'][0])
+        val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
 
 
         if config['init_file'][0] is not None:
@@ -242,17 +351,17 @@ def run(df_file, file_name, configurations, hparams):
         model = CustomModel(config, network)
 
         callback = CustomCallback()
-        # tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True,
-        #                                 write_images=False, update_freq='epoch', profile_batch=2,
-        #                                 embeddings_freq=0, embeddings_metadata=None)
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True)#, profile_batch='35,50')
         hyper_params = hp.KerasCallback(file_name, hparams)
 
 
         optimizer = config['optimizer'][0]
-        # TODO: Put in mixed precision training
-        optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
-
+        optimizer.learning_rate = config['learning_rate'][0]
+        if config['mixed_precision'][0]:
+            optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
+        else:
+            optimizer.get_scaled_loss = lambda x: x
+            optimizer.get_unscaled_gradients = lambda x: x
         model.compile(optimizer=optimizer, loss="mse")#, run_eagerly=True)#, metrics=["mae"])
 
         history = model.fit(dataset, 

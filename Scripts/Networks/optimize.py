@@ -54,7 +54,9 @@ def main():
 
     df_in_file = 'Data/Dataframes/N_1000000_PINN_study.data'
     df_out_file = 'Data/Dataframes/N_1000000_PINN_study_opt_1E3.data'
-    #df_out_file = 'Data/Dataframes/temp_opt.data'
+
+    df_in_file = 'Data/Dataframes/old_test.data'
+    df_out_file = 'Data/Dataframes/old_test_opt.data'
 
     compression_config = {
         'optimize' : [False],
@@ -71,19 +73,21 @@ def main():
     for model_id in ids:
         tf.keras.backend.clear_session()
 
-        config, model = load_config_and_model(model_id, df_in_file)
-        config['mixed_precision'] = [False]
+        config, model = load_config_and_model(model_id, df)
+
         utils.check_config_combos(config)
         config = utils.format_config_combos(config)
         config.update(compression_config)
         
-        # If optimizing, save the original network id as the init_file
-        config['init_file'] = [model_id]
+        # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
+        trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
+        if "Planet" in config['planet'][0].__module__:
+            get_analytic_data_fcn = get_sh_data
+        else:
+            get_analytic_data_fcn = get_poly_data
+        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(trajectory, config['grav_file'][0], **config)
 
-        trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)#points=1000000)
-        x_unscaled, a_unscaled, u_unscaled = get_sh_data(trajectory, config['grav_file'][0],config['max_deg'][0], config['deg_removed'][0])
-    
-        
+
         if config['basis'][0] == 'spherical':
             x_unscaled = cart2sph(x_unscaled)     
             a_unscaled = project_acceleration(x_unscaled, a_unscaled)
@@ -101,30 +105,38 @@ def main():
         # Preprocessing
         x_transformer = config['x_transformer'][0]
         a_transformer = config['a_transformer'][0]
+        u_transformer = config['u_transformer'][0]
 
         x_train = x_transformer.fit_transform(x_train)
         a_train = a_transformer.fit_transform(a_train)
+        u_train = u_transformer.fit_transform(u_train)
 
         x_val = x_transformer.transform(x_val)
         a_val = a_transformer.transform(a_val)
-        
-        # Initial Data
-        dataset = generate_dataset(x_train, a_train, config['batch_size'][0])
-        val_dataset = generate_dataset(x_val, a_val, config['batch_size'][0])
+        u_val = u_transformer.transform(u_val)
 
-        network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/network")
-        model = CustomModel(config, network)
+        # Decide to train with potential or not
+        y_train = np.hstack([u_train, a_train]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_train)), a_train])
+        y_val = np.hstack([u_val, a_val]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_val)), a_val])
 
-        optimizer = config['optimizer'][0]
+        dataset = generate_dataset(x_train, y_train, config['batch_size'][0])
+        val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
+
+        #network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
+        #model = CustomModel(config, network)
+
+        #optimizer = config['optimizer'][0]
         #optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')
 
-        model.compile(optimizer=optimizer, loss="mse")#, run_eagerly=True)#, metrics=["mae"])
+        #model.compile(optimizer=optimizer, loss="mse")#, run_eagerly=True)#, metrics=["mae"])
 
-        model, cluster_history = cluster_model(model, dataset, val_dataset, config)
-        model, prune_history = prune_model(model, dataset, val_dataset, config)
-        model, quantize_history = quantize_model(model, dataset, val_dataset, config)
+        model.optimize2(dataset)
+
+        # model, cluster_history = cluster_model(model, dataset, val_dataset, config)
+        # model, prune_history = prune_model(model, dataset, val_dataset, config)
+        # model, quantize_history = quantize_model(model, dataset, val_dataset, config)
     
-        model.optimize(dataset)
+        #model.optimize(dataset)
 
         model.save(df_out_file)
 

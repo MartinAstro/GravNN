@@ -15,7 +15,7 @@ import pandas as pd
 import scipy.io
 import tensorflow as tf
 ##import tensorflow_model_optimization as tfmot
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
@@ -56,7 +56,7 @@ def get_default_earth_config():
         'grav_file' : [Earth().sh_hf_file],
         'distribution' : [RandomDist],
         'N_dist' : [1000000],
-        'N_train' : [95000], 
+        'N_train' : [950000], 
         'N_val' : [50000],
         'radius_min' : [Earth().radius],
         'radius_max' : [Earth().radius + 420000.0],
@@ -78,6 +78,7 @@ def get_default_earth_config():
         'epochs' : [100000],
         'optimizer' : [tf.keras.optimizers.Adam()], #(learning_rate=config['lr_scheduler'][0])
         'batch_size' : [40000],
+        'initializer' : ['glorot_normal'],
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
@@ -87,6 +88,46 @@ def get_default_earth_config():
     config.update(data_config)
     config.update(network_config)
     return config
+
+def get_default_moon_config():
+    data_config = {
+        'planet' : [Moon()],
+        'grav_file' : [Moon().sh_hf_file],
+        'distribution' : [RandomDist],
+        'N_dist' : [1000000],
+        'N_train' : [950000], 
+        'N_val' : [50000],
+        'radius_min' : [Moon().radius],
+        'radius_max' : [Moon().radius + 50000.0],
+        'acc_noise' : [0.00],
+        'basis' : [None],# ['spherical'],
+        'deg_removed' : [2],
+        'include_U' : [False],
+        'mixed_precision' : [False],
+        'max_deg' : [1000], 
+        'analytic_truth' : ['sh_stats_moon_'],
+        'use_potential' : [False]
+    }
+    network_config = {
+        'network_type' : [TraditionalNet],
+        'PINN_flag' : ['none'],
+        'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 3]],
+        'activation' : ['tanh'],
+        'init_file' : [None],#'2459192.4530671295'],
+        'epochs' : [100000],
+        'initializer' : ['glorot_normal'],
+        'optimizer' : [tf.keras.optimizers.Adam()], #(learning_rate=config['lr_scheduler'][0])
+        'batch_size' : [40000],
+        'dropout' : [0.0], 
+        'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+    }
+    config = {}
+    config.update(data_config)
+    config.update(network_config)
+    return config
+
 
 
 def get_default_eros_config():
@@ -115,6 +156,7 @@ def get_default_eros_config():
         'activation' : ['tanh'],
         'init_file' : [None],
         'epochs' : [100000],
+        'initializer' : ['glorot_normal'],
         'optimizer' : [tf.keras.optimizers.Adam()],
         'batch_size' : [40000],
         'dropout' : [0.0], 

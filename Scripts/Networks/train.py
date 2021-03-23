@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler
 ##import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from GravNN.CelestialBodies.Planets import Earth
@@ -31,7 +32,7 @@ from GravNN.Networks.Compression import (cluster_model, prune_model,
 from GravNN.Networks.Data import generate_dataset, training_validation_split
 from GravNN.Networks.Model import CustomModel, load_config_and_model
 from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
-                                      TraditionalNet)
+                                      TraditionalNet, CustomNet)
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import (cart2sph, project_acceleration,
@@ -45,27 +46,39 @@ from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from GravNN.Networks.Activations import leaky_relu, bent_identity
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
+from GravNN.Networks.Activations import leaky_relu, bent_identity, radial_basis_function
 
-tf.config.run_functions_eagerly(True)
+#tf.config.run_functions_eagerly(True)
+mixed_precision_flag = True
 
 if sys.platform == 'win32':
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-# # TODO: Put in mixed precision training
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
+# # # TODO: Put in mixed precision training
+if mixed_precision_flag:
+    from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_policy(policy)
-print('Compute dtype: %s' % policy.compute_dtype)
-print('Variable dtype: %s' % policy.variable_dtype)
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_policy(policy)
+    print('Compute dtype: %s' % policy.compute_dtype)
+    print('Variable dtype: %s' % policy.variable_dtype)
 
 
 np.random.seed(1234)
 tf.random.set_seed(0)
 
+def lr_step_decay(epoch, lr):
+    drop_rate = 0.5
+    epochs_drop = 500.0
+    epoch_0 = 10000
+    initial_lr = 0.001
+
+    if epoch < epoch_0:
+        return lr
+    else:
+        return initial_lr * tf.math.pow(drop_rate, tf.math.floor((epoch-epoch_0)/epochs_drop))
 
 def train_network(filename, config):
     tf.keras.backend.clear_session()
@@ -116,8 +129,6 @@ def train_network(filename, config):
     dataset = generate_dataset(x_train, y_train, config['batch_size'][0])
     val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
 
-
-
     if config['init_file'][0] is not None:
         network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
     else:
@@ -133,12 +144,13 @@ def train_network(filename, config):
         optimizer.get_unscaled_gradients = lambda x: x
     model.compile(optimizer=optimizer, loss="mse", run_eagerly=False)#, run_eagerly=True)#, metrics=["mae"])
 
+    #lr_scheduler = LearningRateScheduler(lr_step_decay, verbose=0)
     callback = CustomCallback()
     history = model.fit(dataset, 
                         epochs=config['epochs'][0], 
                         verbose=0,
                         validation_data=val_dataset,
-                        callbacks=[callback])#,
+                        callbacks=[callback])#, lr_scheduler])#,
                                     #early_stop])
     history.history['time_delta'] = callback.time_delta
     model.history = history
@@ -171,34 +183,57 @@ def main():
     configurations = {"default" : get_default_earth_config()}
 
     df_file = "Data/Dataframes/useless.data"
-    df_file = "Data/Dataframes/basis_test.data"
 
-    #config['PINN_flag'] = [False]
-    #config['basis'] = ['spherical']
-   
+
+    configurations = {"default" : get_default_moon_config()}
+
+    df_file = "Data/Dataframes/moon_test.data"
+    df_file = "Data/Dataframes/moon_test_mixed.data"
+
+    # Smaller Dataset
+    df_file = "Data/Dataframes/moon_test_preprocessing.data"
+    df_file = "Data/Dataframes/moon_test_small.data"
+
+    # Train on Even Tighter bounds
+    df_file = "Data/Dataframes/moon_test_very_narrow.data"
+
+
     for key, config in configurations.items():
         #config['basis'] = ['spherical']
         #config['init_file'] = [2459255.2569212965]
         #config['PINN_flag'] = ['gradient']
-
+        #config['a_transformer'] : [QuantileTransformer(output_distribution='normal')]
         #config['activation'] = [leaky_relu(act_slope=0.05)]
-        #config['act_slope'] = [0.05]
+        #config['activation'] = ['relu']
+        #config['activation'] = ['tanh']
         #config['activation'] = [bent_identity]
+        config['network_type'] = [TraditionalNet]
+        #config['network_type'] = [CustomNet]
+        #config['network_type'] = [ResNet]
+        #config['distribution'] = [DHGridDist]
+        #config['radius'] = [Moon().radius]
+        #config['degree'] = [180]
+        #config['optimizer'] = [tf.keras.optimizers.Adam(amsgrad=True)]
+        #config['batch_size'] = [950000]
 
-        config['epochs'] = [50000]
-        config['mixed_precision'] = [True]
-        config['layers'] = [True]
-        config['dropout'] = [[0, 0.1, 0.05, 0.01, 0, 0, 0, 0]]
+        config['epochs'] = [30000]
 
-        #config['N_train'] = [9500]
-        # config['epochs'] = [200]
-        # config['N_train'] = [2000]
-        # config['N_test'] = [100]
+        config['N_dist'] = [1000000]
 
+        config['N_dist'] = [55000]
+        config['N_train'] = [50000]
+        config['N_val'] = [4450]
+        config['batch_size'] = [2048]
+        config['radius_max'] = [Moon().radius + 5000]
+        config['activation'] = ['gelu']
+        #config['network_type']
+        config['initializer'] = ['glorot_normal']
+
+        config['mixed_precision'] = [mixed_precision_flag]
+        #config['dropout'] = [[0, 0.1, 0.05, 0.01, 0, 0, 0, 0, 0]]
         #config['batch_size'] = [131072]
         config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
-        #config['batch_size'] = [int(config['batch_size'][0]/64)]
-        #config['mixed_precision']=[False]
+
         train_network(df_file, config)
 
 

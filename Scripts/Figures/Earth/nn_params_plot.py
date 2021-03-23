@@ -86,6 +86,9 @@ def main():
     # vis.save(fig, "NN_Brill_Traditional_v_PINN.pdf")
 
 
+
+
+
     # * LEO Orbit
     # sh_pareto_curve('Data/Dataframes/sh_stats_LEO.data')
 
@@ -101,8 +104,18 @@ def main():
     # nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study_opt.data', orbit_name='LEO', marker='v')
     # vis.save(fig, "NN_LEO_PINN_Opt_Params.pdf")
 
+    fig, ax = vis.newFig(fig_size=vis.full_page)
+    sh_pareto_curve('Data/Dataframes/sh_stats_Brillouin.data', max_deg=None)
+    plt.legend()
+    #vis.save(fig, "Brill_Params.pdf")
 
+    # # ! Neural Network Results
+    # nn_pareto_curve('Data/Dataframes/N_1000000_Rand_Study.data', orbit_name='Brillouin', linestyle='--')
+    # #vis.save(fig, "NN_Brill_Params.pdf")
 
+    # # ! PINN Neural Network Results
+    # nn_pareto_curve('Data/Dataframes/N_1000000_PINN_study.data', orbit_name='Brillouin', marker='o')
+    # #vis.save(fig, "NN_Brill_PINN_Params.pdf")
 
     
     plt.show()
