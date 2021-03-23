@@ -204,10 +204,10 @@ if __name__ == "__main__":
     trajectory = ReducedRandDist(planet, [radius, radius+10], points=15488*4, degree=density_deg, reduction=0.25)
 
     Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-    accelerations = Call_r0_gm.load()
+    accelerations = Call_r0_gm.load().accelerations
 
     C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
-    accelerations_C22 = C22_r0_gm.load()
+    accelerations_C22 = C22_r0_gm.load().accelerations
 
     #t = None #time T x 1
     x = Call_r0_gm.positions # position (N x 3)
@@ -247,10 +247,10 @@ if __name__ == "__main__":
 
     trajectory = ReducedGridDist(planet, radius, degree=density_deg, reduction=0.25)
     Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-    accelerations = Call_r0_gm.load()
+    accelerations = Call_r0_gm.load().accelerations
     
     C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
-    accelerations_C22 = C22_r0_gm.load()
+    accelerations_C22 = C22_r0_gm.load().accelerations
 
     x = Call_r0_gm.positions # position (N x 3)
     a = accelerations-accelerations_C22 # acceleration (N x 3) 

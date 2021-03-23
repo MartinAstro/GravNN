@@ -46,7 +46,7 @@ def generate_test_dataset(x, batch_size):
 
 def time_model(positions, model):
     start = time.time()
-    output = model.compute_acc(positions)
+    output = model.compute_acceleration(positions)
     delta = time.time() - start
     try:
         params = model.mesh.vertices.shape[0]* model.mesh.vertices.shape[1] + model.mesh.faces.shape[0]

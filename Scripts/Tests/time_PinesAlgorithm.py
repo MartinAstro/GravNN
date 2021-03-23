@@ -28,12 +28,12 @@ degree = 100
 cbar = make_2D_array(gravityModel.C_lm)
 sbar = make_2D_array(gravityModel.S_lm)
 pines = PinesAlgorithm(planet.radius, planet.mu, degree, cbar, sbar)
-pines.compute_acc(positions)
+pines.compute_acceleration(positions)
 
 def timing():
 
     import timeit
-    print(timeit.timeit('pines.compute_acc(positions)', globals=globals(), number=100))
+    print(timeit.timeit('pines.compute_acceleration(positions)', globals=globals(), number=100))
     #print(timeit.timeit('pines.compute_acc_jit(positions)', globals=globals(), number=100))
 
 if __name__ == "__main__":

@@ -11,16 +11,22 @@ from numba import jit, njit, prange
 from GravNN.Support.ProgressBar import ProgressBar
 
 
-def get_poly_data(trajectory, obj_file):
+def get_poly_data(trajectory, obj_file, **kwargs):
     Call_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
-    accelerations = Call_r0_gm.load()
+    Call_r0_gm.load()
 
+    # TODO: Determine if this is valuable -- how do dynamics and representation change inside brillouin sphere
     # Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
-    # accelerations_Clm = Clm_r0_gm.load()
+    # accelerations_Clm = Clm_r0_gm.load().accelerations
 
     x = Call_r0_gm.positions # position (N x 3)
-    a = accelerations #- accelerations_Clm
-    u = np.array([None for _ in range(len(a))]) # potential (N x 1)
+    a = Call_r0_gm.accelerations
+    u = np.array([None for _ in range(len(a))]).reshape((len(a),1)) # potential (N x 1)
+
+    # By default the potential isn't loaded into the training data
+    if 'use_potential' in kwargs:
+        if kwargs['use_potential'][0]:
+            u = Call_r0_gm.potentials
 
     return x, a, u
 
@@ -111,6 +117,7 @@ def GetLe(r_scaled, vertices, edges_unique, edge_idx):
 @njit(cache=True, parallel=True)
 def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
     acc = np.zeros((3,))
+    pot = 0.0
     for i in prange(len(faces)):
         r0 = vertices[faces[i][0]]
         r0m = r0 - point_scaled
@@ -119,11 +126,13 @@ def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
         F = facet_dyads[i]
 
         acc += wf*np.dot(F, r0m)
+        pot -= wf*np.dot(r0m, np.dot(F, r0m))
     return acc 
 
 @njit(cache=True,parallel=True)
 def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
     acc = np.zeros((3,))
+    pot = 0.0
     for i in prange(len(edges_unique)):
         r0 = vertices[edges_unique[i][0]]
         r0m = r0 - point_scaled
@@ -132,6 +141,8 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
         E = edge_dyads[i]
         
         acc -= Le*np.dot(E, r0m)
+        pot += Le*np.dot(r0m, np.dot(E, r0m))
+
     return acc
 
 class Polyhedral(GravityModelBase):
@@ -178,32 +189,54 @@ class Polyhedral(GravityModelBase):
         plt.show()
 
     # Bulk function 
-    def compute_acc(self, positions=None):
+    def compute_acceleration(self, positions=None):
         "Compute the acceleration for an existing trajectory or provided set of positions"
         if positions is None:
             positions = self.trajectory.positions
 
-
         bar = ProgressBar(positions.shape[0], enable=True)
         self.accelerations = np.zeros(positions.shape)
+        self.potentials = np.zeros(len(positions))
+
         for i in range(len(self.accelerations)):
-            self.accelerations[i] = self.compute_acceleration(positions[i])      
+            self.accelerations[i], self.potentials[i] = self.compute_values(positions[i])      
             bar.update(i)
         bar.markComplete()
         bar.close()
         return self.accelerations
 
-    def compute_acceleration(self, position):
+    def compute_potential(self, positions=None):
+        "Compute the potential for an existing trajectory or provided set of positions"
+        if positions is None:
+            positions = self.trajectory.positions
+            
+        bar = ProgressBar(positions.shape[0], enable=True)
+        self.accelerations = np.zeros(positions.shape)
+        self.potentials = np.zeros(len(positions))
+
+        for i in range(len(self.accelerations)):
+            self.accelerations[i], self.potentials[i] = self.compute_values(positions[i])      
+            bar.update(i)
+        bar.markComplete()
+        bar.close()
+        return self.potentials
+
+
+    def compute_values(self, position):
         G = 6.67408*1E-11 #m^3/(kg s^2)
         point_scaled = position/self.scaleFactor
         acc = np.zeros((3,))
+        pot = 0.0
 
-        acc_facet = facet_acc_loop(point_scaled, self.mesh.vertices, self.mesh.faces, self.facet_dyads)
-        acc_edge = edge_acc_loop(point_scaled, self.mesh.vertices, self.mesh.edges_unique, self.edge_dyads)
+        acc_facet, pot_facet = facet_acc_loop(point_scaled, self.mesh.vertices, self.mesh.faces, self.facet_dyads)
+        acc_edge, pot_edge = edge_acc_loop(point_scaled, self.mesh.vertices, self.mesh.edges_unique, self.edge_dyads)
 
-        acc = acc_facet + acc_edge
+        acc = acc_facet + acc_edge # signs taken care of in loop
         acc *= G*self.density*self.scaleFactor
-        return acc
+
+        pot = pot_edge + pot_facet # signs taken care of in loop
+        pot *= 1.0/2.0*G*self.density*self.scaleFactor
+        return acc, pot
 
 
 def main():
@@ -219,35 +252,35 @@ def main():
     timeList = []
     position = np.ones((64,3))*1E4# Must be in meters
     start = time.time()
-    print(poly_model.compute_acc(position))
+    print(poly_model.compute_acceleration(position))
     stop = time.time() - start
     timeList.append(stop)
     print(stop)
 
     position = np.ones((128,3))*1E4# Must be in meters
     start = time.time()
-    poly_model.compute_acc(position)
+    poly_model.compute_acceleration(position)
     stop = time.time() - start
     timeList.append(stop)
     print(stop)
 
     position = np.ones((256,3))*1E4# Must be in meters
     start = time.time()
-    poly_model.compute_acc(position)
+    poly_model.compute_acceleration(position)
     stop = time.time() - start
     timeList.append(stop)
     print(stop)
 
     # position = np.ones((512,3))*1E4# Must be in meters
     # start = time.time()
-    # poly_model.compute_acc(position)
+    # poly_model.compute_acceleration(position)
     # stop = time.time() - start
     # timeList.append(stop)
     # print(stop)
 
     # position = np.ones((1024,3))*1E4# Must be in meters
     # start = time.time()
-    # poly_model.compute_acc(position)
+    # poly_model.compute_acceleration(position)
     # stop = time.time() - start
     # timeList.append(stop)
     # print(stop)

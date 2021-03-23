@@ -42,7 +42,7 @@ def main():
     for poly_file in poly_files:
         Call_r0_gm = Polyhedral(trajectory.celestial_body, poly_file, trajectory=trajectory)
         x = trajectory.positions
-        a = Call_r0_gm.load()
+        a = Call_r0_gm.load().accelerations
 
         state_pred = StateObject(trajectory=trajectory, accelerations=a)
         

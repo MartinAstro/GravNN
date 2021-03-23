@@ -41,6 +41,7 @@ def get_potential(legendre, l, m, Nlm, Clm, Slm, R, mu, r, lambda_, phi_):
 
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
+    # Handle cases where the keyword wasn't properly wrapped as a list []
     try:
         max_deg = int(kwargs['max_deg'][0])
         deg_removed = int(kwargs['deg_removed'][0])
@@ -49,14 +50,21 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
         deg_removed = int(kwargs['deg_removed'])
 
     Call_r0_gm = SphericalHarmonics(gravity_file, degree=max_deg, trajectory=trajectory)
-    accelerations = Call_r0_gm.load()
+    accelerations = Call_r0_gm.load().accelerations
 
     Clm_r0_gm = SphericalHarmonics(gravity_file, degree=deg_removed, trajectory=trajectory)
-    accelerations_Clm = Clm_r0_gm.load()
+    accelerations_Clm = Clm_r0_gm.load().accelerations
 
     x = Call_r0_gm.positions # position (N x 3)
     a = accelerations - accelerations_Clm
     u = np.array([None for _ in range(len(a))]).reshape((len(a),1)) # potential (N x 1)
+
+    # By default the potential isn't loaded into the training data
+    if 'use_potential' in kwargs:
+        if kwargs['use_potential'][0]
+            potentials = Call_r0_gm.potentials
+            potentials_Clm = Clm_r0_gm.potentials
+            u = potentials - potentials_Clm
 
     return x, a, u
 
@@ -193,7 +201,7 @@ class SphericalHarmonics(GravityModelBase):
         return self.potential
 
     
-    def compute_acc(self, positions=None):
+    def compute_acceleration(self, positions=None):
         "Compute the acceleration for an existing trajectory or provided set of positions"
         if positions is None:
             positions = self.trajectory.positions

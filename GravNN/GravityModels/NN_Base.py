@@ -34,7 +34,7 @@ class NN_Base(GravityModelBase):
         y_pred = self.model.predict(np.array(x).reshape((len(x),3)))
         return y_pred.reshape((len(x),1, 3))
 
-    def compute_acc(self, positions=None):
+    def compute_acceleration(self, positions=None):
         """Compute the accelerations via NN
 
         Args:

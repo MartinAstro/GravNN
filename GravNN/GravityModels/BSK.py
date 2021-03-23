@@ -43,14 +43,14 @@ class BSK(AccelerationBase):
         self.body = body
         self.errors = errors
         self.configure(trajectory)
-        self.load()
+        self.load().accelerations
         pass
 
     def generate_full_file_directory(self):
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + str(self.errors) + "/"
         pass
     
-    def compute_acc(self):
+    def compute_acceleration(self):
         bodyInterface = self.body
         rIC = self.trajectory.position
 
@@ -162,7 +162,7 @@ class BSK(AccelerationBase):
 
 def run():
     body = GravBodyInterface('earth', "/Users/johnmartin/Basilisk/SupportData/LocalGravData/GGM03S.txt", degree=10)
-    rIC = UniformDist(body, body.gravBody['earth'].radEquator + 10000, 10000).load()
+    rIC = UniformDist(body, body.gravBody['earth'].radEquator + 10000, 10000).load().accelerations
     accData = simulate(body, rIC, generator="SH")
     gc.collect()
 

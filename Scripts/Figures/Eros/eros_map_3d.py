@@ -36,7 +36,7 @@ def main():
 
     trajectory = SurfaceDist(planet, obj_file)
     poly_gm = Polyhedral(planet, obj_file, trajectory)
-    acc_poly = poly_gm.load()
+    acc_poly = poly_gm.load().accelerations
 
 
     # Polyhedral Results

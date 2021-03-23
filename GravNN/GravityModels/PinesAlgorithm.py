@@ -24,7 +24,7 @@ def compute_n_matrices(N):
     return n1, n2, n1q, n2q
 
 @njit(cache=True)
-def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
+def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
     for i in range(0, int(len(positions)/3)):
         r = np.linalg.norm(positions[3*i:3*(i+1)])

@@ -260,10 +260,10 @@ if __name__ == "__main__":
 
 
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-        accelerations = Call_r0_gm.load()
+        accelerations = Call_r0_gm.load().accelerations
 
         Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=trajectory)
-        accelerations_Clm = Clm_r0_gm.load()
+        accelerations_Clm = Clm_r0_gm.load().accelerations
 
 
 
@@ -309,10 +309,10 @@ if __name__ == "__main__":
         ######################################################################    
 
         Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=map_trajectory)
-        Call_a = Call_r0_gm.load()
+        Call_a = Call_r0_gm.load().accelerations
         
         Clm_r0_gm = SphericalHarmonics(model_file, degree=int(config['deg_removed'][0]), trajectory=map_trajectory)
-        Clm_a = Clm_r0_gm.load()
+        Clm_a = Clm_r0_gm.load().accelerations
 
         x = Call_r0_gm.positions # position (N x 3)
         a = Call_a - Clm_a
@@ -374,7 +374,7 @@ if __name__ == "__main__":
        
         # This ensures the same features are being evaluated independent of what degree is taken off at beginning
         C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=map_trajectory)
-        C22_a = C22_r0_gm.load()
+        C22_a = C22_r0_gm.load().accelerations
         grid_C22 = Grid(trajectory=map_trajectory, accelerations=Call_a - C22_a)
 
         two_sigma_mask = np.where(grid_C22.total > (np.mean(grid_C22.total) + 2*np.std(grid_C22.total)))

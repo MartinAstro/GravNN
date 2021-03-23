@@ -38,11 +38,11 @@ def main():
 
     trajectory = SurfaceDist(planet, obj_file)
     poly_gm = Polyhedral(planet, obj_file, trajectory)
-    acc_poly = poly_gm.load()
+    acc_poly = poly_gm.load().accelerations
 
     max_deg = 37
     Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
-    acc_sh = Call_r0_gm.load()
+    acc_sh = Call_r0_gm.load().accelerations
 
     diff = acc_poly - acc_sh
 

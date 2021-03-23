@@ -5,6 +5,8 @@ import numpy as np
 import trimesh
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.CelestialBodies.Asteroids import Bennu
+from GravNN.CelestialBodies.Planets import Earth
+from GravNN.Support.transformations import sphere2cart, cart2sph
 
 from numba import jit, njit, prange
 
@@ -21,36 +23,51 @@ class PointMass(GravityModelBase):
         pass
 
 
-    def compute_acc(self, positions=None):
+    def compute_acceleration(self, positions=None):
         "Compute the acceleration for an existing trajectory or provided set of positions"
         if positions is None:
             positions = self.trajectory.positions
 
+        positions = cart2sph(positions)
         self.accelerations = np.zeros(positions.shape)
         for i in range(len(self.accelerations)):
-            self.accelerations[i] = self.compute_acceleration(positions[i])      
+            self.accelerations[i] = self.compute_acceleration_value(positions[i])      
         
+        self.accelerations = sphere2cart(self.accelerations)
         return self.accelerations
 
-    def compute_acceleration(self, position):
-        G = 6.67408*1E-11 #m^3/(kg s^2)
-        acc = -self.mu*np.square(np.power(position,-2))
-        return acc
+    def compute_potential(self, positions=None):
+        "Compute the potential for an existing trajectory or provided set of positions"
+        if positions is None:
+            positions = self.trajectory.positions
 
+        positions = cart2sph(positions)
+        self.potentials = np.zeros(len(positions))
+        for i in range(len(self.potentials)):
+            self.potentials[i] = self.compute_potential_value(positions[i])      
+        
+        return self.potentials
+
+    def compute_acceleration_value(self, position):
+        return np.array([-self.mu/position[0]**2, position[1], position[2]]) #[a_r, theta, phi]
+
+    def compute_potential_value(self, position):
+        return self.mu/position[0]
 
 def main():
-    density = 1260.0 #kg/m^3 bennu https://github.com/bbercovici/SBGAT/blob/master/SbgatCore/include/SbgatCore/Constants.hpp 
     import time 
     start = time.time()
-    asteroid = Bennu()
-    poly_model = Polyhedral(asteroid, asteroid.obj_file)
+    planet = Earth()
+    point_mass = PointMass(planet)
     print(time.time() - start)
 
-    position = np.array([[1.,1.,1.],[1.,1.,1.]])*1E3 # Must be in meters
+    position = np.array([[1.,0.,0.],[0.,1.,0.]])*planet.radius # Must be in meters
 
     print(position)
     start = time.time()
-    print(poly_model.compute_acc(position))
+    accelerations = point_mass.compute_acceleration(position)
+    print(accelerations)
+    print(np.linalg.norm(accelerations, axis=1))
     print(time.time() - start)
 
 

@@ -31,7 +31,7 @@ def get_poly_state_object(map_type='sphere'):
     else:
         trajectory = SurfaceDist(planet, obj_file)
     Clm_r0_gm = Polyhedral(planet, obj_file, trajectory)
-    Clm_a = Clm_r0_gm.load()
+    Clm_a = Clm_r0_gm.load().accelerations
 
     return StateObject(trajectory, Clm_a)
 
@@ -46,7 +46,7 @@ def get_sh_state_object_C00(map_type='sphere'):
     else:
         trajectory = SurfaceDist(planet, obj_file)
     Clm_r0_gm = SphericalHarmonics(planet.sh_obj_file, 0, trajectory)
-    Clm_a = Clm_r0_gm.load()
+    Clm_a = Clm_r0_gm.load().accelerations
     return StateObject(trajectory, Clm_a)
 
 def acceleration_distribution_plots(map_type):

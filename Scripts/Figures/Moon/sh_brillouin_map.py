@@ -31,13 +31,13 @@ def main():
     # map_trajectory = trajectory
 
     Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
-    Call_a = Call_r0_gm.load()
+    Call_a = Call_r0_gm.load().accelerations
 
     # Clm_r0_gm = SphericalHarmonics(model_file, degree=100, trajectory=trajectory)
-    # Clm_a = Clm_r0_gm.load()
+    # Clm_a = Clm_r0_gm.load().accelerations
     
     C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
-    C22_a = C22_r0_gm.load()
+    C22_a = C22_r0_gm.load().accelerations
         
     grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
     #grid_pred = Grid(trajectory=trajectory, accelerations=Clm_a-C22_a)

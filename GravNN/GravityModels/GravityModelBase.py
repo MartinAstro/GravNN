@@ -6,6 +6,7 @@ class GravityModelBase(ABC):
     def __init__(self):
         self.trajectory = None
         self.accelerations = None
+        self.potentials = None
         self.file_directory  = None
         return
     
@@ -20,15 +21,26 @@ class GravityModelBase(ABC):
         self.generate_full_file_directory()
 
     def save(self):
-        # Create the directory/file and dump the acceleration
+        # Create the directory/file and dump the acceleration and potential if computed
         if not os.path.exists(self.file_directory):
             os.makedirs(self.file_directory)
-        with open(self.file_directory + "acceleration.data",'wb') as f:
-            pickle.dump(self.accelerations, f)
+        
+        if self.accelerations is not None:
+            with open(self.file_directory + "acceleration.data",'wb') as f:
+                pickle.dump(self.accelerations, f)
+
+        if self.potentials is not None:
+            with open(self.file_directory + "potential.data",'wb') as f:
+                pickle.dump(self.potentials, f)
         return
 
     def load(self, override=False):
-        # Check if the file exists and either load the positions or generate the acceleration
+        self.load_acceleration(override)
+        self.load_potential(override)
+
+
+    def load_acceleration(self, override=False):
+        # Check if the file exists and either load the acceleration or generate it
         if os.path.exists(self.file_directory + "acceleration.data") and override == False:
             if self.verbose:
                 print("Found existing acceleration.data at " + self.file_directory)
@@ -38,15 +50,37 @@ class GravityModelBase(ABC):
         else:
             if self.verbose:
                 print("Generating acceleration at " + self.file_directory)
-            self.compute_acc()
+            # Note: compute_acceleration() might generate the potential values too for some representations.
+            # For example, computing the potential of the polyhedral model adds one extra step
+            # to the acceleration calculation. Rather than rerunning the entire algorithm to 
+            # compute the potential, the calculations are bundled together for efficiency. 
+            self.compute_acceleration() 
             self.save()
-            return self.accelerations
+        return
+
+    def load_potential(self, override=False):
+        # Check if the file exists and either load the potential or generate it
+        if os.path.exists(self.file_directory + "potential.data") and override == False:
+            if self.verbose:
+                print("Found existing potential.data at " + self.file_directory)
+            with open(self.file_directory+"potential.data", 'rb') as f:
+                self.potentials = pickle.load(f)
+                return self.potentials
+        else:
+            if self.verbose:
+                print("Generating potential at " + self.file_directory)
+            self.compute_potential()
+            self.save()
+            return self.potential
 
     @abstractmethod
     def generate_full_file_directory(self):
         pass
 
     @abstractmethod
-    def compute_acc(self):
+    def compute_acceleration(self):
         pass
         
+    @abstractmethod
+    def compute_potential(self):
+        pass

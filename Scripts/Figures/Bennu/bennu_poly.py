@@ -26,15 +26,15 @@ def main():
     map_trajectory = trajectory
 
     poly_gm = Polyhedral(planet, obj_file, trajectory)
-    acc_poly = poly_gm.load()
+    acc_poly = poly_gm.load().accelerations
 
     max_deg = 9
     Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
-    acc_sh = Call_r0_gm.load()
+    acc_sh = Call_r0_gm.load().accelerations
 
     max_deg = 0
     Call_r0_gm = SphericalHarmonics(sh_file, degree=max_deg, trajectory=trajectory)
-    acc_sh_point_mass = Call_r0_gm.load()
+    acc_sh_point_mass = Call_r0_gm.load().accelerations
 
     grid_true = Grid(trajectory=trajectory, accelerations=acc_poly-acc_sh_point_mass)
     grid_pred = Grid(trajectory=trajectory, accelerations=acc_sh-acc_sh_point_mass)

@@ -29,7 +29,7 @@ def get_grid(degree, map_type='world'):
     else:
         trajectory = ReducedGridDist(planet, radius_min, density_deg, reduction=0.25)
     Clm_r0_gm = SphericalHarmonics(model_file, degree=degree, trajectory=trajectory)
-    Clm_a = Clm_r0_gm.load()
+    Clm_a = Clm_r0_gm.load().accelerations
     return Grid(trajectory, Clm_a)
 
 def feature_mask(map_type):

@@ -174,18 +174,11 @@ def main():
     df_file = 'Data/Dataframes/new_pinn_constraints.data'
     configurations = {"fast" : get_fast_earth_pinn_config()}
 
-    df_file = 'Data/Dataframes/new_temp.data'
-
-    df_file = 'Data/Dataframes/new_temp_small.data'
-    df_file = 'Data/Dataframes/new_temp_long.data'
-    df_file = 'Data/Dataframes/dummy.data'
-
+    df_file = "Data/Dataframes/useless.data"
     configurations = {"default" : get_default_earth_config()}
 
-    df_file = "Data/Dataframes/useless.data"
 
 
-    configurations = {"default" : get_default_moon_config()}
 
     df_file = "Data/Dataframes/moon_test.data"
     df_file = "Data/Dataframes/moon_test_mixed.data"
@@ -196,6 +189,7 @@ def main():
 
     # Train on Even Tighter bounds
     df_file = "Data/Dataframes/moon_test_very_narrow.data"
+    configurations = {"default" : get_default_moon_config()}
 
 
     for key, config in configurations.items():
