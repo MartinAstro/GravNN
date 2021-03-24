@@ -31,14 +31,6 @@ def get_normalization(l, m):
                 N[i,j] = np.sqrt((2*(2*i+1)*np.math.factorial(i-j))/(np.math.factorial(i+j)))
     return N
 
-#@njit(cache=True)
-def get_potential(legendre, l, m, Nlm, Clm, Slm, R, mu, r, lambda_, phi_):
-    U = 0.0 # Potential
-    for i in range(0, l+1):
-        for j in range(0, i+1):
-            U += mu/r*(R/r)**i *Nlm[i,j] * legendre[0][j,i] * (Clm[i,j]*np.cos(j*lambda_) + Slm[i,j]*np.sin(j*lambda_))
-    return U
-
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
     # Handle cases where the keyword wasn't properly wrapped as a list []
@@ -61,7 +53,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
     # By default the potential isn't loaded into the training data
     if 'use_potential' in kwargs:
-        if kwargs['use_potential'][0]
+        if kwargs['use_potential'][0]:
             potentials = Call_r0_gm.potentials
             potentials_Clm = Clm_r0_gm.potentials
             u = potentials - potentials_Clm
@@ -190,15 +182,15 @@ class SphericalHarmonics(GravityModelBase):
         if positions is None:
             positions = self.trajectory.positions
         
-        positions_sph = cart2sph(positions) # [r, lambda, phi]
-        self.potential = np.zeros((len(positions),))
-        l = self.degree
-        m = l
-        Nlm = get_normalization(l,m)
-        for i in range(len(positions)):
-            legendre = lpmn(m, l, np.sin(positions_sph[i,2]))
-            self.potential[i] = get_potential(legendre, l, m, Nlm, self.C_lm, self.S_lm, self.radEquator, self.mu, positions_sph[i,0], np.deg2rad(positions_sph[i,1]), np.deg2rad(positions_sph[i,2]))
-        return self.potential
+        positions = np.reshape(positions, (len(positions)*3))
+        
+        n1, n2, n1q, n2q = compute_n_matrices(self.degree)
+        accelerations, potentials = compute_acc_parallel(positions, self.degree, self.mu, self.radEquator, n1, n2, n1q, n2q, self.C_lm, self.S_lm)      
+        
+        self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
+        self.potentials = potentials
+
+        return self.potentials
 
     
     def compute_acceleration(self, positions=None):
@@ -209,9 +201,10 @@ class SphericalHarmonics(GravityModelBase):
         positions = np.reshape(positions, (len(positions)*3))
         
         n1, n2, n1q, n2q = compute_n_matrices(self.degree)
-        accelerations = compute_acc_parallel(positions, self.degree, self.mu, self.radEquator, n1, n2, n1q, n2q, self.C_lm, self.S_lm)      
+        accelerations, potentials = compute_acc_parallel(positions, self.degree, self.mu, self.radEquator, n1, n2, n1q, n2q, self.C_lm, self.S_lm)      
         
         self.accelerations = np.reshape(np.array(accelerations), (int(len(np.array(accelerations))/3), 3))
+        self.potentials = potentials
         return self.accelerations
 
 

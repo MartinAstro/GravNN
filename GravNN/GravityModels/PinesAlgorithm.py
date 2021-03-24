@@ -79,15 +79,19 @@ def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
 @njit(parallel=True, cache=True) 
 def compute_acc_parallel(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
+    potential = np.zeros((int(len(positions)/3),))
     if N == -1:
-        return acc
+        return (acc, potential)
     for i in prange(0, int(len(positions)/3)):
-        acc[3*i:3*(i+1)] = compute_acc_thread(positions[3*i:3*(i+1)], N, mu, a, n1, n2, n1q, n2q, cbar, sbar)
-    return acc
+        results = compute_acc_thread(positions[3*i:3*(i+1)], N, mu, a, n1, n2, n1q, n2q, cbar, sbar) 
+        acc[3*i:3*(i+1)] = results[0]
+        potential[i] = results[1]
+    return (acc, potential)
     
 @njit(cache=True)
 def compute_acc_thread(position, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(position.shape)
+    potential = 0.0
     r = np.linalg.norm(position)
     [s, t, u] = position/r
 
@@ -128,10 +132,15 @@ def compute_acc_thread(position, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
             if m < l:
                 sum_a3 += n1q[l][m]*aBar[l][m+1]*D
             sum_a4 += n2q[l][m]*aBar[l+1][m+1]*D
+
+            potential += rhol[l]*aBar[l][m]*D
         a1 += rhol[l+1]/a*sum_a1
         a2 += rhol[l+1]/a*sum_a2
         a3 += rhol[l+1]/a*sum_a3
         a4 -= rhol[l+1]/a*sum_a4
     a4 -= rhol[1]/a
 
-    return (np.array([a1, a2, a3]) + np.array([s,t,u])*a4)#.tolist()
+    # The prior loop doesn't account for the l=0 index
+    potential += (rhol[0]*aBar[0][0]*(cbar[0][0]*rE[0] + sbar[0][0]*iM[0]))
+
+    return (np.array([a1, a2, a3]) + np.array([s,t,u])*a4, potential)

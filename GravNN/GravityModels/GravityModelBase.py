@@ -37,7 +37,7 @@ class GravityModelBase(ABC):
     def load(self, override=False):
         self.load_acceleration(override)
         self.load_potential(override)
-
+        return self
 
     def load_acceleration(self, override=False):
         # Check if the file exists and either load the acceleration or generate it
@@ -71,7 +71,7 @@ class GravityModelBase(ABC):
                 print("Generating potential at " + self.file_directory)
             self.compute_potential()
             self.save()
-            return self.potential
+            return self.potentials
 
     @abstractmethod
     def generate_full_file_directory(self):
