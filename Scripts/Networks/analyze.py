@@ -79,11 +79,13 @@ def main():
     df_file = "Data/Dataframes/moon_test_preprocessing.data"
     df_file = "Data/Dataframes/moon_test_small.data"
     df_file = "Data/Dataframes/moon_test_very_narrow.data"
+    df_file = 'Data/Dataframes/hyperparameter_moon_v_50000_0.data'
+    
 
 
 
     # df_list = ['Data/Dataframes/deeper_networks2.data', 'Data/Dataframes/deeper_networks4.data', 'Data/Dataframes/deeper_networks5.data', 'Data/Dataframes/deeper_networks6.data', 'Data/Dataframes/deeper_networks7.data', 'Data/Dataframes/deeper_networks8.data', 'Data/Dataframes/deeper_networks9.data']
-    df = pd.read_pickle(df_file)#[5:]
+    df = pd.read_pickle(df_file)#[5:] -- WARN: if you index, then you'll write over the entire dataframe!
     ids = df['id'].values
 
     points = 64800

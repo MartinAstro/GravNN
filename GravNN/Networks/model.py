@@ -69,6 +69,11 @@ np.random.seed(1234)
 #     a_pred_infinite = tf.where(tf.math.is_inf(a_pred_infinite), y, a_pred_infinite)
 #     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
 #     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)
+def count_nonzero_params(model):
+    params = 0
+    for v in model.trainable_variables:
+        params += tf.math.count_nonzero(v)
+    return params.numpy()
 
 
 #@tf.function(experimental_compile=True)
@@ -400,7 +405,7 @@ class CustomModel(tf.keras.Model):
     
     def model_size_stats(self):
         size_stats = {
-            'params' : [utils.count_nonzero_params(self.network)],
+            'params' : [count_nonzero_params(self.network)],
             'size' : [utils.get_gzipped_model_size(self)],
         }
         self.config.update(size_stats)

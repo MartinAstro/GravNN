@@ -106,6 +106,25 @@ def load_hparams_to_config(hparams, config):
     #config['layers'][0][1:len(config['layers'][0])-1] = config['num_units']
     return config
 
+
+def scheduler(epoch, lr):
+  if epoch >= 25000 and epoch % 5000 == 0:
+    return lr / 10.0
+  else:
+    return lr
+
+def lr_step_decay(epoch, lr):
+    drop_rate = 0.5
+    epochs_drop = 500.0
+    epoch_0 = 10000
+    initial_lr = 0.001
+
+    if epoch < epoch_0:
+        return lr
+    else:
+        return initial_lr * tf.math.pow(drop_rate, tf.math.floor((epoch-epoch_0)/epochs_drop))
+
+
 def main():
 
     device_name = tf.test.gpu_device_name()
@@ -144,28 +163,7 @@ def main():
     # HP_DATA_SIZE = hp.HParam('N_train', hp.Discrete([125000, 250000, 500000]))
     # HP_EPOCHS = hp.HParam('epochs', hp.Discrete([2500, 5000, 7500]))
 
-    # session_num = 0
-    # for epochs in HP_EPOCHS.domain.values:
-    #     for num_units in HP_NUM_UNITS.domain.values:
-    #         for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-    #             for optimizer in HP_OPTIMIZER.domain.values:
-    #                 for batch_size in HP_BATCH_SIZE.domain.values:
-    #                     for data_size in HP_DATA_SIZE.domain.values:
-    #                         for activation in HP_ACTIVATION.domain.values:
-    #                             hparams = {
-    #                                 HP_EPOCHS : epochs,
-    #                                 HP_NUM_UNITS: num_units,
-    #                                 HP_DROPOUT: dropout_rate,
-    #                                 HP_OPTIMIZER: optimizer,
-    #                                 HP_BATCH_SIZE: batch_size,
-    #                                 HP_DATA_SIZE: data_size,
-    #                                 HP_ACTIVATION: activation
-    #                             }
-    #                             run_name = "run-%d" % session_num
-    #                             print('--- Starting trial: %s' % run_name)
-    #                             print({h.name: hparams[h] for h in hparams})
-    #                             run(df_file, directory + run_name, configurations, hparams)
-    #                             session_num += 1
+
                             
 
     # df_file = 'Data/Dataframes/hyperparameter_v4.data'
@@ -179,29 +177,9 @@ def main():
     # HP_EPOCHS = hp.HParam('epochs', hp.Discrete([1250, 2500]))
     # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['gelu', 'elu', 'relu', 'swish']))
 
-    # session_num = 0
-    # for epochs in HP_EPOCHS.domain.values:
-    #     for num_units in HP_NUM_UNITS.domain.values:
-    #         for learning_rate in HP_LEARNING_RATE.domain.values:
-    #             for batch_size in HP_BATCH_SIZE.domain.values:
-    #                 for data_size in HP_DATA_SIZE.domain.values:
-    #                     for activation in HP_ACTIVATION.domain.values:
-    #                         hparams = {
-    #                             HP_EPOCHS : epochs,
-    #                             HP_NUM_UNITS: num_units,
-    #                             HP_LEARNING_RATE: learning_rate,
-    #                             HP_BATCH_SIZE: batch_size,
-    #                             HP_DATA_SIZE: data_size,
-    #                             HP_ACTIVATION: activation
-    #                         }
-    #                         run_name = "run-%d" % session_num
-    #                         print('--- Starting trial: %s' % run_name)
-    #                         print({h.name: hparams[h] for h in hparams})
-    #                         run(df_file, directory + run_name, configurations, hparams)
-    #                         session_num += 1
                             
-    df_file = 'Data/Dataframes/hyperparameter_moon_v1.data'
-    directory = 'logs/hyperparameter_moon_v1/'
+    # df_file = 'Data/Dataframes/hyperparameter_moon_v1.data'
+    # directory = 'logs/hyperparameter_moon_v1/'
 
     # configurations = {"Default" : get_default_moon_config() }
     # configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
@@ -219,31 +197,54 @@ def main():
     # HP_NETWORK = hp.HParam('network_type', hp.Discrete(['traditional', 'resnet']))
 
 
-    # Just Batch Size
-    df_file = 'Data/Dataframes/hyperparameter_moon_v2.data'
-    directory = 'logs/hyperparameter_moon_v2/'
+    # # Just Batch Size
+    # df_file = 'Data/Dataframes/hyperparameter_moon_v2.data'
+    # directory = 'logs/hyperparameter_moon_v2/'
 
 
-    configurations = {"Default" : get_default_moon_config() }
-    configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
-    configurations['Default']['N_dist'] =  [55000]
-    configurations['Default']['N_train'] =  [50000]
-    configurations['Default']['N_val'] =  [4450]
-    configurations['Default']['radius_max'] = [Moon().radius + 5000]
-    configurations['Default']['epochs'] = [50000]
+    # configurations = {"Default" : get_default_moon_config() }
+    # configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+    # configurations['Default']['N_dist'] =  [55000]
+    # configurations['Default']['N_train'] =  [50000]
+    # configurations['Default']['N_val'] =  [4450]
+    # configurations['Default']['radius_max'] = [Moon().radius + 5000]
+    # configurations['Default']['epochs'] = [50000]
 
 
 
-    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-5]))
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
-    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh']))
-    HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal']))
-    HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet']))
+    # HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-5]))
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh']))
+    # HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal']))
+    # HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet']))
 
     
-    # More comprehensive Batch Size
-    df_file = 'Data/Dataframes/hyperparameter_moon_v3.data'
-    directory = 'logs/hyperparameter_moon_v3/'
+    # # More comprehensive Batch Size
+    # df_file = 'Data/Dataframes/hyperparameter_moon_v3.data'
+    # directory = 'logs/hyperparameter_moon_v3/'
+
+
+    # configurations = {"Default" : get_default_moon_config() }
+    # configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+    # configurations['Default']['N_dist'] =  [55000]
+    # configurations['Default']['N_train'] =  [50000]
+    # configurations['Default']['N_val'] =  [4450]
+    # configurations['Default']['radius_max'] = [Moon().radius + 5000]
+    # configurations['Default']['epochs'] = [50000]
+
+
+
+    # HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-3, 5E-5]))
+    # HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
+    # HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'gelu']))
+    # HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal', 'glorot_uniform']))
+    # HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet', 'traditional']))
+
+
+
+    # Big Batch Learning Rate Config
+    df_file = 'Data/Dataframes/hyperparameter_moon_v4.data'
+    directory = 'logs/hyperparameter_moon_v4/'
 
 
     configurations = {"Default" : get_default_moon_config() }
@@ -256,11 +257,12 @@ def main():
 
 
 
-    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([5E-3, 5E-5]))
-    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([512, 1024, 2048]))
-    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh', 'gelu']))
-    HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_normal', 'glorot_uniform']))
-    HP_NETWORK = hp.HParam('network_type', hp.Discrete(['resnet', 'traditional']))
+    HP_LEARNING_RATE = hp.HParam('learning_rate', hp.Discrete([1E-2]))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([32768, 65536]))
+    HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['tanh']))
+    HP_INITIALIZER = hp.HParam('initializer', hp.Discrete(['glorot_uniform']))
+    HP_NETWORK = hp.HParam('network_type', hp.Discrete(['traditional']))
+
 
 
     # Maybe preprocessing
@@ -351,6 +353,8 @@ def run(df_file, file_name, configurations, hparams):
         model = CustomModel(config, network)
 
         callback = CustomCallback()
+        schedule = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
+
         tensorboard = tf.keras.callbacks.TensorBoard(log_dir=file_name, histogram_freq=1000, write_graph=True)#, profile_batch='35,50')
         hyper_params = hp.KerasCallback(file_name, hparams)
 
@@ -368,7 +372,7 @@ def run(df_file, file_name, configurations, hparams):
                             epochs=config['epochs'][0], 
                             verbose=0,
                             validation_data=val_dataset,
-                            callbacks=[callback, tensorboard, hyper_params])# tensorboard, hyper_params])#,
+                            callbacks=[callback, tensorboard, schedule, hyper_params])# tensorboard, hyper_params])#,
                                         #early_stop])
         history.history['time_delta'] = callback.time_delta
         model.history = history

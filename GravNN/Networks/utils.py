@@ -2,7 +2,6 @@ import os
 import zipfile
 import tempfile
 import pandas as pd
-import tensorflow as tf
 #import tensorflow_model_optimization as tfmot
 from GravNN.Trajectories.ExponentialDist import ExponentialDist
 from GravNN.Trajectories.GaussianDist import GaussianDist
@@ -21,11 +20,6 @@ def get_gzipped_model_size(model):
 
     return os.path.getsize(zipped_file)
 
-def count_nonzero_params(model):
-    params = 0
-    for v in model.trainable_variables:
-        params += tf.math.count_nonzero(v)
-    return params.numpy()
 
 def check_config_combos(config):
     if config['PINN_flag'][0] != "none":
