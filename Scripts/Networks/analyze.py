@@ -49,49 +49,13 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 def main():
 
+    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v1.data'
+    planet = Earth()
 
-    df_file = "Data/Dataframes/temp_spherical.data"
-    df_file = 'Data/Dataframes/new_pinn_constraints.data'
-    df_file = 'Data/Dataframes/new_temp.data'
-    df_file = 'Data/Dataframes/new_temp_small.data'
-    df_file = 'Data/Dataframes/hyperparameter_v3.data'
-    df_file = 'Data/Dataframes/deeper_networks.data'
-    df_file = 'Data/Dataframes/basis_test.data'
-    df_file = 'Data/Dataframes/deeper_networks2.data'
-    df_file = 'Data/Dataframes/deeper_networks4.data'
-    df_file = 'Data/Dataframes/deeper_networks5.data'
-    df_file = "Data/Dataframes/deeper_networks6.data" # ResNet  -- tanh
-    df_file = "Data/Dataframes/deeper_networks7.data" # 950000 -- leaky -- resnet
-    df_file = "Data/Dataframes/deeper_networks8.data"
-    df_file = "Data/Dataframes/deeper_networks9.data" #1950000 -- leaky -- resnet
-
-    df_file = "Data/Dataframes/old_test.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    #df_file = "Data/Dataframes/N_1000000_Rand_Study.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-
-    df_file = "Data/Dataframes/learning_rates2.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    df_file = "Data/Dataframes/widening_networks.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    df_file = "Data/Dataframes/widening_activation.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    df_file = "Data/Dataframes/widening_activation_long.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    df_file = "Data/Dataframes/low_lr_large_batch_long_train.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-
-    df_file = "Data/Dataframes/moon_test.data" # 950000 -- tanh -- trad -- 40000 batch size -- 100000 epochs 
-    df_file = "Data/Dataframes/moon_test_mixed.data"
-    df_file = "Data/Dataframes/moon_test_preprocessing.data"
-    df_file = "Data/Dataframes/moon_test_small.data"
-    df_file = "Data/Dataframes/moon_test_very_narrow.data"
-    df_file = 'Data/Dataframes/hyperparameter_moon_v_50000_0.data'
-    
-
-
-
-    # df_list = ['Data/Dataframes/deeper_networks2.data', 'Data/Dataframes/deeper_networks4.data', 'Data/Dataframes/deeper_networks5.data', 'Data/Dataframes/deeper_networks6.data', 'Data/Dataframes/deeper_networks7.data', 'Data/Dataframes/deeper_networks8.data', 'Data/Dataframes/deeper_networks9.data']
-    df = pd.read_pickle(df_file)#[5:] -- WARN: if you index, then you'll write over the entire dataframe!
+    df = pd.read_pickle(df_file)# ![5:] -- WARN: if you index, then you'll write over the entire dataframe!
     ids = df['id'].values
+    points = 250000 # 64800
 
-    points = 64800
-    points = 250000
-
-    planet = Moon()
     alt_list = np.arange(0, 500000, 10000, dtype=float)
     window = np.array([0, 5, 10, 15, 25, 35, 45, 100, 200, 300, 400]) 
     alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])
@@ -100,14 +64,8 @@ def main():
         "Brillouin" : FibonacciDist(planet, planet.radius, points),
         #"LEO" : FibonacciDist(planet, planet.radius+420000.0, points),
         }
-
-    # test_trajectories = {
-    #     "Brillouin" : DHGridDist(planet, planet.radius, degree=180),
-    #     #"LEO" : FibonacciDist(planet, planet.radius+420000.0, points),
-    #     }
-    
-    
-    # #* Asteroid config
+   
+    # * Asteroid config
     # planet = Eros()
     # altitudes = np.arange(0, 10000, 1000, dtype=float) 
     # test_trajectories = {
@@ -119,18 +77,17 @@ def main():
     for model_id in ids:
         tf.keras.backend.clear_session()
 
-        alt_df_file = os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/rse_alt.data"
         config, model = load_config_and_model(model_id, df)
-        #config['analytic_truth'] = ['sh_stats_']
-        #config, model = load_config_and_model(model_id, df_file)
+        #config['analytic_truth'] = ['sh_stats_'] #! Necessary if analyzing old networks whose truth model was based on the DH Grid.
 
         # Analyze the model
         analyzer = Analysis(model, config)
         rse_entries = analyzer.compute_rse_stats(test_trajectories)
-        #utils.update_df_row(model_id, df_file, rse_entries)
         df = utils.update_df_row(model_id, df, rse_entries, save=False)
         print(rse_entries)
+
         # alt_df = analyzer.compute_alt_stats(planet, altitudes, points)
+        # alt_df_file = os.path.abspath('.') +"/Data/Networks/"+str(model_id)+"/rse_alt.data"
         # alt_df.to_pickle(alt_df_file)
     df.to_pickle(df_file)
 

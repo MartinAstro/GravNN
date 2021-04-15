@@ -20,62 +20,30 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Visualization.FigureSupport import nn_pareto_curve, sh_pareto_curve
 
 np.random.seed(1234)
 tf.random.set_seed(0)
 
-def main():
+def conference_compactness():
     planet = Eros()
-
     vis = VisualizationBase(save_directory=os.path.abspath('.') +"/Plots/OneOff/")
-
-    # ! RSE MEAN Full Size
-    # Brillouin 0 km    
     fig, ax = vis.newFig(fig_size=vis.full_page)
 
-    def sh_pareto_curve(file_name, max_deg=None):
-        if max_deg is not None:
-            sh_df = pd.read_pickle(file_name).loc[:max_deg]
-        else:
-            sh_df = pd.read_pickle(file_name)
-
-        plt.semilogx(sh_df.index, sh_df['rse_mean'], label=r"MRSE($\mathcal{A'}$)")
-        plt.semilogx(sh_df.index, sh_df["sigma_2_mean"], label=r"MRSE($\mathcal{F'}$)")
-        plt.semilogx(sh_df.index, sh_df["sigma_2_c_mean"], label=r"MRSE($\mathcal{C'}$)")
-
-        plt.ylabel("Mean RSE")
-        plt.xlabel("Parameters")
-        
-        ax.ticklabel_format(axis='y', style='sci',scilimits=(0, 0),  useMathText=True)
-
-    def nn_pareto_curve(file_name, orbit_name, linestyle=None, marker=None):
-        nn_df = pd.read_pickle(file_name)
-        sub_df = nn_df[nn_df['radius_max'] == planet.radius + 10000.0].sort_values(by='params')
-        plt.gca().set_prop_cycle(None)
-        plt.semilogx(sub_df['params'], sub_df[orbit_name+'_rse_mean'], linestyle=linestyle, marker=marker)
-        plt.semilogx(sub_df['params'], sub_df[orbit_name+'_sigma_2_mean'], linestyle=linestyle, marker=marker)
-        plt.semilogx(sub_df['params'], sub_df[orbit_name+'_sigma_2_c_mean'], linestyle=linestyle, marker=marker)
-        plt.legend()
-
+    # ! RSE MEAN Full Size
     sh_pareto_curve('Data/Dataframes/poly_stats_eros_brillouin.data', max_deg=None)
     vis.save(fig, "Eros_Brill_Params.pdf")
 
     # ! Neural Network Results
-    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_study_v2.data', orbit_name='Brillouin', linestyle='--')
+    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_study_v2.data', radius_max=planet.radius + 420000, orbit_name='Brillouin', linestyle='--')
     vis.save(fig, "NN_Eros_Brill_Params.pdf")
 
     # ! PINN Neural Network Results
-    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_PINN_study_v2.data', orbit_name='Brillouin', marker='o')
+    nn_pareto_curve('Data/Dataframes/N_100000_rand_eros_PINN_study_v2.data', radius_max=planet.radius + 420000, orbit_name='Brillouin', marker='o')
     vis.save(fig, "NN_Eros_Brill_PINN_Params.pdf")
-    #plt.show()
-    #plt.close()
-    
 
-
-    
     # # * Surface
     # fig, ax = vis.newFig(fig_size=vis.full_page)
-
     # sh_pareto_curve('poly_stats_eros_surface.data', max_deg=None)
     # vis.save(fig, "Eros_Surface_Params.pdf")
 
@@ -88,8 +56,10 @@ def main():
     # vis.save(fig, "NN_Eros_Surface_PINN_Params.pdf")
 
 
-
-    
+def main():
+    conference_compactness()   
     plt.show()
+
+
 if __name__ == '__main__':
     main()

@@ -7,72 +7,31 @@ import itertools
 def main():
 
 
-    
 
-    # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v1.data'
-    directory = 'logs/hyperparameter_earth_pinn_20_v1/'
+
+    #5,000,000 data --  Plus a little extra epochs for the best performing two 
+    df_file = 'Data/Dataframes/hyperparameter_earth_time.data'
+    directory = 'logs/hyperparameter_earth_time/'
     hparams = {
         'N_dist' : [5000000],
-        'N_train' : [4900000],
-        'epochs' : [100000],
+        'N_train' : [100000, 250000, 500000, 750000, 1000000, 2500000, 4900000],
+        'epochs' : [30],
         'network_shape' : ['normal'],
-        'decay_rate_epoch' : [25000],
-        'decay_epoch_0' : [25000],
+        'decay_rate_epoch' : [50000], # the last one is to simulate virtually no decay
+        'decay_epoch_0' : [50000],
         'decay_rate' : [2.0],
-        'learning_rate' : [0.02, 2E-3], # 5e-3 (highest), 5e-3*(1/2)^1=0.0025, (5e-3)*(1/2)^(2)=0.00125 (lowest) 
-        'batch_size': [131072*2],
+        'learning_rate' : [2E-2],
+        'batch_size': [2**14,2**15,2**16,2**17,2**18,2**19, 2**20],
         'activation' : ['gelu'],
         'initializer' : ['glorot_uniform'],
         'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
-        'mixed_precision' : [False],
         'num_units' : [20],
-        #'init_file' : [2459318.211111111]2459319.668483796
+        #'init_file' : [2459314.280798611]
     }
 
-    hparams = {
-        'N_dist' : [5000000],
-        'N_train' : [4900000],
-        'epochs' : [200000],
-        'network_shape' : ['normal'],
-        'decay_rate_epoch' : [25000],
-        'decay_epoch_0' : [25000],
-        'decay_rate' : [2.0],
-        'learning_rate' : [0.005], # 0.02 (highest), 0.02*(1/2)^1=0.01, (0.02)*(1/2)^(2)=0.005 (lowest) 
-        'batch_size': [131072*2],
-        'activation' : ['gelu'],
-        'initializer' : ['glorot_uniform'],
-        'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
-        'mixed_precision' : [False],
-        'num_units' : [20],
-        'init_file' : [2459319.668483796]
-    }
+  
+
     # TODO: Add preprocessing
-
-    # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v2.data'
-    directory = 'logs/hyperparameter_earth_pinn_20_v2/'
-    hparams = {
-        'N_dist' : [5000000],
-        'N_train' : [4900000],
-        'epochs' : [100000],
-        'network_shape' : ['normal'],
-        'decay_rate_epoch' : [50000],
-        'decay_epoch_0' : [20000],
-        'decay_rate' : [2.0],
-        'learning_rate' : [0.02], # 5e-3 (highest), 5e-3*(1/2)^1=0.0025, (5e-3)*(1/2)^(2)=0.00125 (lowest) 
-        'batch_size': [131072*2],
-        'activation' : ['gelu'],
-        'initializer' : ['glorot_uniform'],
-        'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
-        'mixed_precision' : [False],
-        'num_units' : [20],
-        #'init_file' : [2459318.211111111]2459319.668483796
-    }
-
 
     keys, values = zip(*hparams.items())
     permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -88,7 +47,7 @@ def main():
 
 
     # Can't use a pool because the processes get reused, so TF has already been initialized (but apparently not)
-    with mp.Pool(6) as pool:
+    with mp.Pool(1) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
 
@@ -130,7 +89,7 @@ def run(df_file, file_name, hparams):
     from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                         get_sh_data)
     from GravNN.Networks.Analysis import Analysis
-    from GravNN.Networks.Callbacks import CustomCallback
+    from GravNN.Networks.Callbacks import CustomCallback, TimingCallback
     from GravNN.Networks.Compression import (cluster_model, prune_model,
                                             quantize_model)
     from GravNN.Networks.Data import generate_dataset, training_validation_split
@@ -156,7 +115,6 @@ def run(df_file, file_name, hparams):
         if name == 'decay_rate_epoch': decay_rate_epochs = value
         if name == 'decay_epoch_0' : decay_epoch_0 = value 
         if name == 'network_shape' : network_shape = value 
-        if name == 'mixed_precision' : mixed_precision_flag = value
 
 
 
@@ -172,6 +130,8 @@ def run(df_file, file_name, hparams):
         configurations['Default']['layers'] =  [[3, 52, 52, 3]]
     else:
         exit()
+
+    mixed_precision_flag = True
 
     if sys.platform == 'win32':
         physical_devices = tf.config.list_physical_devices('GPU')
@@ -291,7 +251,7 @@ def run(df_file, file_name, hparams):
         
         model = CustomModel(config, network)
 
-        callback = CustomCallback()
+        callback = TimingCallback()
         schedule = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
         lr_on_plateau = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=5000, factor=0.5, min_delta=0.00001, verbose=1, min_lr=1E-5)
 
@@ -311,6 +271,7 @@ def run(df_file, file_name, hparams):
                             callbacks=[callback, schedule])#lr_on_plateau])# schedule])#, hyper_params])# tensorboard, hyper_params])#,
                                         #early_stop])
         history.history['time_delta'] = callback.time_delta
+        model.config['delta'] = callback.time_10
         model.history = history
 
         # TODO: Save extra parameters like optimizer.learning_rate

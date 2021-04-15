@@ -60,6 +60,17 @@ def get_df_row(model_id, df_file):
     return config
 
 def update_df_row(model_id, df_file, entries, save=True):
+    """Update a row in the dataframe
+
+    Args:
+        model_id (float): Timetag for model within dataframe
+        df_file (any): Either the path used to load the df (slow) or the df itself (fast)
+        entries (series): The series to update in the df
+        save (bool, optional): Save the dataframe immediately after updating (slow). Defaults to True.
+
+    Returns:
+        DataFrame: The updated dataframe
+    """
     if type(df_file) == str:
         original_df = pd.read_pickle(df_file)
     else:
