@@ -43,6 +43,8 @@ def format_config_combos(config):
     return config
 
 def save_df_row(dictionary, df_file):
+    directory = os.path.abspath('.') +"/Data/Dataframes/"
+    os.makedirs(directory, exist_ok=True)
     dictionary = dict(sorted(dictionary.items(), key = lambda kv: kv[0]))
     df = pd.DataFrame().from_dict(dictionary).set_index('timetag')
     try: 

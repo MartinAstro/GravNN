@@ -43,21 +43,28 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 np.random.seed(1234)
 tf.random.set_seed(0)
 
-
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+if sys.platform == 'win32':
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 def main():
 
     df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v1.data'
     planet = Earth()
-
-    df = pd.read_pickle(df_file)# ![5:] -- WARN: if you index, then you'll write over the entire dataframe!
+    df = pd.read_pickle(df_file)# ! [5:] -- WARN: if you index, then you'll write over the entire dataframe!
+    
     ids = df['id'].values
     points = 250000 # 64800
 
-    alt_list = np.arange(0, 500000, 10000, dtype=float)
-    window = np.array([0, 5, 10, 15, 25, 35, 45, 100, 200, 300, 400]) 
+    points = 64800
+    points = 250000
+
+    planet = Moon()
+    planet = Earth()
+
+    sh_stats_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude.data")
+    alt_list = np.linspace(0, 500000, 50, dtype=float) # Every 10 kilometers above surface
+    window = np.array([5, 15, 45, 100, 300]) # Close to surface distribution
     alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])
     altitudes = np.sort(np.unique(alt_list))
     test_trajectories = {
@@ -76,7 +83,6 @@ def main():
 
     for model_id in ids:
         tf.keras.backend.clear_session()
-
         config, model = load_config_and_model(model_id, df)
         #config['analytic_truth'] = ['sh_stats_'] #! Necessary if analyzing old networks whose truth model was based on the DH Grid.
 

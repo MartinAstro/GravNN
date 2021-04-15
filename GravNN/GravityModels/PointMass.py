@@ -2,11 +2,10 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import trimesh
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Support.transformations import sphere2cart, cart2sph
+from GravNN.Support.transformations import sphere2cart, cart2sph, project_acceleration, invert_projection
 
 from numba import jit, njit, prange
 
@@ -33,7 +32,8 @@ class PointMass(GravityModelBase):
         for i in range(len(self.accelerations)):
             self.accelerations[i] = self.compute_acceleration_value(positions[i])      
         
-        self.accelerations = sphere2cart(self.accelerations)
+        # accelerations are in spherical coordinates in the hill frame. Need to change to inertial frame
+        self.accelerations = invert_projection(positions,self.accelerations) 
         return self.accelerations
 
     def compute_potential(self, positions=None):
@@ -49,7 +49,8 @@ class PointMass(GravityModelBase):
         return self.potentials
 
     def compute_acceleration_value(self, position):
-        return np.array([-self.mu/position[0]**2, position[1], position[2]]) #[a_r, theta, phi]
+        # No negative because no such thing as negative radius
+        return np.array([-self.mu/position[0]**2, 0, 0]) #[a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
 
     def compute_potential_value(self, position):
         return self.mu/position[0]
@@ -61,7 +62,7 @@ def main():
     point_mass = PointMass(planet)
     print(time.time() - start)
 
-    position = np.array([[1.,0.,0.],[0.,1.,0.]])*planet.radius # Must be in meters
+    position = np.array([[1.,0.,0.],[0.,1.,0.], [1., 1., 1.]])*planet.radius # Must be in meters
 
     print(position)
     start = time.time()
@@ -70,6 +71,11 @@ def main():
     print(np.linalg.norm(accelerations, axis=1))
     print(time.time() - start)
 
+    from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+    model = SphericalHarmonics(planet.sh_hf_file, 1000)
+    sh_results = model.compute_acceleration(position)
+
+    print(sh_results)
 
 if __name__ == '__main__':
     main()

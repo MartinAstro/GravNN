@@ -56,7 +56,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
         if kwargs['use_potential'][0]:
             potentials = Call_r0_gm.potentials
             potentials_Clm = Clm_r0_gm.potentials
-            u = potentials - potentials_Clm
+            u = np.array(potentials - potentials_Clm).reshape((-1,1))
 
     return x, a, u
 

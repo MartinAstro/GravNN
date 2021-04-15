@@ -96,12 +96,15 @@ class Plotting():
         self.vis.save(fig, self.directory + "loss.pdf")
         return fig
 
-    def plot_alt_curve(self, stat):
+    def plot_alt_curve(self, stat, ylabel=None):
         df = pd.read_pickle(self.directory + 'rse_alt.data')    
         fig, ax = self.vis.newFig()
         plt.plot(df.index/1000.0, df[stat])
         plt.xlabel('Altitude [km]')
-        plt.ylabel('RSE')
+        if ylabel is None:
+            plt.ylabel(stat)
+        else:
+            plt.ylabel(ylabel)
         self.vis.save(fig, self.directory + "altitude.pdf")
         return fig
         

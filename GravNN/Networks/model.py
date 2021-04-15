@@ -24,7 +24,6 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
 from scipy.optimize import minimize, fmin_l_bfgs_b
-import tensorflow_probability as tfp
 
 np.random.seed(1234)
 
@@ -197,6 +196,8 @@ class CustomModel(tf.keras.Model):
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize2(self, dataset):
+        import tensorflow_probability as tfp
+
         class History:
             def __init__(self):
                 self.history = []

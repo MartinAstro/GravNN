@@ -42,7 +42,8 @@ def nearest_analytic(map_stat_series, value):
     nearest_param = np.round(line_x[i])
     return nearest_param
 
-def diff_map_and_stats(name, trajectory, a, acc_pred):
+
+def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'median']):
     state_obj_true = StateObject(trajectory=trajectory, accelerations=a)
     state_obj_pred = StateObject(trajectory=trajectory, accelerations=acc_pred)
     diff = state_obj_pred - state_obj_true
@@ -51,11 +52,11 @@ def diff_map_and_stats(name, trajectory, a, acc_pred):
     two_sigma_mask, two_sigma_mask_compliment = sigma_mask(state_obj_true.total, 2)
     three_sigma_mask, three_sigma_mask_compliment = sigma_mask(state_obj_true.total, 3)
 
-    rse_stats = mean_std_median(diff.total, prefix=name+'_rse')
-    sigma_2_stats = mean_std_median(diff.total, two_sigma_mask, name+"_sigma_2")
-    sigma_2_c_stats = mean_std_median(diff.total, two_sigma_mask_compliment, name+"_sigma_2_c")
-    sigma_3_stats = mean_std_median(diff.total, three_sigma_mask, name+"_sigma_3")
-    sigma_3_c_stats = mean_std_median(diff.total, three_sigma_mask_compliment, name+"_sigma_3_c")
+    rse_stats = mean_std_median(diff.total, prefix=name+'_rse', stats_idx=stats)
+    sigma_2_stats = mean_std_median(diff.total, two_sigma_mask, name+"_sigma_2", stats_idx=stats)
+    sigma_2_c_stats = mean_std_median(diff.total, two_sigma_mask_compliment, name+"_sigma_2_c", stats_idx=stats)
+    sigma_3_stats = mean_std_median(diff.total, three_sigma_mask, name+"_sigma_3", stats_idx=stats)
+    sigma_3_c_stats = mean_std_median(diff.total, three_sigma_mask_compliment, name+"_sigma_3_c", stats_idx=stats)
 
     stats = {
         **rse_stats,
@@ -132,32 +133,35 @@ class Analysis():
         stats = {}
 
         for name, map_traj in test_trajectories.items():
+            # SH Data and NN Data
             x, a, u = self.generate_analytic_data_fcn(map_traj, self.config['grav_file'][0] , **self.config)
-
             acc_pred = self.generate_nn_data(x, a)
+
+            # Generate map statistics on sets A, F, and C (2 and 3 sigma)
             diff, diff_stats = diff_map_and_stats(name, map_traj, a, acc_pred)
-            
             map_stats = { 
                     **diff_stats,
                     name+'_max_error' : [np.max(diff.total)]
                     }
 
+            # Calculate the spherical harmonic degree that yields approximately the same statistics
             analytic_neighbors = self.compute_nearest_analytic(name, map_stats)
             stats.update(map_stats)
             stats.update(analytic_neighbors)
         return stats
 
-    def compute_alt_stats(self, planet, altitudes, points):
+    def compute_alt_stats(self, planet, altitudes, points, sh_alt_df):
         stats = {}
         df_all = pd.DataFrame()
+
+        
         for alt in altitudes: 
             trajectory = FibonacciDist(planet, planet.radius + alt, points)
             model_file = trajectory.celestial_body.sh_hf_file
             x, a, u = get_sh_data(trajectory, model_file, **self.config)
-            
             acc_pred = self.generate_nn_data(x, a)
-            diff, diff_stats = diff_map_and_stats("", trajectory, a, acc_pred)
 
+            diff, diff_stats = diff_map_and_stats("", trajectory, a, acc_pred, 'mean')
             extras = {
                     'alt' : [alt], 
                     'max_error' : [np.max(diff.total)]
@@ -167,6 +171,16 @@ class Analysis():
                     **extras
                     }
             stats.update(entries)
+
+            # Check for the nearest SH in altitude
+            analytic_neighbors = {
+                        'param_rse_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_rse_mean'], entries['_rse_mean'])],
+                        'param_sigma_2_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_2_mean'], entries['_sigma_2_mean'],)],
+                        'param_sigma_2_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_2_c_mean'], entries['_sigma_2_c_mean'])],
+                        'param_sigma_3_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_3_mean'], entries['_sigma_3_mean'])],
+                        'param_sigma_3_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_3_c_mean'], entries['_sigma_3_c_mean'])],
+                    }
+            stats.update(analytic_neighbors)
             df = pd.DataFrame().from_dict(stats).set_index('alt')
             df_all = df_all.append(df)
         print(df_all)
