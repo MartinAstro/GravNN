@@ -11,6 +11,39 @@ from GravNN.Support.transformations import project_acceleration, cart2sph, spher
 def print_stats(data, name):
     print("(" + name + ") " + "Max: %.4f, Min: %.4f, Range: %.4f" % (np.max(data), np.min(data), np.max(data) - np.min(data)))
 
+def standardize_output(y_hat, config):
+    u = np.zeros((len(y_hat), 1))
+    a = np.zeros((len(y_hat), 3))
+    laplace = np.zeros((len(y_hat), 1))
+    curl = np.zeros((len(y_hat), 3))
+
+    if config['PINN_constraint_fcn'][0] == no_pinn:
+        a = y_hat
+    elif config['PINN_constraint_fcn'][0] == pinn_A:
+        a = y_hat
+
+    elif config['PINN_constraint_fcn'][0] == pinn_AL:
+        a = y_hat[:,0:3]
+        laplace = y_hat[:,3]
+    elif config['PINN_constraint_fcn'][0] == pinn_ALC:
+        a = y_hat[:,0:3]
+        laplace = y_hat[:,3]
+        curl = y_hat[:,4:]
+
+    elif config['PINN_constraint_fcn'][0] == pinn_AP:
+        u = y_hat[:,0]
+        a = y_hat[:,1:4]
+    elif config['PINN_constraint_fcn'][0] == pinn_APL:
+        u = y_hat[:,0]
+        a = y_hat[:,1:4]
+        laplace = y_hat[:,4]
+    elif config['PINN_constraint_fcn'][0] == pinn_APLC:
+        u = y_hat[:,0]
+        a = y_hat[:,1:4]
+        laplace = y_hat[:,4]
+        curl = y_hat[:,5:]
+    
+    return u, a, laplace, curl
 
 def pull_data(config):
     # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.

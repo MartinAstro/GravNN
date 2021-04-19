@@ -2,6 +2,7 @@
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Networks import utils
+from GravNN.Networks.Data import standardize_output
 from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
 from GravNN.Support.transformations import sphere2cart, cart2sph, invert_projection, project_acceleration
@@ -72,6 +73,7 @@ class Analysis():
         self.config = config
         self.model = model
         self.x_transformer = config['x_transformer'][0]
+        self.u_transformer = config['u_transformer'][0]
         self.a_transformer = config['a_transformer'][0]
 
         if "Planet" in self.config['planet'][0].__module__:
@@ -93,18 +95,20 @@ class Analysis():
         x = self.x_transformer.transform(x)
         a = self.a_transformer.transform(a)
 
-        U_pred, acc_pred, laplace, curl = self.model.predict(x.astype('float32'))
+        y_hat = self.model.predict(x.astype('float32'))
+        u_pred, a_pred, laplace_pred, curl_pred = standardize_output(y_hat, self.config)
 
         x = self.x_transformer.inverse_transform(x)
+        #u = self.u_transformer.inverse_transform(u)
         a = self.a_transformer.inverse_transform(a)
-        acc_pred = self.a_transformer.inverse_transform(acc_pred)
+        a_pred = self.a_transformer.inverse_transform(a_pred)
 
         if self.config['basis'][0] == 'spherical':
             x[:,1:3] = np.rad2deg(x[:,1:3])
             #x = sphere2cart(x)
             a = invert_projection(x, a)
-            acc_pred = invert_projection(x, acc_pred.astype(float))# numba requires that the types are the same 
-        return acc_pred
+            a_pred = invert_projection(x, a_pred.astype(float))# numba requires that the types are the same 
+        return a_pred
     
 
 
