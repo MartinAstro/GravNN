@@ -43,20 +43,15 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
     Call_r0_gm = SphericalHarmonics(gravity_file, degree=max_deg, trajectory=trajectory)
     accelerations = Call_r0_gm.load().accelerations
+    potentials = Call_r0_gm.potentials
 
     Clm_r0_gm = SphericalHarmonics(gravity_file, degree=deg_removed, trajectory=trajectory)
     accelerations_Clm = Clm_r0_gm.load().accelerations
-
+    potentials_Clm = Clm_r0_gm.potentials
+    
     x = Call_r0_gm.positions # position (N x 3)
     a = accelerations - accelerations_Clm
-    u = np.array([None for _ in range(len(a))]).reshape((len(a),1)) # potential (N x 1)
-
-    # By default the potential isn't loaded into the training data
-    if 'use_potential' in kwargs:
-        if kwargs['use_potential'][0]:
-            potentials = Call_r0_gm.potentials
-            potentials_Clm = Clm_r0_gm.potentials
-            u = np.array(potentials - potentials_Clm).reshape((-1,1))
+    u = np.array(potentials - potentials_Clm).reshape((-1,1)) # potential (N x 1)
 
     return x, a, u
 

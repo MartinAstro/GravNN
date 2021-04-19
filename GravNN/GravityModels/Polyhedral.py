@@ -21,12 +21,7 @@ def get_poly_data(trajectory, obj_file, **kwargs):
 
     x = Call_r0_gm.positions # position (N x 3)
     a = Call_r0_gm.accelerations
-    u = np.array([None for _ in range(len(a))]).reshape((len(a),1)) # potential (N x 1)
-
-    # By default the potential isn't loaded into the training data
-    if 'use_potential' in kwargs:
-        if kwargs['use_potential'][0]:
-            u = Call_r0_gm.potentials
+    u = Call_r0_gm.potentials # potential (N x 1)
 
     return x, a, u
 

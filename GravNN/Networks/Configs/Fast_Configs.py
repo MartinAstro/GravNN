@@ -28,6 +28,8 @@ from GravNN.Networks.Data import generate_dataset, training_validation_split
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
                                       TraditionalNet)
+from GravNN.Networks.Constraints import no_pinn, pinn_A
+
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
@@ -67,11 +69,10 @@ def get_fast_earth_config():
         'mixed_precision' : [True],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_'],
-        'use_potential' : [False]
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : ['none'],
+        'PINN_constraint_fcn' : [no_pinn],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -109,7 +110,7 @@ def get_fast_eros_config():
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : ['none'],
+        'PINN_constraint_fcn' : [no_pinn],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -146,7 +147,7 @@ def get_fast_earth_pinn_config():
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : ['gradient'],
+        'PINN_constraint_fcn' : [pinn_A],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
         'activation' : ['tanh'],
         'init_file' : [None],
@@ -183,7 +184,7 @@ def get_fast_eros_pinn_config():
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : ['gradient'],
+        'PINN_constraint_fcn' : [pinn_A],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
         'activation' : ['tanh'],
         'init_file' : [None],

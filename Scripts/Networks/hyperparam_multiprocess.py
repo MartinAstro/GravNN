@@ -229,72 +229,7 @@ def run(df_file, file_name, hparams):
         else:
             return lr
 
-    for key, config_original in configurations.items():
-        tf.keras.backend.clear_session()
-        config = copy.deepcopy(config_original)
-
-        config = load_hparams_to_config(hparams, config)
-
-        utils.check_config_combos(config)
-        config = utils.format_config_combos(config)
-        print(config)
-        
-        
-        # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
-        trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
-        if "Planet" in config['planet'][0].__module__:
-            get_analytic_data_fcn = get_sh_data
-        else:
-            get_analytic_data_fcn = get_poly_data
-        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(trajectory, config['grav_file'][0], **config)
-
-
-        if config['basis'][0] == 'spherical':
-            x_unscaled = cart2sph(x_unscaled)     
-            a_unscaled = project_acceleration(x_unscaled, a_unscaled)
-            x_unscaled[:,1:3] = np.deg2rad(x_unscaled[:,1:3])
-
-        x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(x_unscaled, 
-                                                                                    a_unscaled, 
-                                                                                    u_unscaled, 
-                                                                                    config['N_train'][0], 
-                                                                                    config['N_val'][0])
-
-        a_train = a_train + config['acc_noise'][0]*np.std(a_train)*np.random.randn(a_train.shape[0], a_train.shape[1])
-
-
-        # Preprocessing
-        x_transformer = config['x_transformer'][0]
-        a_transformer = config['a_transformer'][0]
-        u_transformer = config['u_transformer'][0]
-
-        x_train = x_transformer.fit_transform(x_train)
-        a_train = a_transformer.fit_transform(a_train)
-        u_train = u_transformer.fit_transform(u_train)
-
-        x_val = x_transformer.transform(x_val)
-        a_val = a_transformer.transform(a_val)
-        u_val = u_transformer.transform(u_val)
-
-        # Decide to train with potential or not
-        y_train = np.hstack([u_train, a_train]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_train)), a_train])
-        y_val = np.hstack([u_val, a_val]) if config['use_potential'][0] else np.hstack([np.zeros(np.shape(u_val)), a_val])
-
-
-        dataset = generate_dataset(x_train, y_train, config['batch_size'][0])
-        val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
-
-        if config['init_file'][0] is not None:
-            network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
-        else:
-            network = config['network_type'][0](**config)        
-        
-        model = CustomModel(config, network)
-
-        callback = CustomCallback()
-        schedule = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
-        lr_on_plateau = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=5000, factor=0.5, min_delta=0.00001, verbose=1, min_lr=1E-5)
-
+    def configure_optimizer(config):
         optimizer = config['optimizer'][0]
         optimizer.learning_rate = config['learning_rate'][0]
         if config['mixed_precision'][0]:
@@ -302,7 +237,29 @@ def run(df_file, file_name, hparams):
         else:
             optimizer.get_scaled_loss = lambda x: x
             optimizer.get_unscaled_gradients = lambda x: x
+        return optimizer
+
+    for key, config_original in configurations.items():
+        tf.keras.backend.clear_session()
+
+        # Standardize Configuration
+        config = copy.deepcopy(config_original)
+        config = load_hparams_to_config(hparams, config)
+        utils.check_config_combos(config)
+        config = utils.format_config_combos(config)
+        print(config)
+        
+        # Get data, network, optimizer, and generate model
+        dataset, val_dataset, transformers = pull_data(config)
+        optimizer = configure_optimizer(config)
+        network = load_network(config)
+        model = CustomModel(config, network)
         model.compile(optimizer=optimizer, loss="mse")#, run_eagerly=True)#, metrics=["mae"])
+
+        # Train network 
+        callback = CustomCallback()
+        schedule = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
+        lr_on_plateau = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=5000, factor=0.5, min_delta=0.00001, verbose=1, min_lr=1E-5)
 
         history = model.fit(dataset, 
                             epochs=config['epochs'][0], 

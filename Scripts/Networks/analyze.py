@@ -49,7 +49,7 @@ if sys.platform == 'win32':
 
 def main():
 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v1.data'
+    df_file = 'Data/Dataframes/useless_04_15.data'
     planet = Earth()
     df = pd.read_pickle(df_file)# ! [5:] -- WARN: if you index, then you'll write over the entire dataframe!
     
@@ -62,7 +62,7 @@ def main():
     planet = Moon()
     planet = Earth()
 
-    sh_stats_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude.data")
+    #sh_stats_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude.data")
     alt_list = np.linspace(0, 500000, 50, dtype=float) # Every 10 kilometers above surface
     window = np.array([5, 15, 45, 100, 300]) # Close to surface distribution
     alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])

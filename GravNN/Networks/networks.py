@@ -1,5 +1,12 @@
 import tensorflow as tf
 
+def load_network(config):
+    if config['init_file'][0] is not None:
+        network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
+    else:
+        network = config['network_type'][0](**config)
+    return network
+
 def CustomNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
@@ -30,13 +37,14 @@ def TraditionalNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
-
+    dtype = kwargs['dtype'][0]
     inputs = tf.keras.Input(shape=(layers[0],))
     x = inputs
     for i in range(1,len(layers)-1):
         x = tf.keras.layers.Dense(units=layers[i], 
                                     activation=activation, 
                                     kernel_initializer=initializer,
+                                    dtype=dtype,
                                     )(x)
                                     #dtype=kwargs['dtype'])(x)
         if 'dropout' in kwargs:
@@ -45,7 +53,7 @@ def TraditionalNet(**kwargs):
     outputs = tf.keras.layers.Dense(units=layers[-1], 
                                     activation='linear', 
                                     kernel_initializer=initializer,
-                                    dtype='float32'
+                                    dtype=dtype
                                     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model

@@ -5,7 +5,7 @@ import pandas as pd
 #import tensorflow_model_optimization as tfmot
 from GravNN.Trajectories.ExponentialDist import ExponentialDist
 from GravNN.Trajectories.GaussianDist import GaussianDist
-
+from GravNN.Networks.Constraints import * 
 
 
 
@@ -22,7 +22,7 @@ def get_gzipped_model_size(model):
 
 
 def check_config_combos(config):
-    if config['PINN_flag'][0] != "none":
+    if config['PINN_constraint_fcn'][0] != no_pinn:
         assert config['layers'][0][-1] == 1, "If PINN, the final layer must have one output (the potential, U)"
     else:
         assert config['layers'][0][-1] == 3, "If not PINN, the final layer must have three outputs (the acceleration vector, a)"
