@@ -25,12 +25,13 @@ from GravNN.Networks.Callbacks import CustomCallback
 from GravNN.Networks.Configs.Default_Configs import *
 from GravNN.Networks.Configs.Fast_Configs import *
 from GravNN.Networks.Constraints import *
-from GravNN.Networks.Data import (generate_dataset, pull_data,
-                                  training_validation_split)
+from GravNN.Networks.Data import (generate_dataset, get_preprocessed_data,configure_dataset,
+                                  training_validation_split, standardize_output)
 from GravNN.Networks.Model import CustomModel, load_config_and_model
 from GravNN.Networks.Networks import (CustomNet, DenseNet, InceptionNet,
                                       ResNet, TraditionalNet, load_network)
 from GravNN.Preprocessors.UniformScaler import UniformScaler
+from GravNN.Preprocessors.DummyScaler import DummyScaler
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.RandomDist import RandomDist
 from sklearn.preprocessing import (MinMaxScaler, QuantileTransformer,
@@ -70,7 +71,8 @@ def train_network(filename, config):
 
     utils.check_config_combos(config)
     config = utils.format_config_combos(config)
-    dataset, val_dataset, transformers = pull_data(config)
+    train_data, val_data, transformers = get_preprocessed_data(config)
+    dataset, val_dataset = configure_dataset(train_data, val_data, config)
     network = load_network(config)
     model = CustomModel(config, network)
     optimizer = configure_optimizer(config)
@@ -82,7 +84,7 @@ def train_network(filename, config):
                                         mode='auto', min_delta=config['min_delta'][0], cooldown=0, min_lr=0, 
                                         )
     early_stop = tf.keras.callbacks.EarlyStopping(
-                                        monitor='val_loss', min_delta=config['min_delta'][0], patience=1000, verbose=1,
+                                        monitor='val_loss', min_delta=config['min_delta'][0], patience=3000, verbose=1,
                                         mode='auto', baseline=None, restore_best_weights=True
                                     )
 
@@ -90,12 +92,23 @@ def train_network(filename, config):
                         epochs=config['epochs'][0], 
                         verbose=0,
                         validation_data=val_dataset,
-                        callbacks=[callback, early_stop])
+                        callbacks=[callback, early_stop])#,
+                        #class_weight=config['class_weight'][0])
     history.history['time_delta'] = callback.time_delta
     model.history = history
 
     # TODO: Save extra parameters like optimizer.learning_rate
     # Save network and config information
+    # y_true = train_data[1:5]
+    # y_true = np.hstack(y_true)
+
+    # y_hat = model.output(dataset)
+    # y_hat = np.hstack(y_hat)
+    # diff = y_hat - y_true 
+
+    # print(np.mean(diff, axis=0))
+    # print(np.std(diff, axis=0))
+
     model.config['time_delta'] = [callback.time_delta]
     model.config['x_transformer'][0] = transformers['x']
     model.config['u_transformer'][0] = transformers['u']
@@ -114,7 +127,7 @@ def main():
     df_file = 'Data/Dataframes/new_pinn_constraints.data'
     configurations = {"fast" : get_fast_earth_pinn_config()}
 
-    df_file = "Data/Dataframes/useless_04_19.data"
+    df_file = "Data/Dataframes/useless_04_19_v4.data"
     configurations = {"default" : get_default_earth_config()}
     # Test 1: No PINN without potential
     # Test 2: PINN without potential
@@ -122,13 +135,15 @@ def main():
 
     for key, config in configurations.items():
         config['network_type'] = [TraditionalNet]
-        config['epochs'] = [20000]
+        config['epochs'] = [200000]
 
         config['N_dist'] = [1000000]
         config['u_transformer'] = [UniformScaler(feature_range=(-1,1))]
         config['a_transformer'] = [UniformScaler(feature_range=(-1,1))]
-        config['PINN_constraint_fcn'] = [pinn_AL]#pinn_AP]
-        config['min_delta'] = [1E-9]
+        config['PINN_constraint_fcn'] = [pinn_A]#pinn_AP]
+        config['min_delta'] = [1E-12]
+        config['learning_rate'] = [0.005]
+        config['scale_by'] = ['none']
 
         config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
 
@@ -139,10 +154,22 @@ def main():
         config['radius_max'] = [Earth().radius + 420000]
         config['activation'] = ['gelu']
         config['initializer'] = ['glorot_normal']
-        config['learning_rate'] = [0.01]
+        #config['loss_scale'] = [[1.0/100.0, 100.0, 100.0, 100.0]]
+
 
         config['mixed_precision'] = [mixed_precision_flag]
         config['dtype'] = [tf.float32]
+        config['dummy_transformer'] = [DummyScaler()]
+
+        # config['class_weight'] = [{'0' : 1.0/100.0, 
+        #                           '1' : 100.0,
+        #                           '2' : 100.0,
+        #                           '3' : 100.0}]
+
+        config['class_weight'] = [[1.0, 1.0, 1.0]] #PINN_A
+        # config['class_weight'] = [[1.0/1000.0, 2000, 2000, 2000]] # PINN AP
+        # config['class_weight'] = [[2000, 2000, 2000, 2E6, 2E6, 2E6, 2E6]] #PINN_ALC
+
         train_network(df_file, config)
 
 

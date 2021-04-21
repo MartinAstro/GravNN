@@ -42,6 +42,8 @@ from GravNN.Support.transformations import cart2sph, sphere2cart, project_accele
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from GravNN.Preprocessors.UniformScaler import UniformScaler
+from GravNN.Preprocessors.DummyScaler import DummyScaler
 
 np.random.seed(1234)
 tf.random.set_seed(0)
@@ -82,7 +84,10 @@ def get_default_earth_config():
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'dtype' : [tf.float32],
+        'dummy_transformer' : [DummyScaler()],
+        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
     }
     config = {}
     config.update(data_config)
@@ -102,7 +107,6 @@ def get_default_moon_config():
         'acc_noise' : [0.00],
         'basis' : [None],# ['spherical'],
         'deg_removed' : [2],
-        'include_U' : [False],
         'mixed_precision' : [False],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_moon_'],
@@ -120,14 +124,15 @@ def get_default_moon_config():
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'u_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'dtype' : [tf.float32],
+        'dummy_transformer' : [DummyScaler()],
+        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
     }
     config = {}
     config.update(data_config)
     config.update(network_config)
     return config
-
-
 
 def get_default_eros_config():
     data_config = {
@@ -142,7 +147,6 @@ def get_default_eros_config():
         'acc_noise' : [0.00],
         'basis' : [None],
         'deg_removed' : [0],
-        'include_U' : [False],
         'mixed_precision' : [True],
         'dtype' :['float32'],
         'max_deg' : [1000], 
@@ -160,15 +164,16 @@ def get_default_eros_config():
         'batch_size' : [40000],
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        'dtype' : [tf.float32],
+        'dummy_transformer' : [DummyScaler()],
+        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
     }
 
     config = {}
     config.update(data_config)
     config.update(network_config)
     return config
-
-
 
 def get_default_earth_pinn_config():
     data_config = {
@@ -183,7 +188,6 @@ def get_default_earth_pinn_config():
         'acc_noise' : [0.00],
         'basis' : [None],# ['spherical'],
         'deg_removed' : [2],
-        'include_U' : [False],
         'mixed_precision' : [True],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_']
@@ -199,13 +203,16 @@ def get_default_earth_pinn_config():
         'batch_size' : [40000],
         'dropout' : [0.0], 
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'u_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'a_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'dtype' : [tf.float32],
+        'dummy_transformer' : [DummyScaler()],
+        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
     }
     config = {}
     config.update(data_config)
     config.update(network_config)
     return config
-
 
 def get_default_eros_pinn_config():
     data_config = {
@@ -220,7 +227,6 @@ def get_default_eros_pinn_config():
         'acc_noise' : [0.00],
         'basis' : [None],
         'deg_removed' : [0],
-        'include_U' : [False],
         'mixed_precision' : [True],
         'dtype' :['float32'],
         'max_deg' : [1000], 
@@ -236,8 +242,12 @@ def get_default_eros_pinn_config():
         'optimizer' : [tf.keras.optimizers.Adam()],
         'batch_size' : [40000],
         'dropout' : [0.0], 
+        'u_transformer' : [UniformScaler(feature_range=(-1,1))],
         'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        'a_transformer' : [MinMaxScaler(feature_range=(-1,1))]
+        'a_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'dtype' : [tf.float32],
+        'dummy_transformer' : [DummyScaler()],
+        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
     }
 
     config = {}

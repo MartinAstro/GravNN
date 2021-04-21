@@ -20,6 +20,7 @@ from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
 from GravNN.Support.Grid import Grid
 from GravNN.Networks import utils
+from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from sklearn.preprocessing import MinMaxScaler
@@ -36,32 +37,58 @@ class CustomModel(tf.keras.Model):
         self.eval = config['PINN_constraint_fcn'][0]
         self.mixed_precision = tf.constant(self.config['mixed_precision'][0], dtype=tf.bool)
         self.variable_cast = config['dtype'][0]
+        self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
     
-    #@tf.function(experimental_compile=True)
+    @tf.function(experimental_compile=True)
     def train_step(self, data):
         x, y = data 
         with tf.GradientTape() as tape:
             y_hat = self(x, training=True)
-            loss = self.compiled_loss(y, y_hat)
+            loss = self.compiled_loss(tf.multiply(y, self.class_weight), \
+                                      tf.multiply(y_hat, self.class_weight))#, class_weights=None)
             loss = self.optimizer.get_scaled_loss(loss)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
 
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.compiled_metrics.update_state(y, y_hat)
+        self.compiled_metrics.update_state(tf.multiply(y, self.class_weight), \
+                                           tf.multiply(y_hat, self.class_weight))
         return {m.name: m.result() for m in self.metrics}
         
-    #@tf.function(experimental_compile=True)
+    @tf.function(experimental_compile=True)
     def test_step(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss = self.compiled_loss(y, y_hat)
-        self.compiled_metrics.update_state(y, y_hat)
+        loss = self.compiled_loss(tf.multiply(y, self.class_weight), \
+                                  tf.multiply(y_hat, self.class_weight))
+        self.compiled_metrics.update_state(tf.multiply(y, self.class_weight), \
+                                           tf.multiply(y_hat, self.class_weight))
         return {m.name: m.result() for m in self.metrics}
+    
+    def output(self, dataset):
+        x, y = dataset
+        assert self.config['PINN_constraint_fcn'][0] != no_pinn
+        with tf.GradientTape(persistent=True) as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x) # shape = (k,) #! evaluate network                
+            u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
+        u_xx = g1.batch_jacobian(u_x, x)
+        
+        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
+
+        curl_x = tf.math.subtract(u_xx[:,2,1], u_xx[:,1,2])
+        curl_y = tf.math.subtract(u_xx[:,0,2], u_xx[:,2,0])
+        curl_z = tf.math.subtract(u_xx[:,1,0], u_xx[:,0,1])
+
+        curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
+        return u,  tf.multiply(-1.0,u_x), laplacian, curl
+
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):
@@ -209,6 +236,25 @@ class CustomModel(tf.keras.Model):
         utils.save_df_row(self.config, df_file)
 
 
+def backwards_compatibility(config):
+    if float(config['id'][0]) < 2459322.587314815:
+        if config['PINN_flag'][0] == 'none':
+            config['PINN_constraint_fcn'] = [no_pinn]
+        elif config['PINN_flag'][0] == 'gradient':
+            config['PINN_constraint_fcn'] = [pinn_A]
+        elif config['PINN_flag'][0] == 'laplacian':
+            config['PINN_constraint_fcn'] = [pinn_APL]
+        elif config['PINN_flag'][0] == 'convervative':
+            config['PINN_constraint_fcn'] = [pinn_APLC]
+        
+        if 'class_weight' not in config:
+            config['class_weight'] = [1.0]
+        
+        if 'dtype' not in config:
+            config['dtype'] = [tf.float32]
+
+    
+    return config
 def load_config_and_model(model_id, df_file):
     # Get the parameters and stats for a given run
     # If the dataframe hasn't been loaded
@@ -224,6 +270,7 @@ def load_config_and_model(model_id, df_file):
     if 'mixed_precision' not in config:
         config['use_precision'] = [False]
     
+    config = backwards_compatibility(config)
     network = tf.keras.models.load_model(os.path.abspath('.') + "/Data/Networks/"+str(model_id)+"/network")
     model = CustomModel(config, network)
     if 'adam' in config['optimizer'][0]:

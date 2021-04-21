@@ -6,12 +6,9 @@ import itertools
 
 def main():
 
-
-    
-
     # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v1.data'
-    directory = 'logs/hyperparameter_earth_pinn_20_v1/'
+    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_40_v10.data'
+    directory = 'logs/hyperparameter_earth_pinn_40_v10/'
     hparams = {
         'N_dist' : [5000000],
         'N_train' : [4900000],
@@ -20,58 +17,20 @@ def main():
         'decay_rate_epoch' : [25000],
         'decay_epoch_0' : [25000],
         'decay_rate' : [2.0],
-        'learning_rate' : [0.02, 2E-3], # 5e-3 (highest), 5e-3*(1/2)^1=0.0025, (5e-3)*(1/2)^(2)=0.00125 (lowest) 
+        'learning_rate' : [0.005], # 5e-3 (highest), 5e-3*(1/2)^1=0.0025, (5e-3)*(1/2)^(2)=0.00125 (lowest) 
         'batch_size': [131072*2],
         'activation' : ['gelu'],
         'initializer' : ['glorot_uniform'],
         'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
+        'PINN_constraint_fcn' : ['pinn_A'],
+        # 'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
+        # 'u_transformer' : [UniformScaler(feature_range=(-1,1))],
+        # 'a_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'scale_by' : ['a'],
         'mixed_precision' : [False],
-        'num_units' : [20],
-        #'init_file' : [2459318.211111111]2459319.668483796
+        'num_units' : [40],
     }
 
-    hparams = {
-        'N_dist' : [5000000],
-        'N_train' : [4900000],
-        'epochs' : [200000],
-        'network_shape' : ['normal'],
-        'decay_rate_epoch' : [25000],
-        'decay_epoch_0' : [25000],
-        'decay_rate' : [2.0],
-        'learning_rate' : [0.005], # 0.02 (highest), 0.02*(1/2)^1=0.01, (0.02)*(1/2)^(2)=0.005 (lowest) 
-        'batch_size': [131072*2],
-        'activation' : ['gelu'],
-        'initializer' : ['glorot_uniform'],
-        'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
-        'mixed_precision' : [False],
-        'num_units' : [20],
-        'init_file' : [2459319.668483796]
-    }
-    # TODO: Add preprocessing
-
-    # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_20_v2.data'
-    directory = 'logs/hyperparameter_earth_pinn_20_v2/'
-    hparams = {
-        'N_dist' : [5000000],
-        'N_train' : [4900000],
-        'epochs' : [100000],
-        'network_shape' : ['normal'],
-        'decay_rate_epoch' : [50000],
-        'decay_epoch_0' : [20000],
-        'decay_rate' : [2.0],
-        'learning_rate' : [0.02], # 5e-3 (highest), 5e-3*(1/2)^1=0.0025, (5e-3)*(1/2)^(2)=0.00125 (lowest) 
-        'batch_size': [131072*2],
-        'activation' : ['gelu'],
-        'initializer' : ['glorot_uniform'],
-        'network_type' : ['traditional'],
-        'pinn_flag' : ['gradient'],
-        'mixed_precision' : [False],
-        'num_units' : [20],
-        #'init_file' : [2459318.211111111]2459319.668483796
-    }
 
 
     keys, values = zip(*hparams.items())
@@ -124,7 +83,8 @@ def run(df_file, file_name, hparams):
 
     from GravNN.CelestialBodies.Asteroids import Bennu, Eros
     from GravNN.CelestialBodies.Planets import Earth, Moon
-    from GravNN.Networks.Configs.Default_Configs import get_default_moon_config, get_default_earth_config
+    from GravNN.Networks.Configs.Default_Configs import get_default_moon_config, get_default_earth_config, \
+                                                        get_default_earth_pinn_config
     from GravNN.Networks.Configs.Fast_Configs import get_fast_earth_config, get_fast_earth_pinn_config
     from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
     from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
@@ -133,11 +93,12 @@ def run(df_file, file_name, hparams):
     from GravNN.Networks.Callbacks import CustomCallback
     from GravNN.Networks.Compression import (cluster_model, prune_model,
                                             quantize_model)
-    from GravNN.Networks.Data import generate_dataset, training_validation_split
+    from GravNN.Networks.Data import generate_dataset, training_validation_split, get_preprocessed_data, configure_dataset
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
-                                        TraditionalNet)
+                                        TraditionalNet, load_network)
     from GravNN.Networks.Plotting import Plotting
+    from GravNN.Networks.Constraints import no_pinn, pinn_A
     from GravNN.Support.Grid import Grid
     from GravNN.Support.transformations import (cart2sph, project_acceleration,
                                                 sphere2cart)
@@ -164,12 +125,12 @@ def run(df_file, file_name, hparams):
     #configurations['Default']['init_file'] = [2459304.942048611] # ! Sometimes there is one more sigfig so you might have to check the directory
     #configurations['Default']['N_dist'] =  [5000000]
 
-    configurations = {"Default" : get_default_earth_config() }
+    configurations = {"Default" : get_default_earth_pinn_config() }
 
     if network_shape == 'normal':
-        configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]]
+        configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
     elif network_shape == 'wide':
-        configurations['Default']['layers'] =  [[3, 52, 52, 3]]
+        configurations['Default']['layers'] =  [[3, 52, 52, 1]]
     else:
         exit()
 
@@ -193,6 +154,18 @@ def run(df_file, file_name, hparams):
     def load_hparams_to_config(hparams, config):
         for key, value in hparams.items():
             config[key] = [value]
+
+        # try:
+        #     config['PINN_constraint_fcn'] = [eval(config['PINN_constraint_fcn'][0])]
+        # except:
+        #     exit("Couldn't load the constraint!")
+
+        if config['PINN_constraint_fcn'][0] == 'pinn_A':
+            config['PINN_constraint_fcn'] = [pinn_A]
+        elif config['PINN_constraint_fcn'][0] == 'no_pinn':
+            config['PINN_constraint_fcn'] = [no_pinn]
+        else:
+            exit("Couldn't load the constraint!")
 
         if config['activation'][0] == 'bent_identity':
             config['activation'] = [bent_identity]
@@ -250,7 +223,8 @@ def run(df_file, file_name, hparams):
         print(config)
         
         # Get data, network, optimizer, and generate model
-        dataset, val_dataset, transformers = pull_data(config)
+        train_data, val_data, transformers = get_preprocessed_data(config)
+        dataset, val_dataset = configure_dataset(train_data, val_data, config)
         optimizer = configure_optimizer(config)
         network = load_network(config)
         model = CustomModel(config, network)
@@ -273,8 +247,9 @@ def run(df_file, file_name, hparams):
         # TODO: Save extra parameters like optimizer.learning_rate
         # Save network and config information
         model.config['time_delta'] = [callback.time_delta]
-        model.config['x_transformer'][0] = x_transformer
-        model.config['a_transformer'][0] = a_transformer
+        model.config['x_transformer'][0] = transformers['x']
+        model.config['u_transformer'][0] = transformers['u']
+        model.config['a_transformer'][0] = transformers['a']
 
 
         #model.save(df_file)

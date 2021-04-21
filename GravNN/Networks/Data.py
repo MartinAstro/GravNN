@@ -6,10 +6,11 @@ from GravNN.GravityModels.PointMass import PointMass
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                      get_sh_data)
+from GravNN.Preprocessors.DummyScaler import DummyScaler
 from GravNN.Networks.Constraints import *
 from GravNN.Support.transformations import project_acceleration, cart2sph, sphere2cart
 def print_stats(data, name):
-    print("(" + name + ") " + "Max: %.4f, Min: %.4f, Range: %.4f" % (np.max(data), np.min(data), np.max(data) - np.min(data)))
+    print("(" + name + ")\t" + "Max: %.4f, Min: %.4f, Range: %.4f \n \tAvg: %.4f, Std: %.4f, Median: %.4f" % (np.max(data), np.min(data), np.max(data) - np.min(data), np.mean(data), np.std(data), np.median(data)))
 
 def standardize_output(y_hat, config):
     u = np.zeros((len(y_hat), 1))
@@ -45,8 +46,8 @@ def standardize_output(y_hat, config):
     
     return u, a, laplace, curl
 
-def pull_data(config):
-    # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
+def get_preprocessed_data(config):
+        # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.
     trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
     if "Planet" in config['planet'][0].__module__:
         get_analytic_data_fcn = get_sh_data
@@ -78,25 +79,30 @@ def pull_data(config):
     a_transformer = config['a_transformer'][0]
     u_transformer = config['u_transformer'][0]
 
-    # # Scale (a,u) with a_transformer
-    # x_train = x_transformer.fit_transform(x_train)
-    # a_train = a_transformer.fit_transform(a_train)
-    # u_train = a_transformer.transform(np.repeat(u_train,3,axis=1))[:,0].reshape((-1,1))
+    if config['scale_by'][0] == 'a':
+        # Scale (a,u) with a_transformer
+        x_train = x_transformer.fit_transform(x_train)
+        a_train = a_transformer.fit_transform(a_train)
+        u_train = a_transformer.transform(np.repeat(u_train,3,axis=1))[:,0].reshape((-1,1))
 
-    # x_val = x_transformer.transform(x_val)
-    # a_val = a_transformer.transform(a_val)
-    # u_val = a_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
-    # u_transformer = a_transformer
+        x_val = x_transformer.transform(x_val)
+        a_val = a_transformer.transform(a_val)
+        u_val = a_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
+        u_transformer = a_transformer
+    elif config['scale_by'][0] == 'u':
+        # Scale (a,u) with u_transformer
+        x_train = x_transformer.fit_transform(x_train)
+        u_train = u_transformer.fit_transform(np.repeat(u_train,3,axis=1))[:,0].reshape((-1,1))
+        a_train = u_transformer.transform(a_train)
 
-    # Scale (a,u) with u_transformer
-    x_train = x_transformer.fit_transform(x_train)
-    u_train = u_transformer.fit_transform(np.repeat(u_train,3,axis=1))[:,0].reshape((-1,1))
-    a_train = u_transformer.transform(a_train)
-
-    x_val = x_transformer.transform(x_val)
-    a_val = u_transformer.transform(a_val)
-    u_val = u_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
-    a_transformer = u_transformer
+        x_val = x_transformer.transform(x_val)
+        a_val = u_transformer.transform(a_val)
+        u_val = u_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
+        a_transformer = u_transformer
+    elif config['scale_by'][0] == 'none':
+        x_transformer = config['dummy_transformer'][0]
+        a_transformer = config['dummy_transformer'][0]
+        u_transformer = config['dummy_transformer'][0]
 
     print_stats(a_train, "Acceleration")
     print_stats(u_train, "Potential")
@@ -107,6 +113,17 @@ def pull_data(config):
     curl_train = np.zeros((np.shape(a_train)))
     curl_val = np.zeros((np.shape(a_val)))
 
+
+    transformers = {"x" : x_transformer,
+                    "a" : a_transformer,
+                    "u" : u_transformer}
+            
+    return (x_train, u_train, a_train, laplace_train, curl_train), (x_val, u_val, a_val, laplace_val, curl_val), transformers
+
+
+def configure_dataset(train_data, val_data, config):
+    x_train, u_train, a_train, laplace_train, curl_train = train_data
+    x_val, u_val, a_val, laplace_val, curl_val = val_data
 
     # Decide to train with potential or not
     # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint. 
@@ -144,11 +161,8 @@ def pull_data(config):
     dataset = generate_dataset(x_train, y_train, config['batch_size'][0], dtype=config['dtype'][0])
     val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0], dtype=config['dtype'][0])
 
-    transformers = {"x" : x_transformer,
-                    "a" : a_transformer,
-                    "u" : u_transformer}
 
-    return dataset, val_dataset, transformers
+    return dataset, val_dataset
 
 
 def training_validation_split(X, Y, Z, N_train, N_val):
