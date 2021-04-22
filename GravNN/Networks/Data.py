@@ -165,9 +165,9 @@ def configure_dataset(train_data, val_data, config):
     return dataset, val_dataset
 
 
-def training_validation_split(X, Y, Z, N_train, N_val):
+def training_validation_split(X, Y, Z, N_train, N_val, random_state=42):
 
-    X, Y, Z = shuffle(X, Y, Z, random_state=42)
+    X, Y, Z = shuffle(X, Y, Z, random_state=random_state)
 
     X_train = X[:N_train]
     Y_train = Y[:N_train]

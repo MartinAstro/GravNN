@@ -67,13 +67,13 @@ def get_default_earth_config():
         'basis' : [None],# ['spherical'],
         'deg_removed' : [2],
         'include_U' : [False],
-        'mixed_precision' : [True],
+        'mixed_precision' : [False],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_'],
     }
     network_config = {
         'network_type' : [TraditionalNet],
-        'PINN_flag' : ['none'],
+        'PINN_constraint_fcn' : [no_pinn],
         'layers' : [[3, 40, 40, 40, 40, 40, 40, 40, 40, 3]],
         'activation' : ['tanh'],
         'init_file' : [None],#'2459192.4530671295'],
@@ -87,7 +87,8 @@ def get_default_earth_config():
         'u_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         'dtype' : [tf.float32],
         'dummy_transformer' : [DummyScaler()],
-        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
+        'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
+        'learning_rate' : [0.001]
     }
     config = {}
     config.update(data_config)
@@ -147,7 +148,7 @@ def get_default_eros_config():
         'acc_noise' : [0.00],
         'basis' : [None],
         'deg_removed' : [0],
-        'mixed_precision' : [True],
+        'mixed_precision' : [False],
         'dtype' :['float32'],
         'max_deg' : [1000], 
         'analytic_truth' : ['poly_stats_']
@@ -185,10 +186,11 @@ def get_default_earth_pinn_config():
         'N_val' : [50000],
         'radius_min' : [Earth().radius],
         'radius_max' : [Earth().radius + 420000.0],
+        'initializer' : ['glorot_normal'],
         'acc_noise' : [0.00],
         'basis' : [None],# ['spherical'],
         'deg_removed' : [2],
-        'mixed_precision' : [True],
+        'mixed_precision' : [False],
         'max_deg' : [1000], 
         'analytic_truth' : ['sh_stats_']
     }
@@ -207,7 +209,8 @@ def get_default_earth_pinn_config():
         'a_transformer' : [UniformScaler(feature_range=(-1,1))],
         'dtype' : [tf.float32],
         'dummy_transformer' : [DummyScaler()],
-        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
+        'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
+        'learning_rate' : [0.001]
     }
     config = {}
     config.update(data_config)
@@ -227,7 +230,7 @@ def get_default_eros_pinn_config():
         'acc_noise' : [0.00],
         'basis' : [None],
         'deg_removed' : [0],
-        'mixed_precision' : [True],
+        'mixed_precision' : [False],
         'dtype' :['float32'],
         'max_deg' : [1000], 
         'analytic_truth' : ['poly_stats_']
