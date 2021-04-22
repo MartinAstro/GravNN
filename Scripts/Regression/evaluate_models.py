@@ -95,7 +95,7 @@ def main():
     df_all = pd.DataFrame()
 
 
-    directory = os.path.abspath('.') + '\\GravNN\\Files\\GravityModels\\Regressed\\' 
+    directory = os.path.join(os.path.abspath('.'), '/GravNN/Files/GravityModels/Regressed/')
 
     sh_df = pd.read_pickle("Data/Dataframes/regress_sh.data")
     nn_df = pd.read_pickle("Data/Dataframes/regress_nn.data")

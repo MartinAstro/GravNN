@@ -41,7 +41,9 @@ def configure_optimizer(config):
 
 def regress_sh_model(x, a, planet, max_deg, noise, idx):
     file_name = 'regress_' + str(max_deg) + "_" + str(noise) + "_" + str(idx) 
-    grav_file = os.path.abspath('.') + '\\GravNN\\Files\\GravityModels\\Regressed\\' + file_name + ".csv"
+    directory = os.path.join(os.path.abspath('.') , '/GravNN/Files/GravityModels/Regressed/')
+    os.makedirs(directory, exist_ok=True)
+    grav_file = directory + file_name + ".csv"
     regressor = Regression(max_deg, planet, x, a)
     coefficients = regressor.perform_regression(remove_deg=True)
     regressor.save(grav_file)
