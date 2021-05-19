@@ -3,15 +3,38 @@ from tensorboard.plugins.hparams import api as hp
 import multiprocessing as mp
 import pandas as pd
 import itertools
+from GravNN.Trajectories.ExponentialDist import ExponentialDist
 
 def main():
 
     # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_earth_pinn_40_v10.data'
-    directory = 'logs/hyperparameter_earth_pinn_40_v10/'
+    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_20_v10.data'
+    directory = 'logs/hyperparameter_moon_pinn_20_v10/'
+
+    df_file = 'Data/Dataframes/exponential_invert_dist_v2.data'
+    directory = 'logs/exponential_invert_dist_v2/'
+
+    # df_file = 'Data/Dataframes/hyperparameter_earth_20_v20.data'
+    # directory = 'logs/hyperparameter_earth_20_v20/'
+
+    df_file = 'Data/Dataframes/exponential_invert_dist_v10.data'
+    directory = 'logs/exponential_invert_dist_v10/'
+
+    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_80_v10.data'
+    directory = 'logs/hyperparameter_moon_pinn_80_v10/'
+
+    df_file = 'Data/Dataframes/hyperparameter_moon_traditional.data'
+    directory = 'logs/hyperparameter_moon_traditional/'
+
+    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_40_v10.data'
+    directory = 'logs/hyperparameter_moon_pinn_40_v10/'
+
+    threads = 6
+    threads = 1
+
     hparams = {
-        'N_dist' : [5000000],
-        'N_train' : [4900000],
+        'N_dist' : [5000000],#[1200000],
+        'N_train' :[4900000],#[1000000], #
         'epochs' : [100000],
         'network_shape' : ['normal'],
         'decay_rate_epoch' : [25000],
@@ -22,13 +45,16 @@ def main():
         'activation' : ['gelu'],
         'initializer' : ['glorot_uniform'],
         'network_type' : ['traditional'],
-        'PINN_constraint_fcn' : ['pinn_A'],
+        'PINN_constraint_fcn' :['pinn_A'],#,# ['no_pinn'],#
         # 'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         # 'u_transformer' : [UniformScaler(feature_range=(-1,1))],
         # 'a_transformer' : [UniformScaler(feature_range=(-1,1))],
         'scale_by' : ['a'],
         'mixed_precision' : [False],
-        'num_units' : [40],
+        'num_units' : [40],#, 80],#, 80], 
+        # 'distribution' : [ExponentialDist],
+        # 'invert' : [True],
+        # 'scale_parameter' : [420000.0/10.0]
     }
 
 
@@ -47,7 +73,7 @@ def main():
 
 
     # Can't use a pool because the processes get reused, so TF has already been initialized (but apparently not)
-    with mp.Pool(6) as pool:
+    with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
 
@@ -84,7 +110,7 @@ def run(df_file, file_name, hparams):
     from GravNN.CelestialBodies.Asteroids import Bennu, Eros
     from GravNN.CelestialBodies.Planets import Earth, Moon
     from GravNN.Networks.Configs.Default_Configs import get_default_moon_config, get_default_earth_config, \
-                                                        get_default_earth_pinn_config
+                                                        get_default_earth_pinn_config, get_default_moon_pinn_config
     from GravNN.Networks.Configs.Fast_Configs import get_fast_earth_config, get_fast_earth_pinn_config
     from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
     from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
@@ -104,7 +130,6 @@ def run(df_file, file_name, hparams):
                                                 sphere2cart)
 
     from GravNN.Trajectories.RandomDist import RandomDist
-
     from GravNN.Visualization.VisualizationBase import VisualizationBase
     from sklearn.preprocessing import MinMaxScaler, StandardScaler
     from GravNN.Networks.Activations import bent_identity
@@ -118,6 +143,7 @@ def run(df_file, file_name, hparams):
         if name == 'decay_epoch_0' : decay_epoch_0 = value 
         if name == 'network_shape' : network_shape = value 
         if name == 'mixed_precision' : mixed_precision_flag = value
+        if name == 'PINN_constraint_fcn' : PINN_constraint_fcn_val = value
 
 
 
@@ -125,7 +151,14 @@ def run(df_file, file_name, hparams):
     #configurations['Default']['init_file'] = [2459304.942048611] # ! Sometimes there is one more sigfig so you might have to check the directory
     #configurations['Default']['N_dist'] =  [5000000]
 
-    configurations = {"Default" : get_default_earth_pinn_config() }
+    if PINN_constraint_fcn_val == 'no_pinn':
+        #configurations = {"Default" : get_default_earth_config() }
+        configurations = {"Default" : get_default_moon_config() }
+    else:
+        #configurations = {"Default" : get_default_earth_pinn_config() }
+        configurations = {"Default" : get_default_moon_pinn_config() }
+
+    #configurations = {"Default" : get_default_moon_pinn_config() }
 
     if network_shape == 'normal':
         configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]

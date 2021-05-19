@@ -122,7 +122,7 @@ def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
 
         acc += wf*np.dot(F, r0m)
         pot -= wf*np.dot(r0m, np.dot(F, r0m))
-    return acc 
+    return acc, pot
 
 @njit(cache=True,parallel=True)
 def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
@@ -138,7 +138,7 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
         acc -= Le*np.dot(E, r0m)
         pot += Le*np.dot(r0m, np.dot(E, r0m))
 
-    return acc
+    return acc, pot
 
 class Polyhedral(GravityModelBase):
     def __init__(self, celestial_body, obj_file, trajectory=None): 

@@ -178,11 +178,11 @@ class Analysis():
 
             # Check for the nearest SH in altitude
             analytic_neighbors = {
-                        'param_rse_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_rse_mean'], entries['_rse_mean'])],
-                        'param_sigma_2_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_2_mean'], entries['_sigma_2_mean'],)],
-                        'param_sigma_2_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_2_c_mean'], entries['_sigma_2_c_mean'])],
-                        'param_sigma_3_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_3_mean'], entries['_sigma_3_mean'])],
-                        'param_sigma_3_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['param_sigma_3_c_mean'], entries['_sigma_3_c_mean'])],
+                        'param_rse_mean' : [nearest_analytic(sh_alt_df.loc[alt]['rse_mean'], entries['_rse_mean'])],
+                        'param_sigma_2_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_2_mean'], entries['_sigma_2_mean'],)],
+                        'param_sigma_2_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_2_c_mean'], entries['_sigma_2_c_mean'])],
+                        'param_sigma_3_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_3_mean'], entries['_sigma_3_mean'])],
+                        'param_sigma_3_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_3_c_mean'], entries['_sigma_3_c_mean'])],
                     }
             stats.update(analytic_neighbors)
             df = pd.DataFrame().from_dict(stats).set_index('alt')

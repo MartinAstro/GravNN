@@ -62,6 +62,9 @@ def journal_compactness():
     nn_pareto_curve('Data/Dataframes/traditional_nn_df.data', radius_max=planet.radius+420000, orbit_name='Brillouin', linestyle='--')
     vis.save(fig, "NN_Brill_Params.pdf")
 
+    nn_pareto_curve('Data/Dataframes/pinn_df.data', radius_max=planet.radius+420000, orbit_name='Brillouin',  marker='o')
+    vis.save(fig, "NN_Brill_PINN_Params.pdf")
+
 
 def main():
     #conference_compactness()

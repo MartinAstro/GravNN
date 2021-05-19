@@ -21,6 +21,7 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Trajectories import *
 from GravNN.Support.transformations import cart2sph
+from GravNN.Networks.Constraints import no_pinn        
 
 
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
@@ -30,127 +31,142 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 np.random.seed(1234)
 tf.random.set_seed(0)
 
-mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'gold',  'pink',  'lime', 'salmon', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'blue', 'green', 'red'])#, 'orange', 'gold',  'pink',  'lime', 'salmon', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
+
+def generate_histogram(vis, trajectory, df, name):
+    main_fig, ax = vis.newFig()
+
+
+    positions = cart2sph(trajectory.positions)
+
+    ax.hist((positions[:,0] - df['radius_min'][0])/1000.0,bins=100, alpha=0.3, label=name)
+    ax2 = ax.twinx()
+
+    ax.set_xlabel('Altitude [km]')
+    ax.set_ylabel('Frequency')
+    ax.set_xlim([0, None])
+    ax.yaxis.set_label_position("right")
+    ax.yaxis.tick_right()
+
+    return ax2
+
+def extract_sub_df(trajectory, df):
+    sub_df = df[df['distribution'] == trajectory.__class__]
+    sub_df = sub_df[(sub_df['num_units'] == 20) | 
+                    (sub_df['num_units'] == 40) | 
+                    (sub_df['num_units'] == 80)].sort_values(by='num_units', ascending=False)
+    return sub_df
+
+def generate_altitude_curve(sub_df, df, statistic):
+    ids = sub_df['id'].values
+    fig_list = []
+    labels = []
+    linestyles= []
+    # Generate their altitude rse plot
+    for model_id in ids:
+        tf.keras.backend.clear_session()
+
+        config, model = load_config_and_model(model_id, df)
+        if config['PINN_constraint_fcn'][0] == no_pinn:
+            linestyle = '--'
+        else:
+            linestyle = '-'
+        plotter = Plotting(model, config)
+        fig = plotter.plot_alt_curve(statistic, ylabel='Nearest SH Degree', linestyle=linestyle, tick_position='left')
+        fig_list.append(fig)
+        labels.append(str(sub_df[sub_df['id']==model_id]['num_units'][0]))
+        linestyles.append(linestyle)
+    return fig_list, labels, linestyles
+
+
+def generate_plot(df, trajectory, vis, name, statistic, legend=False, bounds=None):
+
+    
+    # Generate trajectory histogram
+    ax = generate_histogram(vis, trajectory, df, name)
+
+    # Find all networks that trained on that trajectory
+    sub_df = extract_sub_df(trajectory, df)
+
+    # Generate the altitude curves
+    fig_list, labels, linestyles = generate_altitude_curve(sub_df, df, statistic)
+    
+    # Take the curves from each figure and put them all on the histogram plot
+    handles= []
+    colors = ['red', 'red', 'green', 'green', 'blue', 'blue']
+
+    for j in range(0,len(fig_list)):
+        cur_fig = plt.figure(fig_list[j].number)
+        cur_ax = cur_fig.get_axes()[0]
+        data = cur_ax.get_lines()[0].get_xydata()
+        label = '$N=' +str(labels[j]) + "$" if linestyles[j] == '-' else None
+        line, = ax.plot(data[:,0], data[:,1], label=label, linestyle=linestyles[j], c=colors[j])
+        handles.append(line)
+        plt.close(cur_fig)
+
+    ax.set_ylabel('Nearest SH Degree')
+    if legend:
+        ax.legend(handles=handles,loc='upper right')
+    ax.yaxis.set_label_position("left") # Works
+    plt.tick_params(
+        axis='y',          # changes apply to the x-axis
+        which='minor',      # both major and minor ticks are affected
+        left=True,      # ticks along the left edge are off
+        right=False,         # ticks along the top edge are off
+        labelleft=True,
+        labelright=False) # labels along the left edge are off
+    plt.tick_params(
+        axis='y',          
+        which='major',     
+        left=True,      
+        right=False,         
+        labelleft=True,
+        labelright=False) 
+    ax.set_ylim(bottom=bounds[0], top=bounds[1])
+
+
+    vis.save(plt.gcf(), "Generalization/" + name + "nn_sh_altitude_equivalence.pdf")
+
 
 def main():
-    trajectories = []
-    names = []
+    vis = VisualizationBase(save_directory=os.path.abspath('.') +"/Plots/")
+
     planet = Earth()
-    points = 1000000
+    points = 5000000
     radius_bounds = [planet.radius, planet.radius + 420000.0]
 
-    df_file = 'Data/Dataframes/sh_stats_altitude.data'
+    df_file = 'Data/Dataframes/sh_stats_earth_altitude_v2.data'
     sh_df = pd.read_pickle(df_file)
 
-    df_file = 'Data/Dataframes/useless_03_30.data'
-    rse_bounds = [None, None]# [8E-5, 3E-4]
-    sigma_bounds = [None,None] #[2E-4, 2E-3]
-    PINN = False
-
-    df = pd.read_pickle(df_file)
-
-    # Plot composite curve
-    vis = VisualizationBase(save_directory=os.path.abspath('.') +"/Plots/")
-    #vis.fig_size = vis.half_page
-
-    def generate_plot(trajectory, name, statistic, legend=False, bounds=None, xlim=500000.0/1000.0):
-        # Generate trajectory histogram
-        positions = cart2sph(trajectory.positions)
-
-        main_fig, ax = vis.newFig()
-        plt.hist((positions[:,0] - df['radius_min'][0])/1000.0,bins=100, alpha=0.3, label=name)
-        plt.xlabel('Altitude [km]')
-        plt.ylabel('Frequency')
-        if xlim is not None:
-            plt.xlim([0, xlim])
-
-        ax2 = ax.twinx()
-
-        # Find all networks that trained on that trajectory
-        sub_df = df[df['distribution'] == trajectory.__class__]
-        sub_df = sub_df[(sub_df['params'] == 45923) | 
-                        (sub_df['params'] == 11763) | 
-                        (sub_df['params'] == 3083) |
-                        (sub_df['params'] == 45760) | 
-                        (sub_df['params'] == 11680) | 
-                        (sub_df['params'] == 3040)].sort_values(by='params', ascending=False)
-        #sub_df = sub_df['layers'].isin(some_values)
-
-
-        ids = sub_df['id'].values
-        fig_list = []
-        labels = []
-
-        # Generate their altitude rse plot
-        for model_id in ids:
-            tf.keras.backend.clear_session()
-
-            config, model = load_config_and_model(model_id, df_file)
-
-            plotter = Plotting(model, config)
-
-            fig = plotter.plot_alt_curve(statistic,ylabel='Nearest SH')
-            fig_list.append(fig)
-            labels.append(str(df[df['id']==model_id]['layers'].values[0][3]))
-
-        if legend: 
-            legend1 = ax2.legend(loc='lower left')
-            ax2.add_artist(legend1)
-
-        handles= []
-        for j in range(0,len(fig_list)):
-            cur_fig = plt.figure(fig_list[j].number)
-            cur_ax = cur_fig.get_axes()[0]
-            data = cur_ax.get_lines()[0].get_xydata()
-            line, = ax2.plot(data[:,0], data[:,1], label='$N=' +str(labels[j]) + "$")
-            handles.append(line)
-            #plt.close(cur_fig)
-
-        plt.figure(main_fig.number)
-        ax2.set_ylabel('Nearest SH')
-        if legend:
-            ax2.legend(handles=handles,loc='lower right')
-        
-        #ax2.set_ylim(bottom=bounds[0], top=bounds[1])     
-
-        plt.tick_params(
-            axis='y',          # changes apply to the x-axis
-            which='minor',      # both major and minor ticks are affected
-            left=False,      # ticks along the left edge are off
-            right=True,         # ticks along the top edge are off
-            labelleft=False,
-            labelright=True) # labels along the left edge are off
-        plt.tick_params(
-            axis='y',          # changes apply to the x-axis
-            which='major',      # both major and minor ticks are affected
-            left=False,      # ticks along the left edge are off
-            right=True,         # ticks along the top edge are off
-            labelleft=False,
-            labelright=True) # labels along the left edge are off
-
-        # a.axes.xaxis.set_ticklabels([])
-        # a.axes.yaxis.set_ticklabels([])
-
-        #ax2.indicate_inset_zoom(a)
-        # if PINN:
-        #     vis.save(plt.gcf(), "OneOff/" + name + "_PINN_distribution.pdf")
-        # else:
-        #     vis.save(plt.gcf(), "OneOff/" + name + "_distribution.pdf")
-
-
-    statistic = 'param_rse_mean'
+    trad_df = pd.read_pickle('Data/Dataframes/traditional_nn_df.data')
+    pinn_df = pd.read_pickle('Data/Dataframes/pinn_df.data')
+    df = pd.concat([trad_df, pinn_df])
+    #df = pinn_df
+    
     # * Random Brillouin
-    #vis.fig_size = vis.half_page
-    radius_bounds = [planet.radius, planet.radius+420000.0]
+    bounds=[0, 270]
     traj = RandomDist.RandomDist(planet, radius_bounds, points)
-    generate_plot(traj, "Random", 'param_rse_mean',legend=True, bounds=rse_bounds)
-
-    # * Random Brillouin Features
-    radius_bounds = [planet.radius, planet.radius+420000.0]
-    traj = RandomDist.RandomDist(planet, radius_bounds, points)
-    generate_plot(traj, "Random_sigma", 'param_sigma_2_mean',legend=True, bounds=sigma_bounds)
+    generate_plot(df, traj, vis, "Random", 'param_rse_mean',legend=True, bounds=bounds)
+    generate_plot(df, traj, vis, "Random_sigma", 'param_sigma_2_mean',legend=True, bounds=bounds)
+    #generate_plot(df, traj, vis, "Random_comp", 'param_sigma_2_c_mean',legend=True, bounds=bounds)
 
 
+    vis.fig_size = vis.half_page
+
+    # # * Exponential 
+    # bounds=[0, 160]
+    # exp_df = pd.read_pickle("Data/Dataframes/exponential_invert_dist_all.data")
+    # traj = ExponentialDist.ExponentialDist(planet, radius_bounds, points=1200000, scale_parameter=[420000.0/3.0], invert=[True])
+    # generate_plot(exp_df, traj, vis, "Exp", 'param_rse_mean',legend=False, bounds=bounds)
+    # generate_plot(exp_df, traj, vis, "Exp_sigma", 'param_sigma_2_mean',legend=False, bounds=bounds)
+    # #generate_plot(exp_df, traj, vis, "Exp_comp", 'param_sigma_2_c_mean',legend=False, bounds=bounds)
+
+    # # * Exponential 
+    # exp_df = pd.read_pickle("Data/Dataframes/exponential_invert_dist_v10.data")
+    # traj = ExponentialDist.ExponentialDist(planet, radius_bounds, points=1200000, scale_parameter=[420000.0/10.0], invert=[True])
+    # generate_plot(exp_df, traj, vis, "Exp_narrow", 'param_rse_mean',legend=False, bounds=bounds)
+    # generate_plot(exp_df, traj, vis, "Exp_sigma_narrow", 'param_sigma_2_mean',legend=False, bounds=bounds)
+    # #generate_plot(exp_df, traj, vis, "Exp_comp_narrow", 'param_sigma_2_c_mean',legend=False, bounds=bounds)
     plt.show()
 
    

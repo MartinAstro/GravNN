@@ -35,9 +35,13 @@ def generate_test_dataset(x, batch_size):
     #Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
     return dataset
 
-def time_model(positions, model):
+def time_model(positions, model, batch=True):
     start = time.time()
-    output = model.compute_acceleration(positions)
+    if batch:
+        output = model.compute_acceleration(positions)
+    else:
+        for i in range(len(positions)):
+            output = model.compute_acceleration(positions[i,:])
     delta = time.time() - start
     try:
         params = model.mesh.vertices.shape[0]* model.mesh.vertices.shape[1] + model.mesh.faces.shape[0]
@@ -51,11 +55,13 @@ def time_model(positions, model):
 
     return params, delta
 
-def time_network(positions, config, network):
-    dataset_short = generate_test_dataset(positions_short.astype('float32'), 10000)
-    dataset = generate_test_dataset(positions.astype('float32'), 10000)
-
-    output = network.predict(dataset_short)
+def time_network(positions, config, network, batch=True):
+    if batch:
+        dataset = generate_test_dataset(positions.astype('float32'), 10000)
+        output = network.predict(dataset)
+    else:
+        for i in range(len(positions)):
+            output = network.predict(positions[i,:])
     
     start = time.time()
     output = network.predict(dataset)
@@ -63,7 +69,7 @@ def time_network(positions, config, network):
     params = config['params'][0]
     return params, delta
 
-def time_models_in_df(df_file, column_name):
+def time_models_in_df(df_file, column_name, batch=True):
     total_params = []
     time = []
 
@@ -73,22 +79,14 @@ def time_models_in_df(df_file, column_name):
     for model_id in ids:
         tf.keras.backend.clear_session()
         config, model = load_config_and_model(model_id, df_file)
-        params, delta = time_network(positions, config, model)
+        params, delta = time_network(positions, config, model, batch=batch)
         total_params.append(params)
         time.append(delta)
     df = pd.DataFrame(data=time, index=total_params, columns=[column_name])
     return df
 
 
-positions = np.random.uniform(size=(10000,3))*1E4# Must be in meters
-positions_short = np.random.uniform(size=(10,3))*1E4
-def main():
-    earth = Earth()
-    asteroid = Eros()
-
-    
-
-    #* Polyhedral Models
+def time_polyhedral(asteroid, batch):
     poly_params = []
     poly_time = []
     poly_3 = Polyhedral(asteroid, asteroid.model_3k)
@@ -98,48 +96,65 @@ def main():
 
     models = [poly_3, poly_6, poly_12, poly_25]
     for model in models:
-        params, delta = time_model(positions, model)
+        params, delta = time_model(positions, model, batch=batch)
         poly_params.append(params)
         poly_time.append(delta)
     poly_df = pd.DataFrame(data=poly_time, index=poly_params, columns=['poly_time'])
+    return poly_df
 
 
-    #* Spherical Harmonics
+def time_spherical_harmonics(planet, batch):
     sh_params = []
     sh_time = []
 
-    sh_10 = SphericalHarmonics(earth.sh_hf_file, 10)
-    sh_50 = SphericalHarmonics(earth.sh_hf_file, 50)
-    sh_200 = SphericalHarmonics(earth.sh_hf_file, 200)
-    sh_400 = SphericalHarmonics(earth.sh_hf_file, 400)
+    sh_10 = SphericalHarmonics(planet.sh_hf_file, 10)
+    sh_50 = SphericalHarmonics(planet.sh_hf_file, 50)
+    sh_200 = SphericalHarmonics(planet.sh_hf_file, 200)
+    sh_400 = SphericalHarmonics(planet.sh_hf_file, 400)
 
     models = [sh_10, sh_50, sh_200, sh_400]
     for model in models:
-        params, delta = time_model(positions, model)
+        params, delta = time_model(positions, model,batch=batch)
         sh_params.append(params)
         sh_time.append(delta)
     sh_df = pd.DataFrame(data=sh_time, index=sh_params, columns=['sh_time'])
-   
+    return sh_df
 
-    #* Traditional Network (GPU)
+positions = np.random.uniform(size=(10000,3))*1E4# Must be in meters
+#positions = np.random.uniform(size=(10,3))*1E4
+
+def conference_timing():
+    earth = Earth()
+    asteroid = Eros()
+
+    poly_df = time_polyhedral(asteroid)
+    sh_df = time_spherical_harmonics(earth)
+    
     nn_df = time_models_in_df('N_10000_rand_study.data', 'nn_time')
     pinn_df = time_models_in_df('N_10000_rand_PINN_study.data', 'pinn_time')
-
-    # #! Run on CPU
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    # if tf.test.gpu_device_name():
-    #     print('GPU found')
-    # else:
-    #     print("No GPU found")
-
-    
-    # #* Traditional Network (CPU)
-    # nn_CPU_df = time_models_in_df('N_10000_rand_study.data', 'nn_time')
-    # pinn_CPU_df = time_models_in_df('N_10000_rand_PINN_study.data', 'pinn_time')
 
 
     df = pd.concat([poly_df, sh_df, nn_df, pinn_df])#, nn_CPU_df, pinn_CPU_df])
     df.to_pickle('Data/speed_results_v2.data')
 
+def journal_timing():
+    earth = Earth()
+    asteroid = Eros()
+
+    batch = True
+
+    poly_df = time_polyhedral(asteroid,batch)
+    sh_df = time_spherical_harmonics(earth,batch)
+    
+    #* Traditional Network (GPU)
+    nn_df = time_models_in_df('Data/Dataframes/traditional_nn_df.data', 'nn_time', batch)
+    pinn_df = time_models_in_df('Data/Dataframes/pinn_df.data', 'pinn_time', batch)
+
+
+    df = pd.concat([poly_df, sh_df, nn_df, pinn_df])#, nn_CPU_df, pinn_CPU_df])
+    df.to_pickle('Data/Dataframes/speed_results_journal.data')
+
+
+
 if __name__ == '__main__':
-    main()
+    journal_timing()
