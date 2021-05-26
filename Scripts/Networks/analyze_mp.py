@@ -28,12 +28,14 @@ def main():
     '''
     Multiprocess the analysis pipeline for each network within the dataframe 
     '''
-    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_20_v10.data'#traditional_nn_df.data'
-    df_file = 'Data/Dataframes/exponential_invert_dist_v10.data'
-    planet = Moon()
-    planet = Earth()
+    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_80_v10.data'#traditional_nn_df.data'
+    df_file = 'Data/Dataframes/moon_traditional_nn_df.data'
+    df_file = 'Data/Dataframes/moon_pinn_df.data'
 
-    analyze_altitude = True
+    planet = Moon()
+    #planet = Earth()
+
+    analyze_altitude = False
 
     points = 250000 # 64800
     test_trajectories = {
@@ -51,7 +53,7 @@ def main():
 
     i = 0
     args = []
-    for i in range(8):
+    for i in range(4):
         args.append((i, df_file, planet, analyze_altitude, test_trajectories, points))
         i += 1
 
@@ -74,7 +76,8 @@ def main():
 def run(i, df_file, planet, analyze_altitude, test_trajectories, points):
     import os
     os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
-
+    os.environ["TF_GPU_THREAD_MODE"] ='gpu_private'
+    os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
     import pickle
     import sys
     import tensorflow as tf

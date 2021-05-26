@@ -216,11 +216,10 @@ class CustomModel(tf.keras.Model):
         }
         self.config.update(size_stats)
 
-    def save(self, df_file):
-        timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
+    def prep_save(self):
+        timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()  
         self.directory = os.path.abspath('.') +"/Data/Networks/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
         os.makedirs(self.directory, exist_ok=True)
-        self.network.save(self.directory + "network")
         self.config['timetag'] = timestamp
         self.config['history'] = [self.history.history]
         self.config['id'] = [pd.Timestamp(timestamp).to_julian_date()]
@@ -233,7 +232,22 @@ class CustomModel(tf.keras.Model):
         except:
             pass
         self.model_size_stats()
-        utils.save_df_row(self.config, df_file)
+
+    def save(self, df_file=None):
+        # add final entries to config dictionary
+        self.prep_save()
+
+        # convert to dataframe
+        config = dict(sorted(self.config.items(), key = lambda kv: kv[0]))
+        df = pd.DataFrame().from_dict(config).set_index('timetag')
+
+        # save network and config to directory
+        self.network.save(self.directory + "network")
+        df.to_pickle(self.directory + "config.data")
+
+        # save config to preexisting dataframe if requested
+        if df_file is not None:
+            utils.save_df_row(self.config, df_file)
 
 
 def backwards_compatibility(config):

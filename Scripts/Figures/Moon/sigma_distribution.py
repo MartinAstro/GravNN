@@ -7,7 +7,7 @@ from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 
@@ -18,25 +18,22 @@ def std_masks(grid, sigma):
     sigma_mask_compliment = np.where(grid.total < (np.mean(grid.total) + sigma*np.std(grid.total)))
     return sigma_mask, sigma_mask_compliment
 
-def get_grid(degree, map_type='world'):
-    planet = Earth()
+def get_grid(degree):
+    planet = Moon()
     model_file = planet.sh_hf_file
     density_deg = 180
 
     radius_min = planet.radius
-    if map_type == 'world':
-        trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-    else:
-        trajectory = ReducedGridDist(planet, radius_min, density_deg, reduction=0.25)
+    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
     Clm_r0_gm = SphericalHarmonics(model_file, degree=degree, trajectory=trajectory)
     Clm_a = Clm_r0_gm.load().accelerations
     return Grid(trajectory, Clm_a)
 
-def acceleration_histogram_masks(map_type):
+def acceleration_histogram_masks():
 
-    grid_true = get_grid(1000, map_type)
-    grid_C00 = get_grid(0, map_type)
-    grid_C22 = get_grid(2, map_type)
+    grid_true = get_grid(1000)
+    grid_C00 = get_grid(0)
+    grid_C22 = get_grid(2)
 
     grid_Call_m_C22 = grid_true - grid_C22
 
@@ -75,11 +72,11 @@ def acceleration_histogram_masks(map_type):
 
 def acceleration_distribution_plots(map_type):
 
-    grid_true = get_grid(1000, map_type)
-    grid_C00 = get_grid(0, map_type)
-    grid_C22 = get_grid(2, map_type)
-    grid_C33 = get_grid(3, map_type)
-    grid_C4040 = get_grid(40, map_type)
+    grid_true = get_grid(1000)
+    grid_C00 = get_grid(0)
+    grid_C22 = get_grid(2)
+    grid_C33 = get_grid(3)
+    grid_C4040 = get_grid(40)
 
     # Primary Figures 
     map_vis.newFig()
@@ -123,9 +120,9 @@ def acceleration_distribution_plots(map_type):
     # plt.ylabel("Frequency")
 
 def cumulative_distribution():
-    grid_true = get_grid(1000, map_type)
-    grid_C00 = get_grid(0, map_type)
-    grid_C22 = get_grid(2, map_type)
+    grid_true = get_grid(1000)
+    grid_C00 = get_grid(0)
+    grid_C22 = get_grid(2)
 
     grid_Call_m_C22 = grid_true - grid_C22
     sorted_data = np.sort(grid_Call_m_C22.total.reshape((-1,)))
@@ -158,20 +155,29 @@ def cumulative_distribution():
 def acceleration_histogram_std():
     # Distribution Stats 
     
-    grid_true = get_grid(1000, map_type)
-    grid_C00 = get_grid(0, map_type)
-    grid_C22 = get_grid(2, map_type)
+    grid_true = get_grid(1000)
+    grid_C00 = get_grid(0)
+    grid_C22 = get_grid(2)
 
     grid_Call_m_C22 = grid_true - grid_C22
-    plt.figure()
+    map_vis.newFig()
     plt.hist(grid_Call_m_C22.total.reshape((-1,)), 1000)
-    plt.vlines(np.mean(grid_Call_m_C22.total), 0, 5000, colors='r', label='mean')
-    plt.vlines(np.mean(grid_Call_m_C22.total) + np.std(grid_Call_m_C22.total), 0, 5000, colors='g', label='mean+std')
-    plt.vlines(np.mean(grid_Call_m_C22.total) + 2*np.std(grid_Call_m_C22.total), 0, 5000, colors='y', label='mean+2std')
-    plt.vlines(1E-8, 0, 5000, colors='y', label='SRP at Earth')
-    plt.xlabel("||a-(a0 + grad(U_c22))|| [m/s^2]")
+    # plt.vlines(np.mean(grid_Call_m_C22.total), 0, 5000, label='mean', linestyle='--')
+    # plt.vlines(np.mean(grid_Call_m_C22.total) + np.std(grid_Call_m_C22.total), 0, 5000, colors='g', label='mean+std')
+    # plt.vlines(np.mean(grid_Call_m_C22.total) + 2*np.std(grid_Call_m_C22.total), 0, 5000, colors='r', label='mean+2std')
+    # plt.vlines(np.mean(grid_Call_m_C22.total) + 3*np.std(grid_Call_m_C22.total), 0, 5000, colors='y', label='mean+3std')
+    # plt.vlines(np.mean(grid_Call_m_C22.total) + 4*np.std(grid_Call_m_C22.total), 0, 5000, colors='c', label='mean+4std')
+    # plt.vlines(np.mean(grid_Call_m_C22.total) + 5*np.std(grid_Call_m_C22.total), 0, 5000, colors='m', label='mean+5std')
+    plt.xlim([0, 1E-2])
+    plt.xlabel('$|\delta \mathbf{a}|$' + '[m/s$^2$]')
+    plt.ylabel('Frequency')
+
+    map_vis.save(plt.gcf(), directory + 'moon_acc_histogram.pdf')
 
 def acceleration_masks():
+    grid_true = get_grid(1000)
+    grid_C00 = get_grid(0)
+    grid_C22 = get_grid(2)
 
     grid_Call_m_C22 = grid_true - grid_C22
     five_sigma_mask, five_sigma_mask_compliment = std_masks(grid_Call_m_C22, 5)
@@ -185,7 +191,9 @@ def acceleration_masks():
     # plt.hist(grid_Call_m_C22.total[five_sigma_mask_compliment].reshape((-1,)), 100)
 
     map_vis = MapVisualization(unit='mGal')
-    plt.rc('text', usetex=False)
+    plt.rc('text', usetex=True)
+    map_vis.fig_size = map_vis.half_page
+    map_vis.tick_interval = [60,60]
 
     layer_grid = grid_true - grid_C22
     layer_grid.total[one_sigma_mask_compliment] = 0.0
@@ -194,40 +202,53 @@ def acceleration_masks():
     layer_grid.total[three_sigma_mask] = 3.0
     layer_grid.total[four_sigma_mask] = 4.0
     layer_grid.total[five_sigma_mask] = 5.0
-    map_vis.plot_grid(layer_grid.total, 'sigma map')
-
-    vlim = [0, np.max(grid_Call_m_C22.total)*10000]
+    fig, ax = map_vis.plot_grid(layer_grid.total, 'sigma map')#, cmap='Dark2')
+    map_vis.save(fig, directory + 'moon_sigma_map.pdf')
+    # vlim = [0, np.max(grid_Call_m_C22.total)*10000]
     
-    directory = os.path.abspath('.') +"/Plots/"
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "Truth", vlim)
-    #map_vis.save(fig, directory + 'OneOff/true_' + map_type + '.pdf')
+    # directory = os.path.abspath('.') +"/Plots/"
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "Truth", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/true_' +  + '.pdf')
 
-    two_sigma_values = grid_Call_m_C22.total[two_sigma_mask]
-    grid_Call_m_C22.total[two_sigma_mask] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Feature Compliment", vlim)
-    #map_vis.save(fig, directory + 'OneOff/two_sigma_mask_compliment_' + map_type + '.pdf')
-    grid_Call_m_C22.total[two_sigma_mask] = two_sigma_values
+    # one_sigma_values = grid_Call_m_C22.total[one_sigma_mask]
+    # grid_Call_m_C22.total[one_sigma_mask] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "1-Sigma Feature Compliment", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/one_sigma_mask_compliment_' +  + '.pdf')
+    # grid_Call_m_C22.total[one_sigma_mask] = one_sigma_values
 
-    two_sigma_compliment_values = grid_Call_m_C22.total[two_sigma_mask_compliment]
-    grid_Call_m_C22.total[two_sigma_mask_compliment] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Features", vlim)
-    #map_vis.save(fig, directory + 'OneOff/two_sigma_mask_' + map_type + '.pdf')
-    grid_Call_m_C22.total[two_sigma_mask_compliment] = two_sigma_compliment_values
+    # one_sigma_compliment_values = grid_Call_m_C22.total[one_sigma_mask_compliment]
+    # grid_Call_m_C22.total[one_sigma_mask_compliment] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "1-Sigma Features", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/one_sigma_mask_' +  + '.pdf')
+    # grid_Call_m_C22.total[one_sigma_mask_compliment] = one_sigma_compliment_values
 
-    three_sigma_values = grid_Call_m_C22.total[three_sigma_mask]
-    grid_Call_m_C22.total[three_sigma_mask] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Feature Compliment", vlim)
-    #map_vis.save(fig, directory + 'OneOff/three_sigma_mask_compliment_' + map_type + '.pdf')
-    grid_Call_m_C22.total[three_sigma_mask] = three_sigma_values
+    # two_sigma_values = grid_Call_m_C22.total[two_sigma_mask]
+    # grid_Call_m_C22.total[two_sigma_mask] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Feature Compliment", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/two_sigma_mask_compliment_' +  + '.pdf')
+    # grid_Call_m_C22.total[two_sigma_mask] = two_sigma_values
 
-    three_sigma_compliment_values = grid_Call_m_C22.total[three_sigma_mask_compliment]
-    grid_Call_m_C22.total[three_sigma_mask_compliment] = 0.0
-    fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Features", vlim)
-    #map_vis.save(fig, directory + 'OneOff/three_sigma_mask_' + map_type + '.pdf')
-    grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
+    # two_sigma_compliment_values = grid_Call_m_C22.total[two_sigma_mask_compliment]
+    # grid_Call_m_C22.total[two_sigma_mask_compliment] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "2-Sigma Features", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/two_sigma_mask_' +  + '.pdf')
+    # grid_Call_m_C22.total[two_sigma_mask_compliment] = two_sigma_compliment_values
+
+    # three_sigma_values = grid_Call_m_C22.total[three_sigma_mask]
+    # grid_Call_m_C22.total[three_sigma_mask] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Feature Compliment", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/three_sigma_mask_compliment_' +  + '.pdf')
+    # grid_Call_m_C22.total[three_sigma_mask] = three_sigma_values
+
+    # three_sigma_compliment_values = grid_Call_m_C22.total[three_sigma_mask_compliment]
+    # grid_Call_m_C22.total[three_sigma_mask_compliment] = 0.0
+    # fig, ax = map_vis.plot_grid(grid_Call_m_C22.total, "3-Sigma Features", vlim)
+    # #map_vis.save(fig, directory + 'OneOff/three_sigma_mask_' +  + '.pdf')
+    # grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
 
 
 map_vis = VisualizationBase(halt_formatting=False)
+map_vis.fig_size = map_vis.half_page
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -239,13 +260,12 @@ directory = os.path.abspath('.') +"/Plots/OneOff/"
 os.makedirs(directory, exist_ok=True)
 
 def main():
-    map_type = 'pacific'
-    map_type = 'world'
-    #acceleration_distribution_plots(map_type)
-    acceleration_histogram_masks(map_type)
-    # acceleration_histogram_std()
-    # cumulative_distribution()
-    # acceleration_masks()
+
+    #acceleration_distribution_plots()
+    #acceleration_histogram_masks()
+    acceleration_histogram_std()
+    #cumulative_distribution()
+    #acceleration_masks()
    
     plt.show()
 

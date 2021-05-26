@@ -51,12 +51,16 @@ def regress_sh_model(x, a, planet, max_deg, noise, idx):
 
 def regress_nn_model(x, a, x_val, a_val, num_units, pinn):
     import time
+    import os
     import tensorflow as tf
     from GravNN.Networks.Data import generate_dataset
     from GravNN.Networks.Configs.Default_Configs import get_default_earth_config, get_default_earth_pinn_config
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Callbacks import CustomCallback
+    os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+    os.environ["TF_GPU_THREAD_MODE"] ='gpu_private'
+    os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
     if pinn:
         config = get_default_earth_pinn_config()
@@ -100,10 +104,10 @@ def regress_nn_model(x, a, x_val, a_val, num_units, pinn):
     optimizer = configure_optimizer(config)
     model.compile(optimizer=optimizer, loss="mse", run_eagerly=False)#, run_eagerly=True)#, metrics=["mae"])
 
-    config['min_delta'] = [1E-9]
+    config['min_delta'] = [1E-6]
     scheduler = tf.keras.callbacks.ReduceLROnPlateau(
                                         monitor='val_loss', factor=0.9, patience=500, verbose=0,
-                                        mode='auto', min_delta=config['min_delta'][0], cooldown=0, min_lr=0, 
+                                        mode='auto', min_delta=config['min_delta'][0], cooldown=0, min_lr=1E-6, 
                                         )
     early_stop = tf.keras.callbacks.EarlyStopping(
                                         monitor='val_loss', min_delta=config['min_delta'][0], patience=1000, verbose=1,
@@ -150,7 +154,7 @@ def regress_nn_model(x, a, x_val, a_val, num_units, pinn):
 def main():
     planet = Earth()
     model_file = planet.sh_hf_file
-    model_deg = 70 #95 # 33
+    model_deg = 80 #95 # 33
     model_interval = 5
     N_train = 9500
     N_val = 500
@@ -158,7 +162,7 @@ def main():
     trajectory = RandomDist(planet, [planet.radius, planet.radius+420000.0], 1000000)
     
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
-    num_units_list = [10, 20, 30, 40]
+    num_units_list = [10, 20, 30]
     noise_list =  [0, 2]
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
@@ -166,15 +170,15 @@ def main():
     nn_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, num_units_list, model_id_list], names=['noise', 'nodes', 'id']), columns=['model_identifier'])
     pinn_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, num_units_list, model_id_list], names=['noise', 'nodes', 'id']), columns=['model_identifier'])
 
-    df_regressed = "Data/Dataframes/regressed_models_v2.data"
+    df_regressed = "Data/Dataframes/regressed_models_v3.data"
 
     pool = mp.Pool(6)
     # Generate N number of models from random data 
     for idx in range(num_models):
 
         # Get randomly shuffled data 
-        x, a, u = get_sh_data(trajectory, model_file, max_deg=1000, deg_removed=2, random_state=idx)
-        x, a, u, x_val, a_val, u_val = training_validation_split(x, a, u, N_train, N_val)
+        x, a, u = get_sh_data(trajectory, model_file, max_deg=1000, deg_removed=2)
+        x, a, u, x_val, a_val, u_val = training_validation_split(x, a, u, N_train, N_val, random_state=idx)
 
         # Bias the data with some amount of noise
         for noise in noise_list:
@@ -186,37 +190,36 @@ def main():
                 sh_model_name = regress_sh_model(x, a_biased, planet, deg, noise, idx)
                 sh_df.loc[(noise, deg, idx)] = sh_model_name
 
-            # Train on increasingly high capacity NN
-            args = []
-            for num_units in num_units_list:
-                args.append((x, a_biased, x_val, a_val, num_units, False))
-                args.append((x, a_biased, x_val, a_val, num_units, True))
+            # # Train on increasingly high capacity NN
+            # args = []
+            # for num_units in num_units_list:
+            #     args.append((x, a_biased, x_val, a_val, num_units, False))
+            #     args.append((x, a_biased, x_val, a_val, num_units, True))
 
-            results = pool.starmap_async(regress_nn_model, args)
-            nn_identifiers = results.get()
+            # results = pool.starmap_async(regress_nn_model, args)
+            # nn_identifiers = results.get()
 
-            for nn in nn_identifiers:
-
-                # Save off config into dataframe
-                config = nn['config']
-                config = dict(sorted(config.items(), key = lambda kv: kv[0]))
-                df = pd.DataFrame().from_dict(config).set_index('timetag')
-                try: 
-                    df_all = pd.read_pickle(df_regressed)
-                    df_all = df_all.append(df)
-                    df_all.to_pickle(df_regressed)
-                except: 
-                    df.to_pickle(df_regressed)
+            # for nn in nn_identifiers:
+            #     # Save off config into dataframe
+            #     config = nn['config']
+            #     config = dict(sorted(config.items(), key = lambda kv: kv[0]))
+            #     df = pd.DataFrame().from_dict(config).set_index('timetag')
+            #     try: 
+            #         df_all = pd.read_pickle(df_regressed)
+            #         df_all = df_all.append(df)
+            #         df_all.to_pickle(df_regressed)
+            #     except: 
+            #         df.to_pickle(df_regressed)
                 
-                # Save of identifiers for plotting
-                if nn['pinn']:
-                    pinn_df.loc[(noise, nn['num_units'], idx)] = nn['id']
-                else:
-                    nn_df.loc[(noise, nn['num_units'], idx)] = nn['id']    
+            #     # Save of identifiers for plotting
+            #     if nn['pinn']:
+            #         pinn_df.loc[(noise, nn['num_units'], idx)] = nn['id']
+            #     else:
+            #         nn_df.loc[(noise, nn['num_units'], idx)] = nn['id']    
 
     sh_df.to_pickle("Data/Dataframes/regress_sh.data")
-    nn_df.to_pickle("Data/Dataframes/regress_nn.data")
-    pinn_df.to_pickle("Data/Dataframes/regress_pinn.data")
+    # nn_df.to_pickle("Data/Dataframes/regress_nn.data")
+    # pinn_df.to_pickle("Data/Dataframes/regress_pinn.data")
 
 if __name__ == "__main__":
     main()

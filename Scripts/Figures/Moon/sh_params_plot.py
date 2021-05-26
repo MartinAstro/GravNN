@@ -5,97 +5,67 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import sigfig
-from GravNN.CelestialBodies.Planets import Earth, Moon
+from GravNN.CelestialBodies.Planets import Moon
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.Support.Grid import Grid
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
-map_vis = MapVisualization()
-
-def plot_1d_curve(df, metric, y_label, size=map_vis.half_page):
-    fig, ax = map_vis.newFig(fig_size=map_vis.half_page)
-    plt.semilogx(df.index*(df.index+1), df[metric])
-    plt.ylabel(y_label)
-    plt.xlabel("Params, $p$")
-    ax.ticklabel_format(axis='y', style='sci',scilimits=(0, 0),  useMathText=True)
-    return fig
 
 def main():
-    """ 
-    This generates 
-    1) Spherical Harmonic RSE median curves Brillouin, LEO, and GEO 
-    2) Spherical Harmonic RSE 2 sigma curves Brillouin, LEO, and GEO
-    3) Spherical Harmonic RSE 2 sigma compliment curves Brillouin, LEO, and GEO
-    """
+    
+    planet = Moon()
+    model_file = planet.sh_hf_file
+    density_deg = 180
+    max_deg = 1000
 
-    # TODO: Consider the proper figure size. 
+    radius_min = planet.radius
+    
+    df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
+    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
+
+    Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
+    Call_a = Call_r0_gm.load().accelerations
+
+    C55_r0_gm = SphericalHarmonics(model_file, degree=55, trajectory=trajectory)
+    C55_a = C55_r0_gm.load().accelerations
+
+    # C110_r0_gm = SphericalHarmonics(model_file, degree=110, trajectory=trajectory)
+    # C110_a = C110_r0_gm.load().accelerations
+
+    C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
+    C22_a = C22_r0_gm.load().accelerations
+        
+
+    
+
 
     directory = os.path.abspath('.') +"/Plots/Moon/"
     os.makedirs(directory, exist_ok=True)
 
-    with open("Data/Dataframes/sh_stats_moon_Brillouin.data", 'rb') as f:
-        brillouin_df = pickle.load(f)
-    # with open("sh_stats_LEO.data", 'rb') as f:
-    #     leo_df = pickle.load(f)
-    # with open("sh_stats_GEO.data", 'rb') as f:
-    #     geo_df = pickle.load(f)
+    mapUnit = 'mGal'
+    map_vis = MapVisualization(mapUnit)
+    map_vis.fig_size = map_vis.full_page
 
-    # # ! RSE MEDIAN 
-    # # Brillouin 0 km
-    # fig = plot_1d_curve(brillouin_df, 'rse_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_Mean_RSE_Brillouin.pdf")
-
-   
-    # # ! RSE 2 SIGMA MEDIAN 
-    # # Brillouin 0 km
-    # fig = plot_1d_curve(brillouin_df, 'sigma_2_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_sigma_2_Mean_RSE_Brillouin.pdf")
-
-    # # ! RSE 2 SIGMA COMPLIMENT MEDIAN 
-    # # Brillouin 0 km
-    # fig = plot_1d_curve(brillouin_df, 'sigma_2_c_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_sigma_2_c_Mean_RSE_Brillouin.pdf")
-
-   
+    vlim= [0, 60]
+    grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label='[mGal]')
+    map_vis.save(plt.gcf(), directory + "sh_brillouin_true_map.pdf")
 
 
-    # ! RSE MEDIAN Full Size
-    # Brillouin 0 km    
-    fig, ax = map_vis.newFig(fig_size=map_vis.full_page)
-    plt.semilogx(brillouin_df.index, brillouin_df['rse_mean'])
-    plt.ylabel('Mean RSE')
-    plt.xlabel("Degree, $l$")
-    ax.ticklabel_format(axis='y', style='sci',scilimits=(0, 0),  useMathText=True)
-    map_vis.save(fig, directory + "SH_Mean_RSE_Brillouin_Full.pdf")
+    vlim= [0, 60]
+    grid_true = Grid(trajectory=trajectory, accelerations=C55_a-C22_a)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label='[mGal]')
+    map_vis.save(plt.gcf(), directory + "sh_brillouin_55_map.pdf")
 
-    fig, ax = map_vis.newFig(fig_size=map_vis.full_page)
-    plt.semilogx(brillouin_df.index, brillouin_df['rse_mean'], label=r'MSE($\mathcal{A}$)')
-    plt.semilogx(brillouin_df.index, brillouin_df['sigma_2_mean'], label=r'MSE($\mathcal{F}$)')
-    plt.semilogx(brillouin_df.index, brillouin_df['sigma_2_c_mean'], label=r'MSE($\mathcal{C}$)')
 
-    plt.ylabel('Mean RSE')
-    plt.xlabel("Degree, $l$")
-    ax.ticklabel_format(axis='y', style='sci',scilimits=(0, 0),  useMathText=True)
-    plt.legend()
-    map_vis.save(fig, directory + "SH_Brill_All.pdf")
+    # grid_true = Grid(trajectory=trajectory, accelerations=C110_a-C22_a)
+    # map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
+    # map_vis.save(plt.gcf(), directory + "sh_brillouin_110_map.pdf")
+
+
     plt.show()
-
-
-    # # GEO 35,786 km 
-    # fig = plot_1d_curve(geo_df, 'rse_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_Mean_RSE_GEO.pdf")
-
-    # # GEO 35,786 km 
-    # fig = plot_1d_curve(geo_df, 'sigma_2_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_sigma_2_Mean_RSE_GEO.pdf")
-
-    # # GEO 35,786 km 
-    # fig = plot_1d_curve(geo_df, 'sigma_2_c_mean', 'Mean RSE')
-    # map_vis.save(fig, directory + "SH_sigma_2_c_Mean_RSE_GEO.pdf")
-
 if __name__ == "__main__":
     main()

@@ -3,11 +3,16 @@ import pandas as pd
 import tensorflow as tf
 import pickle
 import os
+os.environ["PATH"] += os.pathsep + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+os.environ["TF_GPU_THREAD_MODE"] ='gpu_private'
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+
+
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Moon
 from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
@@ -94,27 +99,27 @@ def compute_stats(grid_true, grid_pred):
 
 def main():
     
-    planet = Earth()
+    planet = Moon()
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
 
     # * Generate the true acceleration
-    trajectory = RandomDist(planet, [planet.radius, planet.radius+420000.0], 10000)
+    trajectory = RandomDist(planet, [planet.radius, planet.radius+50000.0], 10000)
     trajectory = FibonacciDist(planet, planet.radius, 250000)
     x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2, override=False)
     #x, a, u, x_val, a_val, u_val = training_validation_split(x, a, u, 9500, 500, random_state=1234)
     grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
-    directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed')
+    directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', 'Moon')
 
-    sh_df = pd.read_pickle("Data/Dataframes/regress_sh.data")
-    nn_df = pd.read_pickle("Data/Dataframes/regress_nn.data")
-    pinn_df = pd.read_pickle("Data/Dataframes/regress_pinn.data")
+    sh_df = pd.read_pickle("Data/Dataframes/moon_regress_sh.data")
+    nn_df = pd.read_pickle("Data/Dataframes/moon_regress_nn.data")
+    pinn_df = pd.read_pickle("Data/Dataframes/moon_regress_pinn.data")
 
-    sh_df_stats_file = "Data/Dataframes/sh_regress_stats.data"
-    nn_df_stats_file = "Data/Dataframes/nn_regress_stats.data"
-    pinn_df_stats_file = "Data/Dataframes/pinn_regress_stats.data"
+    sh_df_stats_file = "Data/Dataframes/sh_moon_regress_stats.data"
+    nn_df_stats_file = "Data/Dataframes/nn_moon_regress_stats.data"
+    pinn_df_stats_file = "Data/Dataframes/pinn_moon_regress_stats.data"
 
 
 
@@ -143,7 +148,7 @@ def main():
 
 
     df_all = pd.DataFrame()
-    model_df = pd.read_pickle("Data/Dataframes/regressed_models_v2.data")
+    model_df = pd.read_pickle("Data/Dataframes/regressed_models_moon.data")
     for i in range(len(nn_df)):
         row = nn_df.iloc[i]
         model_id = row['model_identifier'] # TODO: Change this name
@@ -165,8 +170,9 @@ def main():
 
 
     df_all = pd.DataFrame()
+    model_df = pd.read_pickle("Data/Dataframes/regressed_models_moon.data")
     for i in range(len(nn_df)):
-        row = nn_df.iloc[i]
+        row = pinn_df.iloc[i]
         model_id = row['model_identifier'] # TODO: Change this name
         config, model = load_config_and_model(model_id, model_df)
         

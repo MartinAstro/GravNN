@@ -7,24 +7,9 @@ from GravNN.Trajectories.ExponentialDist import ExponentialDist
 
 def main():
 
-    # Take trained network and see if a larger learning rate would have let it continue learning. 
-    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_20_v10.data'
-    directory = 'logs/hyperparameter_moon_pinn_20_v10/'
-
-    df_file = 'Data/Dataframes/exponential_invert_dist_v2.data'
-    directory = 'logs/exponential_invert_dist_v2/'
-
-    # df_file = 'Data/Dataframes/hyperparameter_earth_20_v20.data'
-    # directory = 'logs/hyperparameter_earth_20_v20/'
-
+    # Take trained network and see if a larger learning rate would have let it continue learning.
     df_file = 'Data/Dataframes/exponential_invert_dist_v10.data'
     directory = 'logs/exponential_invert_dist_v10/'
-
-    df_file = 'Data/Dataframes/hyperparameter_moon_pinn_80_v10.data'
-    directory = 'logs/hyperparameter_moon_pinn_80_v10/'
-
-    df_file = 'Data/Dataframes/hyperparameter_moon_traditional.data'
-    directory = 'logs/hyperparameter_moon_traditional/'
 
     df_file = 'Data/Dataframes/hyperparameter_moon_pinn_40_v10.data'
     directory = 'logs/hyperparameter_moon_pinn_40_v10/'
@@ -34,7 +19,7 @@ def main():
 
     hparams = {
         'N_dist' : [5000000],#[1200000],
-        'N_train' :[4900000],#[1000000], #
+        'N_train' :[4900000],#[1000000], 
         'epochs' : [100000],
         'network_shape' : ['normal'],
         'decay_rate_epoch' : [25000],
@@ -46,18 +31,13 @@ def main():
         'initializer' : ['glorot_uniform'],
         'network_type' : ['traditional'],
         'PINN_constraint_fcn' :['pinn_A'],#,# ['no_pinn'],#
-        # 'x_transformer' : [MinMaxScaler(feature_range=(-1,1))],
-        # 'u_transformer' : [UniformScaler(feature_range=(-1,1))],
-        # 'a_transformer' : [UniformScaler(feature_range=(-1,1))],
         'scale_by' : ['a'],
         'mixed_precision' : [False],
-        'num_units' : [40],#, 80],#, 80], 
+        'num_units' : [40],
         # 'distribution' : [ExponentialDist],
         # 'invert' : [True],
         # 'scale_parameter' : [420000.0/10.0]
     }
-
-
 
     keys, values = zip(*hparams.items())
     permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -96,45 +76,16 @@ def run(df_file, file_name, hparams):
     os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
     import copy
-    import pickle
     import sys
-    import time
-
-    import matplotlib.gridspec as gridspec
-    import matplotlib.pyplot as plt
     import numpy as np
-    import pandas as pd
-    import scipy.io
-    from GravNN.Networks import utils
-
-    from GravNN.CelestialBodies.Asteroids import Bennu, Eros
-    from GravNN.CelestialBodies.Planets import Earth, Moon
-    from GravNN.Networks.Configs.Default_Configs import get_default_moon_config, get_default_earth_config, \
-                                                        get_default_earth_pinn_config, get_default_moon_pinn_config
-    from GravNN.Networks.Configs.Fast_Configs import get_fast_earth_config, get_fast_earth_pinn_config
-    from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
-    from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
-                                                        get_sh_data)
-    from GravNN.Networks.Analysis import Analysis
+    from GravNN.Networks import utils, utils_tf
     from GravNN.Networks.Callbacks import CustomCallback
-    from GravNN.Networks.Compression import (cluster_model, prune_model,
-                                            quantize_model)
-    from GravNN.Networks.Data import generate_dataset, training_validation_split, get_preprocessed_data, configure_dataset
+    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
     from GravNN.Networks.Model import CustomModel
-    from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
-                                        TraditionalNet, load_network)
-    from GravNN.Networks.Plotting import Plotting
-    from GravNN.Networks.Constraints import no_pinn, pinn_A
-    from GravNN.Support.Grid import Grid
-    from GravNN.Support.transformations import (cart2sph, project_acceleration,
-                                                sphere2cart)
+    from GravNN.Networks.Networks import load_network
+    from GravNN.Networks.utils_tf import load_hparams_to_config
 
-    from GravNN.Trajectories.RandomDist import RandomDist
-    from GravNN.Visualization.VisualizationBase import VisualizationBase
-    from sklearn.preprocessing import MinMaxScaler, StandardScaler
-    from GravNN.Networks.Activations import bent_identity
-
-
+    # Get global keywords
     for key, value in hparams.items():
         name = key
         if name == 'decay_rate' : decay_rate = value 
@@ -144,89 +95,23 @@ def run(df_file, file_name, hparams):
         if name == 'network_shape' : network_shape = value 
         if name == 'mixed_precision' : mixed_precision_flag = value
         if name == 'PINN_constraint_fcn' : PINN_constraint_fcn_val = value
+        if name == 'planet' : planet_val = value
 
-
-
-    #configurations = {"Default" : get_default_moon_config() }
-    #configurations['Default']['init_file'] = [2459304.942048611] # ! Sometimes there is one more sigfig so you might have to check the directory
-    #configurations['Default']['N_dist'] =  [5000000]
-
-    if PINN_constraint_fcn_val == 'no_pinn':
-        #configurations = {"Default" : get_default_earth_config() }
-        configurations = {"Default" : get_default_moon_config() }
-    else:
-        #configurations = {"Default" : get_default_earth_pinn_config() }
-        configurations = {"Default" : get_default_moon_pinn_config() }
-
-    #configurations = {"Default" : get_default_moon_pinn_config() }
-
-    if network_shape == 'normal':
-        configurations['Default']['layers'] =  [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
-    elif network_shape == 'wide':
-        configurations['Default']['layers'] =  [[3, 52, 52, 1]]
-    else:
-        exit()
+    configurations = utils_tf.get_default_config(PINN_constraint_fcn_val, planet_val)
 
     if sys.platform == 'win32':
         physical_devices = tf.config.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-    # # # TODO: Put in mixed precision training
     if mixed_precision_flag:
         from tensorflow.keras.mixed_precision import experimental as mixed_precision
-
         policy = mixed_precision.Policy('mixed_float16')
         mixed_precision.set_policy(policy)
         print('Compute dtype: %s' % policy.compute_dtype)
         print('Variable dtype: %s' % policy.variable_dtype)
 
-
     np.random.seed(1234)
     tf.random.set_seed(0)
-
-    def load_hparams_to_config(hparams, config):
-        for key, value in hparams.items():
-            config[key] = [value]
-
-        # try:
-        #     config['PINN_constraint_fcn'] = [eval(config['PINN_constraint_fcn'][0])]
-        # except:
-        #     exit("Couldn't load the constraint!")
-
-        if config['PINN_constraint_fcn'][0] == 'pinn_A':
-            config['PINN_constraint_fcn'] = [pinn_A]
-        elif config['PINN_constraint_fcn'][0] == 'no_pinn':
-            config['PINN_constraint_fcn'] = [no_pinn]
-        else:
-            exit("Couldn't load the constraint!")
-
-        if config['activation'][0] == 'bent_identity':
-            config['activation'] = [bent_identity]
-        
-        try:
-            if 'adam' in config['optimizer'][0]:
-                config['optimizer'][0] = tf.keras.optimizers.Adam()
-        except:
-            pass
-
-        try: 
-            if 'rmsprop' in config['optimizer'][0]:
-                config['optimizer'][0] = tf.keras.optimizers.RMSprop()
-        except:
-            pass
-            
-        if 'num_units' in config:
-            for i in range(1, len(config['layers'][0])-1):
-                config['layers'][0][i] = config['num_units'][0]
-        
-        if config['network_type'][0] == 'traditional':
-            config['network_type'] = [TraditionalNet]
-        elif config['network_type'][0] == 'resnet':
-            config['network_type'] = [ResNet]
-        else:
-            exit("Network type (%s) is not defined! Exiting." % config['network_type'][0])
-
-        return config
 
     def scheduler(epoch, lr):
         epoch0 = decay_epoch_0
@@ -277,39 +162,15 @@ def run(df_file, file_name, hparams):
         history.history['time_delta'] = callback.time_delta
         model.history = history
 
-        # TODO: Save extra parameters like optimizer.learning_rate
         # Save network and config information
         model.config['time_delta'] = [callback.time_delta]
         model.config['x_transformer'][0] = transformers['x']
         model.config['u_transformer'][0] = transformers['u']
         model.config['a_transformer'][0] = transformers['a']
 
-
-        #model.save(df_file)
-        # Need to make this async friendly on the dataframe
-        timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()
-        model.directory = os.path.abspath('.') +"/Data/Networks/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
-        os.makedirs(model.directory, exist_ok=True)
-        model.network.save(model.directory + "network")
-        model.config['timetag'] = timestamp
-        model.config['history'] = [model.history.history]
-        model.config['id'] = [pd.Timestamp(timestamp).to_julian_date()]
-        try:
-            model.config['activation'] = [model.config['activation'][0].__name__]
-        except:
-            pass
-        try:
-            model.config['optimizer'] = [model.config['optimizer'][0].__module__]
-        except:
-            pass
-        model.model_size_stats()
-
-        config = dict(sorted(config.items(), key = lambda kv: kv[0]))
-        df = pd.DataFrame().from_dict(config).set_index('timetag')
-        df.to_pickle(model.directory + "config.data")
-
+        # Appends the model config to a perscribed df
+        model.save(df_file=None)
         return model.config
-
 
 
 if __name__ == '__main__':

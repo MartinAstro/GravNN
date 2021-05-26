@@ -129,6 +129,9 @@ def main():
 
     df_file = "Data/Dataframes/useless_04_19_v4.data"
     configurations = {"default" : get_default_earth_config()}
+
+    df_file = "Data/Dataframes/useless_05_07_v1.data"
+    configurations = {"default" : get_default_moon_pinn_config()}
     # Test 1: No PINN without potential
     # Test 2: PINN without potential
     # Test 3: PINN with potential
@@ -143,7 +146,7 @@ def main():
         config['PINN_constraint_fcn'] = [pinn_A]#pinn_AP]
         config['min_delta'] = [1E-12]
         config['learning_rate'] = [0.005]
-        config['scale_by'] = ['none']
+        config['scale_by'] = ['a']
 
         config['layers'] = [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]]
 
@@ -151,7 +154,7 @@ def main():
         config['N_train'] = [5000]
         config['N_val'] = [408]
         config['batch_size'] = [8192]
-        config['radius_max'] = [Earth().radius + 420000]
+        config['radius_max'] = [Moon().radius + 50000]
         config['activation'] = ['gelu']
         config['initializer'] = ['glorot_normal']
         #config['loss_scale'] = [[1.0/100.0, 100.0, 100.0, 100.0]]

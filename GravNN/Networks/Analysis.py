@@ -50,10 +50,13 @@ def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'med
     diff = state_obj_pred - state_obj_true
 
     # This ensures the same features are being evaluated independent of what degree is taken off at beginning
+    one_sigma_mask, one_sigma_mask_compliment = sigma_mask(state_obj_true.total, 1)
     two_sigma_mask, two_sigma_mask_compliment = sigma_mask(state_obj_true.total, 2)
     three_sigma_mask, three_sigma_mask_compliment = sigma_mask(state_obj_true.total, 3)
 
     rse_stats = mean_std_median(diff.total, prefix=name+'_rse', stats_idx=stats)
+    sigma_1_stats = mean_std_median(diff.total, one_sigma_mask, name+"_sigma_1", stats_idx=stats)
+    sigma_1_c_stats = mean_std_median(diff.total, one_sigma_mask_compliment, name+"_sigma_1_c", stats_idx=stats)
     sigma_2_stats = mean_std_median(diff.total, two_sigma_mask, name+"_sigma_2", stats_idx=stats)
     sigma_2_c_stats = mean_std_median(diff.total, two_sigma_mask_compliment, name+"_sigma_2_c", stats_idx=stats)
     sigma_3_stats = mean_std_median(diff.total, three_sigma_mask, name+"_sigma_3", stats_idx=stats)
@@ -61,6 +64,8 @@ def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'med
 
     stats = {
         **rse_stats,
+        **sigma_1_stats,
+        **sigma_1_c_stats,       
         **sigma_2_stats,
         **sigma_2_c_stats,
         **sigma_3_stats,
@@ -121,6 +126,11 @@ class Analysis():
             name+'_param_rse_mean' : [nearest_analytic(stats_df['rse_mean'], map_stats[name+'_rse_mean'])],
             name+'_param_rse_median' : [nearest_analytic(stats_df['rse_median'], map_stats[name+'_rse_median'])],
 
+            name+'_param_sigma_1_mean' : [nearest_analytic(stats_df['sigma_1_mean'], map_stats[name+'_sigma_1_mean'])],
+            name+'_param_sigma_1_median' : [nearest_analytic(stats_df['sigma_1_median'], map_stats[name+'_sigma_1_median'])],
+            name+'_param_sigma_1_c_mean' : [nearest_analytic(stats_df['sigma_1_c_mean'], map_stats[name+'_sigma_1_c_mean'])],
+            name+'_param_sigma_1_c_median' : [nearest_analytic(stats_df['sigma_1_c_median'], map_stats[name+'_sigma_1_c_median'])],
+
             name+'_param_sigma_2_mean' : [nearest_analytic(stats_df['sigma_2_mean'], map_stats[name+'_sigma_2_mean'])],
             name+'_param_sigma_2_median' : [nearest_analytic(stats_df['sigma_2_median'], map_stats[name+'_sigma_2_median'])],
             name+'_param_sigma_2_c_mean' : [nearest_analytic(stats_df['sigma_2_c_mean'], map_stats[name+'_sigma_2_c_mean'])],
@@ -179,6 +189,8 @@ class Analysis():
             # Check for the nearest SH in altitude
             analytic_neighbors = {
                         'param_rse_mean' : [nearest_analytic(sh_alt_df.loc[alt]['rse_mean'], entries['_rse_mean'])],
+                        'param_sigma_1_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_1_mean'], entries['_sigma_1_mean'],)],
+                        'param_sigma_1_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_1_c_mean'], entries['_sigma_1_c_mean'],)],
                         'param_sigma_2_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_2_mean'], entries['_sigma_2_mean'],)],
                         'param_sigma_2_c_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_2_c_mean'], entries['_sigma_2_c_mean'])],
                         'param_sigma_3_mean' : [nearest_analytic(sh_alt_df.loc[alt]['sigma_3_mean'], entries['_sigma_3_mean'])],

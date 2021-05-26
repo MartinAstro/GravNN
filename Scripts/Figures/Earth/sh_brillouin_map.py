@@ -55,11 +55,20 @@ def main():
     map_vis.save(plt.gcf(), directory + "sh_brillouin_true_map.pdf")
 
 
-    # vlim= [0, 30]
-    # grid_true = Grid(trajectory=trajectory, accelerations=C55_a-C22_a)
-    # map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
-    # map_vis.save(plt.gcf(), directory + "sh_brillouin_55_map.pdf")
+    vlim= [0, 30]
+    grid_true = Grid(trajectory=trajectory, accelerations=C55_a-C22_a)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
+    map_vis.save(plt.gcf(), directory + "sh_brillouin_55_map.pdf")
 
+
+    # For moon comparision
+    map_vis.fig_size = map_vis.half_page
+    map_vis.tick_interval = [60, 60]
+    map_vis.newFig()
+    vlim= [0, 40]
+    im = map_vis.new_map(grid_true.total, vlim=vlim, cmap='viridis')#,log_scale=True)
+    map_vis.add_colorbar(im, '[mGal]', vlim, extend='max')
+    map_vis.save(plt.gcf(), directory + "sh_brillouin_true_map_half.pdf")
 
     # grid_true = Grid(trajectory=trajectory, accelerations=C110_a-C22_a)
     # map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)

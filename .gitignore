@@ -21,3 +21,5 @@ Scripts/logs/*
 Scripts/Hyperparams/*
 venv/*
 Scripts/Scratch/*
+*-checkpoint.ipynb
+Hyperparameter Analysis*

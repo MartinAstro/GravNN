@@ -77,9 +77,9 @@ class MapVisualization(VisualizationBase):
         # create an axes on the right side of ax. The width of cax will be 5%
         # of ax and the padding between cax and ax will be fixed at 0.05 inch.
 
-    def plot_grid(self, grid, label, vlim=None):
+    def plot_grid(self, grid, label, vlim=None, cmap=None):
         fig, ax = self.newFig()
-        im = self.new_map(grid, vlim)
+        im = self.new_map(grid, vlim, cmap=cmap)
         self.add_colorbar(im, label,vlim)
         return fig, ax
        
