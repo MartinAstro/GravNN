@@ -1,14 +1,9 @@
-import inspect
-import os
-import pickle
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Support.transformations import (cart2sph, invert_projection,
                                             project_acceleration, sphere2cart)
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+from GravNN.Trajectories import TrajectoryBase
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.utils import class_weight
 # from tensorflow.keras.callbacks import EarlyStopping

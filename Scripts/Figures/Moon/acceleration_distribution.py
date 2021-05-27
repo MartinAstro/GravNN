@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
-from GravNN.Trajectories.RandomDist import RandomDist
+from GravNN.Trajectories import RandomDist
 from GravNN.CelestialBodies.Planets import Moon
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Visualization.VisualizationBase import VisualizationBase

@@ -1,10 +1,8 @@
 
 import numpy as np
 from GravNN.Support.Regression import regress
-from GravNN.Trajectories.UniformDist import UniformDist
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.Trajectories.DHGridDist import DHGridDist
+from GravNN.Trajectories import DHGridDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 

@@ -1,6 +1,5 @@
         
 import os
-import pickle
 import tensorflow as tf
 
 import matplotlib.pyplot as plt
@@ -8,13 +7,11 @@ import numpy as np
 import pandas as pd
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Data import standardize_output
 from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def format_potential_as_Nx3(model):
     Clm_p = model.potential

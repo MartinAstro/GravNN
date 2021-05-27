@@ -13,10 +13,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.SurfaceDist import SurfaceDist
-
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import DHGridDist, SurfaceDist, ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
 def main():

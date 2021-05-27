@@ -6,7 +6,7 @@ import gc
 
 path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 from GravNN.Support.GravBodyInterface import GravBodyInterface
-from GravNN.Trajectories.UniformDist import UniformDist
+from GravNN.Trajectories import UniformDist
 import Support.transformations as transformations
 # import general simulation Support files
 from Basilisk.utilities import SimulationBaseClass

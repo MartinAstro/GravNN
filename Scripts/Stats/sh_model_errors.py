@@ -8,9 +8,7 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth, Moon
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
 def main():
@@ -18,13 +16,13 @@ def main():
     max_deg = 1000   
     points = 250000
 
-    df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
-    planet = Moon()
-    model_file = planet.sh_hf_file
-
-    # df_file = "Data/Dataframes/sh_stats_Brillouin.data"
-    # planet = Earth()
+    # df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
+    # planet = Moon()
     # model_file = planet.sh_hf_file
+
+    df_file = "Data/Dataframes/sh_stats_Brillouin.data"
+    planet = Earth()
+    model_file = planet.sh_hf_file
 
 
     trajectory = FibonacciDist(planet, planet.radius, points)

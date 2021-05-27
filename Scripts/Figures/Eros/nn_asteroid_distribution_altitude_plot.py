@@ -1,34 +1,19 @@
 
 import os
-import copy
-import pickle
-import sys
-import time
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.io
 import tensorflow as tf
-#import tensorflow_model_optimization as tfmot
-from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks import utils
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Plotting import Plotting
-from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Trajectories.RandomAsteroidDist import RandomAsteroidDist
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Trajectories import *
 from GravNN.Support.transformations import cart2sph
-
-
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
-
+from GravNN.Trajectories import *
+from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset, zoomed_inset_axes
 
 np.random.seed(1234)
 tf.random.set_seed(0)

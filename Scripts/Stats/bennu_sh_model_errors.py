@@ -5,18 +5,14 @@ import pickle
 from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
 
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Bennu
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.SurfaceDist import SurfaceDist
+from GravNN.Trajectories import SurfaceDist, DHGridDist, ReducedGridDist
 
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 
 def main():
     

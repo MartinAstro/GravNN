@@ -1,20 +1,14 @@
+import matplotlib.pylab as pl
 import matplotlib.pyplot as plt
 import numpy as np
-
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.DHGridDist import DHGridDist
 from GravNN.CelestialBodies.Planets import Moon
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
-from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Support.Grid import Grid
+from GravNN.Support.transformations import (cart2sph,
+                                            check_fix_radial_precision_errors)
+from GravNN.Trajectories import DHGridDist, RandomDist
 from GravNN.Visualization.MapVisualization import MapVisualization
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransformer
-from GravNN.Support.transformations import cart2sph, check_fix_radial_precision_errors
-
-import matplotlib.pylab as pl
 from matplotlib.colors import ListedColormap
-
 
 
 def main():

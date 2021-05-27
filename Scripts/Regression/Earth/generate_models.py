@@ -8,16 +8,13 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
+from GravNN.Trajectories import DHGridDist, RandomDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks.Data import training_validation_split, generate_dataset
-from GravNN.Networks.Configs.Default_Configs import get_default_earth_config, get_default_earth_pinn_config
+from GravNN.Networks.Configs import get_default_earth_config, get_default_earth_pinn_config
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Callbacks import CustomCallback

@@ -1,30 +1,12 @@
 import os
-import pickle
-import sys
-import time
-import warnings
-import multiprocessing
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
+import time
 import numpy as np
 import pandas as pd
-import scipy.io
 import tensorflow as tf
 
-from GravNN.CelestialBodies.Planets import Earth
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
-from GravNN.Support.Grid import Grid
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC
-from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from sklearn.preprocessing import MinMaxScaler
-from scipy.optimize import minimize, fmin_l_bfgs_b
 
 np.random.seed(1234)
 

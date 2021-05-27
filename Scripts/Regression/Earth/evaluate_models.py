@@ -3,27 +3,17 @@ import pandas as pd
 import tensorflow as tf
 import pickle
 import os
-from GravNN.Support.Grid import Grid
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
+
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
+from GravNN.Trajectories import RandomDist, FibonacciDist
 
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks.Data import training_validation_split, standardize_output
 from GravNN.Support.StateObject import StateObject
-from GravNN.Regression.Regression import Regression
-from GravNN.Networks.Model import load_config_and_model, count_nonzero_params
-from GravNN.Support.transformations import project_acceleration, invert_projection
-
 
 
 np.random.seed(1234)

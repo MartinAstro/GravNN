@@ -6,7 +6,6 @@ GravNN/C_Algorithms/.vscode/*
 **/.vscode/*
 **/.idea/*
 **/__pycache__/
-**/__init__.py
 **/__init__.pyc
 *.code-workspace
 **/*.zip

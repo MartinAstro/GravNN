@@ -271,7 +271,7 @@ class Regression:
    
 
 def main():
-    from GravNN.Trajectories.DHGridDist import DHGridDist
+    from GravNN.Trajectories import DHGridDist
     from GravNN.CelestialBodies.Planets import Earth
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
     import time

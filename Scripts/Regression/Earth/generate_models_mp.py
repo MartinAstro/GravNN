@@ -1,20 +1,13 @@
 import numpy as np
 import pandas as pd
-import pickle
 import os
 import multiprocessing as mp
-from GravNN.Support.Grid import Grid
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 from sklearn.utils import shuffle
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
+from GravNN.Trajectories import RandomDist, DHGridDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 
@@ -54,7 +47,7 @@ def regress_nn_model(x, a, x_val, a_val, num_units, pinn):
     import os
     import tensorflow as tf
     from GravNN.Networks.Data import generate_dataset
-    from GravNN.Networks.Configs.Default_Configs import get_default_earth_config, get_default_earth_pinn_config
+    from GravNN.Networks.Configs import get_default_earth_config, get_default_earth_pinn_config
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Callbacks import CustomCallback

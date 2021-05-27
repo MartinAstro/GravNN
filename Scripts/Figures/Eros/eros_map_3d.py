@@ -1,21 +1,9 @@
-        
-import os
-import pickle
-
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Trajectories.SurfaceDist import SurfaceDist
 
-from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Trajectories import SurfaceDist
 from GravNN.Visualization.PolyVisualization import PolyVisualization
 
 import matplotlib.pyplot as plt

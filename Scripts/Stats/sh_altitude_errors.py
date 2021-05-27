@@ -4,15 +4,11 @@ import pickle
 
 from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
-
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.CelestialBodies.Asteroids import Bennu
 
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import FibonacciDist, ReducedGridDist
 from GravNN.Support.Statistics import sigma_mask, mean_std_median
 
 def get_altitude_list(planet):

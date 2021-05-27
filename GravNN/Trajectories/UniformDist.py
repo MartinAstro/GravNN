@@ -1,6 +1,5 @@
 import os
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
 import numpy as np
 
 class UniformDist(TrajectoryBase):

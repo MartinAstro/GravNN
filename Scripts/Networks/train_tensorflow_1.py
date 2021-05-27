@@ -4,11 +4,9 @@ import pickle
 import sys
 import time
 
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.io
 import tensorflow as tf
 
 from GravNN.CelestialBodies.Planets import Earth
@@ -17,10 +15,8 @@ from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.GravityModels.Polyhedral import Polyhedral
 
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
+from GravNN.Trajectories import DHGridDist, RandomDist
+
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase

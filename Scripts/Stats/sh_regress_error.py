@@ -1,19 +1,10 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import pickle
-
-from GravNN.Support.Grid import Grid
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
-
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks.Data import training_validation_split

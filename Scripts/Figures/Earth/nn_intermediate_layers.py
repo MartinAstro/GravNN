@@ -1,50 +1,20 @@
 import os
 
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
-from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks import utils
-from GravNN.Support.Grid import Grid
-from GravNN.Support.transformations import sphere2cart, cart2sph, invert_projection, project_acceleration
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import tensorflow as tf
-import copy
-import pickle
 import sys
-import time
-from GravNN.Networks.Constraints import no_pinn, pinn_A
 
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.io
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
-from GravNN.CelestialBodies.Planets import Earth, Moon
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
+from GravNN.CelestialBodies.Planets import Earth
+from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
+                                                     get_sh_data)
 from GravNN.Networks import utils
-from GravNN.Networks.Plotting import Plotting
-from GravNN.Networks.Callbacks import CustomCallback
-from GravNN.Networks.Compression import (cluster_model, prune_model,
-                                         quantize_model)
+from GravNN.Networks.Constraints import no_pinn, pinn_A
 from GravNN.Networks.Model import CustomModel, load_config_and_model
-from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
-                                      TraditionalNet)
-from GravNN.Networks.Plotting import Plotting
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
-from GravNN.Support.Grid import Grid
-from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration
+from GravNN.Trajectories import DHGridDist
 from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 if sys.platform == 'win32':
     physical_devices = tf.config.list_physical_devices('GPU')

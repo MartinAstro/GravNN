@@ -1,6 +1,4 @@
-
 import tensorflow as tf
-
 
 def no_pinn(f, x, training):
     u_x = f(x, training)
@@ -82,46 +80,3 @@ def pinn_APLC(f, x, training):
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
     return tf.concat((u,  tf.multiply(-1.0,u_x), laplacian, curl),1)
-
-
-
-
-#def compute_spherical_gradient():
-    # if self.config['basis'][0] == 'spherical':
-    #     # This cannot work as currently designed. The gradient at theta [0, 180] is divergent. 
-    #     with tf.GradientTape() as tape:
-    #         tape.watch(x)
-    #         U_pred = self.network(x, training)
-    #     gradients = tape.gradient(U_pred, x)
-    #     # https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates#Del_formula
-    #     a0 = -gradients[:,0]
-    #     # In wiki article, theta is 0-180 deg (which has been phi in our definition)
-    #     theta = tf.add(tf.multiply(x[:,2],np.pi), np.pi)
-    #     a1 = -(1.0/x[:,0])*(1.0/tf.sin(theta))*gradients[:,1]
-    #     a2 = -(1.0/x[:,0])*gradients[:,2]
-
-    #     #print(a2.shape)
-    #     a_pred = tf.concat([[a0], [a1], [a2]], 0)
-    #     a_pred = tf.reshape(a_pred, [-1, 3])
-    # else:   
-    # 
-
-# # Periodic boundary conditions 
-# if self.config['basis'][0] == 'spherical':
-    
-#     x_periodic = tf.add(x, [0, 2, 2])
-#     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
-#     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
-#     loss += self.compiled_loss(y, a_pred_periodic)
-
-#     x_periodic = tf.add(x, [0, -2, -2])
-#     U_pred_periodic, a_pred_periodic = self(x_periodic, training=True)
-#     #a_pred_periodic = tf.where(tf.math.is_inf(a_pred_periodic), y, a_pred_periodic)
-#     loss += self.compiled_loss(y, a_pred_periodic)
-
-#     # 0 potential at infinity. 
-#     x_infinite = tf.multiply(x, [1E308, 1, 1])
-#     U_pred_infinite, a_pred_infinite = self(x_infinite, training=True)
-#     a_pred_infinite = tf.where(tf.math.is_inf(a_pred_infinite), y, a_pred_infinite)
-#     a_pred_infinite = tf.where(tf.math.is_nan(a_pred_infinite), y, a_pred_infinite)
-#     loss += self.compiled_loss(tf.zeros_like(a_pred_infinite), a_pred_infinite)

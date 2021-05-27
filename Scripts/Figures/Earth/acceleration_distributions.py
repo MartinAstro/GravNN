@@ -8,8 +8,7 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
+from GravNN.Trajectories import DHGridDist, ReducedGridDist
 
 import matplotlib.pyplot as plt
 

@@ -12,29 +12,15 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.io
 import tensorflow as tf
-#import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks import utils
-from GravNN.Networks.Plotting import Plotting
-from GravNN.Networks.Callbacks import CustomCallback
-from GravNN.Networks.Compression import (cluster_model, prune_model,
-                                         quantize_model)
-from GravNN.Networks.Model import CustomModel, load_config_and_model
-from GravNN.Networks.Networks import (DenseNet, InceptionNet, ResNet,
-                                      TraditionalNet)
-from GravNN.Networks.Plotting import Plotting
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.ReducedGridDist import ReducedGridDist
-from GravNN.Trajectories.ReducedRandDist import ReducedRandDist
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.Grid import Grid
-from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration
+from GravNN.Support.transformations import (cart2sph, project_acceleration,
+                                            sphere2cart)
+from GravNN.Trajectories import DHGridDist
 from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 np.random.seed(1234)
 tf.random.set_seed(0)

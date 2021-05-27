@@ -1,7 +1,6 @@
 import numpy as np
 
-from GravNN.Trajectories.RandomDist import RandomDist
-from GravNN.Trajectories.ExponentialDist import ExponentialDist
+from GravNN.Trajectories import RandomDist, ExponentialDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Support.transformations import cart2sph
 

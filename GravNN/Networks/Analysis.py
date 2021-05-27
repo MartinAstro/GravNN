@@ -1,19 +1,15 @@
 
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks import utils
 from GravNN.Networks.Data import standardize_output
-from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
 from GravNN.Support.transformations import sphere2cart, cart2sph, invert_projection, project_acceleration
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.FibonacciDist import FibonacciDist
+from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
 import numpy as np
 import pickle
-import time
-import os
 import pandas as pd
 
 def nearest_analytic(map_stat_series, value):
@@ -200,5 +196,6 @@ class Analysis():
             df = pd.DataFrame().from_dict(stats).set_index('alt')
             df_all = df_all.append(df)
         print(df_all)
+        df_all.to_pickle( "/Data/Networks/"+str(model_id)+"/rse_alt.data")
         return df_all
         

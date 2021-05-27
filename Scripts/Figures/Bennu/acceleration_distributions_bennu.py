@@ -10,8 +10,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
 from GravNN.CelestialBodies.Asteroids import Bennu
-from GravNN.Trajectories.DHGridDist import DHGridDist
-from GravNN.Trajectories.SurfaceDist import SurfaceDist
+from GravNN.Trajectories import DHGridDist, SurfaceDist
 
 import matplotlib.pyplot as plt
 
