@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC
-
+from GravNN.Networks.Annealing import update_constant
 np.random.seed(1234)
 
 class CustomModel(tf.keras.Model):
@@ -21,6 +21,11 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config['dtype'][0]
         self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
+        self.calc_adaptive_constant = update_constant
+        self.scale_loss = config['PINN_constraint_fcn'][1]
+        self.adaptive_constant = tf.Variable(config['PINN_constraint_fcn'][2], dtype=tf.float32)
+        self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
+
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
     
@@ -29,26 +34,56 @@ class CustomModel(tf.keras.Model):
         x, y = data 
         with tf.GradientTape() as tape:
             y_hat = self(x, training=True)
-            loss = self.compiled_loss(tf.multiply(y, self.class_weight), \
-                                      tf.multiply(y_hat, self.class_weight))#, class_weights=None)
+            loss = self.compiled_loss(y, y_hat)
             loss = self.optimizer.get_scaled_loss(loss)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
 
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.compiled_metrics.update_state(tf.multiply(y, self.class_weight), \
-                                           tf.multiply(y_hat, self.class_weight))
+        self.compiled_metrics.update_state(y, y_hat)
         return {m.name: m.result() for m in self.metrics}
         
+
+    # def train_step(self, data):
+    #     x, y = data
+    #     with tf.GradientTape(persistent=True) as tape:
+    #         y_hat = self(x, training=True)
+
+    #         # Compute loss components, scale them, sum them
+    #         loss_components = tf.reduce_mean(tf.square(y_hat - y), 0)
+    #         updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
+    #         loss = tf.reduce_sum(updated_loss_components)
+    #         loss = self.optimizer.get_scaled_loss(loss)
+
+    #     # calculate new adaptive constant
+    #     self.adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
+    #                                                             self.adaptive_constant, self.beta, \
+    #                                                             self.trainable_weights)
+    #     gradients = tape.gradient(loss, self.trainable_variables)
+    #     gradients = self.optimizer.get_unscaled_gradients(gradients)
+    #     del tape
+
+    #     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    #     return {'loss' : loss, 'adaptive_constant' : self.adaptive_constant}
+
+    # @tf.function(experimental_compile=True)
+    # def test_step(self, data):
+    #     x, y = data
+    #     y_hat = self(x, training=True)
+    #     loss_components = tf.reduce_mean(tf.square(y_hat - y), 0)
+    #     updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
+    #     loss =  tf.reduce_sum(updated_loss_components)
+    #     return {'loss' : loss}
+    
+
     @tf.function(experimental_compile=True)
     def test_step(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss = self.compiled_loss(tf.multiply(y, self.class_weight), \
-                                  tf.multiply(y_hat, self.class_weight))
-        self.compiled_metrics.update_state(tf.multiply(y, self.class_weight), \
-                                           tf.multiply(y_hat, self.class_weight))
+        loss = self.compiled_loss(y, y_hat)
+        self.compiled_metrics.update_state(y, y_hat)
         return {m.name: m.result() for m in self.metrics}
     
     def output(self, dataset):
@@ -269,12 +304,7 @@ def load_config_and_model(model_id, df_file):
     config = backwards_compatibility(config)
     network = tf.keras.models.load_model(os.path.abspath('.') + "/Data/Networks/"+str(model_id)+"/network")
     model = CustomModel(config, network)
-    if 'adam' in config['optimizer'][0]:
-        optimizer = tf.keras.optimizers.Adam()
-    elif 'rms' in config['optimizer'][0]:
-        optimizer = tf.keras.optimizers.RMSprop()
-    else:
-        exit("No Optimizer Found")
+    optimizer = utils._get_optimizer(config['optimizer'][0])
     model.compile(optimizer=optimizer, loss='mse') #! Check that this compile is even necessary
 
     return config, model

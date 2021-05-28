@@ -114,12 +114,7 @@ def load_config_and_model(model_id, df_file):
     # Reinitialize the model
     network = tf.keras.models.load_model('C:\\Users\\John\\Documents\\Research\\ML_Gravity' + "/Data/Networks/"+str(model_id)+"/network")
     model = CustomModel(config, network)
-    if 'adam' in config['optimizer'][0]:
-        optimizer = tf.keras.optimizers.Adam()
-    elif 'rms' in config['optimizer'][0]:
-        optimizer = tf.keras.optimizers.RMSprop()
-    else:
-        exit("No Optimizer Found")
+    optimizer = utils._get_optimizer(config['optimizer'][0])
     model.compile(optimizer=optimizer, loss='mse') #! Check that this compile is even necessary
 
     return config, model

@@ -35,6 +35,18 @@ def set_mixed_precision():
 
 def _get_optimizer(name):
     import tensorflow as tf
+
+    # This maintains backwards compatibility for when
+    # the entire optimizer object was saved
+    if 'adam' in name.lower():
+        name = 'adam'
+    elif 'rms' in name.lower():
+        name = 'rmsprop'
+    elif 'sgd' in name.lower():
+        name = 'sgd'
+    else:
+        pass
+
     return {
         "sgd": tf.keras.optimizers.SGD(),
         "adagrad": tf.keras.optimizers.Adagrad(),
@@ -46,14 +58,15 @@ def _get_optimizer(name):
 def _get_PI_constraint(name):
     from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AP, \
         pinn_AL, pinn_ALC, pinn_APL, pinn_APLC
+    from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal
     return {
-        "no_pinn": no_pinn,
-        "pinn_a": pinn_A,
-        "pinn_ap": pinn_AP,
-        "pinn_al": pinn_AL,
-        "pinn_alc": pinn_ALC,
-        "pinn_apl": pinn_APL,
-        "pinn_aplc": pinn_APLC,
+        "no_pinn": [no_pinn, no_pinn_anneal, [-1.0]], # scaling ignored
+        "pinn_a": [pinn_A, pinn_A_anneal, [-1.0]], # scaling ignored
+        "pinn_ap": [pinn_AP, pinn_AP_anneal, [-1.0, 1.0]],
+        "pinn_al": [pinn_AL, pinn_AL_anneal, [-1.0, 1.0]],
+        "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],
+        "pinn_apl": [pinn_APL, pinn_APL_anneal, [-1.0, 1.0, 1.0]],
+        "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]]
     }[name.lower()]
 
 def _get_network_fcn(name):
@@ -76,8 +89,7 @@ def load_hparams_to_config(hparams, config):
     for key, value in hparams.items():
         config[key] = [value]
 
-    config['PINN_constraint_fcn'] = [_get_PI_constraint(config['PINN_constraint_fcn'][0])]    
-    config['optimizer'] = [_get_optimizer(config['optimizer'][0])]
+    config['PINN_constraint_fcn'] = _get_PI_constraint(config['PINN_constraint_fcn'][0])    
     config['network_type'] = [_get_network_fcn(config['network_type'][0])]
     config['dtype'] = [_get_tf_dtype(config['dtype'][0])]
     
@@ -89,7 +101,7 @@ def load_hparams_to_config(hparams, config):
 
 
 def configure_optimizer(config, mixed_precision):
-    optimizer = config['optimizer'][0]
+    optimizer = _get_optimizer(config['optimizer'][0])
     optimizer.learning_rate = config['learning_rate'][0]
     if config['mixed_precision'][0]:
         optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')

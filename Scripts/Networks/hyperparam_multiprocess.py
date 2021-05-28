@@ -5,29 +5,33 @@ from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 
 def main():
-    df_file = "Data/Dataframes/useless_05_27_21.data"
+    df_file = "Data/Dataframes/useless_05_28_21.data"
     threads = 6
 
     #config = get_default_earth_config()
-    config = get_default_earth_pinn_config()
+    #config = get_default_earth_pinn_config()
+    config = get_default_eros_pinn_config()
 
     hparams = {
-        "N_dist": [5000000],
+        "N_dist": [100000],
         "N_train": [49000],
         "epochs": [1000],
         "decay_rate_epoch": [25000],
         "decay_epoch_0": [25000],
         "decay_rate": [0.5],
-        "learning_rate": [0.005, 0.001, 0.0005],
+        "learning_rate": [0.005],
         "batch_size": [131072 * 2],
-        "activation": ["gelu", 'tanh'],
+        "activation": ["gelu"],
         "initializer": ["glorot_uniform"],
         "network_type": ["traditional"],
-        "PINN_constraint_fcn": ["pinn_A"],
+        "PINN_constraint_fcn": [ "pinn_A"],
         "scale_by": ["a"],
         "mixed_precision": [False],
         "num_units": [20],
-        "schedule_type" : ['none']
+        "schedule_type" : ['exp_decay'],
+
+        "beta" : [0.9],
+
     }
 
     args = configure_run_args(config, hparams)
@@ -57,7 +61,7 @@ def run(config_original, hparams):
     mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
     np.random.seed(1234)
     tf.random.set_seed(0)
-
+    #tf.config.run_functions_eagerly(True)
     tf.keras.backend.clear_session()
 
     # Standardize Configuration
@@ -73,7 +77,7 @@ def run(config_original, hparams):
     optimizer = configure_optimizer(config, mixed_precision)
     network = load_network(config)
     model = CustomModel(config, network)
-    model.compile(optimizer=optimizer, loss="mse")  # , run_eagerly=True)
+    model.compile(optimizer=optimizer, loss="mse")
 
     # Train network
     callback = CustomCallback()
