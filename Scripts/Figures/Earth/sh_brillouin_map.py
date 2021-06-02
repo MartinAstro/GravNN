@@ -65,9 +65,20 @@ def main():
     map_vis.add_colorbar(im, '[mGal]', vlim, extend='max')
     map_vis.save(plt.gcf(), directory + "sh_brillouin_true_map_half.pdf")
 
-    # grid_true = Grid(trajectory=trajectory, accelerations=C110_a-C22_a)
-    # map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
-    # map_vis.save(plt.gcf(), directory + "sh_brillouin_110_map.pdf")
+
+    # LEO Altitude 
+    trajectory = DHGridDist(planet, radius_min+420000.0, degree=density_deg)
+
+    Call_r0_gm = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
+    Call_a = Call_r0_gm.load().accelerations
+
+    C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
+    C22_a = C22_r0_gm.load().accelerations
+        
+    vlim= [0, 30]
+    grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
+    map_vis.save(plt.gcf(), directory + "sh_brillouin_LEO_true_map.pdf")
 
 
     plt.show()

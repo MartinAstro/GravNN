@@ -163,20 +163,40 @@ def acceleration_histogram_std():
     grid_C22 = get_grid(2, map_type)
 
     grid_Call_m_C22 = grid_true - grid_C22
+    map_vis = MapVisualization(unit='mGal')
     map_vis.newFig()
     plt.hist(grid_Call_m_C22.total.reshape((-1,)), 1000)
-    # plt.vlines(np.mean(grid_Call_m_C22.total), 0, 5000, linestyle='--' label='mean')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + np.std(grid_Call_m_C22.total), 0, 5000, colors='g', label='mean+std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 2*np.std(grid_Call_m_C22.total), 0, 5000, colors='r', label='mean+2std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 3*np.std(grid_Call_m_C22.total), 0, 5000, colors='y', label='mean+3std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 4*np.std(grid_Call_m_C22.total), 0, 5000, colors='c', label='mean+4std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 5*np.std(grid_Call_m_C22.total), 0, 5000, colors='m', label='mean+5std')
     plt.xlim([0, 1E-2])
-    #plt.vlines(1E-8, 0, 5000, colors='y', label='SRP at Earth')
-    #plt.xlabel("||a-(a0 + grad(U_c22))|| [m/s^2]")
-    plt.xlabel('$|\delta \mathbf{a}|$' + '[m/s$^2$]')
+    plt.xlabel('$|\delta \mathbf{a}|$' + '[mGal]')
     plt.ylabel('Frequency')
     map_vis.save(plt.gcf(), directory + 'earth_acc_histogram.pdf')
+
+def acceleration_histogram_scaled():
+    # Distribution Stats 
+    map_type = 'world'
+    grid_true = get_grid(1000, map_type)
+    grid_C22 = get_grid(2, map_type)
+
+    grid_Call_m_C22 = grid_true - grid_C22
+
+    a = grid_Call_m_C22.acceleration
+    from GravNN.Preprocessors import UniformScaler
+    a_transformer = UniformScaler()
+    a_transformed = a_transformer.fit_transform(a)
+
+    planet = Earth()
+    density_deg = 180
+    radius_min = planet.radius
+    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
+
+    grid_transformed = Grid(trajectory, a_transformed)
+    map_vis = MapVisualization(unit='m/s^2')
+
+    map_vis.newFig()
+    plt.hist(grid_transformed.total.reshape((-1,)), 1000)
+    plt.xlabel('Transformed $|\delta \mathbf{a}|$' + '[m/s$^2$]')
+    plt.ylabel('Frequency')
+    map_vis.save(plt.gcf(), directory + 'earth_acc_transformed_histogram.pdf')
 
 def acceleration_masks():
     map_type = 'world'
@@ -258,7 +278,8 @@ def main():
     map_type = 'world'
     #acceleration_distribution_plots(map_type)
     #acceleration_histogram_masks(map_type)
-    acceleration_histogram_std()
+    # acceleration_histogram_std()
+    acceleration_histogram_scaled()
     #cumulative_distribution()
     #acceleration_masks()
    
