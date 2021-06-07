@@ -5,29 +5,31 @@ from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 
 def main():
-    df_file = "Data/Dataframes/useless_05_28_21.data"
-    threads = 6
+    df_file = "Data/Dataframes/eros_traditional.data"
+    threads = 1
 
     #config = get_default_earth_config()
     #config = get_default_earth_pinn_config()
-    config = get_default_eros_pinn_config()
+    #config = get_default_eros_pinn_config()
+    config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [100000],
-        "N_train": [49000],
-        "epochs": [1000],
+        "N_dist": [1000000],
+        "N_train": [900000],
+        "N_val" : [100000],
+        "epochs": [100000],
         "decay_rate_epoch": [25000],
         "decay_epoch_0": [25000],
         "decay_rate": [0.5],
-        "learning_rate": [0.005],
-        "batch_size": [131072 * 2],
+        "learning_rate": [0.001],
+        "batch_size": [131072 / 2],
         "activation": ["gelu"],
         "initializer": ["glorot_uniform"],
         "network_type": ["traditional"],
-        "PINN_constraint_fcn": [ "pinn_A"],
+        "PINN_constraint_fcn": ["no_pinn"],
         "scale_by": ["a"],
         "mixed_precision": [False],
-        "num_units": [20],
+        "num_units": [20, 40, 80],
         "schedule_type" : ['exp_decay'],
 
         "beta" : [0.9],

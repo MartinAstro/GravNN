@@ -47,7 +47,7 @@ def main():
 
         a_pred = a_transformer.inverse_transform(a)
         grid_true = Grid(trajectory=trajectory, accelerations=a_pred)
-        map_vis.plot_grid(grid_true.total, vlim=vlim, label='[mGal]')#"U_{1000}^{(2)} - U_{100}^{(2)}")
+        map_vis.plot_grid(grid_true.total, vlim=vlim, label='[mGal]', extend='max')#"U_{1000}^{(2)} - U_{100}^{(2)}")
         map_vis.save(plt.gcf(), directory + "pinn_brillouin_" + str(row['num_units']) + ".pdf")
 
 

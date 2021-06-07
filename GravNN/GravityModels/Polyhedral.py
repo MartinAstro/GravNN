@@ -21,7 +21,7 @@ def get_poly_data(trajectory, obj_file, **kwargs):
 
     x = Call_r0_gm.positions # position (N x 3)
     a = Call_r0_gm.accelerations
-    u = Call_r0_gm.potentials # potential (N x 1)
+    u = np.array([Call_r0_gm.potentials]).transpose() # potential (N x 1)
 
     return x, a, u
 

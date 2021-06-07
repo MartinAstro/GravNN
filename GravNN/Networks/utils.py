@@ -141,9 +141,13 @@ def get_gzipped_model_size(model):
 def check_config_combos(config):
     from GravNN.Networks.Constraints import no_pinn
     if config['PINN_constraint_fcn'][0] != no_pinn:
-        assert config['layers'][0][-1] == 1, "If PINN, the final layer must have one output (the potential, U)"
+        if config['layers'][0][-1] != 1:
+            print("WARNING: The final layer for a PINN must have one output (the potential, U) -- changing automatically")
+            config['layers'][0][-1] = 1, 
     else:
-        assert config['layers'][0][-1] == 3, "If not PINN, the final layer must have three outputs (the acceleration vector, a)"
+        if config['layers'][0][-1] != 3:
+            config['layers'][0][-1] = 3
+            print("WARNING: The final layer for a traditional network must have three outputs (the acceleration vector, a) -- changing automatically")
     if config['network_type'][0].__class__.__name__ == "InceptionNet":
         assert len(config['layers'][0][1]) != 0, "Inception network requires layers with multiple sizes, i.e. [[3, [3,7,11], [3,7,11], 1]]"
 

@@ -33,7 +33,9 @@ def save_analysis(df_file, results):
 def save_training(df_file, configs):
     for config in configs:
         config = dict(sorted(config.items(), key = lambda kv: kv[0]))
+        config['PINN_constraint_fcn'] = [config['PINN_constraint_fcn'][0]]# Can't have multiple args in each list
         df = pd.DataFrame().from_dict(config).set_index('timetag')
+
         try: 
             df_all = pd.read_pickle(df_file)
             df_all = df_all.append(df)

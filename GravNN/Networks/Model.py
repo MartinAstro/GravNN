@@ -22,9 +22,10 @@ class CustomModel(tf.keras.Model):
         self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
         self.calc_adaptive_constant = update_constant
-        self.scale_loss = config['PINN_constraint_fcn'][1]
-        self.adaptive_constant = tf.Variable(config['PINN_constraint_fcn'][2], dtype=tf.float32)
-        self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
+        
+        #self.scale_loss = config['PINN_constraint_fcn'][1]
+        #self.adaptive_constant = tf.Variable(config['PINN_constraint_fcn'][2], dtype=tf.float32)
+        #self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
@@ -256,6 +257,8 @@ class CustomModel(tf.keras.Model):
 
         # convert to dataframe
         config = dict(sorted(self.config.items(), key = lambda kv: kv[0]))
+        config['PINN_constraint_fcn'] = [config['PINN_constraint_fcn'][0]]# Can't have multiple args in each list
+
         df = pd.DataFrame().from_dict(config).set_index('timetag')
 
         # save network and config to directory

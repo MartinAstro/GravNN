@@ -88,6 +88,35 @@ def plot_intermediate_layer(config, model, columns, planet=None):
    
     map_vis.save(plt.gcf(), "Intermediate_Layers.pdf")
     
+    # Zoomed in final layer
+    cols = 3
+    rows = 1
+    map_vis.newFig()
+    basis_functions = np.array(layer_models[-1](x), dtype=np.float32)
+    col_i = 0
+    row_i = 0
+    for k in range(cols):
+        if k >= basis_functions.shape[1]:
+            continue
+        basis_function = np.transpose(basis_functions)[k]
+
+        # If it is the first or last layer, make sure the 3 components are centered
+        if (row_i == 0 or row_i == N_layers-1) and col_i == 0:
+            col_i = cols//2 - 1
+
+        plt.subplot(rows, cols, row_i*cols+col_i+1)
+
+        grid_pred = np.reshape(basis_function,(traj.N_lon,traj.N_lat))
+        sigma=1
+        im = map_vis.new_map(grid_pred)#, vlim=[np.mean(grid_pred) - sigma*np.std(grid_pred), np.mean(grid_pred) + sigma*np.std(grid_pred)])
+        im.set_clim(vmin=(np.mean(grid_pred) - sigma*np.std(grid_pred))*10000,vmax=(np.mean(grid_pred) + sigma*np.std(grid_pred))*10000)
+        plt.xlabel(None)
+        plt.ylabel(None)
+        plt.xticks([])
+        plt.yticks([])
+        col_i += 1
+    map_vis.save(plt.gcf(), "Final_Layers.pdf")
+
 def load_config_and_model(model_id, df_file):
     # Get the parameters and stats for a given run
     # If the dataframe hasn't been loaded
@@ -128,7 +157,7 @@ def plot_intermediate_layers_helper(idx, df, columns, planet=None):
 def main():
     df_file = 'C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\traditional_nn_df.data'
     bent_df = pd.read_pickle(df_file)#.sort_values(by='Brillouin_rse_mean', ascending=True)
-    plot_intermediate_layers_helper(1, bent_df, 5, Earth())
+    plot_intermediate_layers_helper(0, bent_df, 5, Earth())
     plt.show()
 
 if __name__ == "__main__":

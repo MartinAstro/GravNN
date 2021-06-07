@@ -65,20 +65,30 @@ class MapVisualization(VisualizationBase):
     def add_colorbar(self,im, label, **kwargs):
         extend = kwargs.get('extend', 'neither')
         vlim = kwargs.get('vlim', None)
+        loc = kwargs.get('loc', 'right')
+        orientation = kwargs.get('orientation', 'vertical')
+        pad = kwargs.get('pad', 0.05)
+
         ax = plt.gca()
 
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cax = divider.append_axes(loc, size="5%", pad=pad)
         if vlim is not None:
             t = np.linspace(vlim[0], vlim[1], 5)
             if self.unit == 'mGal':
-                cBar = plt.colorbar(im, cax=cax, ticks=t, format='$%.2f$', extend=extend)
+                cBar = plt.colorbar(im, cax=cax, ticks=t, format='$%.2f$', extend=extend, orientation=orientation)
             else:
-                cBar = plt.colorbar(im, cax=cax, ticks=t, format='$%.4f$', extend=extend)
+                cBar = plt.colorbar(im, cax=cax, ticks=t, format='$%.4f$', extend=extend, orientation=orientation)
 
         else:
             cBar = plt.colorbar(im, cax=cax)
-        cBar.ax.set_ylabel(label)
+        if orientation == 'vertical':
+            cBar.ax.set_ylabel(label)
+        else:
+            cBar.ax.set_xlabel(label)
+            cBar.ax.xaxis.set_ticks_position('top')
+            cBar.ax.xaxis.set_label_position('top')
+
         # create an axes on the right side of ax. The width of cax will be 5%
         # of ax and the padding between cax and ax will be fixed at 0.05 inch.
 

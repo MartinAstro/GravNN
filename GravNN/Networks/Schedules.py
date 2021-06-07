@@ -2,10 +2,10 @@ import tensorflow as tf
 
 
 def _get_exp_decay_schedule(config):
-    decay_rate = config.get("decay_rate")
-    initial_learning_rate = config.get("learning_rate")
-    decay_rate_epoch = config.get("decay_rate_epoch")
-    decay_epoch_0 = config.get("decay_epoch_0")
+    decay_rate = config.get("decay_rate")[0]
+    initial_learning_rate = config.get("learning_rate")[0]
+    decay_rate_epoch = config.get("decay_rate_epoch")[0]
+    decay_epoch_0 = config.get("decay_epoch_0")[0]
 
     def exp_decay(epoch, lr):
         epoch0 = decay_epoch_0
@@ -20,10 +20,10 @@ def _get_exp_decay_schedule(config):
 
 
 def _get_plateau_schedule(config):
-    patience = config.get("patience")
-    decay_rate = config.get("decay_rate")
-    min_delta = config.get("min_delta")
-    min_lr = config.get("min_lr")
+    patience = config.get("patience")[0]
+    decay_rate = config.get("decay_rate")[0]
+    min_delta = config.get("min_delta")[0]
+    min_lr = config.get("min_lr")[0]
     return tf.keras.callbacks.ReduceLROnPlateau(
         monitor="val_loss",
         patience=patience,
@@ -35,8 +35,8 @@ def _get_plateau_schedule(config):
 
 
 def _get_cosine_decay_schedule(config):
-    initial_learning_rate = config.get("learning_rate")
-    decay_steps = config.get("decay_steps")
+    initial_learning_rate = config.get("learning_rate")[0]
+    decay_steps = config.get("decay_steps")[0]
     alpha = config.get("alpha", 0.0)
     return tf.keras.optimizers.schedules.CosineDecay(
         initial_learning_rate, decay_steps, alpha=alpha, name=None
@@ -44,8 +44,8 @@ def _get_cosine_decay_schedule(config):
 
 
 def _get_cosine_restart_decay_schedule(config):
-    initial_learning_rate = config.get("learning_rate")
-    first_decay_steps = config.get("first_decay_steps")
+    initial_learning_rate = config.get("learning_rate")[0]
+    first_decay_steps = config.get("first_decay_steps")[0]
     return tf.keras.optimizers.schedules.CosineDecayRestarts(
         initial_learning_rate,
         first_decay_steps,

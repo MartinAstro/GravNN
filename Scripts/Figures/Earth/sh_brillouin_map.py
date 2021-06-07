@@ -61,8 +61,9 @@ def main():
     map_vis.tick_interval = [60, 60]
     map_vis.newFig()
     vlim= [0, 40]
+    grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
     im = map_vis.new_map(grid_true.total, vlim=vlim, cmap='viridis')#,log_scale=True)
-    map_vis.add_colorbar(im, '[mGal]', vlim, extend='max')
+    map_vis.add_colorbar(im, '[mGal]', vlim=vlim, extend='max', loc='top', orientation='horizontal', pad=0.05)    
     map_vis.save(plt.gcf(), directory + "sh_brillouin_true_map_half.pdf")
 
 
@@ -75,9 +76,10 @@ def main():
     C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=trajectory)
     C22_a = C22_r0_gm.load().accelerations
         
-    vlim= [0, 30]
+    vlim= [0, 5]
+    map_vis.fig_size = map_vis.full_page
     grid_true = Grid(trajectory=trajectory, accelerations=Call_a-C22_a)
-    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label='[mGal]')
     map_vis.save(plt.gcf(), directory + "sh_brillouin_LEO_true_map.pdf")
 
 

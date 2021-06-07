@@ -10,6 +10,18 @@ from GravNN.Trajectories import DHGridDist
 
 import matplotlib.pyplot as plt
 
+def calculate_entropy(data, max=100):
+    from scipy.stats import entropy
+    n, bins, patches = plt.hist(data, 1000)
+    scipy_entropy = np.round(entropy(n/np.sum(n)),2)
+
+    values, edges = np.histogram(data, bins=1000, range=[0, max])
+    numpy_entropy = np.round(entropy(values/np.sum(values)),2)
+
+    print("Scipy Entropy:" + str(scipy_entropy))
+    print("Numpy Entropy:" + str(numpy_entropy))
+    return numpy_entropy
+
 def std_masks(grid, sigma):
     sigma_mask = np.where(grid.total > (np.mean(grid.total) + sigma*np.std(grid.total)))
     sigma_mask_compliment = np.where(grid.total < (np.mean(grid.total) + sigma*np.std(grid.total)))
@@ -65,30 +77,6 @@ def acceleration_histogram_masks():
     ax2.tick_params('y', colors=colors[1])
     plt.tight_layout()
     plt.show()
-
-def acceleration_histogram_scaled():
-    # Distribution Stats 
-    grid_true = get_grid(1000)
-    grid_C22 = get_grid(2)
-
-    grid_Call_m_C22 = grid_true - grid_C22
-
-    a = grid_Call_m_C22.acceleration
-    from GravNN.Preprocessors import UniformScaler
-    a_transformer = UniformScaler()
-    a_transformed = a_transformer.fit_transform(a)
-
-    planet = Moon()
-    density_deg = 180
-    radius_min = planet.radius
-    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-
-    grid_transformed = Grid(trajectory, a_transformed)
-    map_vis.newFig()
-    plt.hist(grid_transformed.total.reshape((-1,)), 1000)
-    plt.xlabel('Transformed $|\delta \mathbf{a}|$' + '[m/s$^2$]')
-    plt.ylabel('Frequency')
-    map_vis.save(plt.gcf(), directory + 'moon_acc_transformed_histogram.pdf')
 
 def acceleration_distribution_plots(map_type):
 
@@ -181,19 +169,48 @@ def acceleration_histogram_std():
 
     grid_Call_m_C22 = grid_true - grid_C22
     map_vis = MapVisualization(unit='mGal')
-    map_vis.newFig()
-    plt.hist(grid_Call_m_C22.total.reshape((-1,)), 1000)
-    # plt.vlines(np.mean(grid_Call_m_C22.total), 0, 5000, label='mean', linestyle='--')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + np.std(grid_Call_m_C22.total), 0, 5000, colors='g', label='mean+std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 2*np.std(grid_Call_m_C22.total), 0, 5000, colors='r', label='mean+2std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 3*np.std(grid_Call_m_C22.total), 0, 5000, colors='y', label='mean+3std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 4*np.std(grid_Call_m_C22.total), 0, 5000, colors='c', label='mean+4std')
-    # plt.vlines(np.mean(grid_Call_m_C22.total) + 5*np.std(grid_Call_m_C22.total), 0, 5000, colors='m', label='mean+5std')
-    plt.xlim([0, 1E-2])
-    plt.xlabel('$|\delta \mathbf{a}|$' + '[m/s$^2$]')
-    plt.ylabel('Frequency')
+    map_vis.fig_size = map_vis.half_page
 
+    map_vis.newFig()
+    data = grid_Call_m_C22.total.reshape((-1,))*10000
+    plt.xlim([0, (1E-2)*10000])
+    plt.xlabel('$|\delta \mathbf{a}|$' + '[mGal]')
+    plt.ylabel('Frequency')
+    entropy = calculate_entropy(data)
+    plt.legend(['Entropy = ' + str(entropy)])
     map_vis.save(plt.gcf(), directory + 'moon_acc_histogram.pdf')
+
+
+def acceleration_histogram_scaled():
+    # Distribution Stats 
+    grid_true = get_grid(1000)
+    grid_C22 = get_grid(2)
+
+    grid_Call_m_C22 = grid_true - grid_C22
+
+    a = grid_Call_m_C22.acceleration
+    from GravNN.Preprocessors import UniformScaler
+    a_transformer = UniformScaler()
+    a_transformed = a_transformer.fit_transform(a)
+
+    planet = Moon()
+    density_deg = 180
+    radius_min = planet.radius
+    trajectory = DHGridDist(planet, radius_min, degree=density_deg)
+
+    grid_transformed = Grid(trajectory, a_transformed)
+    map_vis = MapVisualization(unit='m/s^2')
+    map_vis.fig_size = map_vis.half_page
+
+    map_vis.newFig()
+    data = grid_transformed.total.reshape((-1,))
+    plt.xlabel('Transformed $|\delta \mathbf{a\'}|$')
+    plt.ylabel('Frequency')
+    plt.xlim([0,1])
+
+    entropy = calculate_entropy(data, max=1)
+    plt.legend(['Entropy = ' + str(entropy)])
+    map_vis.save(plt.gcf(), directory + 'moon_acc_transformed_histogram.pdf')
 
 def acceleration_masks():
     grid_true = get_grid(1000)
@@ -284,7 +301,7 @@ def main():
 
     #acceleration_distribution_plots()
     #acceleration_histogram_masks()
-    # acceleration_histogram_std()
+    acceleration_histogram_std()
     acceleration_histogram_scaled()
     #cumulative_distribution()
     #acceleration_masks()

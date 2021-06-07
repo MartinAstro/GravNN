@@ -12,6 +12,18 @@ from GravNN.Trajectories import DHGridDist, ReducedGridDist
 
 import matplotlib.pyplot as plt
 
+def calculate_entropy(data, max=100):
+    from scipy.stats import entropy
+    n, bins, patches = plt.hist(data, 1000)
+    scipy_entropy = np.round(entropy(n/np.sum(n)),2)
+
+    values, edges = np.histogram(data, bins=1000, range=[0, max])
+    numpy_entropy = np.round(entropy(values/np.sum(values)),2)
+
+    print("Scipy Entropy:" + str(scipy_entropy))
+    print("Numpy Entropy:" + str(numpy_entropy))
+    return numpy_entropy
+
 def std_masks(grid, sigma):
     sigma_mask = np.where(grid.total > (np.mean(grid.total) + sigma*np.std(grid.total)))
     sigma_mask_compliment = np.where(grid.total < (np.mean(grid.total) + sigma*np.std(grid.total)))
@@ -164,11 +176,15 @@ def acceleration_histogram_std():
 
     grid_Call_m_C22 = grid_true - grid_C22
     map_vis = MapVisualization(unit='mGal')
+    map_vis.fig_size = map_vis.half_page
     map_vis.newFig()
-    plt.hist(grid_Call_m_C22.total.reshape((-1,)), 1000)
-    plt.xlim([0, 1E-2])
+    data = grid_Call_m_C22.total.reshape((-1,))*10000
+    plt.xlim([0, (1E-2)*10000])
     plt.xlabel('$|\delta \mathbf{a}|$' + '[mGal]')
     plt.ylabel('Frequency')
+    entropy = calculate_entropy(data)
+    plt.legend(['Entropy = ' + str(entropy)])
+
     map_vis.save(plt.gcf(), directory + 'earth_acc_histogram.pdf')
 
 def acceleration_histogram_scaled():
@@ -191,11 +207,16 @@ def acceleration_histogram_scaled():
 
     grid_transformed = Grid(trajectory, a_transformed)
     map_vis = MapVisualization(unit='m/s^2')
+    map_vis.fig_size = map_vis.half_page
 
     map_vis.newFig()
-    plt.hist(grid_transformed.total.reshape((-1,)), 1000)
-    plt.xlabel('Transformed $|\delta \mathbf{a}|$' + '[m/s$^2$]')
+    data =grid_transformed.total.reshape((-1,))
+    entropy = calculate_entropy(data, max=1)
+    plt.xlim([0,1])
+    plt.xlabel('Transformed $|\delta \mathbf{a\'}|$' )
     plt.ylabel('Frequency')
+    plt.legend(['Entropy = ' + str(entropy)])
+
     map_vis.save(plt.gcf(), directory + 'earth_acc_transformed_histogram.pdf')
 
 def acceleration_masks():
@@ -278,7 +299,7 @@ def main():
     map_type = 'world'
     #acceleration_distribution_plots(map_type)
     #acceleration_histogram_masks(map_type)
-    # acceleration_histogram_std()
+    acceleration_histogram_std()
     acceleration_histogram_scaled()
     #cumulative_distribution()
     #acceleration_masks()
