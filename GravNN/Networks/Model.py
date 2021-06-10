@@ -16,76 +16,86 @@ class CustomModel(tf.keras.Model):
         super(CustomModel, self).__init__()
         self.config = config
         self.network = network
-        self.eval = config['PINN_constraint_fcn'][0]
         self.mixed_precision = tf.constant(self.config['mixed_precision'][0], dtype=tf.bool)
         self.variable_cast = config['dtype'][0]
         self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
         self.calc_adaptive_constant = update_constant
-        
-        #self.scale_loss = config['PINN_constraint_fcn'][1]
-        #self.adaptive_constant = tf.Variable(config['PINN_constraint_fcn'][2], dtype=tf.float32)
-        #self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
+
+        PINN_variables = utils._get_PI_constraint(config['PINN_constraint_fcn'][0])
+        self.eval = PINN_variables[0]
+        self.scale_loss = PINN_variables[1]
+        self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
+        self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
     
-    @tf.function(experimental_compile=True)
-    def train_step(self, data):
-        x, y = data 
-        with tf.GradientTape() as tape:
-            y_hat = self(x, training=True)
-            loss = self.compiled_loss(y, y_hat)
-            loss = self.optimizer.get_scaled_loss(loss)
-
-        gradients = tape.gradient(loss, self.trainable_variables)
-        gradients = self.optimizer.get_unscaled_gradients(gradients)
-
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.compiled_metrics.update_state(y, y_hat)
-        return {m.name: m.result() for m in self.metrics}
-        
-
+    # @tf.function(jit_compile=True)
     # def train_step(self, data):
-    #     x, y = data
-    #     with tf.GradientTape(persistent=True) as tape:
+    #     x, y = data 
+    #     with tf.GradientTape() as tape:
     #         y_hat = self(x, training=True)
-
-    #         # Compute loss components, scale them, sum them
-    #         loss_components = tf.reduce_mean(tf.square(y_hat - y), 0)
-    #         updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
-    #         loss = tf.reduce_sum(updated_loss_components)
+    #         loss = self.compiled_loss(y, y_hat)
     #         loss = self.optimizer.get_scaled_loss(loss)
 
-    #     # calculate new adaptive constant
-    #     self.adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
-    #                                                             self.adaptive_constant, self.beta, \
-    #                                                             self.trainable_weights)
     #     gradients = tape.gradient(loss, self.trainable_variables)
     #     gradients = self.optimizer.get_unscaled_gradients(gradients)
-    #     del tape
 
     #     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-
-    #     return {'loss' : loss, 'adaptive_constant' : self.adaptive_constant}
-
-    # @tf.function(experimental_compile=True)
+    #     self.compiled_metrics.update_state(y, y_hat)
+    #     return {m.name: m.result() for m in self.metrics}
+        
+    # @tf.function(jit_compile=True)
     # def test_step(self, data):
     #     x, y = data
     #     y_hat = self(x, training=True)
-    #     loss_components = tf.reduce_mean(tf.square(y_hat - y), 0)
-    #     updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
-    #     loss =  tf.reduce_sum(updated_loss_components)
-    #     return {'loss' : loss}
-    
+    #     loss = self.compiled_loss(y, y_hat)
+    #     self.compiled_metrics.update_state(y, y_hat)
+    #     return {m.name: m.result() for m in self.metrics}
 
-    @tf.function(experimental_compile=True)
+    # def build(self, input_shape):
+    #     self.adaptive_constant = tf.Variable([-1.0], dtype=tf.float32)
+    #     super().build(input_shape)
+    
+    @tf.function()#jit_compile=True)
+    def train_step(self, data):
+        x, y = data
+        with tf.GradientTape(persistent=True) as tape:
+            y_hat = self(x, training=True)
+
+            # Compute loss components, scale them, sum them
+            loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat,y)), 0)
+            updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
+            #tf.print(updated_loss_components)
+            loss = tf.reduce_sum(tf.stack(updated_loss_components))
+            loss = self.optimizer.get_scaled_loss(loss)
+
+        # calculate new adaptive constant
+        adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
+                                                                self.adaptive_constant, self.beta, \
+                                                                self.trainable_weights)
+        self.adaptive_constant.assign(adaptive_constant)
+        #tf.print(adaptive_constant)
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = self.optimizer.get_unscaled_gradients(gradients)
+        del tape
+
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        return {'loss' : loss, 'adaptive_constant' : adaptive_constant}
+
+    @tf.function()#jit_compile=True)
     def test_step(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss = self.compiled_loss(y, y_hat)
-        self.compiled_metrics.update_state(y, y_hat)
-        return {m.name: m.result() for m in self.metrics}
+        loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat, y)), 0)
+        updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
+        loss =  tf.reduce_sum(updated_loss_components)
+        return {'loss' : loss}
+    
+
     
     def output(self, dataset):
         x, y = dataset
@@ -149,7 +159,7 @@ class CustomModel(tf.keras.Model):
 
             part = tf.constant(part)
 
-            @tf.function#(experimental_compile=True)
+            @tf.function#(jit_compile=True)
             def assign_new_model_parameters(params_1d):
                 """A function updating the model's parameters with a 1D tf.Tensor.
 
@@ -162,7 +172,7 @@ class CustomModel(tf.keras.Model):
                     model.trainable_variables[i].assign(tf.reshape(param, shape))
 
             # now create a function that will be returned by this factory
-            @tf.function#(experimental_compile=True)
+            @tf.function#(jit_compile=True)
             def f(params_1d):
                 """A function that can be used by tfp.optimizer.lbfgs_minimize.
 

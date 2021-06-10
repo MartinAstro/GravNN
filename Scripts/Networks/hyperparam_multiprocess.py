@@ -3,37 +3,42 @@ import pandas as pd
 from script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
+from GravNN.Preprocessors.UniformScaler import UniformScaler
+
+import os
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
-    df_file = "Data/Dataframes/eros_traditional.data"
+    df_file = "Data/Dataframes/useless_060921.data"
     threads = 1
 
-    #config = get_default_earth_config()
+    config = get_default_earth_config()
     #config = get_default_earth_pinn_config()
     #config = get_default_eros_pinn_config()
-    config = get_default_eros_config()
+    #config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [1000000],
-        "N_train": [900000],
-        "N_val" : [100000],
-        "epochs": [100000],
-        "decay_rate_epoch": [25000],
-        "decay_epoch_0": [25000],
+        "N_dist": [10000],
+        "N_train": [9000],
+        "N_val" : [1000],
+        "epochs": [2500],
+        "decay_rate_epoch": [2000],#[25000],
+        "decay_epoch_0": [100],#[25000],
         "decay_rate": [0.5],
         "learning_rate": [0.001],
-        "batch_size": [131072 / 2],
+        "batch_size": [131072 // 2],
         "activation": ["gelu"],
         "initializer": ["glorot_uniform"],
         "network_type": ["traditional"],
-        "PINN_constraint_fcn": ["no_pinn"],
-        "scale_by": ["a"],
+        'x_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'u_transformer' : [UniformScaler(feature_range=(-1,1))],
+        'a_transformer' : [UniformScaler(feature_range=(-1,1))],
+        "PINN_constraint_fcn": ["pinn_al"],
+        "scale_by": ["non_dim"],#"u"],
         "mixed_precision": [False],
-        "num_units": [20, 40, 80],
+        "num_units": [20],
         "schedule_type" : ['exp_decay'],
-
         "beta" : [0.9],
-
     }
 
     args = configure_run_args(config, hparams)
@@ -80,7 +85,7 @@ def run(config_original, hparams):
     network = load_network(config)
     model = CustomModel(config, network)
     model.compile(optimizer=optimizer, loss="mse")
-
+    print(tf.compat.v1.get_default_graph())
     # Train network
     callback = CustomCallback()
     schedule = get_schedule(config)
@@ -101,6 +106,9 @@ def run(config_original, hparams):
     model.config["u_transformer"][0] = transformers["u"]
     model.config["a_transformer"][0] = transformers["a"]
 
+    import matplotlib.pyplot as plt
+    plt.plot(history.history['val_loss'])
+    plt.show()
     # Appends the model config to a perscribed df
     model.save(df_file=None)
     return model.config

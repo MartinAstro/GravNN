@@ -55,10 +55,17 @@ def _get_optimizer(name):
         "adam": tf.keras.optimizers.Adam(),
     }[name.lower()]
 
-def _get_PI_constraint(name):
+def _get_PI_constraint(value):
     from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AP, \
         pinn_AL, pinn_ALC, pinn_APL, pinn_APLC
     from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal
+
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
     return {
         "no_pinn": [no_pinn, no_pinn_anneal, [-1.0]], # scaling ignored
         "pinn_a": [pinn_A, pinn_A_anneal, [-1.0]], # scaling ignored
@@ -67,7 +74,7 @@ def _get_PI_constraint(name):
         "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],
         "pinn_apl": [pinn_APL, pinn_APL_anneal, [-1.0, 1.0, 1.0]],
         "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]]
-    }[name.lower()]
+    }[value.lower()]
 
 def _get_network_fcn(name):
     from GravNN.Networks.Networks import TraditionalNet, ResNet
@@ -143,7 +150,7 @@ def check_config_combos(config):
     if config['PINN_constraint_fcn'][0] != no_pinn:
         if config['layers'][0][-1] != 1:
             print("WARNING: The final layer for a PINN must have one output (the potential, U) -- changing automatically")
-            config['layers'][0][-1] = 1, 
+            config['layers'][0][-1] = 1 
     else:
         if config['layers'][0][-1] != 3:
             config['layers'][0][-1] = 3
@@ -208,3 +215,4 @@ def update_df_row(model_id, df_file, entries, save=True):
     if save:
         original_df.to_pickle(df_file)
     return original_df
+

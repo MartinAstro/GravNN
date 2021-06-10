@@ -99,6 +99,33 @@ def get_preprocessed_data(config):
         a_val = u_transformer.transform(a_val)
         u_val = u_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
         a_transformer = u_transformer
+    elif config['scale_by'][0] == 'non_dim':
+        # Designed to make position, acceleration, and potential all exist between [-1,1]
+        x_train = x_transformer.fit_transform(x_train)
+        u_train = u_transformer.fit_transform(np.repeat(u_train,3,axis=1))[:,0].reshape((-1,1))
+        a_transformer.fit(a_train)
+
+        # a = a_star*a0
+        # u = u_star*u0
+        # x = x_star*x0
+
+        # du/dx = -a
+        # du_star / dx_star = -(x0/u0)*(a0*a_star)
+
+        # set x0, u0 equal to the original domain range
+        # choose a such that a_star [-1,1]
+        x0 = x_transformer.data_range_
+        a0 = a_transformer.data_range_
+        u0 = u_transformer.data_range_
+
+        a0 = u0/x0/a0*2
+
+        a_train = a_transformer.fit_transform(a_train, scaler=a0*x0/u0)
+
+        x_val = x_transformer.transform(x_val)
+        a_val = a_transformer.transform(a_val)
+        u_val = u_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
+
     elif config['scale_by'][0] == 'none':
         x_transformer = config['dummy_transformer'][0]
         a_transformer = config['dummy_transformer'][0]

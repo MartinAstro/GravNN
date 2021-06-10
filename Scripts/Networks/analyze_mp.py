@@ -1,3 +1,6 @@
+import os
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
+
 import multiprocessing as mp
 import pandas as pd
 from GravNN.CelestialBodies.Planets import Earth, Moon
@@ -10,7 +13,7 @@ def main():
     """
     Multiprocess the analysis pipeline for each network within the dataframe
     """
-    df_file = "Data/Dataframes/useless_05_27_21.data"
+    df_file = "Data/Dataframes/useless_060921.data"
     # df_file = 'Data/Dataframes/moon_pinn_df.data'
 
     #planet = Moon()
@@ -22,7 +25,7 @@ def main():
     test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
 
     args = []
-    for idx in range(4):
+    for idx in range(0,5):
         args.append((idx, df_file, planet, analyze_altitude, test_trajectories, points))
 
     with mp.Pool(1) as pool:
