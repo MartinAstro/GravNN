@@ -29,7 +29,7 @@ def pinn_AL(f, x, training):
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
     # It does in 2.5, but there is a known issue for the implimentation: https://www.tensorflow.org/xla/known_issues?hl=nb
     # The while_loop needs to be bounded
-    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=False)
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
     return tf.concat((tf.multiply(-1.0,u_x), laplacian),1)
 
@@ -40,7 +40,7 @@ def pinn_ALC(f, x, training):
             g2.watch(x)
             u = f(x, training) # shape = (k,) #! evaluate network                
         u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
-    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=False)
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     
     laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
 
@@ -60,7 +60,7 @@ def pinn_APL(f, x, training):
         u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
     
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
-    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=False)
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
     return tf.concat((u, tf.multiply(-1.0,u_x), laplacian),1)
 
@@ -71,7 +71,7 @@ def pinn_APLC(f, x, training):
             g2.watch(x)
             u = f(x, training) # shape = (k,) #! evaluate network                
         u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
-    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=False)
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     
     laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
 

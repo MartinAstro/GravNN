@@ -130,9 +130,9 @@ def get_preprocessed_data(config):
         x_transformer = config['dummy_transformer'][0]
         a_transformer = config['dummy_transformer'][0]
         u_transformer = config['dummy_transformer'][0]
-
-    print_stats(a_train, "Acceleration")
-    print_stats(u_train, "Potential")
+    print_stats(x_train, "Scaled Position")
+    print_stats(a_train, "Scaled Acceleration")
+    print_stats(u_train, "Scaled Potential")
 
     laplace_train = np.zeros((np.shape(u_train)))
     laplace_val = np.zeros((np.shape(u_val)))
