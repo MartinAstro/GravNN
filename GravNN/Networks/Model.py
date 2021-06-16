@@ -31,34 +31,8 @@ class CustomModel(tf.keras.Model):
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
     
-    # @tf.function(jit_compile=True)
-    # def train_step(self, data):
-    #     x, y = data 
-    #     with tf.GradientTape() as tape:
-    #         y_hat = self(x, training=True)
-    #         loss = self.compiled_loss(y, y_hat)
-    #         loss = self.optimizer.get_scaled_loss(loss)
-
-    #     gradients = tape.gradient(loss, self.trainable_variables)
-    #     gradients = self.optimizer.get_unscaled_gradients(gradients)
-
-    #     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-    #     self.compiled_metrics.update_state(y, y_hat)
-    #     return {m.name: m.result() for m in self.metrics}
-        
-    # @tf.function(jit_compile=True)
-    # def test_step(self, data):
-    #     x, y = data
-    #     y_hat = self(x, training=True)
-    #     loss = self.compiled_loss(y, y_hat)
-    #     self.compiled_metrics.update_state(y, y_hat)
-    #     return {m.name: m.result() for m in self.metrics}
-
-    # def build(self, input_shape):
-    #     self.adaptive_constant = tf.Variable([-1.0], dtype=tf.float32)
-    #     super().build(input_shape)
     
-    @tf.function()#jit_compile=True)
+    @tf.function()# jit_compile=True)
     def train_step(self, data):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
@@ -69,20 +43,23 @@ class CustomModel(tf.keras.Model):
             updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
             #tf.print(updated_loss_components)
             loss = tf.reduce_sum(tf.stack(updated_loss_components))
+            # if loss < 0:
+            #     print("here!")
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
         adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
                                                                 self.adaptive_constant, self.beta, \
                                                                 self.trainable_weights)
+        #adaptive_constant = self.adaptive_constant
         self.adaptive_constant.assign(adaptive_constant)
         #tf.print(adaptive_constant)
 
-        gradients = tape.gradient(loss, self.trainable_variables)
+        gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
         del tape
 
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
         return {'loss' : loss, 'adaptive_constant' : adaptive_constant}
 
