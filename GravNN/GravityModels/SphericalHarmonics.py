@@ -202,3 +202,13 @@ class SphericalHarmonics(GravityModelBase):
         return self.accelerations
 
 
+if __name__ == "__main__":
+    from GravNN.CelestialBodies.Planets import Earth
+    from GravNN.Trajectories import FibonacciDist
+
+    planet = Earth()
+    traj = FibonacciDist(planet, planet.radius, 1000)
+    grav_model = SphericalHarmonics(planet.sh_hf_file, 1000, traj)
+    grav_model.load(override=True)
+    acc = grav_model.accelerations
+    pot = grav_model.potentials

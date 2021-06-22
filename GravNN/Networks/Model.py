@@ -41,10 +41,7 @@ class CustomModel(tf.keras.Model):
             # Compute loss components, scale them, sum them
             loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat,y)), 0)
             updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
-            #tf.print(updated_loss_components)
             loss = tf.reduce_sum(tf.stack(updated_loss_components))
-            # if loss < 0:
-            #     print("here!")
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
@@ -55,13 +52,19 @@ class CustomModel(tf.keras.Model):
         self.adaptive_constant.assign(adaptive_constant)
         #tf.print(adaptive_constant)
 
+        # grad_comp_list = []
+
+        # for loss_comp in updated_loss_components:
+        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
+        #     grad_comp_list.append(gradient_components)
+        
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
         del tape
 
         self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
-        return {'loss' : loss, 'adaptive_constant' : adaptive_constant}
+        return {'loss' : loss, 'adaptive_constant' : adaptive_constant}#, 'grads' : grad_comp_list}
 
     @tf.function()#jit_compile=True)
     def test_step(self, data):
@@ -76,6 +79,7 @@ class CustomModel(tf.keras.Model):
     
     def output(self, dataset):
         x, y = dataset
+        x = tf.Variable(x)
         assert self.config['PINN_constraint_fcn'][0] != no_pinn
         with tf.GradientTape(persistent=True) as g1:
             g1.watch(x)
@@ -92,7 +96,7 @@ class CustomModel(tf.keras.Model):
         curl_z = tf.math.subtract(u_xx[:,1,0], u_xx[:,0,1])
 
         curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-        return u,  tf.multiply(-1.0,u_x), laplacian, curl
+        return u, tf.multiply(-1.0,u_x), laplacian, curl
 
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/

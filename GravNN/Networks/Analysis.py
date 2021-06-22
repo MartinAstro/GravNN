@@ -87,7 +87,7 @@ class Analysis():
             exit("The celestial body %s does not have a perscribed gravity model!" % (str(self.config['planet'][0]),))
 
     
-    def generate_nn_data(self, x, a):
+    def generate_nn_data(self, x, a, u):
         if self.config['basis'][0] == 'spherical':
             x = cart2sph(x)
             a = project_acceleration(x, a)
@@ -95,12 +95,13 @@ class Analysis():
 
         x = self.x_transformer.transform(x)
         a = self.a_transformer.transform(a)
-
-        y_hat = self.model.predict(x.astype('float32'))
-        u_pred, a_pred, laplace_pred, curl_pred = standardize_output(y_hat, self.config)
+        u = self.u_transformer.transform(u)
+        #y_hat = self.model.predict(x.astype('float32'))
+        u_pred, a_pred, laplace_pred, curl_pred = self.model.output((x,x))# the second x is just so it conforms with a dataset
+        #u_pred, a_pred, laplace_pred, curl_pred = standardize_output(y_hat, self.config)
 
         x = self.x_transformer.inverse_transform(x)
-        #u = self.u_transformer.inverse_transform(u)
+        u = self.u_transformer.inverse_transform(u)
         a = self.a_transformer.inverse_transform(a)
         a_pred = self.a_transformer.inverse_transform(a_pred)
 
@@ -108,7 +109,7 @@ class Analysis():
             x[:,1:3] = np.rad2deg(x[:,1:3])
             #x = sphere2cart(x)
             a = invert_projection(x, a)
-            a_pred = invert_projection(x, a_pred.astype(float))# numba requires that the types are the same 
+            a_pred = invert_projection(x, a_pred.astype(float))# numba requires that the types are the same
         return a_pred
     
 
@@ -145,7 +146,7 @@ class Analysis():
         for name, map_traj in test_trajectories.items():
             # SH Data and NN Data
             x, a, u = self.generate_analytic_data_fcn(map_traj, self.config['grav_file'][0] , **self.config)
-            acc_pred = self.generate_nn_data(x, a)
+            acc_pred = self.generate_nn_data(x, a, u)
 
             # Generate map statistics on sets A, F, and C (2 and 3 sigma)
             diff, diff_stats = diff_map_and_stats(name, map_traj, a, acc_pred)
@@ -169,7 +170,7 @@ class Analysis():
             trajectory = FibonacciDist(planet, planet.radius + alt, points)
             model_file = trajectory.celestial_body.sh_hf_file
             x, a, u = get_sh_data(trajectory, model_file, **self.config)
-            acc_pred = self.generate_nn_data(x, a)
+            acc_pred = self.generate_nn_data(x, a, u)
 
             diff, diff_stats = diff_map_and_stats("", trajectory, a, acc_pred, 'mean')
             extras = {

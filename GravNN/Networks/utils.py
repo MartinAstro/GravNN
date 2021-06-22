@@ -56,9 +56,9 @@ def _get_optimizer(name):
     }[name.lower()]
 
 def _get_PI_constraint(value):
-    from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AP, \
+    from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_P, pinn_AP, \
         pinn_AL, pinn_ALC, pinn_APL, pinn_APLC
-    from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal
+    from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_P_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal
 
     # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
     try:
@@ -69,6 +69,11 @@ def _get_PI_constraint(value):
     return {
         "no_pinn": [no_pinn, no_pinn_anneal, [-1.0]], # scaling ignored
         "pinn_a": [pinn_A, pinn_A_anneal, [-1.0]], # scaling ignored
+        "pinn_p": [pinn_P, pinn_P_anneal, [-1.0]],
+        
+        "pinn_pl": [pinn_P, pinn_P_anneal, [-1.0, 1.0]],
+        "pinn_plc": [pinn_P, pinn_P_anneal, [-1.0, 1.0, 1.0]],
+
         "pinn_ap": [pinn_AP, pinn_AP_anneal, [-1.0, 1.0]],
         "pinn_al": [pinn_AL, pinn_AL_anneal, [-1.0, 1.0]],
         "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],

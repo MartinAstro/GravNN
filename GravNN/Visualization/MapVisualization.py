@@ -5,7 +5,8 @@ import numpy as np
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from matplotlib.colors import LogNorm, SymLogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+from GravNN.Support.transformations import cart2sph, check_fix_radial_precision_errors
+from matplotlib.cm import get_cmap
 
 class MapVisualization(VisualizationBase):
     def __init__(self, unit='m/s^2'):
@@ -97,4 +98,17 @@ class MapVisualization(VisualizationBase):
         im = self.new_map(grid, **kwargs)
         self.add_colorbar(im, label, **kwargs)
         return fig, ax
-       
+    
+    def plot_trajectory(self, trajectory):
+        pos_sph = cart2sph(np.array(trajectory.positions))
+        pos_sph = check_fix_radial_precision_errors(pos_sph)
+        cmap = get_cmap('Spectral')
+
+        dataLim = plt.gcf().axes[0].dataLim
+        xpix_per_deg = (dataLim.max[0] - dataLim.min[0]) / 360.0 # x
+        ypix_per_deg = (dataLim.max[1] - dataLim.min[1]) / 180.0 # x
+
+        plt.sca(plt.gcf().axes[0])
+        colors = (pos_sph[:,0] - np.min(pos_sph[:,0]))/(np.max(pos_sph[:,0]) - np.min(pos_sph[:,0]))
+        plt.scatter(pos_sph[:,1]*xpix_per_deg, pos_sph[:,2]*ypix_per_deg, c=cmap(colors), s=1, zorder=10)
+

@@ -22,6 +22,8 @@ def standardize_output(y_hat, config):
         a = y_hat
     elif config['PINN_constraint_fcn'][0] == pinn_A:
         a = y_hat
+    elif config['PINN_constraint_fcn'][0] == pinn_P:
+        u = y_hat
 
     elif config['PINN_constraint_fcn'][0] == pinn_AL:
         a = y_hat[:,0:3]
@@ -162,6 +164,19 @@ def configure_dataset(train_data, val_data, config):
     elif config['PINN_constraint_fcn'][0] == pinn_A:
         y_train = np.hstack([a_train]) 
         y_val = np.hstack([a_val]) 
+
+    # Just use acceleration
+    elif config['PINN_constraint_fcn'][0] == pinn_P:
+        y_train = np.hstack([u_train]) 
+        y_val = np.hstack([u_val]) 
+
+    # Potential + 2nd order constraints
+    elif config['PINN_constraint_fcn'][0] == pinn_PL:
+        y_train = np.hstack([u_train, laplace_train]) 
+        y_val = np.hstack([u_val, laplace_val]) 
+    elif config['PINN_constraint_fcn'][0] == pinn_PLC:
+        y_train = np.hstack([u_train, laplace_train, curl_train]) 
+        y_val = np.hstack([u_val, laplace_val, curl_val]) 
 
     # Accelerations + 2nd order constraints
     elif config['PINN_constraint_fcn'][0] == pinn_AL:

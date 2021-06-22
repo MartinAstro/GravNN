@@ -14,16 +14,19 @@ class Grid(object):
     lats = np.array([])
     lons = np.array([])
 
-    def __init__(self, trajectory, accelerations, override=False):
+    def __init__(self, trajectory, accelerations, override=False, transform=True):
 
         self.N_lat = trajectory.N_lat
         self.N_lon = trajectory.N_lon
         pos_sph = cart2sph(np.array(trajectory.positions))
         pos_sph = check_fix_radial_precision_errors(pos_sph)
-        acc_sph = transformations.project_acceleration(pos_sph, np.array(accelerations, dtype=float))
-
         self.positions = pos_sph
-        self.acceleration = acc_sph
+
+        if transform:
+            acc_sph = transformations.project_acceleration(pos_sph, np.array(accelerations, dtype=float))
+            self.acceleration = acc_sph
+        else:
+            self.acceleration = accelerations
 
         self.total = np.linalg.norm(self.acceleration,axis=1).reshape((self.N_lon,self.N_lat))
         self.r = self.acceleration[:,0].reshape((self.N_lon,self.N_lat))
