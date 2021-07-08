@@ -26,7 +26,6 @@ def main():
     poly_gm = Polyhedral(planet, obj_file, trajectory)
     acc_poly = poly_gm.load().accelerations
 
-
     # Polyhedral Results
     totals = np.linalg.norm(acc_poly, axis=1).reshape((-1,1))
     vlim = [np.min(totals), np.max(totals)]

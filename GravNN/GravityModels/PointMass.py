@@ -50,7 +50,7 @@ class PointMass(GravityModelBase):
 
     def compute_acceleration_value(self, position):
         # No negative because no such thing as negative radius
-        return np.array([-self.mu/position[0]**2, 0, 0]) #[a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
+        return np.array([self.mu/position[0]**2, 0, 0]) #[a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
 
     def compute_potential_value(self, position):
         return self.mu/position[0]

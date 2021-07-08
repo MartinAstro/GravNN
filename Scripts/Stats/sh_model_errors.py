@@ -20,7 +20,7 @@ def main():
     # planet = Moon()
     # model_file = planet.sh_hf_file
 
-    df_file = "Data/Dataframes/sh_stats_Brillouin.data"
+    df_file = "Data/Dataframes/sh_stats_Brillouin_deg_n1.data"
     planet = Earth()
     model_file = planet.sh_hf_file
 
@@ -38,7 +38,7 @@ def main():
     # df_file = "Data/Dataframes/sh_stats_GEO.data"
     # trajectory = DHGridDist(planet, planet.radius + 35786000.0, degree=density_deg)
 
-    x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
+    x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=-1)
     grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
     deg_list =  np.linspace(1, 150, 150,dtype=int)[1:]
@@ -46,7 +46,7 @@ def main():
     df_all = pd.DataFrame()
     for deg in deg_list:
         
-        x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=2)
+        x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=-1)
 
         grid_pred = StateObject(trajectory=trajectory, accelerations=a)
         diff = grid_pred - grid_true

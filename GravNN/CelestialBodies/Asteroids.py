@@ -28,6 +28,10 @@ class Eros():
         self.model_6k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_6k_poly.stl"    
         self.model_12k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_12k_poly.stl"    
 
+        # mac only
+        self.model_17k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Gaskell_17k_poly.stl"   
+        self.model_potatok = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_potato_k_poly.obj"   
+
         self.model_25k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_25k_poly.stl"    
         self.model_50k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Gaskell_50k_poly.obj"  
         self.model_100k = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Blender_98k_poly.stl"   

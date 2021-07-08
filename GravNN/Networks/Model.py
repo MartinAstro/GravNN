@@ -1,13 +1,15 @@
 import os
-
+import copy
 import time
 import numpy as np
+from numpy.random.mtrand import laplace
 import pandas as pd
 import tensorflow as tf
 
 from GravNN.Networks import utils
-from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC
+from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC, pinn_A_sph
 from GravNN.Networks.Annealing import update_constant
+from GravNN.Support.transformations import cart2sph, invert_projection, project_acceleration
 np.random.seed(1234)
 
 class CustomModel(tf.keras.Model):
@@ -20,8 +22,13 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config['dtype'][0]
         self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
-        self.calc_adaptive_constant = update_constant
+        self.a_bar_s = self.config['a_bar_transformer'][0].scale_
+        self.a_bar_0 = self.config['a_bar_transformer'][0].min_
 
+        self.calc_adaptive_constant = update_constant
+        tensors = utils._get_acceleration_nondim_constants(config['PINN_constraint_fcn'][0], self.a_bar_0, self.a_bar_s)
+        self.scale_tensor = tensors[0]
+        self.translate_tensor = tensors[1]
         PINN_variables = utils._get_PI_constraint(config['PINN_constraint_fcn'][0])
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
@@ -31,24 +38,34 @@ class CustomModel(tf.keras.Model):
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
     
-    
+    def compute_loss_components(self, y_hat, y):
+        # The accelerations are scaled in proportion to the potential
+        # such that the acceleration contribution to the loss is extraordinarily small
+        # and doesn't effectively contribute to the loss function.
+        # This scaling allows for the loss contribution of the acceleration to be on par with 
+        # the loss contribution of the potential (when both are being used)
+        y_hat_scaled = (y_hat*self.scale_tensor) + self.translate_tensor# + self.translate_tensor)/self.scale_tensor
+        y_scaled = (y*self.scale_tensor) + self.translate_tensor
+        loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat_scaled,y_scaled)), 0)
+        tf.print(loss_components)
+        return loss_components
+
     @tf.function()# jit_compile=True)
     def train_step(self, data):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=True)
-
-            # Compute loss components, scale them, sum them
-            loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat,y)), 0)
+            loss_components = self.compute_loss_components(y_hat, y)
             updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
             loss = tf.reduce_sum(tf.stack(updated_loss_components))
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
-                                                                self.adaptive_constant, self.beta, \
-                                                                self.trainable_weights)
-        #adaptive_constant = self.adaptive_constant
+        # adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
+        #                                                         self.adaptive_constant, self.beta, \
+        #                                                         self.trainable_weights)                                                                
+        
+        adaptive_constant = self.adaptive_constant
         self.adaptive_constant.assign(adaptive_constant)
         #tf.print(adaptive_constant)
 
@@ -70,7 +87,7 @@ class CustomModel(tf.keras.Model):
     def test_step(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat, y)), 0)
+        loss_components = self.compute_loss_components(y_hat, y)
         updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
         loss =  tf.reduce_sum(updated_loss_components)
         return {'loss' : loss}
@@ -79,8 +96,9 @@ class CustomModel(tf.keras.Model):
     
     def output(self, dataset):
         x, y = dataset
-        x = tf.Variable(x)
+        x = tf.Variable(x, dtype=tf.float32)
         assert self.config['PINN_constraint_fcn'][0] != no_pinn
+        assert self.config['PINN_constraint_fcn'][0] != pinn_A_sph # Not implimented yet
         with tf.GradientTape(persistent=True) as g1:
             g1.watch(x)
             with tf.GradientTape() as g2:
@@ -98,6 +116,36 @@ class CustomModel(tf.keras.Model):
         curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
         return u, tf.multiply(-1.0,u_x), laplacian, curl
 
+
+    def generate_nn_data(self, x):
+        x = copy.deepcopy(x)
+        x_transformer = self.config['x_transformer'][0]
+        a_transformer = self.config['a_transformer'][0]
+        u_transformer = self.config['u_transformer'][0]
+        if self.config['basis'][0] == 'spherical':
+            x = cart2sph(x)
+            x[:,1:3] = np.deg2rad(x[:,1:3])
+
+        x = x_transformer.transform(x)
+        u_pred, a_pred, laplace_pred, curl_pred = self.output((x,x))
+        x_pred = x_transformer.inverse_transform(x)
+        u_pred = u_transformer.inverse_transform(u_pred)
+        a_pred = a_transformer.inverse_transform(a_pred)
+
+        # TODO: (07/02/21): It's likely that laplace and curl should also be inverse transformed as well
+        if self.config['basis'][0] == 'spherical':
+            x[:,1:3] = np.rad2deg(x[:,1:3])
+            #x = sphere2cart(x)
+            a_pred = invert_projection(x, a_pred)
+            try:
+                a_pred = invert_projection(x, a_pred.astype(float))# numba requires that the types are the same
+            except:
+                a_pred = invert_projection(x, a_pred.numpy().astype(float))# if a_pred is a tensor
+        return {'x' : x_pred,
+                'u' : u_pred, 
+                'a' : a_pred,
+                'laplace' : laplace_pred,
+                'curl' : curl_pred}
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):

@@ -33,6 +33,7 @@ def get_normalization(l, m):
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
     # Handle cases where the keyword wasn't properly wrapped as a list []
+    override = bool(kwargs.get('override', [False])[0])
     try:
         max_deg = int(kwargs['max_deg'][0])
         deg_removed = int(kwargs['deg_removed'][0])
@@ -41,11 +42,11 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
         deg_removed = int(kwargs['deg_removed'])
 
     Call_r0_gm = SphericalHarmonics(gravity_file, degree=max_deg, trajectory=trajectory)
-    accelerations = Call_r0_gm.load().accelerations
+    accelerations = Call_r0_gm.load(override=override).accelerations
     potentials = Call_r0_gm.potentials
 
     Clm_r0_gm = SphericalHarmonics(gravity_file, degree=deg_removed, trajectory=trajectory)
-    accelerations_Clm = Clm_r0_gm.load().accelerations
+    accelerations_Clm = Clm_r0_gm.load(override=override).accelerations
     potentials_Clm = Clm_r0_gm.potentials
     
     x = Call_r0_gm.positions # position (N x 3)

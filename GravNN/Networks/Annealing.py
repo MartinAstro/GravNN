@@ -44,7 +44,7 @@ def pinn_PL_anneal(loss_components, adaptive_const):
     loss_L = loss_components[1]*adaptive_const[1]
     return (loss_res, loss_L)
 
-def pinn_ALC_anneal(loss_components, adaptive_const):
+def pinn_PLC_anneal(loss_components, adaptive_const):
     loss_res = loss_components[0]
     loss_L = loss_components[1]*adaptive_const[1]
     loss_C = tf.reduce_sum(loss_components[2:5]*adaptive_const[2])

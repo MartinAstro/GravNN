@@ -12,8 +12,10 @@ from GravNN.Support.ProgressBar import ProgressBar
 
 
 def get_poly_data(trajectory, obj_file, **kwargs):
+    override = bool(kwargs.get('override', [False])[0])
+
     Call_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
-    Call_r0_gm.load()
+    Call_r0_gm.load(override=override)
 
     # TODO: Determine if this is valuable -- how do dynamics and representation change inside brillouin sphere
     # Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
@@ -230,8 +232,10 @@ class Polyhedral(GravityModelBase):
         acc *= G*self.density*self.scaleFactor
 
         pot = pot_edge + pot_facet # signs taken care of in loop
-        pot *= 1.0/2.0*G*self.density*self.scaleFactor
-        return acc, pot
+        pot *= 1.0/2.0*G*self.density*self.scaleFactor**2 #[km^2/s^2] - > [m^2/s^2]
+
+        # the paper gives delta U, not a. Given that a is already standard, we are going to negate U
+        return acc, -pot
 
 
 def main():

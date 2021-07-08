@@ -4,6 +4,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+def get_vlim_bounds(dist, sigma):
+    mu = np.mean(dist)
+    std = np.std(dist)
+    vlim_min = clamp(mu-sigma*std, 0, np.inf)
+    vlim_max = mu+sigma*std
+    return [vlim_min, vlim_max]
+
+def clamp(x, smallest, largest): 
+    return max(smallest, min(x, largest))
+
+def format_potential_as_Nx3(u):
+    U_Nx3 = np.zeros((len(u), 3))
+    try:
+        U_Nx3[:,0] = u[:,0]
+    except:
+        U_Nx3[:,0] = u
+    return U_Nx3
+
 def sh_pareto_curve(file_name, max_deg=None, log=True, sigma=2):
     if max_deg is not None:
         sh_df = pd.read_pickle(file_name).loc[:max_deg]
@@ -41,4 +59,3 @@ def nn_pareto_curve(file_name, orbit_name, radius_max=None, linestyle=None, mark
         plt.plot(sub_df['params'], sub_df[orbit_name+'_sigma_'+str(sigma)+'_mean'], linestyle=linestyle, marker=marker)
         plt.plot(sub_df['params'], sub_df[orbit_name+'_sigma_'+str(sigma)+'_c_mean'], linestyle=linestyle, marker=marker)        
     plt.legend()
-

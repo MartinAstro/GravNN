@@ -55,10 +55,40 @@ def _get_optimizer(name):
         "adam": tf.keras.optimizers.Adam(),
     }[name.lower()]
 
+
+
+
+def _get_acceleration_nondim_constants(value, a0, a_s):
+    import tensorflow as tf
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+    
+    # scale tensor + translate tensor
+    return {
+        "no_pinn": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)), # scaling ignored
+        "pinn_a": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)), # scaling ignored
+        "pinn_p": (tf.constant([1.0], dtype=tf.float32), tf.constant([0.0], dtype=tf.float32)),
+        
+        "pinn_pl": (tf.constant([1.0, 1.0], dtype=tf.float32), tf.constant([0.0, 0.0], dtype=tf.float32)),
+        "pinn_plc": (tf.constant([1.0, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([0.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+
+        "pinn_ap": (tf.constant([1.0, a_s, a_s, a_s], dtype=tf.float32), tf.constant([0.0, a0, a0, a0], dtype=tf.float32)),
+        "pinn_al": (tf.constant([a_s, a_s, a_s, 1.0], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0], dtype=tf.float32)),
+        "pinn_alc": (tf.constant([a_s, a_s, a_s, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+        "pinn_apl": (tf.constant([1.0, a_s, a_s, a_s, 1.0], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0], dtype=tf.float32)),
+        "pinn_aplc": (tf.constant([1.0, a_s, a_s, a_s, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+
+        "pinn_a_sph": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)) # scaling ignored
+    }[value.lower()]
+
+
 def _get_PI_constraint(value):
-    from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_P, pinn_AP, \
-        pinn_AL, pinn_ALC, pinn_APL, pinn_APLC
-    from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_P_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal
+    from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_P, pinn_PLC, pinn_AP, \
+        pinn_AL, pinn_ALC, pinn_APL, pinn_APLC, pinn_A_sph
+    from GravNN.Networks.Annealing import no_pinn_anneal, pinn_A_anneal, pinn_P_anneal, pinn_AP_anneal, pinn_AL_anneal, pinn_ALC_anneal, pinn_APL_anneal, pinn_APLC_anneal, pinn_PLC_anneal
 
     # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
     try:
@@ -72,20 +102,25 @@ def _get_PI_constraint(value):
         "pinn_p": [pinn_P, pinn_P_anneal, [-1.0]],
         
         "pinn_pl": [pinn_P, pinn_P_anneal, [-1.0, 1.0]],
-        "pinn_plc": [pinn_P, pinn_P_anneal, [-1.0, 1.0, 1.0]],
+        "pinn_plc": [pinn_PLC, pinn_PLC_anneal, [-1.0, 1.0, 1.0]],
 
         "pinn_ap": [pinn_AP, pinn_AP_anneal, [-1.0, 1.0]],
         "pinn_al": [pinn_AL, pinn_AL_anneal, [-1.0, 1.0]],
         "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],
         "pinn_apl": [pinn_APL, pinn_APL_anneal, [-1.0, 1.0, 1.0]],
-        "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]]
+        "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]],
+
+        "pinn_a_sph": [pinn_A_sph, pinn_A_anneal, [-1.0]] # scaling ignored
+
     }[value.lower()]
 
 def _get_network_fcn(name):
-    from GravNN.Networks.Networks import TraditionalNet, ResNet
+    from GravNN.Networks.Networks import TraditionalNet, ResNet, SphericalTraditionalNet, CylindricalTraditionalNet
     return {
         "traditional": TraditionalNet,
         "resnet": ResNet,
+        "sph_traditional": SphericalTraditionalNet,
+        "cyl_traditional": CylindricalTraditionalNet
     }[name.lower()]
 
 def _get_tf_dtype(name):

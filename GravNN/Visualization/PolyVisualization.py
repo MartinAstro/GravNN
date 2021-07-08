@@ -14,8 +14,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 class PolyVisualization(VisualizationBase):
-    def __init__(self, unit='m/s^2'):
-        super().__init__()
+    def __init__(self, unit='m/s^2', **kwargs):
+        super().__init__(**kwargs)
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         if unit == "mGal":
             # https://en.wikipedia.org/wiki/Gal_(unit)
@@ -30,9 +30,11 @@ class PolyVisualization(VisualizationBase):
         fig, ax = self.new3DFig()
         cmap = plt.get_cmap('bwr')
         tri = Poly3DCollection(mesh.triangles, cmap=cmap)
+        vlim_min = np.min(accelerations)
+        vlim_max = np.max(accelerations)
+        scaled_acceleration = (accelerations - np.min(accelerations))/(np.max(accelerations) - np.min(accelerations))
         for i in range(len(mesh.faces)):
-            color = cmap(accelerations[i])[0]*255
-            color[3] = 255
+            color = np.array(cmap(int(scaled_acceleration[i]*255)))*255
             mesh.visual.face_colors[i] = color
         tri.set_facecolor(mesh.visual.face_colors/255)
         tri.set_edgecolor(mesh.visual.face_colors/255)
@@ -43,12 +45,18 @@ class PolyVisualization(VisualizationBase):
         ax.axes.set_ylim3d(bottom=min_lim, top=max_lim) 
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim) 
         
-        if vlim is not None:
-            norm = Normalize(vmin=vlim[0], vmax=vlim[1])
-            arg = cm.ScalarMappable(norm=norm, cmap=cmap)
-            ticks = np.linspace(vlim[0], vlim[1], 5)
-            cBar = plt.colorbar(arg,  pad=0.20, fraction=0.15, norm=norm)#ticks=ticks,boundaries=vlim,
-            if label is not None:
-                cBar.ax.set_ylabel(label)
+        norm = Normalize(vmin=vlim_min, vmax=vlim_max)
+        arg = cm.ScalarMappable(norm=norm, cmap=cmap)
+        ticks = np.linspace(vlim_min, vlim_max, 5)
+        cBar = plt.colorbar(arg,  pad=0.20, fraction=0.15, norm=norm)#ticks=ticks,boundaries=vlim,
+        if label is not None:
+            cBar.ax.set_ylabel(label)
 
         return fig, ax
+
+    def plot_position_data(self, data):
+        x = data/1000.0
+        ax = plt.gca()
+        plt.gcf().axes[0].scatter(x[:,0], x[:,1], x[:,2],s=1)
+        # ax = plt.figure().add_subplot(projection='3d')
+        # ax.scatter(x[:,0], x[:,1], x[:,2], s=1)

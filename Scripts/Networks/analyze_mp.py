@@ -13,7 +13,7 @@ def main():
     """
     Multiprocess the analysis pipeline for each network within the dataframe
     """
-    df_file = "Data/Dataframes/useless_060921.data"
+    df_file = "Data/Dataframes/useless_062321_potential.data"
     # df_file = 'Data/Dataframes/moon_pinn_df.data'
 
     #planet = Moon()
@@ -22,13 +22,14 @@ def main():
     analyze_altitude = False
 
     points = 250000  # 64800
-    test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
+    #test_trajectories = {"Brillouin_deg0": FibonacciDist(planet, planet.radius, points)}
+    test_trajectories = {"Brillouin_deg_n1": FibonacciDist(planet, planet.radius, points)}
 
     args = []
-    for idx in range(0,5):
+    for idx in range(5,10):
         args.append((idx, df_file, planet, analyze_altitude, test_trajectories, points))
 
-    with mp.Pool(1) as pool:
+    with mp.Pool(2) as pool:
         output = pool.starmap_async(analyze, args)
         results = output.get()
 
