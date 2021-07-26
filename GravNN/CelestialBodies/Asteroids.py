@@ -23,7 +23,7 @@ class Eros():
         self.radius = np.linalg.norm(np.array([34.4, 11.2, 11.2])*1E3)/2  #34400.0/2.0# 16840.0 is *mean* diameter # meters (diameter / 2)
 
         G = 6.67430*10**-11
-        #self.mu = G*7.329*10**10 # self.density*(4./3.)*np.pi*self.radius**3*G
+        self.mu = G*6.687*10**15 
         self.model_3k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_3k_poly.stl"    
         self.model_6k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_6k_poly.stl"    
         self.model_12k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_12k_poly.stl"    
@@ -35,10 +35,29 @@ class Eros():
         self.model_25k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_25k_poly.stl"    
         self.model_50k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Gaskell_50k_poly.obj"  
         self.model_100k = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Blender_98k_poly.stl"   
-        #self.obj_hf_file = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Gaskell_200k_poly.obj" 
-        # self.obj_hf_file = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Blender_98k_poly.obj" 
-        # self.stl_hf_file = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Blender_98k_poly.stl" 
 
-        # self.sh_obj_file = os.path.dirname(os.path.realpath(__file__)) + "/../Files/GravityModels/Bennu-Radar_39sh.json" 
-        # self.sh_obj_hf_file = os.path.dirname(os.path.realpath(__file__)) + "/../Files/GravityModels/g_06290mm_spc_obj_0000n00000_v008_39sh.json" 
 
+class Toutatis():
+    def __init__(self):
+        self.body_name = "toutatis"
+
+        G = 6.67430*10**-11
+
+        #https://3d-asteroids.space/asteroids/4179-Toutatis
+        self.model_lf = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Toutatis_Radar_based_Blender_lo_res.obj"    
+        self.model_hf = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Toutatis_Radar_based_Blender_hi_res.obj"    
+
+        # Scheeres Paper
+        # volume of 7.670 km^3 
+        # density = 2.5/1000.0*100**3 # kg/m^3 -- 2.5 g/cm^3 (according to Dynamics of Orbits close to Toutatis -- Scheeres)
+        self.radius = 1.223*1000
+        self.density = 2.5/1000.0*100**3
+        self.mass = 1.917*10**13
+
+        self.mu = G*self.mass
+
+
+
+        # from wiki
+        #self.density = 2.1/1000.0*100**3 # kg/m^3 -- 2.1 g/cm^3 (Wiki)
+        #self.radius = 5.4*1E3/2 # mean diameter from https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=4179

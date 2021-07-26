@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import copy
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from GravNN.GravityModels.PointMass import PointMass
@@ -85,6 +86,32 @@ def compute_normalization_layer_constants(config):
 
         x_transformer = MinMaxScaler(feature_range=(-1,1))
         x_train[:,1:3] = x_transformer.fit_transform(x_train[:,1:3])
+    elif config['network_type'][0].__name__ == 'SphericalPinesTraditionalNet':
+        x_cart = copy.deepcopy(x_unscaled)
+
+        # Convert to spherical coordinates
+        x_unscaled = cart2sph(x_unscaled)     
+        x_unscaled[:,1:3] = np.deg2rad(x_unscaled[:,1:3])
+
+        x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(x_unscaled, 
+                                                                                    a_unscaled, 
+                                                                                    u_unscaled, 
+                                                                                    config['N_train'][0], 
+                                                                                    config['N_val'][0])
+
+        a_train = a_train + config['acc_noise'][0]*np.std(a_train)*np.random.randn(a_train.shape[0], a_train.shape[1])
+
+
+
+        # Determine scalers for the normalized spherical coordinates
+
+        r_transformer = MinMaxScaler(feature_range=(-1,1))
+        x_train[:,0:1] = r_transformer.fit_transform(x_train[:,0:1])
+
+        x_transformer = MinMaxScaler(feature_range=(-1,1))
+        x_train[:,1:3] = x_transformer.fit_transform(x_train[:,1:3])
+        config['norm_scalers'] = [np.concatenate([r_transformer.scale_, x_transformer.scale_])]
+        config['norm_mins'] = [np.concatenate([r_transformer.min_, x_transformer.min_])]
 
     elif config['network_type'][0].__name__ == 'CylindricalTraditionalNet':
         # Convert to spherical coordinates
@@ -134,7 +161,8 @@ def get_raw_data(config):
             get_analytic_data_fcn = get_poly_data
         extra_x_unscaled, extra_a_unscaled, extra_u_unscaled = get_analytic_data_fcn(extra_trajectory, config['grav_file'][0], **config)
 
-    if np.max(u_unscaled) > 0.0:
+    deg_removed = config.get('deg_removed', None)
+    if np.max(u_unscaled) > 0.0 and deg_removed is not None:
         print("WARNING: This pickled acceleration/potential pair was generated when the potential had a wrong sign. Regenerating the data")
         print("WARNING: The max potential was: " + str(np.max(u_unscaled)))
         config['override'] = [True]
@@ -241,31 +269,9 @@ def get_preprocessed_data(config):
         a_train = a_bar # this should be on the order of [-100, 100]
         config['a_bar_transformer'] = [a_bar_transformer]
 
-        #a_train = a_bar_transformer.fit_transform(a_bar) # this finds a_bar_0 and a_bar_s and normalizes the "truth" to [-1,1]
-
         x_val = x_transformer.transform(x_val)
         a_val = a_transformer.transform(a_val)
         u_val = u_transformer.transform(np.repeat(u_val,3,axis=1))[:,0].reshape((-1,1))
-
-
-
-        # Old logic
-        # # a = a_star*a0
-        # # u = u_star*u0
-        # # x = x_star*x0
-
-        # # du/dx = -a
-        # # du_star / dx_star = -(x0/u0)*(a0*a_star)
-
-        # # set x0, u0 equal to the original domain range
-        # # choose a such that a_star [-1,1]
-        # x0 = x_transformer.data_range_
-        # a0 = a_transformer.data_range_
-        # u0 = u_transformer.data_range_
-
-        # a_train = a_transformer.fit_transform(a_train)
-        # #a0 = u0/x0/a0*2
-        # #a_train = a_transformer.fit_transform(a_train, scaler=a0*x0/u0)
 
 
 

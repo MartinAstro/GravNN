@@ -13,18 +13,24 @@ from GravNN.Support.ProgressBar import ProgressBar
 
 def get_poly_data(trajectory, obj_file, **kwargs):
     override = bool(kwargs.get('override', [False])[0])
+    remove_point_mass = bool(kwargs.get('remove_point_mass', [False])[0])
 
-    Call_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
-    Call_r0_gm.load(override=override)
+    poly_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
+    poly_r0_gm.load(override=override)
+
+    x = poly_r0_gm.positions # position (N x 3)
+    a = poly_r0_gm.accelerations
+    u = np.array([poly_r0_gm.potentials]).transpose() # potential (N x 1)
 
     # TODO: Determine if this is valuable -- how do dynamics and representation change inside brillouin sphere
-    # Clm_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
-    # accelerations_Clm = Clm_r0_gm.load().accelerations
-
-    x = Call_r0_gm.positions # position (N x 3)
-    a = Call_r0_gm.accelerations
-    u = np.array([Call_r0_gm.potentials]).transpose() # potential (N x 1)
-
+    if remove_point_mass:
+        point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
+        point_mass_r0_gm.load(override=override)
+        a_pm = point_mass_r0_gm.accelerations
+        u_pm =  np.array([point_mass_r0_gm.potentials]).transpose()
+        a = a - a_pm
+        u = u - u_pm
+        
     return x, a, u
 
 @njit(cache=True, parallel=True)

@@ -27,6 +27,9 @@ def update_constant(tape, loss_components, constant_avg, beta, variables):
     new_const_avg = constant_avg*tf.subtract(1.0,beta) + beta*adaptive_constants
     return new_const_avg
 
+def hold_constant(tape, loss_components, constant_avg, beta, variables):
+    return constant_avg
+
 def no_pinn_anneal(loss_components, adaptive_const):
     loss_res = loss_components
     return (loss_res,)

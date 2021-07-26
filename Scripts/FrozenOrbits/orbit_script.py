@@ -1,9 +1,12 @@
 from GravNN.Networks.utils import configure_tensorflow
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Data import standardize_output
+from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Eros, Toutatis
 tf = configure_tensorflow()
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def oe2cart_tf(f, mu, OE):
 
@@ -44,20 +47,20 @@ def oe2cart_tf(f, mu, OE):
 
     return r_xyz, v_xyz
 
+def sph2cart_tf(r_vec):
+    r = r_vec[0] #[0, inf]
+    theta = r_vec[1] * np.pi / 180.0 # [0, 360]
+    phi = r_vec[2]* np.pi / 180.0 # [0, 180]
 
+    x = r*tf.math.sin(phi)*tf.math.cos(theta)
+    y = r*tf.math.sin(phi)*tf.math.sin(theta)
+    z = r*tf.math.cos(phi)
+
+    return tf.stack([[x,y,z]],0)
 class LPE():
     def __init__(self, model, config, mu):
         self.model = model
         self.config = config 
-        x_transformer = config['x_transformer'][0]
-        u_transformer = config['u_transformer'][0]
-
-        x_scaler = x_transformer.data_range_
-        u_scaler = u_transformer.data_range_
-    
-        self.x0 = tf.constant(x_scaler, dtype=tf.float32, name='x_scale')
-        self.u0 = tf.constant(u_scaler, dtype=tf.float32, name='u_scale')
-
         self.mu = tf.constant(mu, dtype=tf.float32, name='mu')
 
     def __call__(self, OE):
@@ -67,50 +70,34 @@ class LPE():
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(OE) # Needs to be watched because it isn't a 'trainable variable' https://stackoverflow.com/questions/56916313/tensorflow-2-0-doesnt-compute-the-gradient
             r, v = oe2cart_tf(f, self.mu, OE)
-            r_scaled = tf.reshape(r/self.x0, shape=(1,3))
-            y_hat = self.model(r_scaled)#.astype('float32'))
-            u_pred, a_pred, laplace_pred, curl_pred = standardize_output(y_hat, self.config)
-            u = u_pred*self.u0
-        dUdOE = tape.gradient(u, OE)
-
+            x = sph2cart_tf(r)
+            u_pred = self.model.generate_potential(x)
+        dUdOE = tape.gradient(u_pred, OE)
 
         b = a*np.sqrt(1.-e**2)
         n = np.sqrt(self.mu/a**3)
         
-        dadt = 2.0/(n*a) * dUdOE[5]
-        dedt = -b/(n*a**3*e)*dUdOE[3] + b**2/(n*a**4*e)*dUdOE[5]
-        didt = -1.0/(n*a*b*np.sin(i))*dUdOE[4] + np.cos(i)/(n*a*b*np.sin(i))*dUdOE[3]
-        dwdt = -np.cos(i)/(n*a*b*np.sin(i))*dUdOE[2] + b/(n*a**3*e)*dUdOE[1]
-        dOdt = 1.0/(n*a*b*np.sin(i))*dUdOE[2]
-        dMdt = -2.0/(n*a)*dUdOE[0] - b**2/(n*a**4*e)*dUdOE[1]
+        dOEdt = {
+            'dadt' : 2.0/(n*a) * dUdOE[5],
+            'dedt' : -b/(n*a**3*e)*dUdOE[3] + b**2/(n*a**4*e)*dUdOE[5],
+            'didt' : -1.0/(n*a*b*np.sin(i))*dUdOE[4] + np.cos(i)/(n*a*b*np.sin(i))*dUdOE[3],
+            'domegadt' : -np.cos(i)/(n*a*b*np.sin(i))*dUdOE[2] + b/(n*a**3*e)*dUdOE[1],
+            'dOmegadt' : 1.0/(n*a*b*np.sin(i))*dUdOE[2],
+            'dMdt' : -2.0/(n*a)*dUdOE[0] - b**2/(n*a**4*e)*dUdOE[1]
+        }
+       
+        return dOEdt
 
-        return [dadt, dedt, didt, dwdt, dOdt, dMdt]
 
-def main():
-
-    df_file = "Data/Dataframes/useless_061121.data"
-    df = pd.read_pickle(df_file)
-    idx = 0
-
-    model_id = df["id"].values[idx]
-    tf.keras.backend.clear_session()
-    config, model = load_config_and_model(model_id, df)
-
-    a = 6378.0+420.0
-    e = 0.1
-    i = np.pi/4.0
-    omega = 0.0
-    Omega = 0.0
-    tau = 0.0
-    OE = [a, e, i, omega, Omega, tau]
-    mu = 3.986004418*10**14 / 1000**3 # km^3/s^2
-
-    solver = LPE(model, config, mu)
-
-    N = 20
-    omega = np.linspace(0.0, 2.0*np.pi, N)
-    e = np.linspace(0.05, 0.99, N)
-    XX, YY = np.meshgrid(omega, e)
+def generate_2d_dOE_grid(OE, N, solver):
+    keys = []
+    for key, value in OE.items():
+        if type(value) == type([]):
+            keys.append(key)
+    
+    X = np.linspace(OE[keys[0]][0], OE[keys[0]][1], N)
+    Y = np.linspace(OE[keys[1]][0], OE[keys[1]][1], N)
+    XX, YY = np.meshgrid(X, Y)
 
     dUdX = []
     dUdY = []
@@ -118,22 +105,81 @@ def main():
         dX = []
         dY = []
         for j in range(len(YY)):
-            x = XX[i,j]
-            y = YY[i,j]
-            OE = [a, y, i, x, Omega, tau]
-            output = solver(OE)
-            dX.append(output[3].numpy())
-            dY.append(output[1].numpy())
+            OE[keys[0]] = XX[i,j]
+            OE[keys[1]] = YY[i,j]
+            OE_inst = [OE['a'], OE['e'], OE['i'], OE['omega'], OE['Omega'], OE['tau']]
+            dOEdt = solver(OE_inst)
+            dX.append(dOEdt['d' + keys[0] + 'dt'].numpy())
+            dY.append(dOEdt['d' + keys[1] + 'dt'].numpy())
         dUdX.append(dX)
         dUdY.append(dY)
 
-    import matplotlib.pyplot as plt
+
     plt.figure()
-    plt.contourf(XX,YY,dUdX, levels=np.linspace(-0.00005, 0.00015,30))
-    #plt.plot(dUda)
+    plt.contourf(XX,YY,dUdX, levels=np.linspace(-0.00005, 0.00015, 30))
+    plt.xlabel(keys[0])
+    plt.ylabel(keys[1])
+    plt.title('d' + keys[0] + 'dt')
     plt.colorbar()
+
+    plt.figure()
+    plt.contourf(XX,YY,dUdY, levels=np.linspace(-0.1, 0.1, 30))
+    plt.xlabel(keys[0])
+    plt.ylabel(keys[1])
+    plt.title('d' + keys[1] + 'dt')
+    plt.colorbar()
+
+    # plt.figure()
+    # plt.imshow(dUdX)#, levels=np.linspace(-0.00005, 0.00015, 30))
+    # plt.xlabel(keys[0])
+    # plt.ylabel(keys[1])     
+    # plt.title('d' + keys[0] + 'dt')
+    # plt.colorbar()
+
+    # plt.figure()
+    # plt.imshow(dUdY)#, levels=np.linspace(-0.00005, 0.00015, 30))
+    # plt.xlabel(keys[0])
+    # plt.ylabel(keys[1])
+    # plt.title('d' + keys[1] + 'dt')
+    # plt.colorbar()
+
     plt.show()
-    print(output)
+    print(dOEdt)
+
+def main():
+
+    #df_file = "Data/Dataframes/useless_061121.data"
+    #mu = Earth().mu / 1000**3 # km^3/s^2
+    
+    df_file = "Data/Dataframes/eros_trajectory_v2.data"
+    df_file = "Data/Dataframes/useless_072321_v1.data"
+
+
+    # mu = Eros().mu / 1000**3 # km^3/s^2
+    mu = Toutatis().mu / 1000**3
+    df = pd.read_pickle(df_file)
+    idx = 0
+
+    model_id = df["id"].values[idx]
+    tf.keras.backend.clear_session()
+    config, model = load_config_and_model(model_id, df)
+
+    a = 6378.0+420.0 # Earth in LEO
+    a = 20.0 # Eros ~16 km diameter
+
+    solver = LPE(model, config, mu)
+    N = 20
+
+    OE_dict = {
+        'a' : [16.0, 18.0],
+        'e' : [0.2, 0.99],
+        'i' : np.pi/3.0,
+        'omega' : 0.0,
+        'Omega' : 0.0,
+        'tau' : 0.0
+    }
+
+    generate_2d_dOE_grid(OE_dict, N, solver)
 
 
 

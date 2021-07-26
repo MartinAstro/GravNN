@@ -53,7 +53,7 @@ class PointMass(GravityModelBase):
         return np.array([self.mu/position[0]**2, 0, 0]) #[a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
 
     def compute_potential_value(self, position):
-        return self.mu/position[0]
+        return -self.mu/position[0]
 
 def main():
     import time 

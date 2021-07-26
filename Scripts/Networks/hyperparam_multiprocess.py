@@ -57,23 +57,45 @@ def main():
     # df_file = "Data/Dataframes/useless_070721_v4.data" # [5000,10000]
     # df_file = "Data/Dataframes/useless_070721_v5.data" # [5000,10000] + [0,5000]
 
-    threads = 1
-    config = get_prototype_eros_config()
-    # config = get_default_earth_config()
+    #df_file = "Data/Dataframes/useless_071321_v1.data" # [0,10000] Pines sphere AP, APLC -- wrong
+    df_file = "Data/Dataframes/useless_071321_v2.data" # [0,10000] Pines sphere vs sphere AP
+    df_file = "Data/Dataframes/useless_071321_v3.data" # [0,10000] Pines sphere AP, APLC
+    df_file = "Data/Dataframes/useless_071321_v4.data" # [5000,10000] Pines sphere AP, APLC
+    df_file = "Data/Dataframes/useless_071321_v5.data" # [5000,10000] Pines sphere AP, APLC (scale by just x_s**1 instead of **2)
+
+    df_file = "Data/Dataframes/useless_071321_v6.data" # [5000,10000] + Extra Pines sphere AP, APLC (scale by x_s**2)
+
+    df_file = "Data/Dataframes/eros_trajectory_v2.data" # [0,10000] -- Pines sphere (AP)
+    df_file = "Data/Dataframes/earth_trajectory_v2.data" # [0,10000] -- Pines sphere (AP)
+    df_file = "Data/Dataframes/earth_trajectory_deg2.data" # [0,10000] -- Pines sphere (AP)
+    df_file = "Data/Dataframes/useless_072021_v2.data" # APLC -- 10000 epochs, and various decay rates and starts
+    df_file = "Data/Dataframes/useless_072121_v1.data" # APLC -- 10000 epochs, and various decay rates and starts
+
+
+    df_file = "Data/Dataframes/useless_072321_v1.data" # Toutatis -- without point mass
+
+    df_file = "Data/Dataframes/useless_072621_v1.data" # Earth -- without point mass
+
+
+    threads = 2
+    # config = get_prototype_eros_config()
+    #config = get_prototype_toutatis_config()
+
+    config = get_default_earth_config()
     #config = get_default_earth_pinn_config()
     #config = get_default_eros_pinn_config()
     #config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [50000],
+        "N_dist": [5000],
         "N_train": [2500],
         "N_val" : [150],
         "epochs": [7500],
 
-        'distribution' : [RandomAsteroidDist],
-        'radius_min' : [0], # Make sure it isn't a float
-        # 'radius_min' : [Eros().radius + 5000.0],
-        'radius_max' : [Eros().radius + 10000.0],
+        # 'distribution' : [RandomAsteroidDist],
+        # #'radius_min' : [Eros().radius + 5000.0], # Make sure it isn't a float
+        # 'radius_min' : [0],
+        # 'radius_max' : [Toutatis().radius + 10000.0],
 
         # 'extra_distribution' : [RandomAsteroidDist],
         # 'extra_radius_min' : [0],
@@ -84,31 +106,39 @@ def main():
 
         #"radius_max" : [Earth().radius+50000.0], # Use a tighter radius
         "decay_rate_epoch": [2500],
-        "decay_epoch_0": [5000],
+        "decay_epoch_0": [500],
         "decay_rate": [0.5],
-        "learning_rate": [0.001],
+        "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
         "activation": ["gelu"],
         "initializer": ["glorot_uniform"],
         'x_transformer' : [UniformScaler(feature_range=(-1,1))],
         'u_transformer' : [UniformScaler(feature_range=(-1,1))],
         'a_transformer' : [UniformScaler(feature_range=(-1,1))],
-        "PINN_constraint_fcn": ["pinn_plc"],#lc", "pinn_plc", "pinn_aplc"],#"pinn_ap"],
-        
+        #"PINN_constraint_fcn": ["pinn_plc"],#lc", "pinn_plc", "pinn_aplc"],#"pinn_ap"],
+        "PINN_constraint_fcn": ["pinn_ap"],#, 'pinn_aplc'],
         "scale_by": ["non_dim"],#"u"],
         "mixed_precision": [False],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         "num_units": [20],
         "schedule_type" : ['exp_decay'],
         "beta" : [0.9],
-        "deg_removed" : [-1],
+        "optimizer" : ['adam'],
+        "deg_removed" : [0],
+        "max_deg" : [2],
         #'dropout': [0.1],
         #'batch_norm' :[True],
         #'basis': ['spherical'],
         #'augmentation':['periodic'],
-        "network_type": ['sph_traditional'],#["sph_traditional"],
-        "input_layer": ["cart_and_sph"],
+
+        #'network_type' : ['traditional'],
         #"input_layer": ["none"],
+
+        "network_type" : ['sph_pines_traditional'],
+        "input_layer": ["cart_and_sph"],
+        "lr_anneal" : [True],
+        "remove_point_mass" : [True], # remove point mass from polyhedral model
+
         'sph_in_graph': [True],
         "override" : [False]
     }

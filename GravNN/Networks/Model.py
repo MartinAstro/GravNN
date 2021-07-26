@@ -22,11 +22,8 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config['dtype'][0]
         self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
 
-        self.a_bar_s = self.config['a_bar_transformer'][0].scale_
-        self.a_bar_0 = self.config['a_bar_transformer'][0].min_
-
-        self.calc_adaptive_constant = update_constant
-        tensors = utils._get_acceleration_nondim_constants(config['PINN_constraint_fcn'][0], self.a_bar_0, self.a_bar_s)
+        self.calc_adaptive_constant = utils._get_annealing_fcn(config['lr_anneal'][0])
+        tensors = utils._get_acceleration_nondim_constants(config['PINN_constraint_fcn'][0], self.config)
         self.scale_tensor = tensors[0]
         self.translate_tensor = tensors[1]
         PINN_variables = utils._get_PI_constraint(config['PINN_constraint_fcn'][0])
@@ -47,7 +44,7 @@ class CustomModel(tf.keras.Model):
         y_hat_scaled = (y_hat*self.scale_tensor) + self.translate_tensor# + self.translate_tensor)/self.scale_tensor
         y_scaled = (y*self.scale_tensor) + self.translate_tensor
         loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat_scaled,y_scaled)), 0)
-        tf.print(loss_components)
+        # tf.print(loss_components)
         return loss_components
 
     @tf.function()# jit_compile=True)
@@ -61,12 +58,10 @@ class CustomModel(tf.keras.Model):
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
-        # adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
-        #                                                         self.adaptive_constant, self.beta, \
-        #                                                         self.trainable_weights)                                                                
+        adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
+                                                                self.adaptive_constant, self.beta, \
+                                                                self.trainable_weights)                                                                
         
-        adaptive_constant = self.adaptive_constant
-        self.adaptive_constant.assign(adaptive_constant)
         #tf.print(adaptive_constant)
 
         # grad_comp_list = []
@@ -146,6 +141,19 @@ class CustomModel(tf.keras.Model):
                 'a' : a_pred,
                 'laplace' : laplace_pred,
                 'curl' : curl_pred}
+
+    def generate_potential(self, x):
+        x = copy.deepcopy(x)
+        x_transformer = self.config['x_transformer'][0]
+        u_transformer = self.config['u_transformer'][0]
+        if self.config['basis'][0] == 'spherical':
+            x = cart2sph(x)
+            x[:,1:3] = np.deg2rad(x[:,1:3])
+
+        x = x_transformer.transform(x)
+        u_pred = self.network(x)
+        u_pred = u_transformer.inverse_transform(u_pred)
+        return u_pred
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):
@@ -325,6 +333,9 @@ def backwards_compatibility(config):
         
         if 'dtype' not in config:
             config['dtype'] = [tf.float32]
+        
+    if 'lr_anneal' not in config:
+        config['lr_anneal'] = [False]
 
     
     return config

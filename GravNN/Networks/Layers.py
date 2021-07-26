@@ -106,7 +106,6 @@ class Cart2SphLayer(tf.keras.layers.Layer):
         })
         return config
 
-
 class Sph2NetLayer(tf.keras.layers.Layer):
     def __init__(self, input_dim, scalers, mins):
         super(Sph2NetLayer, self).__init__()
@@ -134,6 +133,97 @@ class Sph2NetLayer(tf.keras.layers.Layer):
         phi = tf.reshape(phi, shape=[-1, 1])
 
         spheres = tf.concat([r, theta, phi], axis=-1)
+        return spheres
+    def get_config(self):
+        config = super().get_config().copy()
+
+        config.update({
+            'scalers': self.scalers,
+            'mins': self.mins,
+        })
+        config = super().get_config().copy()
+        return config
+
+
+
+class Cart2PinesSphLayer(tf.keras.layers.Layer):
+    def __init__(self, input_dim):
+        super(Cart2PinesSphLayer, self).__init__()
+        self.pi = tf.constant(np.pi, dtype=tf.float32).numpy()
+
+    #@tf.function
+    def call(self, inputs):
+        pi = tf.constant(np.pi, dtype=tf.float32)
+        inputs_transpose = tf.transpose(inputs)
+        X = inputs_transpose[0]
+        Y = inputs_transpose[1]
+        Z = inputs_transpose[2]
+
+        XX = tf.square(X)
+        YY = tf.square(Y)
+        r = tf.sqrt(XX + YY + tf.square(Z))  # r
+
+        s = X/r # sin(beta)
+        t = Y/r # sin(gamma)
+        u = Z/r # sin(alpha)
+
+        # beta = tf.math.asin(s)
+        # gamma = tf.math.asin(t)
+        # alpha = tf.math.asin(u)
+
+        beta = s
+        gamma = t
+        alpha = u
+
+        r = tf.reshape(r, shape=[-1, 1])
+        beta = tf.reshape(beta, shape=[-1, 1])
+        gamma = tf.reshape(gamma, shape=[-1, 1])
+        alpha = tf.reshape(alpha, shape=[-1, 1])
+
+        spheres = tf.concat([r, beta, gamma, alpha], axis=-1)
+        return spheres
+    def get_config(self):
+
+        config = super().get_config().copy()
+        config.update({
+            'pi': self.pi,
+        })
+        return config
+
+class PinesSph2NetLayer(tf.keras.layers.Layer):
+    #https://ntrs.nasa.gov/api/citations/19760011100/downloads/19760011100.pdf
+    # contains definitions of alpha, beta, and gamma
+    # (three angle non-singular system)
+    def __init__(self, input_dim, scalers, mins):
+        super(PinesSph2NetLayer, self).__init__()
+        self.scalers = tf.constant(scalers, dtype=tf.float32).numpy()
+        self.mins = tf.constant(mins, dtype=tf.float32).numpy()
+
+    #@tf.function
+    def call(self, inputs):
+        pi = tf.constant(np.pi, dtype=tf.float32)
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        beta = inputs_transpose[1]
+        gamma = inputs_transpose[2]
+        alpha = inputs_transpose[2]
+
+        # Normalize r -> [-1,1]
+        r = tf.add(tf.multiply(r,self.scalers[0]), self.mins[0])
+        #r = tf.divide(1.0,r)
+
+        # Convert deg -> rad -> periodic [-1,1] 
+        # beta = tf.sin(beta)
+        # gamma = tf.sin(gamma)
+        # alpha = tf.sin(alpha)
+
+        r = tf.reshape(r, shape=[-1, 1])
+        beta = tf.reshape(beta, shape=[-1, 1])
+        gamma = tf.reshape(gamma, shape=[-1, 1])
+        alpha = tf.reshape(alpha, shape=[-1, 1])
+
+        spheres = tf.concat([r, beta, gamma, alpha], axis=-1)
+
         return spheres
     def get_config(self):
         config = super().get_config().copy()

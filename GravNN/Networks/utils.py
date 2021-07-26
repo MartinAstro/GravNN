@@ -56,9 +56,14 @@ def _get_optimizer(name):
     }[name.lower()]
 
 
+def _get_annealing_fcn(value):
+    from GravNN.Networks.Annealing import update_constant, hold_constant
+    if value:
+        return update_constant
+    else:
+        return hold_constant
 
-
-def _get_acceleration_nondim_constants(value, a0, a_s):
+def _get_acceleration_nondim_constants(value, config):
     import tensorflow as tf
     # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
     try:
@@ -66,20 +71,40 @@ def _get_acceleration_nondim_constants(value, a0, a_s):
     except:
         pass
     
+    a_bar_s = config['a_bar_transformer'][0].scale_
+    a_bar_0 = config['a_bar_transformer'][0].min_
+
+    a0 = a_bar_0
+    a_s = a_bar_s
+
+    u_xx_s = config['u_transformer'][0].scale_
+    u_xx_0 = config['u_transformer'][0].min_
+
+    x_s = config['x_transformer'][0].scale_
+    x_0 = config['x_transformer'][0].min_
+
+    l_s = x_s**2
+    c_s = x_s**2
+
+    l_s = 1.0
+    c_s = 1.0
+
+
+
     # scale tensor + translate tensor
     return {
         "no_pinn": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)), # scaling ignored
         "pinn_a": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)), # scaling ignored
         "pinn_p": (tf.constant([1.0], dtype=tf.float32), tf.constant([0.0], dtype=tf.float32)),
         
-        "pinn_pl": (tf.constant([1.0, 1.0], dtype=tf.float32), tf.constant([0.0, 0.0], dtype=tf.float32)),
-        "pinn_plc": (tf.constant([1.0, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([0.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+        "pinn_pl": (tf.constant([1.0, l_s], dtype=tf.float32), tf.constant([0.0, 0.0], dtype=tf.float32)),
+        "pinn_plc": (tf.constant([1.0, l_s, c_s, c_s, c_s], dtype=tf.float32), tf.constant([0.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
 
         "pinn_ap": (tf.constant([1.0, a_s, a_s, a_s], dtype=tf.float32), tf.constant([0.0, a0, a0, a0], dtype=tf.float32)),
-        "pinn_al": (tf.constant([a_s, a_s, a_s, 1.0], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0], dtype=tf.float32)),
-        "pinn_alc": (tf.constant([a_s, a_s, a_s, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
-        "pinn_apl": (tf.constant([1.0, a_s, a_s, a_s, 1.0], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0], dtype=tf.float32)),
-        "pinn_aplc": (tf.constant([1.0, a_s, a_s, a_s, 1.0, 1.0, 1.0, 1.0], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+        "pinn_al": (tf.constant([a_s, a_s, a_s, l_s], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0], dtype=tf.float32)),
+        "pinn_alc": (tf.constant([a_s, a_s, a_s, l_s, c_s, c_s, c_s], dtype=tf.float32), tf.constant([a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
+        "pinn_apl": (tf.constant([1.0, a_s, a_s, a_s, l_s], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0], dtype=tf.float32)),
+        "pinn_aplc": (tf.constant([1.0, a_s, a_s, a_s, l_s, c_s, c_s, c_s], dtype=tf.float32), tf.constant([0.0, a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32)),
 
         "pinn_a_sph": (tf.constant([a_s, a_s, a_s], dtype=tf.float32), tf.constant([a0, a0, a0], dtype=tf.float32)) # scaling ignored
     }[value.lower()]
@@ -115,11 +140,12 @@ def _get_PI_constraint(value):
     }[value.lower()]
 
 def _get_network_fcn(name):
-    from GravNN.Networks.Networks import TraditionalNet, ResNet, SphericalTraditionalNet, CylindricalTraditionalNet
+    from GravNN.Networks.Networks import TraditionalNet, ResNet, SphericalTraditionalNet, SphericalPinesTraditionalNet, CylindricalTraditionalNet
     return {
         "traditional": TraditionalNet,
         "resnet": ResNet,
         "sph_traditional": SphericalTraditionalNet,
+        "sph_pines_traditional": SphericalPinesTraditionalNet,
         "cyl_traditional": CylindricalTraditionalNet
     }[name.lower()]
 

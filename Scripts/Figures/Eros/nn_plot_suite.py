@@ -5,7 +5,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from GravNN.CelestialBodies.Asteroids import Eros
+from GravNN.CelestialBodies.Asteroids import Eros, Toutatis
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Trajectories import DHGridDist, RandomDist, RandomAsteroidDist
@@ -59,6 +59,8 @@ def main():
     map_suite.fig_size = map_suite.full_page
 
     planet = Eros()
+    # planet = Toutatis()
+
     density_deg = 180
 
     radius_min = planet.radius
@@ -79,13 +81,14 @@ def main():
 
     #plt.show()
     # df = pd.read_pickle('Data/Dataframes/useless_070221_v4.data')
-    df = pd.read_pickle('Data/Dataframes/useless_070621_v4.data')
+    df = pd.read_pickle('Data/Dataframes/useless_072321_v1.data')
     model_ids = df['id'].values[:]
     for model_id in model_ids:
         config, model = load_config_and_model(model_id, df)
         title = get_title(config)
 
-        directory = os.path.abspath('.') +"/Plots/Asteroid/" + config['PINN_constraint_fcn'][0].__name__ + "/" + str(np.round(config['radius_min'][0],2)) + "_" +str(np.round(config['radius_max'][0],2)) + "_"+str(config['extra_N_train'][0]) + "/"
+        N_extra = config.get('extra_N_train', 0)
+        directory = os.path.abspath('.') +"/Plots/Asteroid/" + config['PINN_constraint_fcn'][0].__name__ + "/" + str(np.round(config['radius_min'][0],2)) + "_" +str(np.round(config['radius_max'][0],2)) + "_"+str(N_extra) + "/"
         os.makedirs(directory, exist_ok=True)
 
         train_trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
