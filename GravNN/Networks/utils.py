@@ -140,12 +140,13 @@ def _get_PI_constraint(value):
     }[value.lower()]
 
 def _get_network_fcn(name):
-    from GravNN.Networks.Networks import TraditionalNet, ResNet, SphericalTraditionalNet, SphericalPinesTraditionalNet, CylindricalTraditionalNet
+    from GravNN.Networks.Networks import TraditionalNet, ResNet, SphericalTraditionalNet, SphericalPinesTraditionalNet, CylindricalTraditionalNet, SphericalPinesTransformerNet
     return {
         "traditional": TraditionalNet,
         "resnet": ResNet,
         "sph_traditional": SphericalTraditionalNet,
         "sph_pines_traditional": SphericalPinesTraditionalNet,
+        "sph_pines_transformer": SphericalPinesTransformerNet,
         "cyl_traditional": CylindricalTraditionalNet
     }[name.lower()]
 

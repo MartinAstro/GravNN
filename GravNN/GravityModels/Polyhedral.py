@@ -28,6 +28,7 @@ def get_poly_data(trajectory, obj_file, **kwargs):
         point_mass_r0_gm.load(override=override)
         a_pm = point_mass_r0_gm.accelerations
         u_pm =  np.array([point_mass_r0_gm.potentials]).transpose()
+
         a = a - a_pm
         u = u - u_pm
         

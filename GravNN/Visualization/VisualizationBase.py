@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+import numpy as np
 
 class VisualizationBase(ABC):
 
@@ -21,6 +21,7 @@ class VisualizationBase(ABC):
             mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'gold',  'salmon',  'lime', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
 
          # ~ 5:3 aspect ratio
+         # (tall, wide)
         golden_ratio = (5**.5 - 1) / 2
         self.tri_page = (2.1, 2.1*golden_ratio)
         self.half_page = (3, 3*golden_ratio) #
@@ -28,6 +29,9 @@ class VisualizationBase(ABC):
 
         # AAS textwidth is 6.5
         self.half_page = (3.25, 3.25*golden_ratio)
+
+        silver_ratio = 1/(1 + np.sqrt(2))
+        self.tri_vert_page = (6.3, 6.3*silver_ratio)
 
         self.fig_size = (5,3.5) #(3, 1.8) is half page. 
         return

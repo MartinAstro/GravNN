@@ -34,7 +34,8 @@ def get_prototype_toutatis_config():
         'a_transformer' : [UniformScaler(feature_range=(-1,1))],
         'dtype' : ['float32'],
         'dummy_transformer' : [DummyScaler()],
-        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
+        'class_weight' : [[1.0, 1.0, 1.0]],#no_pinn and PINN_A
+        'skip_normalization' : [False]
     }
 
     config = {}

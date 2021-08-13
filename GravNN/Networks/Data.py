@@ -53,7 +53,9 @@ def standardize_output(y_hat, config):
     return u, a, laplace, curl
 
 def compute_normalization_layer_constants(config):
-
+    if config['skip_normalization'][0]:
+        return 
+        
     trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
     if "Planet" in config['planet'][0].__module__:
         get_analytic_data_fcn = get_sh_data
@@ -86,7 +88,7 @@ def compute_normalization_layer_constants(config):
 
         x_transformer = MinMaxScaler(feature_range=(-1,1))
         x_train[:,1:3] = x_transformer.fit_transform(x_train[:,1:3])
-    elif config['network_type'][0].__name__ == 'SphericalPinesTraditionalNet':
+    elif config['network_type'][0].__name__ == 'SphericalPinesTraditionalNet' or config['network_type'][0].__name__ == 'SphericalPinesTransformerNet':
         x_cart = copy.deepcopy(x_unscaled)
 
         # Convert to spherical coordinates
@@ -254,8 +256,6 @@ def get_preprocessed_data(config):
         a_bar = d((u-u0)/us)/dx_bar = d(u/us)/dx_bar = 1/us*du/dx_bar = 1/us *du/(d((x-x0)/xs)) = 1/us * du/d(x/xs) = xs/us * du/dx = xs/us * a
 
         such that a_bar exists in [-1E2, 1E2] rather than [-1,1]
-
-
         '''
 
 

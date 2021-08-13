@@ -36,7 +36,8 @@ def get_default_moon_config():
         'u_transformer' : [MinMaxScaler(feature_range=(-1,1))],
         'dtype' : ['float32'],
         'dummy_transformer' : [DummyScaler()],
-        'class_weight' : [[1.0, 1.0, 1.0]] #no_pinn and PINN_A
+        'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
+        'skip_normalization' : [False]
     }
     config = {}
     config.update(data_config)
@@ -78,7 +79,8 @@ def get_default_moon_pinn_config():
         'dtype' : ['float32'],
         'dummy_transformer' : [DummyScaler()],
         'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
-        'learning_rate' : [0.001]
+        'learning_rate' : [0.001],
+        'skip_normalization' : [False]
     }
     config = {}
     config.update(data_config)

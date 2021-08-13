@@ -26,10 +26,10 @@ class PolyVisualization(VisualizationBase):
             self.scale = 1.0
         pass
 
-    def plot_polyhedron(self, mesh, accelerations, label=None, vlim=None):
+    def plot_polyhedron(self, mesh, accelerations, label=None, vlim=None,log=False):
         fig, ax = self.new3DFig()
         cmap = plt.get_cmap('bwr')
-        tri = Poly3DCollection(mesh.triangles, cmap=cmap)
+        tri = Poly3DCollection(mesh.triangles*1000, cmap=cmap)
         vlim_min = np.min(accelerations)
         vlim_max = np.max(accelerations)
         scaled_acceleration = (accelerations - np.min(accelerations))/(np.max(accelerations) - np.min(accelerations))
@@ -39,15 +39,19 @@ class PolyVisualization(VisualizationBase):
         tri.set_facecolor(mesh.visual.face_colors/255)
         tri.set_edgecolor(mesh.visual.face_colors/255)
         p = ax.add_collection3d(tri)
-        min_lim = np.min(mesh.vertices)
-        max_lim = np.max(mesh.vertices)
+        min_lim = np.min(mesh.vertices*1000)
+        max_lim = np.max(mesh.vertices*1000)
         ax.axes.set_xlim3d(left=min_lim, right=max_lim) 
         ax.axes.set_ylim3d(bottom=min_lim, top=max_lim) 
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim) 
         
-        norm = Normalize(vmin=vlim_min, vmax=vlim_max)
+        if log:
+            norm = SymLogNorm(linthresh=1E-4, vmin=vlim_min, vmax=vlim_max)
+        else:
+            norm = Normalize(vmin=vlim_min, vmax=vlim_max)
         arg = cm.ScalarMappable(norm=norm, cmap=cmap)
         ticks = np.linspace(vlim_min, vlim_max, 5)
+
         cBar = plt.colorbar(arg,  pad=0.20, fraction=0.15, norm=norm)#ticks=ticks,boundaries=vlim,
         if label is not None:
             cBar.ax.set_ylabel(label)

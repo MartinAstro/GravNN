@@ -10,78 +10,20 @@ import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
-    #df_file = "Data/Dataframes/useless_062221_potential.data" # "pinn_a", "pinn_p", "pinn_ap"
-    df_file = "Data/Dataframes/useless_062321_potential.data" # spherical hand norm layer
-    df_file = "Data/Dataframes/useless_062421_potential_v7.data" # No spherical and norm layer
-    df_file = "Data/Dataframes/useless_062521_potential_v3.data" # Simple scaling
-    df_file = "Data/Dataframes/useless_062621_potential.data" # Pinn_P acceleration (trad net and sph net)
-    df_file = "Data/Dataframes/useless_062621_potential_v1.data" # with extra spherical coordinate transformeration
-
-    df_file = "Data/Dataframes/useless_062721_v3.data" # phi and theta scaled by 180 and 360 independent of training data domain
-    df_file = "Data/Dataframes/useless_062721_v4.data" # Scale the accelerations from 0,1; 4800 training data -> 8500 training data 
-    df_file = "Data/Dataframes/useless_062721_v5.data" # More data did not help -- if anything made the phi component even worse --> Try not normalizing the cartesian vectors a priori
-    # it's possible that the unit scaling followed by [-1,1] is causing issues. 
-
-    df_file = "Data/Dataframes/useless_062821_v2.data" # N_train = 2500 (instead of 4800) and just cartesian (which has proper a_r values)
-    df_file = "Data/Dataframes/useless_062821_v3.data" # Remove the concatenation of the [x_cart, x_sph] from the network (cleaner discontinuities at the poles); Change phi to atan instead of atan2 (didn't do anything); Normalize r from 0 to 1 instead of -1 to 1
-    df_file = "Data/Dataframes/useless_062821_v4.data" # try pinn_a and see what the potential looks like
-    df_file = "Data/Dataframes/useless_062821_v5.data" # change phi calc to acos instead of atan2
-    df_file = "Data/Dataframes/useless_062821_v6.data" # Regenerate the data to esnure that potential is correct from [0,420] altitude so a more representative gradient is observed
-    df_file = "Data/Dataframes/useless_062821_v7.data" # More data at altitude 
     df_file = "Data/Dataframes/useless_062821_v8.data" # make the spherical inputs (1/r)
-
-
-    df_file = "Data/Dataframes/useless_062821_v2_4.data" 
-
-
-    df_file = "Data/Dataframes/useless_063021_v1.data" # Cylindrical
-    df_file = "Data/Dataframes/useless_063021_v2.data" # More Data in Spherical
-    df_file = "Data/Dataframes/useless_063021_v3.data" # More Data in Cartesian -- doesn't do well
-    df_file = "Data/Dataframes/useless_063021_v4.data" # Batch Normalization; 0.1 Dropout
-    df_file = "Data/Dataframes/useless_063021_v5.data" # Sphere calc in init_scope()
-    df_file = "Data/Dataframes/useless_070121_v1.data" # ResNet
-    df_file = "Data/Dataframes/useless_070121_v2.data" # Eros -- accidentally earth
-    df_file = "Data/Dataframes/useless_070121_v3.data" # Eros
 
     df_file = "Data/Dataframes/useless_070221_v4.data" # Outer training distribution
     df_file = "Data/Dataframes/useless_070621_v1.data" # Outer training distribution + 250 points within Brill, erroneous (accidentally made half the distribution from within sphere)
     df_file = "Data/Dataframes/useless_070621_v3.data" # Outer training distribution + 250 points within Brill, erroneous (250 out of 2750 within sphere) -- data wasnt added
     df_file = "Data/Dataframes/useless_070621_v4.data" # Outer training distribution + 250 points within Brill, corrected
 
-    df_file = "Data/Dataframes/useless_070721_v1.data" # [0,10000]
-    df_file = "Data/Dataframes/useless_070721_v2.data" # [5000,10000]
-
-
-    # PLC, ALC, APLC
-    df_file = "Data/Dataframes/useless_070721_v3.data" # [0,10000] PLC, ALC, APLC -- erroneous
-    # df_file = "Data/Dataframes/useless_070721_v4.data" # [5000,10000]
-    # df_file = "Data/Dataframes/useless_070721_v5.data" # [5000,10000] + [0,5000]
-
-    #df_file = "Data/Dataframes/useless_071321_v1.data" # [0,10000] Pines sphere AP, APLC -- wrong
-    df_file = "Data/Dataframes/useless_071321_v2.data" # [0,10000] Pines sphere vs sphere AP
-    df_file = "Data/Dataframes/useless_071321_v3.data" # [0,10000] Pines sphere AP, APLC
-    df_file = "Data/Dataframes/useless_071321_v4.data" # [5000,10000] Pines sphere AP, APLC
-    df_file = "Data/Dataframes/useless_071321_v5.data" # [5000,10000] Pines sphere AP, APLC (scale by just x_s**1 instead of **2)
-
-    df_file = "Data/Dataframes/useless_071321_v6.data" # [5000,10000] + Extra Pines sphere AP, APLC (scale by x_s**2)
-
-    df_file = "Data/Dataframes/eros_trajectory_v2.data" # [0,10000] -- Pines sphere (AP)
-    df_file = "Data/Dataframes/earth_trajectory_v2.data" # [0,10000] -- Pines sphere (AP)
-    df_file = "Data/Dataframes/earth_trajectory_deg2.data" # [0,10000] -- Pines sphere (AP)
-    df_file = "Data/Dataframes/useless_072021_v2.data" # APLC -- 10000 epochs, and various decay rates and starts
-    df_file = "Data/Dataframes/useless_072121_v1.data" # APLC -- 10000 epochs, and various decay rates and starts
-
-
-    df_file = "Data/Dataframes/useless_072321_v1.data" # Toutatis -- without point mass
-
-    df_file = "Data/Dataframes/useless_072621_v1.data" # Earth -- without point mass
-
+    df_file = "Data/Dataframes/transformers_wo_constraints.data" # Transformer Performance on r and r_bar
 
     threads = 2
-    # config = get_prototype_eros_config()
+    config = get_prototype_eros_config()
     #config = get_prototype_toutatis_config()
 
-    config = get_default_earth_config()
+    #config = get_default_earth_config()
     #config = get_default_earth_pinn_config()
     #config = get_default_eros_pinn_config()
     #config = get_default_eros_config()
@@ -115,29 +57,28 @@ def main():
         'x_transformer' : [UniformScaler(feature_range=(-1,1))],
         'u_transformer' : [UniformScaler(feature_range=(-1,1))],
         'a_transformer' : [UniformScaler(feature_range=(-1,1))],
-        #"PINN_constraint_fcn": ["pinn_plc"],#lc", "pinn_plc", "pinn_aplc"],#"pinn_ap"],
-        "PINN_constraint_fcn": ["pinn_ap"],#, 'pinn_aplc'],
-        "scale_by": ["non_dim"],#"u"],
+        #"PINN_constraint_fcn": ["pinn_plc", "pinn_aplc"],
+        "PINN_constraint_fcn": ["pinn_a", "pinn_ap"],
+        "scale_by": ["non_dim"],
         "mixed_precision": [False],
         'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         "num_units": [20],
         "schedule_type" : ['exp_decay'],
         "beta" : [0.9],
         "optimizer" : ['adam'],
-        "deg_removed" : [0],
-        "max_deg" : [2],
+        "deg_removed" : [-1],
+        "max_deg" : [0],
         #'dropout': [0.1],
         #'batch_norm' :[True],
-        #'basis': ['spherical'],
-        #'augmentation':['periodic'],
-
         #'network_type' : ['traditional'],
-        #"input_layer": ["none"],
+        #"network_type" : ['sph_pines_traditional'],
+        "network_type" : ['sph_pines_transformer'],
+        'transformer_units' : [20], 
+        "lr_anneal" : [False],
 
-        "network_type" : ['sph_pines_traditional'],
-        "input_layer": ["cart_and_sph"],
-        "lr_anneal" : [True],
-        "remove_point_mass" : [True], # remove point mass from polyhedral model
+
+        "input_layer" : [False],
+        "remove_point_mass" : [False], # remove point mass from polyhedral model
 
         'sph_in_graph': [True],
         "override" : [False]
@@ -210,7 +151,6 @@ def run(config_original, hparams):
     model.config["u_transformer"][0] = transformers["u"]
     model.config["a_transformer"][0] = transformers["a"]
     model.config["a_bar_transformer"][0] = transformers["a_bar"]
-
 
     model.save(df_file=None)
 

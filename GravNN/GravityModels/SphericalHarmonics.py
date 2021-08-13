@@ -33,7 +33,11 @@ def get_normalization(l, m):
 def get_sh_data(trajectory, gravity_file, **kwargs):
 
     # Handle cases where the keyword wasn't properly wrapped as a list []
-    override = bool(kwargs.get('override', [False])[0])
+    try:
+        override = bool(kwargs.get('override', [False])[0])
+    except:
+        override = kwargs.get('override', False)
+
     try:
         max_deg = int(kwargs['max_deg'][0])
         deg_removed = int(kwargs['deg_removed'][0])

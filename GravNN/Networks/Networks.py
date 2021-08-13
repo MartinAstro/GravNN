@@ -151,20 +151,18 @@ def SphericalPinesTraditionalNet(**kwargs):
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
     input_layer = kwargs['input_layer'][0]
-    scalers = kwargs['norm_scalers'][0]
-    mins = kwargs['norm_mins'][0]
+    
     dtype = kwargs['dtype'][0]
-    sph_in_graph = kwargs['sph_in_graph'][0]
+    skip_normalization = kwargs['skip_normalization'][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
+    x = Cart2PinesSphLayer(inputs.shape)(inputs)
 
-    if sph_in_graph:
-        x = Cart2PinesSphLayer(inputs.shape)(inputs)
-    else:
-        with tf.init_scope():
-            x = Cart2PinesSphLayer(inputs.shape)(inputs)
+    if not skip_normalization:
+        scalers = kwargs['norm_scalers'][0]
+        mins = kwargs['norm_mins'][0]
+        x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
 
-    x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
     if input_layer == "cart_and_sph":
         # Once the layer has been converted to sph, normalized between (-1,1) then 
         # run the normalized coordinates through a sine and cosine function so that
@@ -191,6 +189,101 @@ def SphericalPinesTraditionalNet(**kwargs):
                                     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
+
+
+
+def SphericalPinesTransformerNet(**kwargs):
+    layers = kwargs['layers'][0]
+    activation = kwargs['activation'][0]
+    initializer = kwargs['initializer'][0]
+    scalers = kwargs['norm_scalers'][0]
+    mins = kwargs['norm_mins'][0]
+    dtype = kwargs['dtype'][0]
+    sph_in_graph = kwargs['sph_in_graph'][0]
+    transformer_units = kwargs['transformer_units'][0]
+    skip_normalization = kwargs['skip_normalization'][0]
+    inputs = tf.keras.Input(shape=(layers[0],))
+    x = Cart2PinesSphLayer(inputs.shape)(inputs)
+
+    if not skip_normalization:
+        x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
+
+    # if input_layer == "cart_and_sph":
+    #     # Once the layer has been converted to sph, normalized between (-1,1) then 
+    #     # run the normalized coordinates through a sine and cosine function so that
+    #     # the periodic boundary conditions are observed for those coordinates
+    #     x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
+    
+    # # Initialize encoder weights and biases
+    # self.encoder_weights_1 = self.xavier_init([2, layers[1]])
+    # self.encoder_biases_1 = self.xavier_init([1, layers[1]])
+
+    # self.encoder_weights_2 = self.xavier_init([2, layers[1]])
+    # self.encoder_biases_2 = self.xavier_init([1, layers[1]])
+
+
+    # encoder_1 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_1), self.encoder_biases_1))
+    # encoder_2 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_2), self.encoder_biases_2))
+
+
+    # num_layers = len(self.layers)
+    # encoder_1 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_1), self.encoder_biases_1))
+    # encoder_2 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_2), self.encoder_biases_2))
+
+    # for l in range(0, num_layers - 2):
+    #     W = self.weights[l]
+    #     b = self.biases[l]
+    #     H = tf.math.multiply(tf.tanh(tf.add(tf.matmul(H, W), b)), encoder_1) + \
+    #         tf.math.multiply(1 - tf.tanh(tf.add(tf.matmul(H, W), b)), encoder_2)
+
+    # W = self.weights[-1]
+    # b = self.biases[-1]
+    # H = tf.add(tf.matmul(H, W), b)
+    # return H
+
+
+    # encoder_weights_1 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
+    # encoder_biases_1 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
+
+    # encoder_weights_2 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
+    # encoder_biases_2 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
+
+
+    encoder_1 = tf.keras.layers.Dense(units=transformer_units, 
+                                activation=activation, 
+                                kernel_initializer=initializer,
+                                dtype=dtype,
+                                )(x)
+    encoder_2 = tf.keras.layers.Dense(units=transformer_units, 
+                        activation=activation, 
+                        kernel_initializer=initializer,
+                        dtype=dtype,
+                        )(x)
+
+    for i in range(1,len(layers)-1):
+        x = tf.keras.layers.Dense(units=layers[i], 
+                                    activation=activation, 
+                                    kernel_initializer=initializer,
+                                    dtype=dtype,
+                                    )(x)
+        UX = tf.keras.layers.Multiply()([x, encoder_1])  
+        VX = tf.keras.layers.Multiply()([1.0 - x, encoder_2])  
+
+        x = tf.keras.layers.add([UX, VX])
+
+        if 'batch_norm' in kwargs:
+            x = tf.keras.layers.BatchNormalization()(x)
+        if 'dropout' in kwargs:
+            if kwargs['dropout'][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
+    outputs = tf.keras.layers.Dense(units=layers[-1], 
+                                    activation='linear', 
+                                    kernel_initializer=initializer,
+                                    dtype=dtype
+                                    )(x)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
 
 
 def ResNet(**kwargs):

@@ -82,26 +82,6 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                     rTerm = rE[m-1]
                     iTerm = iM[m-1]
                 
-                # Original Effort
-                # f_Cnm_1 = (rho[n+2]/a)*(m*A[n,m]*rTerm -s*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_2 = -(rho[n+2]/a)*(m*A[n,m]*rTerm + t*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_3 = (rho[n+2]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
-
-                # f_Snm_1 = (rho[n+2]/a)*(m*A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_2 = (rho[n+2]/a)*(m*A[n,m]*iTerm - t*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_3 = (rho[n+2]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
-                
-                # Closest -- not quite fully analytic
-                # f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm + s*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm + t*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
-
-                # f_Snm_1 = (rho[n+1]/a)*m*(A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_2 = (rho[n+1]/a)*m*(A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
-
-
-
                 # Seems representative of the computed model
                 f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
                 f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
@@ -119,32 +99,6 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                     f_Snm_3 = (rho[n+1]/a)*(-1.0*u*c2*A[n+1,m+1])*iM[m]
 
 
-
-
-
-
-
-
-                # f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm + s*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm + t*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_3 = (rho[n+1]/a)*m*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
-
-                # f_Snm_1 = (rho[n+1]/a)*m*(A[n,m]*iTerm - s*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_2 = (rho[n+1]/a)*m*(A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_3 = (rho[n+1]/a)*m*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
-
-
-
-
-                # f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
-                # f_Cnm_3 = (rho[n+1]/a)*m*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
-
-                # f_Snm_1 = (rho[n+1]/a)*m*(A[n,m]*iTerm - s*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_2 = (rho[n+1]/a)*m*(A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
-                # f_Snm_3 = (rho[n+1]/a)*m*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
-
-
                 #idx = n - 2 # The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
                 #idx = n
                 if remove_deg: 
@@ -160,6 +114,7 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                 M[3*p + 2, degIdx + 2*m + 1] = f_Snm_3
     
     return M
+
 
 
 
@@ -269,7 +224,6 @@ class Regression:
 
 
    
-
 def main():
     from GravNN.Trajectories import DHGridDist
     from GravNN.CelestialBodies.Planets import Earth

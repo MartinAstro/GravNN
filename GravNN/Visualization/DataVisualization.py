@@ -21,23 +21,13 @@ class DataVisualization(VisualizationBase):
             self.scale = 1.0
         pass
 
-    def plot_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0, plot_truth=True):
+    def plot_values_and_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0, plot_truth=True):
         plt.subplot(2,1,1)
         plt.scatter(x, y_pred, s=1, label=label, alpha=alpha)
         if plot_truth:
             plt.scatter(x, y, s=1, label='True', alpha=alpha, c='c')
 
-        if not np.any(x < 0.0) and vlines is not None: # Confirm that this is spherical coordinates
-            ax = plt.gca()
-            i = 0
-            colors = ['r', 'b', 'g']
-            for vline in vlines:
-                line = plt.axvline(vline, c=colors[i]) 
-                if vline_labels is not None:
-                    x_data = line.get_xdata()
-                    y_data = line.get_ydata()
-                    plt.annotate(vline_labels[i], xy=(x_data[-1], (ax.viewLim.ymax - ax.viewLim.ymin) / 3.0) + ax.viewLim.ymin, rotation='vertical', c=line.get_color(), textcoords='data')
-                i += 1
+        self.plot_radii(x, vlines, vline_labels)
             # for line, name in zip(ax.lines, [r'$r_B$', r'$r_{\text{min}}$', r'$r_{\text{max}}$']):
             #     y = line.get_xdata()[-1]
             #     ax.annotate(name, xy=(x,1), xytext=(0,6), color=line.get_color(), 
@@ -75,6 +65,32 @@ class DataVisualization(VisualizationBase):
         # plt.gca().yaxis.set_ticks_position('right')
         # plt.gca().yaxis.set_label_position('right')
         plt.ylabel(ylabel2)
+
+    def plot_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0, plot_truth=True):
+        if percent:
+            diff = y - y_pred
+            ylabel2 = ylabel + "\n" + "Residual"
+        else:
+            diff = np.abs((y - y_pred)/y)*100.0
+            ylabel2 =  ylabel + "\n" + "Percent Diff"
+
+        plt.scatter(x, diff, s=1, alpha=alpha, label=label)            
+        plt.legend(loc='upper left')
+        plt.ylabel(ylabel2)
+
+    def plot_radii(self, x, vlines, vline_labels):
+        if not np.any(x < 0.0) and vlines is not None: # Confirm that this is spherical coordinates
+            ax = plt.gca()
+            i = 0
+            colors = ['r', 'b', 'g']
+            for vline in vlines:
+                line = plt.axvline(vline, c=colors[i]) 
+                if vline_labels is not None:
+                    x_data = line.get_xdata()
+                    y_data = line.get_ydata()
+                    plt.annotate(vline_labels[i], xy=(x_data[-1], (ax.viewLim.ymax - ax.viewLim.ymin) / 3.0) + ax.viewLim.ymin, rotation='vertical', c=line.get_color(), textcoords='data')
+                i += 1
+
 
 
     def plot_box_and_whisker(self, y, y_pred, label=None, percent=True):

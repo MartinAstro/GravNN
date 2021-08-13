@@ -1,5 +1,7 @@
 from .CompositeDist import CompositeDist
+from .CustomDist import CustomDist
 from .DHGridDist import DHGridDist
+from .EphemerisDist import EphemerisDist
 from .ExponentialDist import ExponentialDist
 from .FibonacciDist import FibonacciDist
 from .GaussianDist import GaussianDist

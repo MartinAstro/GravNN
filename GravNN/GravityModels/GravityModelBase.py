@@ -43,13 +43,13 @@ class GravityModelBase(ABC):
         # Check if the file exists and either load the acceleration or generate it
         if os.path.exists(self.file_directory + "acceleration.data") and override == False:
             if self.verbose:
-                print("Found existing acceleration.data at " + self.file_directory)
+                print("Found existing acceleration.data at " + os.path.relpath(self.file_directory))
             with open(self.file_directory+"acceleration.data", 'rb') as f:
                 self.accelerations = pickle.load(f)
                 return self.accelerations
         else:
             if self.verbose:
-                print("Generating acceleration at " + self.file_directory)
+                print("Generating acceleration at " + os.path.relpath(self.file_directory))
             # Note: compute_acceleration() might generate the potential values too for some representations.
             # For example, computing the potential of the polyhedral model adds one extra step
             # to the acceleration calculation. Rather than rerunning the entire algorithm to 
@@ -62,13 +62,13 @@ class GravityModelBase(ABC):
         # Check if the file exists and either load the potential or generate it
         if os.path.exists(self.file_directory + "potential.data") and override == False:
             if self.verbose:
-                print("Found existing potential.data at " + self.file_directory)
+                print("Found existing potential.data at " + os.path.relpath(self.file_directory))
             with open(self.file_directory+"potential.data", 'rb') as f:
                 self.potentials = pickle.load(f)
                 return self.potentials
         else:
             if self.verbose:
-                print("Generating potential at " + self.file_directory)
+                print("Generating potential at " + os.path.relpath(self.file_directory))
             self.compute_potential()
             self.save()
             return self.potentials

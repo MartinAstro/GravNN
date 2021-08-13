@@ -87,9 +87,17 @@ class CustomModel(tf.keras.Model):
         loss =  tf.reduce_sum(updated_loss_components)
         return {'loss' : loss}
     
+    def acceleration_output(self, dataset):
+        x, y = dataset
+        #x = tf.Variable(x, dtype=tf.float32)
+        assert self.config['PINN_constraint_fcn'][0] != no_pinn
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = self.network(x) # shape = (k,) #! evaluate network                
+        u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
+        return None, tf.multiply(-1.0,u_x), None, None
 
-    
-    def output(self, dataset):
+    def nn_output(self, dataset):
         x, y = dataset
         x = tf.Variable(x, dtype=tf.float32)
         assert self.config['PINN_constraint_fcn'][0] != no_pinn
@@ -112,7 +120,7 @@ class CustomModel(tf.keras.Model):
         return u, tf.multiply(-1.0,u_x), laplacian, curl
 
 
-    def generate_nn_data(self, x):
+    def generate_nn_data(self, x, args=None):
         x = copy.deepcopy(x)
         x_transformer = self.config['x_transformer'][0]
         a_transformer = self.config['a_transformer'][0]
@@ -122,7 +130,10 @@ class CustomModel(tf.keras.Model):
             x[:,1:3] = np.deg2rad(x[:,1:3])
 
         x = x_transformer.transform(x)
-        u_pred, a_pred, laplace_pred, curl_pred = self.output((x,x))
+
+        # This is a cumbersome operation as it computes the Hessian for each term
+        u_pred, a_pred, laplace_pred, curl_pred = self.nn_output((x,x))
+
         x_pred = x_transformer.inverse_transform(x)
         u_pred = u_transformer.inverse_transform(u_pred)
         a_pred = a_transformer.inverse_transform(a_pred)
@@ -154,6 +165,18 @@ class CustomModel(tf.keras.Model):
         u_pred = self.network(x)
         u_pred = u_transformer.inverse_transform(u_pred)
         return u_pred
+
+    @tf.function(jit_compile=True)
+    def generate_acceleration(self, x):
+        x_transformer = self.config['x_transformer'][0]
+        a_transformer = self.config['a_transformer'][0]
+        x = x_transformer.transform(x)
+
+        # This is a cumbersome operation as it computes the Hessian for each term
+        u_pred, a_pred, laplace_pred, curl_pred = self.acceleration_output((x,x))
+        a_pred = a_transformer.inverse_transform(a_pred)
+        return  a_pred
+
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):

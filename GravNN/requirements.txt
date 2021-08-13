@@ -10,4 +10,5 @@ sigfig
 tqdm
 colorama
 tensorflow_model_optimization
+spiceypy
 #tensorflow_probability==0.8

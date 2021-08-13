@@ -36,7 +36,8 @@ def get_default_earth_config():
         'dtype' : ['float32'],
         'dummy_transformer' : [DummyScaler()],
         'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
-        'learning_rate' : [0.001]
+        'learning_rate' : [0.001],
+        'skip_normalization' : [False]
     }
     config = {}
     config.update(data_config)
@@ -78,7 +79,8 @@ def get_default_earth_pinn_config():
         'dtype' : ['float32'],
         'dummy_transformer' : [DummyScaler()],
         'class_weight' : [[1.0, 1.0, 1.0]], #no_pinn and PINN_A
-        'learning_rate' : [0.001]
+        'learning_rate' : [0.001],
+        'skip_normalization' : [False]
     }
     config = {}
     config.update(data_config)
