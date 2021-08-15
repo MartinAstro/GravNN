@@ -43,7 +43,7 @@ def analyze(idx, df_file, planet, analyze_altitude, test_trajectories, points):
     from GravNN.Networks.utils import configure_tensorflow
 
     tf = configure_tensorflow()
-    from GravNN.Networks.Analysis import Analysis
+    from GravNN.Analysis.PlanetAnalyzer import PlanetAnalyzer
     from GravNN.Networks.Model import load_config_and_model
 
     df = pd.read_pickle(df_file)
@@ -54,7 +54,7 @@ def analyze(idx, df_file, planet, analyze_altitude, test_trajectories, points):
     tf.keras.backend.clear_session()
     config, model = load_config_and_model(model_id, df)
 
-    analyzer = Analysis(model, config)
+    analyzer = PlanetAnalyzer(model, config)
     rse_entries = analyzer.compute_rse_stats(test_trajectories)
 
     if analyze_altitude:

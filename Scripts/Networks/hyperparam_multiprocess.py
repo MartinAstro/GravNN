@@ -19,8 +19,10 @@ def main():
 
     df_file = "Data/Dataframes/transformers_wo_constraints.data" # Transformer Performance on r and r_bar
 
+    df_file = "Data/Dataframes/traditional_w_constraints_annealing.data" # Transformer Performance on r and r_bar
+
     threads = 2
-    config = get_prototype_eros_config()
+    config = get_default_eros_config()
     #config = get_prototype_toutatis_config()
 
     #config = get_default_earth_config()
@@ -29,55 +31,27 @@ def main():
     #config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [5000],
-        "N_train": [2500],
-        "N_val" : [150],
+        "N_dist": [50000],
+        "N_train": [2500, 2500*5, 2500*10],
+        "N_val" : [1500],
         "epochs": [7500],
 
-        # 'distribution' : [RandomAsteroidDist],
-        # #'radius_min' : [Eros().radius + 5000.0], # Make sure it isn't a float
-        # 'radius_min' : [0],
-        # 'radius_max' : [Toutatis().radius + 10000.0],
-
-        # 'extra_distribution' : [RandomAsteroidDist],
-        # 'extra_radius_min' : [0],
-        # 'extra_radius_max' : [Eros().radius + 5000.0],
-        # 'extra_N_dist' : [500],
-        # 'extra_N_train' : [250],
-        # 'extra_N_val' : [150],
-
-        #"radius_max" : [Earth().radius+50000.0], # Use a tighter radius
+        "schedule_type" : ['exp_decay'],
         "decay_rate_epoch": [2500],
         "decay_epoch_0": [500],
         "decay_rate": [0.5],
         "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
-        "activation": ["gelu"],
-        "initializer": ["glorot_uniform"],
-        'x_transformer' : [UniformScaler(feature_range=(-1,1))],
-        'u_transformer' : [UniformScaler(feature_range=(-1,1))],
-        'a_transformer' : [UniformScaler(feature_range=(-1,1))],
+
         #"PINN_constraint_fcn": ["pinn_plc", "pinn_aplc"],
-        "PINN_constraint_fcn": ["pinn_a", "pinn_ap"],
-        "scale_by": ["non_dim"],
-        "mixed_precision": [False],
-        'layers' : [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
+        "PINN_constraint_fcn": ["pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
         "num_units": [20],
-        "schedule_type" : ['exp_decay'],
         "beta" : [0.9],
-        "optimizer" : ['adam'],
-        "deg_removed" : [-1],
-        "max_deg" : [0],
-        #'dropout': [0.1],
+
         #'batch_norm' :[True],
-        #'network_type' : ['traditional'],
-        #"network_type" : ['sph_pines_traditional'],
-        "network_type" : ['sph_pines_transformer'],
-        'transformer_units' : [20], 
-        "lr_anneal" : [False],
-
-
-        "input_layer" : [False],
+        #"network_type" : ['sph_pines_transformer'],
+        #'transformer_units' : [20], 
+        "lr_anneal" : [False, True],
         "remove_point_mass" : [False], # remove point mass from polyhedral model
 
         'sph_in_graph': [True],
@@ -154,9 +128,9 @@ def run(config_original, hparams):
 
     model.save(df_file=None)
 
-    import matplotlib.pyplot as plt
-    plt.plot(history.history['val_loss'][1000:])
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.plot(history.history['val_loss'][1000:])
+    # plt.show()
     # Appends the model config to a perscribed df
     return model.config
 

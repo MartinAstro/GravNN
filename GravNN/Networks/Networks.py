@@ -63,7 +63,7 @@ def CylindricalTraditionalNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
-    input_layer = kwargs['input_layer'][0]
+    custom_input_layer = kwargs['custom_input_layer'][0]
 
     dtype = kwargs['dtype'][0]
     inputs = tf.keras.Input(shape=(layers[0],))
@@ -74,7 +74,7 @@ def CylindricalTraditionalNet(**kwargs):
 
     #x = NormalizationLayer(inputs.shape, scalers, mins)(x)
     x = Cyl2NetLayer(inputs.shape, scalers, mins)(x)
-    if input_layer == "cart_and_sph":
+    if custom_input_layer == "cart_and_sph":
         # Once the layer has been converted to cyl coord, normalized between (-1,1) then 
         # run the normalized coordinates through a sine and cosine function so that
         # the periodic boundary conditions are observed for those coordinates
@@ -103,7 +103,7 @@ def SphericalTraditionalNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
-    input_layer = kwargs['input_layer'][0]
+    custom_input_layer = kwargs['custom_input_layer'][0]
     scalers = kwargs['norm_scalers'][0]
     mins = kwargs['norm_mins'][0]
     dtype = kwargs['dtype'][0]
@@ -118,7 +118,7 @@ def SphericalTraditionalNet(**kwargs):
             x = Cart2SphLayer(inputs.shape)(inputs)
 
     x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
-    if input_layer == "cart_and_sph":
+    if custom_input_layer == "cart_and_sph":
         # Once the layer has been converted to sph, normalized between (-1,1) then 
         # run the normalized coordinates through a sine and cosine function so that
         # the periodic boundary conditions are observed for those coordinates
@@ -150,7 +150,7 @@ def SphericalPinesTraditionalNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
-    input_layer = kwargs['input_layer'][0]
+    custom_input_layer = kwargs['custom_input_layer'][0]
     
     dtype = kwargs['dtype'][0]
     skip_normalization = kwargs['skip_normalization'][0]
@@ -163,7 +163,7 @@ def SphericalPinesTraditionalNet(**kwargs):
         mins = kwargs['norm_mins'][0]
         x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
 
-    if input_layer == "cart_and_sph":
+    if custom_input_layer == "cart_and_sph":
         # Once the layer has been converted to sph, normalized between (-1,1) then 
         # run the normalized coordinates through a sine and cosine function so that
         # the periodic boundary conditions are observed for those coordinates
@@ -208,7 +208,7 @@ def SphericalPinesTransformerNet(**kwargs):
     if not skip_normalization:
         x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
 
-    # if input_layer == "cart_and_sph":
+    # if custom_input_layer == "cart_and_sph":
     #     # Once the layer has been converted to sph, normalized between (-1,1) then 
     #     # run the normalized coordinates through a sine and cosine function so that
     #     # the periodic boundary conditions are observed for those coordinates
@@ -290,7 +290,7 @@ def ResNet(**kwargs):
     layers = kwargs['layers'][0]
     activation = kwargs['activation'][0]
     initializer = kwargs['initializer'][0]
-    input_layer = kwargs['input_layer'][0]
+    custom_input_layer = kwargs['custom_input_layer'][0]
     scalers = kwargs['norm_scalers'][0]
     mins = kwargs['norm_mins'][0]
     dtype = kwargs['dtype'][0]
@@ -307,7 +307,7 @@ def ResNet(**kwargs):
             x = Cart2SphLayer(inputs.shape)(inputs)
 
     x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
-    if input_layer == "cart_and_sph":
+    if custom_input_layer == "cart_and_sph":
         # Once the layer has been converted to sph, normalized between (-1,1) then 
         # run the normalized coordinates through a sine and cosine function so that
         # the periodic boundary conditions are observed for those coordinates
