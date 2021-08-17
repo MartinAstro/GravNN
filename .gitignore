@@ -22,3 +22,5 @@ venv/*
 Scripts/Scratch/*
 *-checkpoint.ipynb
 Hyperparameter Analysis*
+
+docs/build/*

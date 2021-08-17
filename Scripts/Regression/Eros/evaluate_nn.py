@@ -65,13 +65,13 @@ def evaluate_nn_suite(min_radius, max_radius, sampling_interval, dist_name):
     dist_name += "_"+str(sampling_interval)
 
     models = glob.glob(directory + "EphemerisDist/PINN_20*_*"+str(sampling_interval)+".data")
-    evaluate_nn(planet, models, trajectory, dist_name)
+    evaluate_nn(planet, models, trajectory, sampling_interval, dist_name)
 
     models = glob.glob(directory + "EphemerisDist/PINN_40*_*"+str(sampling_interval)+".data")
-    evaluate_nn(planet, models, trajectory, dist_name)
+    evaluate_nn(planet, models, trajectory, sampling_interval, dist_name)
 
     models = glob.glob(directory + "EphemerisDist/PINN_80*_*"+str(sampling_interval)+".data")
-    evaluate_nn(planet, models, trajectory, dist_name)
+    evaluate_nn(planet, models, trajectory, sampling_interval, dist_name)
 
     plt.show()
 

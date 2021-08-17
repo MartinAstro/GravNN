@@ -18,7 +18,7 @@ def get_spherical_data(x, a):
     return x_sph, a_sph
 
 
-class ErosAnalyzer():
+class AsteroidAnalyzer():
     def __init__(self, model, config, interior_bound, exterior_bound):
         self.config = config
         self.model = model
@@ -30,8 +30,8 @@ class ErosAnalyzer():
     def compute_stats(self, trajectory, prefix):
         x, a, u = get_poly_data(trajectory, self.model_file, **self.config)
   
-        data_pred = self.model.generate_nn_data(x)
-        a_pred = data_pred['a']
+        # data_pred = self.model.generate_nn_data(x)
+        a_pred = self.model.generate_acceleration(x.astype(np.float32))
 
         diff = a - a_pred
         diff_percent =  np.abs((a - a_pred)/a)*100.0
@@ -54,12 +54,12 @@ class ErosAnalyzer():
         stats = self.compute_stats(trajectory, 'surface')
         return stats
 
-    def compute_interior_stats(self, test_trajectories):
+    def compute_interior_stats(self):
         trajectory = RandomAsteroidDist(self.planet, [0, self.interior_bound], 50000, self.model_file)
         stats = self.compute_stats(trajectory, 'interior')
         return stats
 
-    def compute_exterior_stats(self, test_trajectories):
+    def compute_exterior_stats(self):
         trajectory = RandomAsteroidDist(self.planet, [self.interior_bound, self.exterior_bound], 50000, self.model_file)
         stats = self.compute_stats(trajectory, 'exterior')
         return stats

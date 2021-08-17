@@ -20,7 +20,7 @@ class Eros():
     def __init__(self, gravityModel=None):
         self.body_name = "eros"
         self.density =  2670.0  # kg/m^3 https://ssd.jpl.nasa.gov/sbdb.cgi#top
-        self.radius = np.linalg.norm(np.array([34.4, 11.2, 11.2])*1E3)/2  #34400.0/2.0# 16840.0 is *mean* diameter # meters (diameter / 2)
+        self.physical_radius = np.linalg.norm(np.array([34.4, 11.2, 11.2])*1E3)/2  #34400.0/2.0# 16840.0 is *mean* diameter # meters (diameter / 2)
         self.radius = 16000.0 #http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
 
         G = 6.67430*10**-11
@@ -36,6 +36,9 @@ class Eros():
         self.model_25k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Blender_25k_poly.stl"    
         self.model_50k = os.path.dirname(os.path.realpath(__file__))  + "/../Files/ShapeModels/Eros_Gaskell_50k_poly.obj"  
         self.model_100k = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Blender_98k_poly.stl"   
+
+        self.model_data = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_data_2.obj"   # https://sbn.psi.edu/pds/resource/nearbrowse.html
+        self.model_7790 = os.path.dirname(os.path.realpath(__file__)) +"/../Files/ShapeModels/Eros_Near_Shape_7790_facets2.obj"   # https://sbn.psi.edu/pds/resource/nearbrowse.html
 
 
         self.sh_file = os.path.dirname(os.path.realpath(__file__)) +"/../Files/GravityModels/Regressed/Eros/true.csv"   

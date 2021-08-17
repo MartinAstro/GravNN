@@ -5,18 +5,19 @@ import multiprocessing as mp
 import pandas as pd
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from script_utils import save_analysis
-
+from GravNN.Analysis.AsteroidAnalyzer import AsteroidAnalyzer
 
 def main():
     """
     Multiprocess the analysis pipeline for each network within the dataframe
     """
     df_file = 'Data/Dataframes/traditional_w_constraints_annealing.data'
+    df_file = "Data/Dataframes/transformers_wo_constraints.data"
 
-    interior_bound = Eros().radius
-    exterior_bound = Eros().radius + 10000.0
+    interior_bound = Eros().physical_radius
+    exterior_bound = Eros().physical_radius + 10000.0
     args = []
-    for idx in range(0,10):
+    for idx in range(0,25):
         args.append((idx, df_file, interior_bound, exterior_bound))
 
     with mp.Pool(1) as pool:
@@ -42,9 +43,9 @@ def analyze(idx, df_file, interior_bound, exterior_bound):
     config, model = load_config_and_model(model_id, df)
 
     analyzer = AsteroidAnalyzer(model, config, interior_bound, exterior_bound)
-    surface_stats = analyzer.comute_surface_stats()
-    interior_stats = analyzer.comute_interior_stats()
-    exterior_stats = analyzer.comute_exterior_stats()
+    surface_stats = analyzer.compute_surface_stats()
+    interior_stats = analyzer.compute_interior_stats()
+    exterior_stats = analyzer.compute_exterior_stats()
 
     stats = {}
     stats.update(surface_stats)

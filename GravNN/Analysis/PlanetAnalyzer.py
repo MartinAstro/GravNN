@@ -4,7 +4,6 @@ from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks import utils
 from GravNN.Networks.Data import standardize_output
 from GravNN.Support.StateObject import StateObject
-from GravNN.Support.transformations import sphere2cart, cart2sph, invert_projection, project_acceleration
 from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 
@@ -69,22 +68,14 @@ def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'med
     }
     return diff, stats
 
-class Analysis():
+class PlanetAnalyzer():
     def __init__(self, model, config):
         self.config = config
         self.model = model
         self.x_transformer = config['x_transformer'][0]
         self.u_transformer = config['u_transformer'][0]
         self.a_transformer = config['a_transformer'][0]
-
-        if "Planet" in self.config['planet'][0].__module__:
-            self.generate_analytic_data_fcn = get_sh_data
-            self.body_type = "Planet"
-        elif "Asteroid" in self.config['planet'][0].__module__:
-            self.generate_analytic_data_fcn = get_poly_data
-            self.body_type = "Asteroid"
-        else:
-            exit("The celestial body %s does not have a perscribed gravity model!" % (str(self.config['planet'][0]),))
+        self.body_type = "Planet"
 
     def compute_nearest_analytic(self, name, map_stats):
         # Compute nearest SH degree
@@ -117,7 +108,7 @@ class Analysis():
 
         for name, map_traj in test_trajectories.items():
             # SH Data and NN Data
-            x, a, u = self.generate_analytic_data_fcn(map_traj, self.config['grav_file'][0] , **self.config)
+            x, a, u = get_sh_data(map_traj, self.config['grav_file'][0] , **self.config)
             data_pred = self.model.generate_nn_data(x)
             acc_pred = data_pred['a']
             
