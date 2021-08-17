@@ -5,18 +5,23 @@ import numpy as np
 
 class ExponentialDist(TrajectoryBase):
     def __init__(self, celestial_body, radiusBounds, points, **kwargs):
-        # scale_parameter = beta -- e^(x/beta)
+        """Distribution with samples drawn from an exponential distribution.
 
-        if points % np.sqrt(points) != 0:
-            print("The total number of points is not a perfect square")
-            N = int(np.sqrt(points/2))
-            points = 2*N**2
-            print("The total number of points changed to " + str(points))
+        Useful for simulating samples drawn primarily from orbit, but with occasional samples closer to the surface.
+
+        Args:
+            celestial_body (CelestialBody): Planet about which these distributions will be drawn
+            radiusBounds (list): limits of the exponential distribution
+            points (int): number of samples to be drawn
+            scale_parameter (float): b in 1/b*exp(-x/b) such that small scale parameter leads to narrower distributions
+            invert (bool): invert the distribution such that samples decay in frequency from the higher to the lower altitudes
+        """
+        # scale_parameter = beta -- e^(x/beta)
         self.radiusBounds = radiusBounds
         self.points = points
         self.celestial_body = celestial_body
-        self.scale_parameter = kwargs['scale_parameter'][0]
-        self.invert = kwargs['invert'][0] # if true, higher probabilities occur at higher altitude
+        self.scale_parameter = kwargs['scale_parameter'][0] # TODO: Make this a required parameter
+        self.invert = kwargs['invert'][0] # if true, higher probabilities occur at higher altitude TODO: Make this a required param
 
         super().__init__()
 
@@ -33,7 +38,10 @@ class ExponentialDist(TrajectoryBase):
         pass
     
     def generate(self):
-        '''r ∈ [0, ∞), φ ∈ [-π/2, π/2],  θ ∈ [0, 2π)'''
+        ''' Draw theta and phi from a uniform distribution, but then 
+        pull radius samples from an exponential distribution defined by 
+        the scale parameter. 
+        '''
         X = []
         Y = []
         Z = []

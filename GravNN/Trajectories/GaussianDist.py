@@ -5,21 +5,21 @@ import numpy as np
 
 class GaussianDist(TrajectoryBase):
     def __init__(self, celestial_body, radius_bounds, points, **kwargs):
-        if points % np.sqrt(points) != 0:
-            print("The total number of points is not a perfect square")
-            N = int(np.sqrt(points/2))
-            points = 2*N**2
-            print("The total number of points changed to " + str(points))
-        self.radius_bounds = radius_bounds
+        """Distribution drawn from a gaussian density profile.
 
+        Args:
+            celestial_body (CelestialBody): planet about which samples are taken
+            radius_bounds (list): lower and upper limits for the distribution [low, high]
+            points (int): number of samples to be drawn
+            mu (float): center of the distribution
+            sigma (float): 1-sigma value for the gaussian distribution
+        """
+        self.radius_bounds = radius_bounds
         self.points = points
         self.celestial_body = celestial_body
-
         self.mu = kwargs['mu'][0]
         self.sigma = kwargs['sigma'][0]
-
         super().__init__()
-
         pass
 
     def generate_full_file_directory(self):
@@ -33,7 +33,6 @@ class GaussianDist(TrajectoryBase):
         pass
     
     def generate(self):
-        '''r ∈ [0, ∞), φ ∈ [-π/2, π/2],  θ ∈ [0, 2π)'''
         X = []
         Y = []
         Z = []

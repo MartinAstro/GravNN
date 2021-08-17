@@ -49,6 +49,13 @@ def read_ephemeris_data(file_name):
 
 class CustomDist(TrajectoryBase):
     def __init__(self, ephemeris_file, max_data_entries=None, **kwargs):
+        """Samples taken from a distribution defined in an external text file. Currently only for 
+        ephemeris files produced by JPL Horizons. WIP.
+
+        Args:
+            ephemeris_file (str): path to external file
+            max_data_entries (int, optional): truncate the number of samples in file. Defaults to None.
+        """
         self.ephemeris_file = ephemeris_file
         self.file_name = os.path.basename(ephemeris_file).split('.')[0]
         self.object, self.start_time, self.stop_time = read_ephemeris_head(ephemeris_file)
@@ -68,6 +75,11 @@ class CustomDist(TrajectoryBase):
         pass
     
     def generate(self):
+        """Read in the times and positions provided in the ephemeris text file
+
+        Returns:
+            np.array: cartesian position vectors
+        """
         self.times, self.positions = read_ephemeris_data(self.ephemeris_file)
         self.dt = self.times[1] - self.times[0]
 
@@ -79,6 +91,14 @@ class CustomDist(TrajectoryBase):
         return self.positions
 
     def __sub__(self, other):
+        """Subtract different custom distribution (i.e. near w.r.t. sun minus eros w.r.t. sun)
+
+        Args:
+            other (CustomDist): the distribution to be subtracted off of self
+
+        Returns:
+            CustomDist: new CustomDist
+        """
         # Difference the positions of the two ephermii
 
         # Ensure that the trajectories share the same timestamps
@@ -92,6 +112,7 @@ class CustomDist(TrajectoryBase):
 
 
 def main():
+    # Meant for testing
     import matplotlib.pyplot as plt
     from GravNN.Visualization.VisualizationBase import VisualizationBase
     near_traj = EphemerisDist("GravNN/Files/Ephmerides/near_positions.txt", override=False)
@@ -107,105 +128,6 @@ def main():
     # plt.scatter(X, Y, Z)
     plt.show()
 
-def main2():
-    import matplotlib.pyplot as plt
-    from GravNN.Visualization.VisualizationBase import VisualizationBase
 
-    import spiceypy as spice
-    spice.tkvrsn("TOOLKIT")
-    spice.furnsh("GravNN/Files/Ephmerides/NEAR/near_eros.txt")
-
-    utc = ['March 02, 2000', 'Feb 02, 2001']
-
-    # get et values one and two, we could vectorize str2et
-    etOne = spice.str2et(utc[0])
-    etTwo = spice.str2et(utc[1])
-
-    step = 4000
-    times = [x*(etTwo-etOne)/step + etOne for x in range(step)]
-
-    positions, lightTimes = spice.spkpos('NEAR', times, 'J2000', 'NONE', 'EROS')
-    print(positions)
-    vis = VisualizationBase()
-    fig, ax = vis.new3DFig()
-    ax.plot3D(positions[:,0], positions[:,1], positions[:,2], 'gray')
-
-    # https://www.jhuapl.edu/Content/techdigest/pdf/V23-N01/23-01-Holdridge.pdf -- NEAR Orbits
-    months = ['Feb', 'March', 'April', 'May', 'June', 'July']
-    for i in range(0, len(months)-1):
-            
-        utc = [months[i] + ' 01, 2000', months[i+1]+' 01 2000']
-        times = 100000
-        # get et values one and two, we could vectorize str2et
-        etOne = spice.str2et(utc[0])
-        etTwo = spice.str2et(utc[1])
-
-        times = [x*(etTwo-etOne)/step + etOne for x in range(step)]
-        positions, lightTimes = spice.spkpos('NEAR', times, 'EROS_FIXED', 'NONE', 'EROS')
-        fig, ax = vis.new3DFig()
-        ax.plot3D(positions[:,0], positions[:,1], positions[:,2], 'gray')
-
-    plt.show()
-    spice.kclear()
-
-
-
-def main3():
-    import matplotlib.pyplot as plt
-    from GravNN.Visualization.VisualizationBase import VisualizationBase
-
-    import spiceypy as spice
-    spice.tkvrsn("TOOLKIT")
-    spice.furnsh("GravNN/Files/Ephmerides/NEAR/near_eros.txt")
-
-
-    orbits = ['Feb 24, 2000', 
-            'Mar 03, 2000',
-            'Apr 02, 2000',
-            'Apr 11, 2000',
-            'Apr 22, 2000',
-            'Apr 30, 2000',
-            'July 07, 2000',
-            'July 14, 2000',
-            'July 24, 2000',
-            'July 31, 2000',
-            'Aug 08, 2000',
-            'Aug 26, 2000',
-            'Sep 05, 2000',
-            'Oct 13, 2000',
-            'Oct 20, 2000',
-            'Oct 25, 2000',
-            'Oct 26, 2000',
-            'Nov 03, 2000',
-            'Dec 07, 2000',
-            'Dec 13, 2000',
-            'Jan 24, 2001',
-            'Jan 28, 2001',
-            'Jan 29, 2001',
-            'Feb 02, 2001',
-            'Feb 06, 2001']
-
-
-    # get et values one and two, we could vectorize str2et
-
-    vis = VisualizationBase()
-
-    # https://www.jhuapl.edu/Content/techdigest/pdf/V23-N01/23-01-Holdridge.pdf -- NEAR Orbits
-    for i in range(0, len(orbits)-1):
-            
-        utc = [orbits[i], orbits[i+1]]
-
-        etOne = spice.str2et(utc[0])
-        etTwo = spice.str2et(utc[1])
-
-        step = int((etTwo - etOne)/(10*60)) # Every 10 minutes
-
-        times = [x*(etTwo-etOne)/step + etOne for x in range(step)]
-        positions, lightTimes = spice.spkpos('NEAR', times, 'EROS_FIXED', 'NONE', 'EROS')
-        fig, ax = vis.new3DFig()
-        ax.plot3D(positions[:,0], positions[:,1], positions[:,2], 'gray')
-
-    plt.show()
-    spice.kclear()
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-from .CompositeDist import CompositeDist
 from .CustomDist import CustomDist
 from .DHGridDist import DHGridDist
 from .EphemerisDist import EphemerisDist
@@ -7,9 +6,5 @@ from .FibonacciDist import FibonacciDist
 from .GaussianDist import GaussianDist
 from .RandomAsteroidDist import RandomAsteroidDist
 from .RandomDist import RandomDist
-from .Reduced3dDist import Reduced3dDist
-from .ReducedGridDist import ReducedGridDist
-from .ReducedRandDist import ReducedRandDist
 from .SurfaceDist import SurfaceDist
 from .TrajectoryBase import TrajectoryBase
-from .UniformDist import UniformDist

@@ -7,6 +7,19 @@ import spiceypy as spice
 
 class EphemerisDist(TrajectoryBase):
     def __init__(self, source, target, frame, start_time, end_time, sampling_interval, meta_kernel="GravNN/Files/Ephmerides/NEAR/near_eros.txt", times=None, celestial_body=None):
+        """Use python SPICE interface to generate an ephemeris and return the positions of that ephemeris
+
+        Args:
+            source (str): object whose trajectory is desired
+            target (str): object from which the source trajectory will be defined
+            frame (str): the frame in which the trajectory is defined (ex. J2000 or EROS_FIXED)
+            start_time (str): trajectory start time in UTC (ex. 'Feb 24, 2000')
+            end_time (str): trajectory end time in UTC (ex. 'Feb 24, 2000')
+            sampling_interval (int): number of seconds between samples
+            meta_kernel (str, optional): SPICE Meta-kernel containing all necessary SPICE binaries and definitions. Defaults to "GravNN/Files/Ephmerides/NEAR/near_eros.txt".
+            times (list, optional): Specific times to sample trajectory at (will override start_time and end_time). Defaults to None.
+            celestial_body (CelestialBody, optional): Celestial body relevant to the trajectory. Defaults to None.
+        """
         self.source = source # the orbiting object (i.e. spacecraft)
         self.target = target # the object the source orbits (i.e. asteroid)
         self.frame = frame # the reference frame of the generated coordinates
@@ -32,6 +45,12 @@ class EphemerisDist(TrajectoryBase):
         pass
     
     def generate(self):
+        """Populate spiceypy with necessary kernels, convert UTC times into ET, and 
+        gather ephemeris positions
+
+        Returns:
+            np.array: cartesian position vectors
+        """
         spice.furnsh(self.meta_kernel)        
         etOne = spice.str2et(self.start_time)
         etTwo = spice.str2et(self.end_time)
@@ -42,7 +61,7 @@ class EphemerisDist(TrajectoryBase):
         self.positions = positions*1000.0 # km -> meters
         return positions
 
-def main3():
+def main():
     import matplotlib.pyplot as plt
     from GravNN.Visualization.VisualizationBase import VisualizationBase
 
@@ -89,4 +108,4 @@ def main3():
     plt.show()
 
 if __name__ == "__main__":
-    main3()
+    main()

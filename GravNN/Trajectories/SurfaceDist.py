@@ -1,14 +1,16 @@
 import os
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
 import numpy as np
 import trimesh
 
 class SurfaceDist(TrajectoryBase):
-    radiusBounds = None # [m]
-    points = None  # Total points to distribute
-
     def __init__(self, celestial_body, obj_file):
+        """Distribution that generates samples from the center of each facet of a shape model.
+
+        Args:
+            celestial_body (CelestialBody): body from which points will be sampled
+            obj_file (str): path to the file that contains the shape model
+        """
         self.mesh = trimesh.load_mesh(obj_file)
         self.points = len(self.mesh.faces)# + self.mesh.vertices)
         self.celestial_body = celestial_body
@@ -25,7 +27,7 @@ class SurfaceDist(TrajectoryBase):
         pass
     
     def generate(self):
-        ''' position [m] of the center of each facet '''
+        ''' Generate positions [m] of the center of each facet '''
         X = []
         Y = []
         Z = []
@@ -41,11 +43,5 @@ class SurfaceDist(TrajectoryBase):
             Y[i] = face_c[1]
             Z[i] = face_c[2]
 
-        # N = len(self.mesh.faces)
-        # for i in range(0, len(self.mesh.vertices)):
-        #     vertex = self.mesh.vertices[i]
-        #     X[N + i] = vertex[0]
-        #     Y[N + i] = vertex[1]
-        #     Z[N + i] = vertex[2]
         self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))

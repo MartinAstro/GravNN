@@ -5,6 +5,13 @@ import numpy as np
 
 class RandomDist(TrajectoryBase):
     def __init__(self, celestial_body, radius_bounds, points, **kwargs):
+        """A sample distribution that randomly selects from uniform distributions in latitude, longitude, and radius.
+
+        Args:
+            celestial_body (Celestial Body): Planet about which samples should be taken
+            radius_bounds (list): range of radii from which the sample can be drawn
+            points (int): number of samples
+        """
         if points % np.sqrt(points) != 0:
             print("The total number of points is not a perfect square")
             N = int(np.sqrt(points/2))
@@ -28,6 +35,11 @@ class RandomDist(TrajectoryBase):
         pass
     
     def generate(self):
+        """Randomly sample from uniform latitude, longitude, and radial distributions
+
+        Returns:
+            np.array: cartesian positions of the samples
+        """
         '''r ∈ [0, ∞), φ ∈ [-π/2, π/2],  θ ∈ [0, 2π)'''
         X = []
         Y = []

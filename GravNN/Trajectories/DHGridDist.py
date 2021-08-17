@@ -5,6 +5,18 @@ import numpy as np
 
 class DHGridDist(TrajectoryBase):
     def __init__(self, celestial_body, radius, degree):
+        """Driscoll and Heeley grid (Uniformally spaced at constant radius). 
+        Used to ensure that there is a properly dense distribution to observe a 
+        particular degree harmonic on a 2d image. 
+
+        This distribution is generally used to produce 2D gravity maps / grids
+        using the MapVisualization module. 
+
+        Args:
+            celestial_body (CelestialBody): planet about which the grid will be placed
+            radius (float): radius at which the grid should be placed (typically Brillouin)
+            degree (int): The maximum degree that should be observed
+        """
         self.radius = radius
         self.degree = degree
         n =  2*degree + 2
@@ -24,7 +36,12 @@ class DHGridDist(TrajectoryBase):
         pass
     
     def generate(self):
-        '''r ∈ [0, ∞), φ ∈ [-π/2, π/2],  θ ∈ [0, 2π)'''
+        """Sample the grid at uniform intervals defined by the maximum
+        degree to be observed
+
+        Returns:
+            np.array: cartesian positions of samples
+        """
         X = []
         Y = []
         Z = []
