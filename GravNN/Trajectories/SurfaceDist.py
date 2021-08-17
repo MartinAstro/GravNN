@@ -3,6 +3,7 @@ from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import numpy as np
 import trimesh
 
+
 class SurfaceDist(TrajectoryBase):
     def __init__(self, celestial_body, obj_file):
         """Distribution that generates samples from the center of each facet of a shape model.
@@ -12,7 +13,7 @@ class SurfaceDist(TrajectoryBase):
             obj_file (str): path to the file that contains the shape model
         """
         self.mesh = trimesh.load_mesh(obj_file)
-        self.points = len(self.mesh.faces)# + self.mesh.vertices)
+        self.points = len(self.mesh.faces)  # + self.mesh.vertices)
         self.celestial_body = celestial_body
         self.obj_file = obj_file
         super().__init__()
@@ -20,14 +21,18 @@ class SurfaceDist(TrajectoryBase):
         pass
 
     def generate_full_file_directory(self):
-        self.trajectory_name =  os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
-                                                self.celestial_body.body_name + \
-                                                "N_" + str(self.points)
-        self.file_directory  += self.trajectory_name +  "/"
+        self.trajectory_name = (
+            os.path.splitext(os.path.basename(__file__))[0]
+            + "/"
+            + self.celestial_body.body_name
+            + "N_"
+            + str(self.points)
+        )
+        self.file_directory += self.trajectory_name + "/"
         pass
-    
+
     def generate(self):
-        ''' Generate positions [m] of the center of each facet '''
+        """Generate positions [m] of the center of each facet"""
         X = []
         Y = []
         Z = []
@@ -36,9 +41,15 @@ class SurfaceDist(TrajectoryBase):
         Z.extend(np.zeros((self.points,)).tolist())
         for i in range(len(self.mesh.faces)):
             face = self.mesh.faces[i]
-            face_c = (self.mesh.vertices[face[0]]+ \
-                    self.mesh.vertices[face[1]]+\
-                    self.mesh.vertices[face[2]])/3.0*1E3 
+            face_c = (
+                (
+                    self.mesh.vertices[face[0]]
+                    + self.mesh.vertices[face[1]]
+                    + self.mesh.vertices[face[2]]
+                )
+                / 3.0
+                * 1e3
+            )
             X[i] = face_c[0]
             Y[i] = face_c[1]
             Z[i] = face_c[2]

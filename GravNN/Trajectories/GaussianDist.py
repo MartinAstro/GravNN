@@ -3,6 +3,7 @@ from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
 
+
 class GaussianDist(TrajectoryBase):
     def __init__(self, celestial_body, radius_bounds, points, **kwargs):
         """Distribution drawn from a gaussian density profile.
@@ -17,21 +18,28 @@ class GaussianDist(TrajectoryBase):
         self.radius_bounds = radius_bounds
         self.points = points
         self.celestial_body = celestial_body
-        self.mu = kwargs['mu'][0]
-        self.sigma = kwargs['sigma'][0]
+        self.mu = kwargs["mu"][0]
+        self.sigma = kwargs["sigma"][0]
         super().__init__()
         pass
 
     def generate_full_file_directory(self):
-        self.trajectory_name =  os.path.splitext(os.path.basename(__file__))[0] +  "/" + \
-                                                self.celestial_body.body_name + \
-                                                "N_" + str(self.points) + \
-                                                "_RadBounds" + str(self.radius_bounds) + \
-                                                '_mu' + str(self.mu) +\
-                                                '_sigma' + str(self.sigma)
-        self.file_directory  += self.trajectory_name +  "/"
+        self.trajectory_name = (
+            os.path.splitext(os.path.basename(__file__))[0]
+            + "/"
+            + self.celestial_body.body_name
+            + "N_"
+            + str(self.points)
+            + "_RadBounds"
+            + str(self.radius_bounds)
+            + "_mu"
+            + str(self.mu)
+            + "_sigma"
+            + str(self.sigma)
+        )
+        self.file_directory += self.trajectory_name + "/"
         pass
-    
+
     def generate(self):
         X = []
         Y = []
@@ -43,14 +51,14 @@ class GaussianDist(TrajectoryBase):
 
         for i in range(self.points):
             phi = np.random.uniform(0, np.pi)
-            theta = np.random.uniform(0, 2*np.pi)
+            theta = np.random.uniform(0, 2 * np.pi)
             r = np.random.normal(self.mu, self.sigma)
             while r > self.radius_bounds[1] or r < self.radius_bounds[0]:
                 r = np.random.normal(self.mu, self.sigma)
 
-            X[idx] = r*np.sin(phi)*np.cos(theta)
-            Y[idx] = r*np.sin(phi)*np.sin(theta)
-            Z[idx] = r*np.cos(phi)
+            X[idx] = r * np.sin(phi) * np.cos(theta)
+            Y[idx] = r * np.sin(phi) * np.sin(theta)
+            Z[idx] = r * np.cos(phi)
             idx += 1
         self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))
