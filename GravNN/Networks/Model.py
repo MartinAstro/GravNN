@@ -9,158 +9,218 @@ import tensorflow as tf
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC, pinn_A_sph
 from GravNN.Networks.Annealing import update_constant
-from GravNN.Support.transformations import cart2sph, invert_projection, project_acceleration
+from GravNN.Support.transformations import (
+    cart2sph,
+    invert_projection,
+    project_acceleration,
+)
+
 np.random.seed(1234)
+
 
 class CustomModel(tf.keras.Model):
     # Initialize the class
     def __init__(self, config, network):
+        """Custom Keras model that encapsulates the actual PINN as well as other relevant
+        configuration information, and helper functions. This includes all
+        training loops, methods to get all (or specific) outputs from the network, and additional
+        optimization methods.
+
+        Args:
+            config (dict): hyperparameters and configuration variables needed to initialize the network.
+            Consult the Config dictionaries within Network.Configs to get an idea of what options are currently
+            implemented.
+            network (keras.Model): the actual network that will be trained.
+        """
         super(CustomModel, self).__init__()
         self.config = config
         self.network = network
-        self.mixed_precision = tf.constant(self.config['mixed_precision'][0], dtype=tf.bool)
-        self.variable_cast = config['dtype'][0]
-        self.class_weight = tf.constant(config['class_weight'][0], dtype=tf.float32)
+        self.mixed_precision = tf.constant(
+            self.config["mixed_precision"][0], dtype=tf.bool
+        )
+        self.variable_cast = config["dtype"][0]
+        self.class_weight = tf.constant(config["class_weight"][0], dtype=tf.float32)
 
-        self.calc_adaptive_constant = utils._get_annealing_fcn(config['lr_anneal'][0])
-        tensors = utils._get_acceleration_nondim_constants(config['PINN_constraint_fcn'][0], self.config)
+        self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
+        tensors = utils._get_acceleration_nondim_constants(
+            config["PINN_constraint_fcn"][0], self.config
+        )
         self.scale_tensor = tensors[0]
         self.translate_tensor = tensors[1]
-        PINN_variables = utils._get_PI_constraint(config['PINN_constraint_fcn'][0])
+        PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
-        self.beta = tf.Variable(self.config['beta'][0], dtype=tf.float32)
+        self.beta = tf.Variable(self.config["beta"][0], dtype=tf.float32)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
-    
+
     def compute_loss_components(self, y_hat, y):
-        # The accelerations are scaled in proportion to the potential
-        # such that the acceleration contribution to the loss is extraordinarily small
-        # and doesn't effectively contribute to the loss function.
-        # This scaling allows for the loss contribution of the acceleration to be on par with 
-        # the loss contribution of the potential (when both are being used)
-        y_hat_scaled = (y_hat*self.scale_tensor) + self.translate_tensor# + self.translate_tensor)/self.scale_tensor
-        y_scaled = (y*self.scale_tensor) + self.translate_tensor
-        loss_components = tf.reduce_mean(tf.square(tf.subtract(y_hat_scaled,y_scaled)), 0)
-        # tf.print(loss_components)
+        """When training with multiple components of the lost function (say the potential and
+        the acceleration), the magnitude of the error will be very different and therefore so
+        will their contribution to their training (typically this means that the potential contributes
+        much more than the acceleration). This scaling function balances these two contributions such that
+        they both exist on the same order of magnitude (these scaling variables are precomputed before
+        model initialization).
+
+        Args:
+            y_hat (tf.Tensor): predicted values
+            y (tf.Tensor): true values
+
+        Returns:
+            tf.Tensor: loss components for each contribution (i.e. dU, da, dL, dC)
+        """
+        y_hat_scaled = (y_hat * self.scale_tensor) + self.translate_tensor
+        y_scaled = (y * self.scale_tensor) + self.translate_tensor
+        loss_components = tf.reduce_mean(
+            tf.square(tf.subtract(y_hat_scaled, y_scaled)), 0
+        )
         return loss_components
 
-    @tf.function()# jit_compile=True)
+    @tf.function()  # jit_compile=True)
     def train_step(self, data):
+        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
+        or some combination of these variables. These component losses are then scaled to be comparable
+        orders of magnitude, scaled by the adaptive learning rate (if flag is True), summed, scaled again
+        (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
+        occurs.
+
+        Args:
+            data (tf.Dataset): training data
+
+        Returns:
+            dict: dictionary of metrics passed to the callback.
+        """
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=True)
             loss_components = self.compute_loss_components(y_hat, y)
-            updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
+            updated_loss_components = self.scale_loss(
+                loss_components, self.adaptive_constant
+            )
             loss = tf.reduce_sum(tf.stack(updated_loss_components))
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(tape, updated_loss_components, \
-                                                                self.adaptive_constant, self.beta, \
-                                                                self.trainable_weights)                                                                
-        
-        #tf.print(adaptive_constant)
+        adaptive_constant = self.calc_adaptive_constant(
+            tape,
+            updated_loss_components,
+            self.adaptive_constant,
+            self.beta,
+            self.trainable_weights,
+        )
 
+        # # These lines are needed if using the gradient callback.
         # grad_comp_list = []
-
         # for loss_comp in updated_loss_components:
         #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
         #     grad_comp_list.append(gradient_components)
-        
+
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
         del tape
 
         self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
-        return {'loss' : loss, 'adaptive_constant' : adaptive_constant}#, 'grads' : grad_comp_list}
+        return {
+            "loss": loss,
+            "adaptive_constant": adaptive_constant,
+        }  # , 'grads' : grad_comp_list}
 
-    @tf.function()#jit_compile=True)
+    @tf.function()  # jit_compile=True)
     def test_step(self, data):
         x, y = data
         y_hat = self(x, training=True)
         loss_components = self.compute_loss_components(y_hat, y)
-        updated_loss_components = self.scale_loss(loss_components, self.adaptive_constant)
-        loss =  tf.reduce_sum(updated_loss_components)
-        return {'loss' : loss}
-    
-    def acceleration_output(self, dataset):
+        updated_loss_components = self.scale_loss(
+            loss_components, self.adaptive_constant
+        )
+        loss = tf.reduce_sum(updated_loss_components)
+        return {"loss": loss}
+
+    def __acceleration_output(self, dataset):
         x, y = dataset
-        #x = tf.Variable(x, dtype=tf.float32)
-        assert self.config['PINN_constraint_fcn'][0] != no_pinn
+        assert self.config["PINN_constraint_fcn"][0] != no_pinn
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = self.network(x) # shape = (k,) #! evaluate network                
-        u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
-        return None, tf.multiply(-1.0,u_x), None, None
+            u = self.network(x)  # shape = (k,) #! evaluate network
+        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        return None, tf.multiply(-1.0, u_x), None, None
 
-    def nn_output(self, dataset):
+    def __nn_output(self, dataset):
         x, y = dataset
         x = tf.Variable(x, dtype=tf.float32)
-        assert self.config['PINN_constraint_fcn'][0] != no_pinn
-        assert self.config['PINN_constraint_fcn'][0] != pinn_A_sph # Not implimented yet
+        assert self.config["PINN_constraint_fcn"][0] != no_pinn
         with tf.GradientTape(persistent=True) as g1:
             g1.watch(x)
             with tf.GradientTape() as g2:
                 g2.watch(x)
-                u = self.network(x) # shape = (k,) #! evaluate network                
-            u_x = g2.gradient(u, x) # shape = (k,n) #! Calculate first derivative
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
         u_xx = g1.batch_jacobian(u_x, x)
-        
-        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx),1, keepdims=True)
 
-        curl_x = tf.math.subtract(u_xx[:,2,1], u_xx[:,1,2])
-        curl_y = tf.math.subtract(u_xx[:,0,2], u_xx[:,2,0])
-        curl_z = tf.math.subtract(u_xx[:,1,0], u_xx[:,0,1])
+        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+
+        curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
+        curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
+        curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
         curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-        return u, tf.multiply(-1.0,u_x), laplacian, curl
+        return u, tf.multiply(-1.0, u_x), laplacian, curl
 
+    def generate_nn_data(
+        self,
+        x,
+    ):
+        """Method responsible for generating all possible outputs of the
+        PINN gravity model (U, a, L, C). Note that this is an expensive
+        calculation due to the second order derivatives.
 
-    def generate_nn_data(self, x, args=None):
+        TODO: Investigate if this method can be jit complied and be compatible
+        with tf.Datasets for increased speed.
+
+        Args:
+            x (np.array): Input data (position)
+
+        Returns:
+            dict: dictionary containing all input and outputs of the network
+        """
         x = copy.deepcopy(x)
-        x_transformer = self.config['x_transformer'][0]
-        a_transformer = self.config['a_transformer'][0]
-        u_transformer = self.config['u_transformer'][0]
-        if self.config['basis'][0] == 'spherical':
-            x = cart2sph(x)
-            x[:,1:3] = np.deg2rad(x[:,1:3])
-
+        x_transformer = self.config["x_transformer"][0]
+        a_transformer = self.config["a_transformer"][0]
+        u_transformer = self.config["u_transformer"][0]
         x = x_transformer.transform(x)
 
         # This is a cumbersome operation as it computes the Hessian for each term
-        u_pred, a_pred, laplace_pred, curl_pred = self.nn_output((x,x))
+        u_pred, a_pred, laplace_pred, curl_pred = self.__nn_output((x, x))
 
         x_pred = x_transformer.inverse_transform(x)
         u_pred = u_transformer.inverse_transform(u_pred)
         a_pred = a_transformer.inverse_transform(a_pred)
 
         # TODO: (07/02/21): It's likely that laplace and curl should also be inverse transformed as well
-        if self.config['basis'][0] == 'spherical':
-            x[:,1:3] = np.rad2deg(x[:,1:3])
-            #x = sphere2cart(x)
-            a_pred = invert_projection(x, a_pred)
-            try:
-                a_pred = invert_projection(x, a_pred.astype(float))# numba requires that the types are the same
-            except:
-                a_pred = invert_projection(x, a_pred.numpy().astype(float))# if a_pred is a tensor
-        return {'x' : x_pred,
-                'u' : u_pred, 
-                'a' : a_pred,
-                'laplace' : laplace_pred,
-                'curl' : curl_pred}
+        return {
+            "x": x_pred,
+            "u": u_pred,
+            "a": a_pred,
+            "laplace": laplace_pred,
+            "curl": curl_pred,
+        }
 
     def generate_potential(self, x):
-        x = copy.deepcopy(x)
-        x_transformer = self.config['x_transformer'][0]
-        u_transformer = self.config['u_transformer'][0]
-        if self.config['basis'][0] == 'spherical':
-            x = cart2sph(x)
-            x[:,1:3] = np.deg2rad(x[:,1:3])
+        """Method responsible for returning just the PINN potential.
+        Use this method if a lightweight TF execution is desired
 
+        Args:
+            x (np.array): Input non-normalized position data (cartesian)
+
+        Returns:
+            np.array : PINN generated potential
+        """
+        x = copy.deepcopy(x)
+        x_transformer = self.config["x_transformer"][0]
+        u_transformer = self.config["u_transformer"][0]
         x = x_transformer.transform(x)
         u_pred = self.network(x)
         u_pred = u_transformer.inverse_transform(u_pred)
@@ -168,25 +228,41 @@ class CustomModel(tf.keras.Model):
 
     @tf.function(jit_compile=True)
     def generate_acceleration(self, x):
-        x_transformer = self.config['x_transformer'][0]
-        a_transformer = self.config['a_transformer'][0]
+        """Method responsible for returning the acceleration from the
+        PINN gravity model. Use this if a lightweight TF execution is
+        desired and other outputs are not required.
+
+        Args:
+            x (np.array): Input non-normalized position data (cartesian)
+
+        Returns:
+            np.array: PINN generated acceleration
+        """
+        x_transformer = self.config["x_transformer"][0]
+        a_transformer = self.config["a_transformer"][0]
         x = x_transformer.transform(x)
 
-        # This is a cumbersome operation as it computes the Hessian for each term
-        u_pred, a_pred, laplace_pred, curl_pred = self.acceleration_output((x,x))
+        u_pred, a_pred, laplace_pred, curl_pred = self.__acceleration_output((x, x))
         a_pred = a_transformer.inverse_transform(a_pred)
-        return  a_pred
-
+        return a_pred
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):
+        """L-BFGS optimizer proposed in original PINN paper, but compatable with TF >2.0. Significantly slower
+        than adam, and recommended only for fine tuning the networks after initial optimization with adam.
+
+        Args:
+            dataset (tf.Dataset): training input and output data
+
+        """
         import tensorflow_probability as tfp
 
         class History:
             def __init__(self):
                 self.history = []
-        
+
         self.history = History()
+
         def function_factory(model, loss, train_x, train_y):
             """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
 
@@ -208,18 +284,20 @@ class CustomModel(tf.keras.Model):
             # we'll use tf.dynamic_stitch and tf.dynamic_partition later, so we need to
             # prepare required information first
             count = 0
-            idx = [] # stitch indices
-            part = [] # partition indices
+            idx = []  # stitch indices
+            part = []  # partition indices
 
             for i, shape in enumerate(shapes):
                 n = np.product(shape)
-                idx.append(tf.reshape(tf.range(count, count+n, dtype=tf.int32), shape))
-                part.extend([i]*n)
+                idx.append(
+                    tf.reshape(tf.range(count, count + n, dtype=tf.int32), shape)
+                )
+                part.extend([i] * n)
                 count += n
 
             part = tf.constant(part)
 
-            @tf.function#(jit_compile=True)
+            @tf.function  # (jit_compile=True)
             def assign_new_model_parameters(params_1d):
                 """A function updating the model's parameters with a 1D tf.Tensor.
 
@@ -232,7 +310,7 @@ class CustomModel(tf.keras.Model):
                     model.trainable_variables[i].assign(tf.reshape(param, shape))
 
             # now create a function that will be returned by this factory
-            @tf.function#(jit_compile=True)
+            @tf.function  # (jit_compile=True)
             def f(params_1d):
                 """A function that can be used by tfp.optimizer.lbfgs_minimize.
 
@@ -250,9 +328,9 @@ class CustomModel(tf.keras.Model):
                     # update the parameters in the model
                     assign_new_model_parameters(params_1d)
                     # calculate the loss
-                    U_dummy = tf.zeros_like(train_x[:,0:1])
+                    U_dummy = tf.zeros_like(train_x[:, 0:1])
 
-                    #U_dummy = tf.zeros((tf.divide(tf.size(train_x),tf.constant(3)),1))
+                    # U_dummy = tf.zeros((tf.divide(tf.size(train_x),tf.constant(3)),1))
                     pred_y = model(train_x, training=True)
                     loss_value = loss(pred_y, train_y)
 
@@ -281,7 +359,7 @@ class CustomModel(tf.keras.Model):
 
         inps = np.concatenate([x for x, y in dataset], axis=0)
         outs = np.concatenate([y for x, y in dataset], axis=0)
- 
+
         # prepare prediction model, loss function, and the function passed to L-BFGS solver
 
         loss_fun = tf.keras.losses.MeanSquaredError()
@@ -292,44 +370,69 @@ class CustomModel(tf.keras.Model):
 
         # train the model with L-BFGS solver
         results = tfp.optimizer.lbfgs_minimize(
-            value_and_gradients_function=func, initial_position=init_params, max_iterations=2000, tolerance=1e-12)#, parallel_iterations=4)
+            value_and_gradients_function=func,
+            initial_position=init_params,
+            max_iterations=2000,
+            tolerance=1e-12,
+        )  # , parallel_iterations=4)
 
         func.assign_new_model_parameters(results.position)
         self.history.history = func.history
 
     def model_size_stats(self):
+        """Method which computes the number of trainable variables in the model as well
+        as the binary size of the saved network and adds it to the configuration dictionary.
+        """
         size_stats = {
-            'params' : [count_nonzero_params(self.network)],
-            'size' : [utils.get_gzipped_model_size(self)],
+            "params": [count_nonzero_params(self.network)],
+            "size": [utils.get_gzipped_model_size(self)],
         }
         self.config.update(size_stats)
 
     def prep_save(self):
-        timestamp = pd.Timestamp(time.time(), unit='s').round('s').ctime()  
-        self.directory = os.path.abspath('.') +"/Data/Networks/"+ str(pd.Timestamp(timestamp).to_julian_date()) + "/"
+        """Method responsible for timestamping the network, adding the training history to the configuration dictionary,
+        and formatting other variables into the configuration dictionary.
+        """
+        timestamp = pd.Timestamp(time.time(), unit="s").round("s").ctime()
+        self.directory = (
+            os.path.abspath(".")
+            + "/Data/Networks/"
+            + str(pd.Timestamp(timestamp).to_julian_date())
+            + "/"
+        )
         os.makedirs(self.directory, exist_ok=True)
-        self.config['timetag'] = timestamp
-        self.config['history'] = [self.history.history]
-        self.config['id'] = [pd.Timestamp(timestamp).to_julian_date()]
+        self.config["timetag"] = timestamp
+        self.config["history"] = [self.history.history]
+        self.config["id"] = [pd.Timestamp(timestamp).to_julian_date()]
         try:
-            self.config['activation'] = [self.config['activation'][0].__name__]
+            self.config["activation"] = [self.config["activation"][0].__name__]
         except:
             pass
         try:
-            self.config['optimizer'] = [self.config['optimizer'][0].__module__]
+            self.config["optimizer"] = [self.config["optimizer"][0].__module__]
         except:
             pass
         self.model_size_stats()
 
     def save(self, df_file=None):
+        """Add remaining training / model variables into the confiruation dictionary, then
+        save the config variables into its own pickled file, and potentially add it to an existing
+        dataframe defined by `df_file`.
+
+        Args:
+            df_file (str or pd.Dataframe, optional): path to dataframe to which the config variables should
+            be appended or the loaded dataframe itself. Defaults to None.
+        """
         # add final entries to config dictionary
         self.prep_save()
 
         # convert to dataframe
-        config = dict(sorted(self.config.items(), key = lambda kv: kv[0]))
-        config['PINN_constraint_fcn'] = [config['PINN_constraint_fcn'][0]]# Can't have multiple args in each list
+        config = dict(sorted(self.config.items(), key=lambda kv: kv[0]))
+        config["PINN_constraint_fcn"] = [
+            config["PINN_constraint_fcn"][0]
+        ]  # Can't have multiple args in each list
 
-        df = pd.DataFrame().from_dict(config).set_index('timetag')
+        df = pd.DataFrame().from_dict(config).set_index("timetag")
 
         # save network and config to directory
         self.network.save(self.directory + "network")
@@ -341,49 +444,74 @@ class CustomModel(tf.keras.Model):
 
 
 def backwards_compatibility(config):
-    if float(config['id'][0]) < 2459322.587314815:
-        if config['PINN_flag'][0] == 'none':
-            config['PINN_constraint_fcn'] = [no_pinn]
-        elif config['PINN_flag'][0] == 'gradient':
-            config['PINN_constraint_fcn'] = [pinn_A]
-        elif config['PINN_flag'][0] == 'laplacian':
-            config['PINN_constraint_fcn'] = [pinn_APL]
-        elif config['PINN_flag'][0] == 'convervative':
-            config['PINN_constraint_fcn'] = [pinn_APLC]
-        
-        if 'class_weight' not in config:
-            config['class_weight'] = [1.0]
-        
-        if 'dtype' not in config:
-            config['dtype'] = [tf.float32]
-        
-    if 'lr_anneal' not in config:
-        config['lr_anneal'] = [False]
+    """Convert old configuration variables to their modern
+    equivalents such that they can be imported and tested.
 
-    
+    Args:
+        config (dict): old configuration dictionary
+
+    Returns:
+        dict: new configuration dictionary
+    """
+    if float(config["id"][0]) < 2459322.587314815:
+        if config["PINN_flag"][0] == "none":
+            config["PINN_constraint_fcn"] = [no_pinn]
+        elif config["PINN_flag"][0] == "gradient":
+            config["PINN_constraint_fcn"] = [pinn_A]
+        elif config["PINN_flag"][0] == "laplacian":
+            config["PINN_constraint_fcn"] = [pinn_APL]
+        elif config["PINN_flag"][0] == "convervative":
+            config["PINN_constraint_fcn"] = [pinn_APLC]
+
+        if "class_weight" not in config:
+            config["class_weight"] = [1.0]
+
+        if "dtype" not in config:
+            config["dtype"] = [tf.float32]
+
+    if "lr_anneal" not in config:
+        config["lr_anneal"] = [False]
     return config
+
+
 def load_config_and_model(model_id, df_file):
+    """Primary loading function for the networks and their
+    configuration information.
+
+    Args:
+        model_id (float): the timestamp of the desired network to load
+        df_file (str or pd.Dataframe): the path to (or dataframe itself) containing the network
+        configuration parameters of interest.
+
+    Returns:
+        tuple: configuration/hyperparater dictionary, compiled CustomModel
+    """
     # Get the parameters and stats for a given run
     # If the dataframe hasn't been loaded
     if type(df_file) == str:
         config = utils.get_df_row(model_id, df_file)
     else:
         # If the dataframe has already been loaded
-        config = df_file[model_id == df_file['id']].to_dict()
+        config = df_file[model_id == df_file["id"]].to_dict()
         for key, value in config.items():
             config[key] = list(value.values())
 
     # Reinitialize the model
-    if 'mixed_precision' not in config:
-        config['use_precision'] = [False]
-    
+    if "mixed_precision" not in config:
+        config["use_precision"] = [False]
+
     config = backwards_compatibility(config)
-    network = tf.keras.models.load_model(os.path.abspath('.') + "/Data/Networks/"+str(model_id)+"/network")
+    network = tf.keras.models.load_model(
+        os.path.abspath(".") + "/Data/Networks/" + str(model_id) + "/network"
+    )
     model = CustomModel(config, network)
-    optimizer = utils._get_optimizer(config['optimizer'][0])
-    model.compile(optimizer=optimizer, loss='mse') #! Check that this compile is even necessary
+    optimizer = utils._get_optimizer(config["optimizer"][0])
+    model.compile(
+        optimizer=optimizer, loss="mse"
+    )  #! Check that this compile is even necessary
 
     return config, model
+
 
 def count_nonzero_params(model):
     params = 0

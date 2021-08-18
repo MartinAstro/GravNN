@@ -34,8 +34,12 @@ def plot_coef_history(t_hist, x_hat_hist, remove_deg, start_idx=0):
 def BLLS_SH(regress_deg, remove_deg, sampling_interval):
     # This has the true SH coef of Eros -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Eros()
-    model_file = planet.model_potatok
-    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/"
+    model_file = planet.model_data
+    model_file = planet.model_7790
+
+    # planet.radius = planet.physical_radius
+
+    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/RegressedRealModel/"
     N = regress_deg  
     M = remove_deg 
 
@@ -90,14 +94,14 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
 
 def main():
     # # 10 minute sample interval
-    # BLLS_SH(4, 0, 10*60)
+    #BLLS_SH(4, 0, 10*60)
     # BLLS_SH(8, 0, 10*60)
     # BLLS_SH(16, 0, 10*60)
 
     # 1 minute sample interval
     BLLS_SH(4, 0, 1*60)
-    BLLS_SH(8, 0, 1*60)
-    BLLS_SH(16, 0, 1*60)
+    # BLLS_SH(8, 0, 1*60)
+    # BLLS_SH(16, 0, 1*60)
 
 if __name__ == "__main__":
     main()

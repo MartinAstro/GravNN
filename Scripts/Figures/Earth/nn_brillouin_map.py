@@ -12,7 +12,6 @@ from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Networks.Data import standardize_output
 
 
 def main():

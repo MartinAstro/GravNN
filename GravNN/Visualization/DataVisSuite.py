@@ -9,17 +9,9 @@ import pandas as pd
 import seaborn as sns
 from GravNN.Visualization.DataVisualization import DataVisualization
 class DataVisSuite(DataVisualization):
-    def __init__(self, unit='m/s^2', **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
-        if unit == "mGal":
-            # https://en.wikipedia.org/wiki/Gal_(unit)
-            # 1 Gal == 0.01 m/s^2
-            # 1 mGal == 1E-2 * 10E-3 = 10E-5 or 10000 mGal per m/s^2
-            self.scale = 10000.0
-        elif unit == "m/s^2":
-            self.scale = 1.0
-        pass
 
     def plot_potential_dist(self, x, u, u_pred, title=None):
         self.newFig()

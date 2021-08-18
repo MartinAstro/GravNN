@@ -41,7 +41,6 @@ def run(config_original, hparams):
         configure_tensorflow,
         set_mixed_precision,
         check_config_combos,
-        format_config_combos,
     )
     from GravNN.Networks.Callbacks import TimingCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
@@ -61,7 +60,6 @@ def run(config_original, hparams):
     config = copy.deepcopy(config_original)
     config = load_hparams_to_config(hparams, config)
     check_config_combos(config)
-    config = format_config_combos(config)
     print(config)
 
     # Get data, network, optimizer, and generate model

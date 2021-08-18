@@ -18,7 +18,6 @@ from GravNN.Trajectories import DHGridDist, RandomDist, FibonacciDist
 
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks.Data import training_validation_split, standardize_output
 from GravNN.Support.StateObject import StateObject
 from GravNN.Regression.Regression import Regression
 from GravNN.Networks.Model import load_config_and_model, count_nonzero_params
@@ -33,8 +32,7 @@ def get_nn_data(x, model, config):
     a_transformer = config['a_transformer'][0]
 
     x = x_transformer.transform(x)
-    y_hat = model.predict(x.astype('float32'))
-    u_pred, a_pred, laplace_pred, curl_pred = standardize_output(y_hat, config)
+    a_pred = model.get_acceleration(x.astype('float32'))
 
     x = x_transformer.inverse_transform(x)
     a_pred = a_transformer.inverse_transform(a_pred)

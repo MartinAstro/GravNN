@@ -11,6 +11,7 @@ Welcome to GravNN's documentation!
    :caption: Contents:
 
    modules 
+   getting_started
 
 Indices and tables
 ==================

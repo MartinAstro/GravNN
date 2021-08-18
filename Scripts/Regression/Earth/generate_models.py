@@ -17,7 +17,7 @@ from GravNN.Networks.Data import training_validation_split, generate_dataset
 from GravNN.Networks.Configs import get_default_earth_config, get_default_earth_pinn_config
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Model import CustomModel
-from GravNN.Networks.Callbacks import CustomCallback
+from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Support.StateObject import StateObject
 from GravNN.Regression.Regression import Regression
 
@@ -79,7 +79,7 @@ def regress_nn_model(x, a, x_val, a_val, config):
                                         monitor='val_loss', min_delta=config['min_delta'][0], patience=1000, verbose=1,
                                         mode='auto', baseline=None, restore_best_weights=True
                                     )
-    callback = CustomCallback()
+    callback = SimpleCallback()
     history = model.fit(dataset, 
                         epochs=config['epochs'][0], 
                         verbose=0,

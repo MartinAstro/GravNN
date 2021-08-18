@@ -2,7 +2,6 @@
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks import utils
-from GravNN.Networks.Data import standardize_output
 from GravNN.Support.StateObject import StateObject
 from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
@@ -70,6 +69,16 @@ def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'med
 
 class PlanetAnalyzer():
     def __init__(self, model, config):
+        """Analysis class used to evaluate the performance of a PINN gravity model trained on a 
+        celestial body typically modeled with spherical harmonics. 
+
+        The class is responsible for determining the closest spherical harmonic degree equivalent 
+        given the networks mean RSE both at the Brillouin sphere and at a specified altitude. 
+
+        Args:
+            model (CustomModel): compiled keras model containing network and associated functions
+            config (dict): hyperparameter and configuration dictionary for model
+        """
         self.config = config
         self.model = model
         self.x_transformer = config['x_transformer'][0]

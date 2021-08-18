@@ -14,9 +14,8 @@ from GravNN.Networks.utils import (
     configure_tensorflow,
     set_mixed_precision,
     check_config_combos,
-    format_config_combos,
 )
-from GravNN.Networks.Callbacks import CustomCallback
+from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_normalization_layer_constants
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Networks import load_network

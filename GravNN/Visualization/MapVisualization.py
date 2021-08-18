@@ -10,6 +10,11 @@ from matplotlib.cm import get_cmap
 
 class MapVisualization(VisualizationBase):
     def __init__(self, unit='m/s^2', **kwargs):
+        """Visualization class responsible for plotting maps of the gravity field.
+
+        Args:
+            unit (str, optional): Acceleration unit (ex. 'mGal' or 'm/s^2'). Defaults to 'm/s^2'.
+        """
         super().__init__(**kwargs)
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         if unit == "mGal":

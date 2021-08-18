@@ -1,0 +1,1 @@
+"""Planetary bodies with gravity information or shape models provided"""

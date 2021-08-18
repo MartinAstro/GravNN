@@ -1,12 +1,12 @@
 import numpy as np
 
+
 class UniformScaler:
-    """Scale the variable by the min and max of the range or by a constant scaler
-    """
-    def __init__(self,feature_range=(-1,1)):
+    def __init__(self, feature_range=(-1, 1)):
+        """Scale the variable by the min and max of the range or by a constant scaler"""
         self.feature_range = feature_range
         pass
-    
+
     def fit(self, data, scaler=None):
         self.scaler = scaler
 
@@ -19,9 +19,8 @@ class UniformScaler:
         self.data_min_ = data_min
         self.data_max_ = data_max
         self.data_range_ = data_range
-   
 
-    def fit_transform(self,data, scaler=None):
+    def fit_transform(self, data, scaler=None):
         self.scaler = scaler
         data_max = np.max(data)
         data_min = np.min(data)
@@ -34,22 +33,21 @@ class UniformScaler:
         self.data_range_ = data_range
 
         if self.scaler is not None:
-            X = data*self.scaler
+            X = data * self.scaler
         else:
-            X = data*self.scale_ + self.min_
+            X = data * self.scale_ + self.min_
         return X
-    
-    def transform(self, data):   
+
+    def transform(self, data):
 
         if self.scaler is not None:
-            X = data*self.scaler
+            X = data * self.scaler
         else:
-            X = data*self.scale_ + self.min_
+            X = data * self.scale_ + self.min_
         return X
-    
-    
+
     def inverse_transform(self, data):
         if self.scaler is not None:
-            return data/self.scaler
+            return data / self.scaler
         else:
-            return (data - self.min_)/self.scale_
+            return (data - self.min_) / self.scale_

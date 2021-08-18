@@ -1,378 +1,410 @@
-from GravNN.Networks.Layers import Cart2SphLayer, NormalizationLayer, Sph2NetLayer, Cart2CylLayer, Cyl2NetLayer,PinesSph2NetLayer,Cart2PinesSphLayer
+from GravNN.Networks.Layers import (
+    Cart2SphLayer,
+    Sph2NetLayer,
+    PinesSph2NetLayer,
+    Cart2PinesSphLayer,
+)
 import tensorflow as tf
-import numpy as np
+import os
+import warnings
+
+
 def load_network(config):
-    if config['init_file'][0] is not None:
-        network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
+    if config["init_file"][0] is not None:
+        network = tf.keras.models.load_model(
+            os.path.abspath(".")
+            + "/Data/Networks/"
+            + str(config["init_file"][0])
+            + "/network"
+        )
     else:
-        network = config['network_type'][0](**config)
+        network = config["network_type"][0](**config)
     return network
-
-def CustomNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    dropout_list = kwargs['dropout'][0]
-    initializer = kwargs['initializer'][0]
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = inputs
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    )(x)
-                                    #dtype=kwargs['dtype'])(x)
-        # dropout layers
-        if dropout_list[i] != 0.0:
-            x = tf.keras.layers.Dropout(dropout_list[i])(x)
-
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype='float32'
-                                    )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    return model
 
 
 def TraditionalNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    dtype = kwargs['dtype'][0]
+    """Vanilla densely connected neural network.
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str) : float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional) : fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+    Returns:
+        tf.keras.Model: densely connected network
+    """
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    dtype = kwargs["dtype"][0]
     inputs = tf.keras.Input(shape=(layers[0],))
     x = inputs
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype,
-                                    )(x)
-                                    #dtype=kwargs['dtype'])(x)
-        if 'dropout' in kwargs:
-            if kwargs['dropout'][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype
-                                    )(x)
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            dtype=dtype,
+        )(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
-def CylindricalTraditionalNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    custom_input_layer = kwargs['custom_input_layer'][0]
-
-    dtype = kwargs['dtype'][0]
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2CylLayer(inputs.shape)(inputs)
-
-    scalers = kwargs['norm_scalers'][0]
-    mins = kwargs['norm_mins'][0]
-
-    #x = NormalizationLayer(inputs.shape, scalers, mins)(x)
-    x = Cyl2NetLayer(inputs.shape, scalers, mins)(x)
-    if custom_input_layer == "cart_and_sph":
-        # Once the layer has been converted to cyl coord, normalized between (-1,1) then 
-        # run the normalized coordinates through a sine and cosine function so that
-        # the periodic boundary conditions are observed for those coordinates
-        x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
-    
-
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype,
-                                    )(x)
-                                    #dtype=kwargs['dtype'])(x)
-        if 'dropout' in kwargs:
-            if kwargs['dropout'][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype
-                                    )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    return model
 
 def SphericalTraditionalNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    custom_input_layer = kwargs['custom_input_layer'][0]
-    scalers = kwargs['norm_scalers'][0]
-    mins = kwargs['norm_mins'][0]
-    dtype = kwargs['dtype'][0]
-    sph_in_graph = kwargs['sph_in_graph'][0]
+    """Densely connected neural network that will convert inputs into 3D spherical coordinates
+    before proceeding into the network.
+
+    .. Note:: If using this network as a PINN and derivatives will be taken, the 3D spherical coordinates
+    will have a singularity at the poles and a discontinuity at theta = {0, 360}.
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+        custom_input_layer (str): selects any custom configuration option for the layer that enters the network. (e.g. concatenate the cartesian inputs
+        with the spherical coordinates using "cart_and_sph").
+        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
+        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
+        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
+    Returns:
+        tf.keras.Model: densely connected network
+    """
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    custom_input_layer = kwargs["custom_input_layer"][0]
+    scalers = kwargs["norm_scalers"][0]
+    mins = kwargs["norm_mins"][0]
+    dtype = kwargs["dtype"][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
-
-    if sph_in_graph:
-        x = Cart2SphLayer(inputs.shape)(inputs)
-    else:
-        with tf.init_scope():
-            x = Cart2SphLayer(inputs.shape)(inputs)
-
+    x = Cart2SphLayer(inputs.shape)(inputs)
     x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
     if custom_input_layer == "cart_and_sph":
-        # Once the layer has been converted to sph, normalized between (-1,1) then 
-        # run the normalized coordinates through a sine and cosine function so that
-        # the periodic boundary conditions are observed for those coordinates
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
-    
 
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype,
-                                    )(x)
-                                    #dtype=kwargs['dtype'])(x)
-        if 'batch_norm' in kwargs:
-            x = tf.keras.layers.BatchNormalization()(x)
-        if 'dropout' in kwargs:
-            if kwargs['dropout'][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype
-                                    )(x)
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            dtype=dtype,
+        )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
 def SphericalPinesTraditionalNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    custom_input_layer = kwargs['custom_input_layer'][0]
-    
-    dtype = kwargs['dtype'][0]
-    skip_normalization = kwargs['skip_normalization'][0]
+    """Densely connected neural network that will convert inputs into 4D spherical coordinates
+    before proceeding into the network.
+
+    .. Note:: This network superseeds the SphericalTraditionalNet as its spherical derivatives are non-singular.
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+        custom_input_layer (str): selects any custom configuration option for the layer that enters the network. (e.g. concatenate the cartesian inputs
+        with the spherical coordinates using "cart_and_sph").
+        skip_normalization (bool): flag determining if the spherical values entering the network should be normalized
+        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
+        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
+        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
+    Returns:
+        tf.keras.Model: densely connected network
+    """
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    custom_input_layer = kwargs["custom_input_layer"][0]
+    dtype = kwargs["dtype"][0]
+    skip_normalization = kwargs["skip_normalization"][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
 
     if not skip_normalization:
-        scalers = kwargs['norm_scalers'][0]
-        mins = kwargs['norm_mins'][0]
+        scalers = kwargs["norm_scalers"][0]
+        mins = kwargs["norm_mins"][0]
         x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
 
     if custom_input_layer == "cart_and_sph":
-        # Once the layer has been converted to sph, normalized between (-1,1) then 
-        # run the normalized coordinates through a sine and cosine function so that
-        # the periodic boundary conditions are observed for those coordinates
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
-    
 
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype,
-                                    )(x)
-                                    #dtype=kwargs['dtype'])(x)
-        if 'batch_norm' in kwargs:
-            x = tf.keras.layers.BatchNormalization()(x)
-        if 'dropout' in kwargs:
-            if kwargs['dropout'][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype
-                                    )(x)
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            dtype=dtype,
+        )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
-
 def SphericalPinesTransformerNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    scalers = kwargs['norm_scalers'][0]
-    mins = kwargs['norm_mins'][0]
-    dtype = kwargs['dtype'][0]
-    sph_in_graph = kwargs['sph_in_graph'][0]
-    transformer_units = kwargs['transformer_units'][0]
-    skip_normalization = kwargs['skip_normalization'][0]
+    """Transformer model that takes 4D spherical coordinates as inputs. This architecture was recommended by the
+    Wang2020 PINN Gradient Pathologies paper to help expose symmetries and invariances between different layers within the network.
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+    TODO: Check if the transformer_units have to be the same as the hidden layer node count. If so remove the keyword. s
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        transformer_units (int): number of nodes used within the encoder layers.
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+        skip_normalization (bool): flag determining if the spherical values entering the network should be normalized
+        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
+        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
+        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
+    Returns:
+        tf.keras.Model: densely connected network
+    """
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    scalers = kwargs["norm_scalers"][0]
+    mins = kwargs["norm_mins"][0]
+    dtype = kwargs["dtype"][0]
+    transformer_units = kwargs["transformer_units"][0]
+    skip_normalization = kwargs["skip_normalization"][0]
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
 
     if not skip_normalization:
         x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
 
-    # if custom_input_layer == "cart_and_sph":
-    #     # Once the layer has been converted to sph, normalized between (-1,1) then 
-    #     # run the normalized coordinates through a sine and cosine function so that
-    #     # the periodic boundary conditions are observed for those coordinates
-    #     x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
-    
-    # # Initialize encoder weights and biases
-    # self.encoder_weights_1 = self.xavier_init([2, layers[1]])
-    # self.encoder_biases_1 = self.xavier_init([1, layers[1]])
+    # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
+    encoder_1 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
+    encoder_2 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
 
-    # self.encoder_weights_2 = self.xavier_init([2, layers[1]])
-    # self.encoder_biases_2 = self.xavier_init([1, layers[1]])
-
-
-    # encoder_1 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_1), self.encoder_biases_1))
-    # encoder_2 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_2), self.encoder_biases_2))
-
-
-    # num_layers = len(self.layers)
-    # encoder_1 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_1), self.encoder_biases_1))
-    # encoder_2 = tf.tanh(tf.add(tf.matmul(H, self.encoder_weights_2), self.encoder_biases_2))
-
-    # for l in range(0, num_layers - 2):
-    #     W = self.weights[l]
-    #     b = self.biases[l]
-    #     H = tf.math.multiply(tf.tanh(tf.add(tf.matmul(H, W), b)), encoder_1) + \
-    #         tf.math.multiply(1 - tf.tanh(tf.add(tf.matmul(H, W), b)), encoder_2)
-
-    # W = self.weights[-1]
-    # b = self.biases[-1]
-    # H = tf.add(tf.matmul(H, W), b)
-    # return H
-
-
-    # encoder_weights_1 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
-    # encoder_biases_1 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
-
-    # encoder_weights_2 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
-    # encoder_biases_2 = tf.Variable(tf.initializers.GlorotUniform()(shape=(4, layers[1])))
-
-
-    encoder_1 = tf.keras.layers.Dense(units=transformer_units, 
-                                activation=activation, 
-                                kernel_initializer=initializer,
-                                dtype=dtype,
-                                )(x)
-    encoder_2 = tf.keras.layers.Dense(units=transformer_units, 
-                        activation=activation, 
-                        kernel_initializer=initializer,
-                        dtype=dtype,
-                        )(x)
-
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype,
-                                    )(x)
-        UX = tf.keras.layers.Multiply()([x, encoder_1])  
-        VX = tf.keras.layers.Multiply()([1.0 - x, encoder_2])  
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            dtype=dtype,
+        )(x)
+        UX = tf.keras.layers.Multiply()([x, encoder_1])
+        VX = tf.keras.layers.Multiply()([1.0 - x, encoder_2])
 
         x = tf.keras.layers.add([UX, VX])
 
-        if 'batch_norm' in kwargs:
-            x = tf.keras.layers.BatchNormalization()(x)
-        if 'dropout' in kwargs:
-            if kwargs['dropout'][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs['dropout'][0])(x)
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer,
-                                    dtype=dtype
-                                    )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
-
 def ResNet(**kwargs):
-    layers = kwargs['layers'][0]
-    activation = kwargs['activation'][0]
-    initializer = kwargs['initializer'][0]
-    custom_input_layer = kwargs['custom_input_layer'][0]
-    scalers = kwargs['norm_scalers'][0]
-    mins = kwargs['norm_mins'][0]
-    dtype = kwargs['dtype'][0]
-    sph_in_graph = kwargs['sph_in_graph'][0]
+    """Residual network
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
+        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
+    Returns:
+        tf.keras.Model: densely connected network with skip connections
+    """
+
+    warnings.warn(
+        "ResNet is outdated and needs refactoring.", warnings.DepreciationWarning
+    )
+
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    custom_input_layer = kwargs["custom_input_layer"][0]
+    scalers = kwargs["norm_scalers"][0]
+    mins = kwargs["norm_mins"][0]
+    dtype = kwargs["dtype"][0]
 
     skip_offset = 3
     inputs = tf.keras.Input(shape=(layers[0],))
 
-    
-    if sph_in_graph:
-        x = Cart2SphLayer(inputs.shape)(inputs)
-    else:
-        with tf.init_scope():
-            x = Cart2SphLayer(inputs.shape)(inputs)
-
+    x = Cart2SphLayer(inputs.shape)(inputs)
     x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
     if custom_input_layer == "cart_and_sph":
-        # Once the layer has been converted to sph, normalized between (-1,1) then 
-        # run the normalized coordinates through a sine and cosine function so that
-        # the periodic boundary conditions are observed for those coordinates
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
 
-    for i in range(1,len(layers)-1):
-        x = tf.keras.layers.Dense(units=layers[i], 
-                                    activation=activation, 
-                                    kernel_initializer=initializer)(x)
-        if (i-1) % skip_offset == 0 and (i-1) == 0:
-            skip = x 
-        if (i-1) % skip_offset == 0 and (i-1) != 0:
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i], activation=activation, kernel_initializer=initializer
+        )(x)
+        if (i - 1) % skip_offset == 0 and (i - 1) == 0:
+            skip = x
+        if (i - 1) % skip_offset == 0 and (i - 1) != 0:
             x = tf.keras.layers.Add()([x, skip])
             x = tf.keras.layers.Activation(activation)(x)
-            skip = x 
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    dtype='float32',
-                                    kernel_initializer=initializer)(x)
+            skip = x
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        dtype=dtype,
+        kernel_initializer=initializer,
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
+
 def InceptionNet(layers, activation, **kwargs):
+    """Inception network. Legacy
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+    Returns:
+        tf.keras.Model: densely connected network with inception blocks
+    """
+    warnings.warn(
+        "InceptionNet is outdated and needs refactoring.", warnings.DepreciationWarning
+    )
+
     inputs = tf.keras.Input(shape=(layers[0],))
-    initializer = kwargs['initializer'][0]
+    initializer = kwargs["initializer"][0]
 
     x = inputs
-    for i in range(1,len(layers)-1):
+    for i in range(1, len(layers) - 1):
         tensors = []
         for j in range(0, len(layers[i])):
-            x_j = tf.keras.layers.Dense(units=layers[i][j], 
-                                        activation=activation, 
-                                        kernel_initializer=initializer)(x)
+            x_j = tf.keras.layers.Dense(
+                units=layers[i][j],
+                activation=activation,
+                kernel_initializer=initializer,
+            )(x)
             tensors.append(x_j)
         x = tf.keras.layers.Concatenate(axis=1)(tensors)
         x = tf.keras.layers.Activation(activation)(x)
-        
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer)(x)
+
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1], activation="linear", kernel_initializer=initializer
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
+
 def DenseNet(layers, activation, **kwargs):
+    """Dense network. Legacy
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+    Returns:
+        tf.keras.Model: densely connected network with inception blocks
+    """
+    warnings.warn(
+        "DenseNet is outdated and needs refactoring.", warnings.DepreciationWarning
+    )
+
     inputs = tf.keras.Input(shape=(layers[0],))
-    initializer = kwargs['initializer'][0]
+    initializer = kwargs["initializer"][0]
 
     x = inputs
-    for i in range(1,len(layers)-1):
+    for i in range(1, len(layers) - 1):
         tensors = []
         tensors.append(x)
         if len(layers[i]) > 1:
             for j in range(0, len(layers[i])):
-                y = tf.keras.layers.Dense(units=layers[i][j], 
-                                            activation=activation, 
-                                            kernel_initializer=initializer)(x)
+                y = tf.keras.layers.Dense(
+                    units=layers[i][j],
+                    activation=activation,
+                    kernel_initializer=initializer,
+                )(x)
                 tensors.append(y)
                 x = tf.keras.layers.Concatenate(axis=1)(tensors)
         else:
-            x = tf.keras.layers.Dense(units=layers[i][0],
-                                        activation=activation,
-                                        kernel_initializer=initializer)(x)
+            x = tf.keras.layers.Dense(
+                units=layers[i][0],
+                activation=activation,
+                kernel_initializer=initializer,
+            )(x)
 
-    outputs = tf.keras.layers.Dense(units=layers[-1], 
-                                    activation='linear', 
-                                    kernel_initializer=initializer)(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1], activation="linear", kernel_initializer=initializer
+    )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model

@@ -1,6 +1,5 @@
 from GravNN.Networks.utils import configure_tensorflow
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Networks.Data import standardize_output
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.CelestialBodies.Asteroids import Eros, Toutatis
 tf = configure_tensorflow()

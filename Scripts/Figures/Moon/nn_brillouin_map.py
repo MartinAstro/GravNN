@@ -9,7 +9,6 @@ from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Networks.Data import standardize_output
 
 
 def main():
@@ -43,7 +42,7 @@ def main():
 
         x = x_transformer.transform(trajectory.positions)
         output = model.predict(x)
-        U, a, lap, curl = standardize_output(output, config)
+        a = model.get_acceleration(x)
 
         a_pred = a_transformer.inverse_transform(a)
         grid_true = Grid(trajectory=trajectory, accelerations=a_pred)

@@ -19,7 +19,6 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Networks import utils
 from GravNN.Networks.Model import CustomModel, load_config_and_model
 from GravNN.Networks.Data import generate_dataset, training_validation_split
-from GravNN.Networks.Plotting import Plotting
 from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration
 
@@ -63,7 +62,6 @@ def main():
         config, model = load_config_and_model(model_id, df)
 
         utils.check_config_combos(config)
-        config = utils.format_config_combos(config)
         config.update(compression_config)
         
         # TODO: Trajectories should take keyword arguments so the inputs dont have to be standard, just pass in config.

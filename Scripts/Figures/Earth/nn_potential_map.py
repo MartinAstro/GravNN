@@ -10,7 +10,6 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Trajectories import DHGridDist, RandomDist
 from GravNN.Support.Grid import Grid
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Networks.Data import standardize_output
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.DataVisualization import DataVisualization
 from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration

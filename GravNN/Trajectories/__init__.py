@@ -1,3 +1,5 @@
+"""Classes used to generate sample distributions and training data"""
+
 from .CustomDist import CustomDist
 from .DHGridDist import DHGridDist
 from .EphemerisDist import EphemerisDist

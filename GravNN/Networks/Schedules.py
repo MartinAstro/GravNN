@@ -2,6 +2,21 @@ import tensorflow as tf
 
 
 def _get_exp_decay_schedule(config):
+    """Learning rate decay schedule.
+
+    TODO: make keywords required.
+
+    Args:
+        config (dict): hyperparameter and configuration variable dictionary.
+        Needs to contain:
+        decay_rate (float): Fraction of original learning rate between 0 and 1. (e.g. decay_rate of 0.5 causes the
+        initial learning rate to decay as (1/2)**(i))
+        decay_rate_epoch (int): Number of epochs necessary to cause the exponent to go up by 1
+        decay_epoch_0 (int): the epoch after which the decay begins.
+
+    Returns:
+        LearningRateSchedule: The TF learning rate scheduler
+    """
     decay_rate = config.get("decay_rate")[0]
     initial_learning_rate = config.get("learning_rate")[0]
     decay_rate_epoch = config.get("decay_rate_epoch")[0]
@@ -20,6 +35,22 @@ def _get_exp_decay_schedule(config):
 
 
 def _get_plateau_schedule(config):
+    """Learning rate schedule that decays after a plateau in val_loss.
+
+    TODO: make keywords required.
+
+    Args:
+        config (dict): hyperparameter and configuration variable dictionary.
+        Needs to contain:
+        patience (int): how many consecutive epochs of the satisfied condition to wait before decaying the learning rate.
+        decay_rate (float): Fraction of original learning rate between 0 and 1. (e.g. decay_rate of 0.5 causes the
+        initial learning rate to decay as (1/2))
+        min_delta (float): the difference in val_loss must exceed this amount, otherwise the epoch counts towards the patience quantity.
+        min_lr (float): the minimum learning rate that can be decayed to.
+
+    Returns:
+        ReduceLROnPlateau: The TF learning rate scheduler
+    """
     patience = config.get("patience")[0]
     decay_rate = config.get("decay_rate")[0]
     min_delta = config.get("min_delta")[0]
@@ -58,7 +89,6 @@ def _get_cosine_restart_decay_schedule(config):
 
 def get_schedule(config):
     name = config["schedule_type"][0]
-
     if name == "exp_decay":
         schedule = _get_exp_decay_schedule(config)
     elif name == "plateau":
@@ -69,7 +99,4 @@ def get_schedule(config):
         schedule = _get_cosine_restart_decay_schedule(config)
     elif name == "none":
         schedule = tf.keras.callbacks.History()
-
-
-
     return schedule

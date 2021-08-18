@@ -3,7 +3,6 @@ import sys
 from copy import deepcopy
 
 import numpy as np
-from GravNN.GravityModels.NN_Base import NN_Base
 from GravNN.Support import transformations
 from GravNN.Support.transformations import (cart2sph,
                                             check_fix_radial_precision_errors,

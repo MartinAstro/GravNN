@@ -15,6 +15,11 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 class PolyVisualization(VisualizationBase):
     def __init__(self, unit='m/s^2', **kwargs):
+        """Visualization class for polyhedral shape models
+
+        Args:
+            unit (str, optional): acceleration unit ('m/s^2' or 'mGal'). Defaults to 'm/s^2'.
+        """
         super().__init__(**kwargs)
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         if unit == "mGal":

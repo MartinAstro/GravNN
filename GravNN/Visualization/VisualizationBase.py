@@ -9,6 +9,13 @@ import numpy as np
 class VisualizationBase(ABC):
 
     def __init__(self, save_directory=None, halt_formatting=False):
+        """Default visualization base class. Generates consistent style formatting for all 
+        figures, offers information about proper figure sizes.
+
+        Args:
+            save_directory (str, optional): path to directory in which all figures will be saved. Defaults to None.
+            halt_formatting (bool, optional): flag determining if custom formatting should be applied. Defaults to False.
+        """
         if save_directory is None:
             self.file_directory = os.path.abspath('.') +"/Plots/"
         else:
@@ -36,12 +43,12 @@ class VisualizationBase(ABC):
         self.fig_size = (5,3.5) #(3, 1.8) is half page. 
         return
 
-    def new3DFig(self):
+    def new3DFig(self, unit='m'):
         fig = plt.figure(num=None, figsize=(5,3.5), dpi=200)
         ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel(r'$x$ (m)', fontsize=10)
-        ax.set_ylabel(r'$y$ (m)', fontsize=10)
-        ax.set_zlabel(r'$z$ (m)', fontsize=10)
+        ax.set_xlabel(r'$x$ ('+unit+r')', fontsize=10)
+        ax.set_ylabel(r'$y$ ('+unit+r')', fontsize=10)
+        ax.set_zlabel(r'$z$ ('+unit+r')', fontsize=10)
         ax.xaxis.set_major_locator(plt.MaxNLocator(6))
         ax.yaxis.set_major_locator(plt.MaxNLocator(6))
         ax.zaxis.set_major_locator(plt.MaxNLocator(6))
@@ -49,7 +56,6 @@ class VisualizationBase(ABC):
         ax.legend(prop={'size': 10})
         ax.get_legend().remove()
         ax.grid(linestyle="--", linewidth=0.1, color='.25', zorder=-10)
-
         return fig, ax
 
     def newFig(self, fig_size=None):
@@ -58,7 +64,6 @@ class VisualizationBase(ABC):
         fig = plt.figure(num=None, figsize=fig_size, dpi=200)
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=10)
-        #ax.legend(prop={'size': 10})
         ax.grid(which='both',linestyle="--", linewidth=0.1, color='.25', zorder=-10)
         return fig, ax
 
