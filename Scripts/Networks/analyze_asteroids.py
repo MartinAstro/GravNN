@@ -13,6 +13,11 @@ def main():
     """
     df_file = 'Data/Dataframes/traditional_w_constraints_annealing.data'
     df_file = "Data/Dataframes/transformers_wo_constraints.data"
+    df_file = "Data/Dataframes/small_data_pinn_constraints_wo_annealing.data"
+    df_file = "Data/Dataframes/small_data_pinn_constraints_w_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/medium_data_pinn_constraints_wo_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/no_pinn.data"
 
     interior_bound = Eros().physical_radius
     exterior_bound = Eros().physical_radius + 10000.0
@@ -20,7 +25,7 @@ def main():
     for idx in range(0,25):
         args.append((idx, df_file, interior_bound, exterior_bound))
 
-    with mp.Pool(1) as pool:
+    with mp.Pool(4) as pool:
         output = pool.starmap_async(analyze, args)
         results = output.get()
 

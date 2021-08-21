@@ -91,7 +91,7 @@ def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
 
         acc[3 * i : 3 * (i + 1)] = (
             np.array([a1, a2, a3]) + np.array([s, t, u]) * a4
-        )  # .tolist()
+        )
     return acc
 
 

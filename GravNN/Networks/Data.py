@@ -37,14 +37,16 @@ def print_stats(data, name):
     )
 
 
-def compute_normalization_layer_constants(config):
+def compute_input_layer_normalization_constants(config):
     """Function responsible for determining how to normalize the spherical coordinates
     before entering the network. Currently the tensorflow graph accepts a normalized cartesian vector
     input, which is then (within the graph) transformed to spherical coordinates. The theta and phi components
     grossly exceed the [-1,1] bounds if left unnormalized, so this function identifies those mins and max values
-    for normalization purposes within the graph.
+    for normalization purposes within the graph. 
 
-    TODO: Check if this is even necessary
+    .. Note:: In the PinesSphericalNet these constants are generally irrelevant given the 4D coordinate system
+    in which all parameters exist naturally between -1,1. Consequently this is only used for the SphTraditionalNet
+    with 3D coordinates. 
 
     Args:
         config (dict): hyperparameters and configuration variables for the TF model.
@@ -83,16 +85,19 @@ def compute_normalization_layer_constants(config):
     )
 
     # Determine scalers for the normalized spherical coordinates
+
+    # Scale the radial component independently
     r_transformer = MinMaxScaler(feature_range=(-1, 1))
     x_train[:, 0:1] = r_transformer.fit_transform(x_train[:, 0:1])
 
-    x_transformer = MinMaxScaler(feature_range=(-1, 1))
-    x_train[:, 1:3] = x_transformer.fit_transform(x_train[:, 1:3])
+    # Also scale the angles together
+    angles_transformer = MinMaxScaler(feature_range=(-1, 1))
+    x_train[:, 1:3] = angles_transformer.fit_transform(x_train[:, 1:3])
 
     config["norm_scalers"] = [
-        np.concatenate([r_transformer.scale_, x_transformer.scale_])
+        np.concatenate([r_transformer.scale_, angles_transformer.scale_])
     ]
-    config["norm_mins"] = [np.concatenate([r_transformer.min_, x_transformer.min_])]
+    config["norm_mins"] = [np.concatenate([r_transformer.min_, angles_transformer.min_])]
     return
 
 

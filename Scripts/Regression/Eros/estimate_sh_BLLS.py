@@ -36,10 +36,12 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
     planet = Eros()
     model_file = planet.model_data
     model_file = planet.model_7790
-
-    # planet.radius = planet.physical_radius
-
     directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/RegressedRealModel/"
+    
+    # planet.radius = planet.physical_radius
+    model_file = planet.model_potatok
+    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/"
+
     N = regress_deg  
     M = remove_deg 
 
@@ -93,13 +95,13 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
 
 
 def main():
-    # # 10 minute sample interval
-    #BLLS_SH(4, 0, 10*60)
-    # BLLS_SH(8, 0, 10*60)
-    # BLLS_SH(16, 0, 10*60)
+    # 10 minute sample interval
+    BLLS_SH(4, 0, 10*60)
+    BLLS_SH(8, 0, 10*60)
+    BLLS_SH(16, 0, 10*60)
 
     # 1 minute sample interval
-    BLLS_SH(4, 0, 1*60)
+    # BLLS_SH(4, 0, 1*60)
     # BLLS_SH(8, 0, 1*60)
     # BLLS_SH(16, 0, 1*60)
 

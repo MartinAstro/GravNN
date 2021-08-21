@@ -39,7 +39,6 @@ class CustomModel(tf.keras.Model):
             self.config["mixed_precision"][0], dtype=tf.bool
         )
         self.variable_cast = config["dtype"][0]
-        self.class_weight = tf.constant(config["class_weight"][0], dtype=tf.float32)
 
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
         tensors = utils._get_acceleration_nondim_constants(
@@ -61,7 +60,7 @@ class CustomModel(tf.keras.Model):
         the acceleration), the magnitude of the error will be very different and therefore so
         will their contribution to their training (typically this means that the potential contributes
         much more than the acceleration). This scaling function balances these two contributions such that
-        they both exist on the same order of magnitude (these scaling variables are precomputed before
+        they both exist on the same order of magnitude (these scaling variables are precomputed in
         model initialization).
 
         Args:
@@ -76,7 +75,10 @@ class CustomModel(tf.keras.Model):
         loss_components = tf.reduce_mean(
             tf.square(tf.subtract(y_hat_scaled, y_scaled)), 0
         )
-        return loss_components
+        loss_components2 = tf.reduce_mean(
+            tf.square(tf.subtract(y_hat, y)), 0
+        )
+        return loss_components2
 
     @tf.function()  # jit_compile=True)
     def train_step(self, data):
@@ -141,6 +143,10 @@ class CustomModel(tf.keras.Model):
 
     def __acceleration_output(self, dataset):
         x, y = dataset
+        if self.config["PINN_constraint_fcn"][0] == no_pinn:
+            a = self.network(x) 
+            return  None, a, None, None
+
         assert self.config["PINN_constraint_fcn"][0] != no_pinn
         with tf.GradientTape() as g2:
             g2.watch(x)

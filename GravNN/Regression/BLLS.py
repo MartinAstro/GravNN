@@ -19,7 +19,6 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
         A = compute_A(A, n1, n2, u)
         rE, iM, rho = compute_euler(N, a, mu, rMag, s, t)
         
-        # NOTE: NO ESTIMATION OF C00, C10, C11 -- THESE ARE DETERMINED ALREADY
         for n in range(k+1,N+1):
             for m in range(0,n+1):
                 delta_m = 1 if (m == 0) else 0
@@ -30,7 +29,7 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                 c1 = n_lm_n_lm_p1 # Eq 79 BSK
                 c2 = n_lm_n_l_p1_m_p1 # Eq 80 BSK
 
-                #TODO: These will need the normalizaiton factor out in front (N1, N2)
+                #TODO: These will need the normalization factor out in front (N1, N2)
                 # Coefficient contribution to X, Y, Z components of the acceleration
                 
                 if (m == 0):
@@ -40,25 +39,23 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                     rTerm = rE[m-1]
                     iTerm = iM[m-1]
                 
-                # Seems representative of the computed model
-                f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
-                f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
+                # Pines Derivatives -- but rho n+1 rather than n+2
+                f_Cnm_1 = (rho[n+1]/a)*(m*A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
+                f_Cnm_2 = (rho[n+1]/a)*(-m*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
 
                 if m < n:
                     f_Cnm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
                 else:
                     f_Cnm_3 = (rho[n+1]/a)*(-1.0*u*c2*A[n+1,m+1])*rE[m]
 
-                f_Snm_1 = (rho[n+1]/a)*m*(A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
-                f_Snm_2 = (rho[n+1]/a)*m*(A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
+                f_Snm_1 = (rho[n+1]/a)*(m*A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
+                f_Snm_2 = (rho[n+1]/a)*(m*A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
                 if m < n:
                     f_Snm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
                 else:
                     f_Snm_3 = (rho[n+1]/a)*(-1.0*u*c2*A[n+1,m+1])*iM[m]
 
 
-                #idx = n - 2 # The M matrix excludes columns for C00, C10, C11 so we need to subtract 2 from the current degree for proper indexing
-                #idx = n
                 degIdx = (n+1)*(n) - (k+2)*(k+1)
 
                 M[3*p + 0, degIdx + 2*m + 0] = f_Cnm_1 # X direction
@@ -127,15 +124,16 @@ def main():
     from GravNN.CelestialBodies.Planets import Earth
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
     import time
-    max_true_deg = 2
-    regress_deg = 2
-    remove_deg = -1
+    max_true_deg = 4
+    regress_deg = 4
+    remove_deg = 1
+    #remove_deg = 0 # C20 is very close, C22 isn't that close
 
     planet = Earth()
     sh_EGM2008 = SphericalHarmonics(planet.sh_hf_file, regress_deg)
 
-    trajectory = DHGridDist(planet, sh_EGM2008.radEquator, 360)
-    trajectory = RandomDist(planet, [planet.radius, planet.radius+420000], 1000)
+    trajectory = DHGridDist(planet, sh_EGM2008.radEquator, 5)
+    #trajectory = RandomDist(planet, [planet.radius, planet.radius+420], 1000)
 
     if remove_deg != -1:
         x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_deg=max_true_deg, deg_removed=remove_deg)
@@ -148,12 +146,15 @@ def main():
     results = regressor.update(x, a)
     C_lm, S_lm = format_coefficients(results, regress_deg, remove_deg)
     print(time.time() - start)
-    print(C_lm)
-    print(S_lm)
+    # print(C_lm)
+    # print(S_lm)
+
+    k = len(C_lm)
+    print(np.array2string((sh_EGM2008.C_lm[:k,:k] - C_lm)/ sh_EGM2008.C_lm[:k,:k]*100, precision=0))
+    print(np.array2string((sh_EGM2008.S_lm[:k,:k] - S_lm)/ sh_EGM2008.S_lm[:k,:k]*100, precision=0))
+
     #regressor.save('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\GravNN\\Files\\GravityModels\\Regressed\\some.csv')
     #print(coefficients)
-
-    
 
 if __name__  == "__main__":
     main()

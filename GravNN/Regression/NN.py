@@ -16,7 +16,7 @@ from GravNN.Networks.utils import (
     check_config_combos,
 )
 from GravNN.Networks.Callbacks import SimpleCallback
-from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_normalization_layer_constants
+from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
@@ -31,7 +31,7 @@ tf.keras.backend.clear_session()
 class NN:
     def __init__(self, config):
         # Get data, network, optimizer, and generate model
-        compute_normalization_layer_constants(config)
+        compute_input_layer_normalization_constants(config)
 
         optimizer = configure_optimizer(config, mixed_precision=None)
         network = load_network(config)

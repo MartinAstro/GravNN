@@ -19,9 +19,20 @@ def main():
 
     df_file = "Data/Dataframes/transformers_wo_constraints.data" # Transformer Performance on r and r_bar
 
-    df_file = "Data/Dataframes/traditional_w_constraints_annealing.data" # Transformer Performance on r and r_bar
+    df_file = "Data/Dataframes/traditional_w_constraints_annealing.data" 
 
-    threads = 2
+    df_file = "Data/Dataframes/small_data_pinn_constraints_wo_annealing.data"
+    df_file = "Data/Dataframes/small_data_pinn_constraints_wo_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/small_data_pinn_constraints_w_annealing_lr_plateau.data"
+
+    df_file = "Data/Dataframes/medium_data_pinn_constraints_wo_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"
+    df_file = "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"
+
+    df_file = "Data/Dataframes/no_pinn.data"
+
+
+    threads = 4
     config = get_default_eros_config()
     #config = get_prototype_toutatis_config()
 
@@ -32,29 +43,35 @@ def main():
 
     hparams = {
         "N_dist": [50000],
-        "N_train": [2500, 2500*5, 2500*10],
+        "N_train": [5000, 2500, 2500//2, 2500//4, 2500//8],
         "N_val" : [1500],
         "epochs": [7500],
 
-        "schedule_type" : ['exp_decay'],
-        "decay_rate_epoch": [2500],
-        "decay_epoch_0": [500],
-        "decay_rate": [0.5],
+
         "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
 
-        #"PINN_constraint_fcn": ["pinn_plc", "pinn_aplc"],
-        "PINN_constraint_fcn": ["pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        "PINN_constraint_fcn": ["no_pinn"],
+        #"PINN_constraint_fcn": ["pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
         "num_units": [20],
         "beta" : [0.9],
+
+        # "schedule_type" : ['exp_decay'],
+        # "decay_rate_epoch": [2500],
+        # "decay_epoch_0": [500],
+        # "decay_rate": [0.5],
+
+        'schedule_type' : ['plateau'],
+        "patience" : [250],
+        "decay_rate" : [0.9],
+        "min_delta" : [0.0001],
+        "min_lr" : [0.0001],
 
         #'batch_norm' :[True],
         #"network_type" : ['sph_pines_transformer'],
         #'transformer_units' : [20], 
-        "lr_anneal" : [False, True],
+        "lr_anneal" : [False],
         "remove_point_mass" : [False], # remove point mass from polyhedral model
-
-        'sph_in_graph': [True],
         "override" : [False]
     }
 
@@ -74,7 +91,7 @@ def run(config_original, hparams):
         check_config_combos,
     )
     from GravNN.Networks.Callbacks import SimpleCallback
-    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_normalization_layer_constants
+    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
@@ -84,7 +101,7 @@ def run(config_original, hparams):
     mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
     np.random.seed(1234)
     tf.random.set_seed(0)
-    # tf.config.run_functions_eagerly(True)
+    #tf.config.run_functions_eagerly(True)
     tf.keras.backend.clear_session()
 
     # Standardize Configuration
@@ -96,7 +113,7 @@ def run(config_original, hparams):
 
     # Get data, network, optimizer, and generate model
     train_data, val_data, transformers = get_preprocessed_data(config)
-    compute_normalization_layer_constants(config)
+    compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
     network = load_network(config)

@@ -74,17 +74,17 @@ def populate_H_singular(rVec1D, A, n1, n2, N, a, mu, remove_deg):
                 rTerm = rE[m-1]
                 iTerm = iM[m-1]
             
-            # Seems representative of the computed model
-            f_Cnm_1 = (rho[n+1]/a)*m*(A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
-            f_Cnm_2 = (rho[n+1]/a)*m*(-1*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
+            # Pines Derivatives -- but rho n+1 rather than n+2
+            f_Cnm_1 = (rho[n+1]/a)*(m*A[n,m]*rTerm - s*c2*A[n+1,m+1]*rE[m])
+            f_Cnm_2 = (rho[n+1]/a)*(-m*A[n,m]*iTerm - t*c2*A[n+1,m+1]*rE[m])
 
             if m < n:
                 f_Cnm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*rE[m]
             else:
                 f_Cnm_3 = (rho[n+1]/a)*(-1.0*u*c2*A[n+1,m+1])*rE[m]
 
-            f_Snm_1 = (rho[n+1]/a)*m*(A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
-            f_Snm_2 = (rho[n+1]/a)*m*(A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
+            f_Snm_1 = (rho[n+1]/a)*(m*A[n,m]*iTerm -s*c2*A[n+1,m+1]*iM[m])
+            f_Snm_2 = (rho[n+1]/a)*(m*A[n,m]*rTerm - t*c2*A[n+1,m+1]*iM[m])
             if m < n:
                 f_Snm_3 = (rho[n+1]/a)*(c1*A[n,m+1] - u*c2*A[n+1,m+1])*iM[m]
             else:

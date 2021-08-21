@@ -67,7 +67,7 @@ We'll keep it simple for now and use the `get_earth_default_config` dictionary w
 
     # Get data, network, optimizer, and generate model
     train_data, val_data, transformers = get_preprocessed_data(config)
-    compute_normalization_layer_constants(config)
+    compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
     network = load_network(config)

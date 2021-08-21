@@ -36,10 +36,15 @@ class AsteroidAnalyzer:
         a_pred = self.model.generate_acceleration(x.astype(np.float32))
 
         diff = a - a_pred
-        diff_percent = np.abs((a - a_pred) / a) * 100.0
-
         rse = np.linalg.norm(diff, axis=1) ** 2
+        
+        # Percent error in each cartesian component (may be super biased if on an axis where true a_x = 0)
+        diff_percent = np.abs((a - a_pred) / a) * 100.0
         percent = np.linalg.norm(diff_percent, axis=1)
+
+        # Percent error as a function of difference in acceleration magnitude
+        percent = np.linalg.norm(a - a_pred, axis=1)/np.linalg.norm(a, axis=1)*100
+
 
         stats = {
             prefix + "_rse_mean": np.mean(rse),
