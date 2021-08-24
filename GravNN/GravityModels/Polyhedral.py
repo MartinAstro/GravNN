@@ -69,6 +69,10 @@ def compute_edge_dyads(
 
         edge_direction = np.cross(normal_A, normal_B)
         edge_direction /= np.linalg.norm(edge_direction)
+        
+        # if adjacent facets share the same normal. 
+        if np.any(np.isnan(edge_direction)):#== np.nan):
+            edge_direction = np.array([0.0, 0.0, 0.0])
 
         edge_normal_A_to_B = np.cross(normal_A, edge_direction)
         edge_normal_B_to_A = np.cross(normal_B, edge_direction)
@@ -185,7 +189,8 @@ class Polyhedral(GravityModelBase):
         self.configure(trajectory)
 
         self.density = celestial_body.density
-        self.mesh = trimesh.load_mesh(obj_file)
+        filename, file_extension = os.path.splitext(obj_file)
+        self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
         self.scaleFactor = 1e3  # Assume that the mesh is given in km
 
         self.facet_dyads = compute_facet_dyads(self.mesh.face_normals)

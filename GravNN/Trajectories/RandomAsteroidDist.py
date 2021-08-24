@@ -4,7 +4,7 @@ import pathlib
 import numpy as np
 import trimesh
 from numba import njit, prange
-
+from GravNN.Support.ProgressBar import ProgressBar
 
 class RandomAsteroidDist(TrajectoryBase):
     def __init__(
@@ -24,9 +24,18 @@ class RandomAsteroidDist(TrajectoryBase):
         """
         self.radius_bounds = radius_bounds
         self.model_file = kwargs.get("grav_file", [model_file])[0]
-        self.shape_model = trimesh.load_mesh(self.model_file)
+        filename, file_extension = os.path.splitext(self.model_file)
+
+        self.shape_model = trimesh.load_mesh(self.model_file, file_type=file_extension[1:])
         self.points = points
         self.celestial_body = celestial_body
+
+        # Reduce the search space to minimum altitude if it exists on the planet
+        if self.radius_bounds[0] == 0.0:
+            try: 
+                self.radius_bounds[0] = celestial_body.min_radius
+            except:
+                pass
 
         super().__init__()
 
@@ -36,6 +45,10 @@ class RandomAsteroidDist(TrajectoryBase):
         """Define the output directory based on number of points sampled,
         the radius/altitude limits, and the shape model used
         """
+        try:
+            model_name = os.path.basename(self.model_file).split('.')[0]
+        except:
+            model_name = str(self.model_file.split("Blender_")[1]).split(".")[0]
         self.trajectory_name = (
             os.path.splitext(os.path.basename(__file__))[0]
             + "/"
@@ -45,7 +58,7 @@ class RandomAsteroidDist(TrajectoryBase):
             + "_RadBounds"
             + str(self.radius_bounds)
             + "_shape_model"
-            + str(self.model_file.split("Blender_")[1]).split(".")[0]
+            + model_name
         )
         self.file_directory += self.trajectory_name + "/"
         pass
@@ -64,7 +77,7 @@ class RandomAsteroidDist(TrajectoryBase):
         X.extend(np.zeros((self.points,)).tolist())
         Y.extend(np.zeros((self.points,)).tolist())
         Z.extend(np.zeros((self.points,)).tolist())
-
+        pbar = ProgressBar(self.points, enable=True)
         while idx < self.points:
             phi = np.random.uniform(0, np.pi)
             theta = np.random.uniform(0, 2 * np.pi)
@@ -77,6 +90,7 @@ class RandomAsteroidDist(TrajectoryBase):
                 np.array([[X_inst, Y_inst, Z_inst]]) / 1e3
             )
             # ensure that the point is outside of the body
+            i = 0
             while distance > 0:
                 # Note that this loop my get stuck if the radius bounds do not extend beyond the body
                 # (i.e. the RA and Dec are fixed so if the upper bound does not extend beyond the shape
@@ -88,9 +102,16 @@ class RandomAsteroidDist(TrajectoryBase):
                 distance = self.shape_model.nearest.signed_distance(
                     np.array([[X_inst, Y_inst, Z_inst]]) / 1e3
                 )
+                i += 1
+                # Try to keep value at same RA and Dec, but if it can't find any then just select a new position entirely. 
+                if i > 10:
+                    phi = np.random.uniform(0, np.pi)
+                    theta = np.random.uniform(0, 2 * np.pi)
+                    i = 0
             X[idx] = X_inst
             Y[idx] = Y_inst
             Z[idx] = Z_inst
             idx += 1
+            pbar.update(idx)
         self.positions = np.transpose(np.array([X, Y, Z]))
         return np.transpose(np.array([X, Y, Z]))

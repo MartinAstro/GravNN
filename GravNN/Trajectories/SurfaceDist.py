@@ -12,7 +12,8 @@ class SurfaceDist(TrajectoryBase):
             celestial_body (CelestialBody): body from which points will be sampled
             obj_file (str): path to the file that contains the shape model
         """
-        self.mesh = trimesh.load_mesh(obj_file)
+        filename, file_extension = os.path.splitext(obj_file)
+        self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
         self.points = len(self.mesh.faces)  # + self.mesh.vertices)
         self.celestial_body = celestial_body
         self.obj_file = obj_file

@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-df = pd.read_pickle( "Data/Dataframes/medium_data_pinn_constraints_wo_annealing_lr_plateau.data")
-df = df.append(pd.read_pickle( "Data/Dataframes/small_data_pinn_constraints_wo_annealing.data"))
-df = df.append(pd.read_pickle( "Data/Dataframes/tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
-df = df.append(pd.read_pickle( "Data/Dataframes/v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
-df = df.append(pd.read_pickle( "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
-df = df.append(pd.read_pickle( "Data/Dataframes/no_pinn.data"))
+# df = pd.read_pickle( "Data/Dataframes/medium_data_pinn_constraints_wo_annealing_lr_plateau.data")
+# df = df.append(pd.read_pickle( "Data/Dataframes/small_data_pinn_constraints_wo_annealing.data"))
+# df = df.append(pd.read_pickle( "Data/Dataframes/tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
+# df = df.append(pd.read_pickle( "Data/Dataframes/v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
+# df = df.append(pd.read_pickle( "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"))
+# df = df.append(pd.read_pickle( "Data/Dataframes/no_pinn.data"))
+
+df = pd.read_pickle("Data/Dataframes/transformer_wo_annealing.data")
 
 # convert dataframe into proper string formatting
 def convert_to_formatted_string(df):

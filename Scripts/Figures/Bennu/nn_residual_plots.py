@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from GravNN.CelestialBodies.Asteroids import Eros
+from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Networks.Model import load_config_and_model
@@ -55,18 +55,16 @@ def main():
     data_vis = DataVisSuite(halt_formatting=False)
     data_vis.fig_size = data_vis.tri_vert_page
 
-    planet = Eros()
+    planet = Bennu()
 
     #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v1.data"), "[0,10000]"
     #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v2.data"), "[5000,10000]"
     df, descriptor = pd.read_pickle("Data/Dataframes/useless_070621_v4.data"), "[5000,10000]"
-    
     #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v3.data"), "[0,10000]"# PLC, ALC, APLC
 
-    model_file = planet.model_potatok
     
-    test_trajectory = RandomAsteroidDist(planet, [0, planet.radius*3], 50000, grav_file=[model_file])        
-    test_poly_gm = Polyhedral(planet, model_file, trajectory=test_trajectory).load()
+    test_trajectory = RandomAsteroidDist(planet, [0, planet.radius + 10000], 50000, grav_file=[planet.model_potatok])        
+    test_poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=test_trajectory).load(override=False)
 
     data_vis.newFig()
     data_vis.newFig()
@@ -77,14 +75,10 @@ def main():
 
     plt.figure(1)
     overlay_hist(x_sph_train,twinx=False)
-    # plt.gca().yaxis.set_ticks_position('right')
-    # plt.gca().yaxis.set_label_position('right')
     plt.gca().twinx()
     
     plt.figure(2)
     overlay_hist(x_sph_train,twinx=False)
-    # plt.gca().yaxis.set_ticks_position('right')
-    # plt.gca().yaxis.set_label_position('right')
     plt.gca().twinx()
     
     plot_truth = True
@@ -122,18 +116,16 @@ def main():
         x_sph, a_sph = get_spherical_data(x, a)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
+        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
+        x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
+
         plt.figure(1)
         data_vis.plot_residuals(x_sph[:,0], u, u_pred, alpha=0.5, label=label, plot_truth=plot_truth, ylabel='Potential')
         plot_moving_average(x_sph[:,0], u, u_pred, marker=marker_list[q], color=color_list[q])
-        # plt.gca().yaxis.set_ticks_position('left')
-        # plt.gca().yaxis.set_label_position('left')
 
         plt.figure(2)
         data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, alpha=0.5,label=label, plot_truth=plot_truth, ylabel='Acceleration')
         plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, marker=marker_list[q], color=color_list[q])
-
-        # plt.gca().yaxis.set_ticks_position('left')
-        # plt.gca().yaxis.set_label_position('left')
 
         plot_truth=False
         q += 1
@@ -141,17 +133,11 @@ def main():
     plt.figure(1)
     # overlay_hist(x_sph_train)
     data_vis.plot_radii(x_sph[:,0], vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
-    # plt.gcf().axes[0].set_zorder(1)
-    # plt.gcf().axes[1].set_zorder(0)
-
     data_vis.save(plt.gcf(), directory+"Potential_Error_Dist.png")
 
     plt.figure(2)
     # overlay_hist(x_sph_train)
     data_vis.plot_radii(x_sph[:,0], vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
-    # plt.gcf().axes[0].set_zorder(1)
-    # plt.gcf().axes[1].set_zorder(0)
-
     data_vis.save(plt.gcf(), directory+"Acceleration_Error_Dist.png")
 
     plt.show()

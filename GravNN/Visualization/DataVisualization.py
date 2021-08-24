@@ -63,10 +63,12 @@ class DataVisualization(VisualizationBase):
 
     def plot_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0, plot_truth=True):
         if percent:
-            diff = y - y_pred
+            diff = np.linalg.norm(y-y_pred, axis=1)
+            # diff = y - y_pred
             ylabel2 = ylabel + "\n" + "Residual"
         else:
-            diff = np.abs((y - y_pred)/y)*100.0
+            diff = np.linalg.norm(y-y_pred, axis=1)/np.linalg.norm(y, axis=1)*100.0
+            # diff = np.abs((y - y_pred)/y)*100.0
             ylabel2 =  ylabel + "\n" + "Percent Diff"
 
         plt.scatter(x, diff, s=1, alpha=alpha, label=label)            

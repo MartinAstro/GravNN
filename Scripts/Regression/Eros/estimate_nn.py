@@ -21,46 +21,28 @@ from GravNN.Networks.utils import (
 )
 
 
-def get_hparams():
-    config = get_default_eros_pinn_config()
+def get_hparams(params={}):
+    config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [5000],
-        "N_train": [2500],
-        "N_val": [150],
-        "epochs": [7500],
-        'grav_file' : [Eros().model_potatok],
-        "decay_rate_epoch": [2500],
-        "decay_epoch_0": [500],
-        "decay_rate": [0.5],
-        "learning_rate": [0.001 / 10],
+        "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
-        "activation": ["gelu"],
-        "initializer": ["glorot_uniform"],
-        "x_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "u_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "a_transformer": [UniformScaler(feature_range=(-1, 1))],
+
         "PINN_constraint_fcn": ["pinn_a"],
-        "scale_by": ["non_dim"],
-        "mixed_precision": [False],
-        "layers": [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
         "num_units": [20],
-        "schedule_type": ["exp_decay"],
-        "beta": [0.9],
-        "optimizer": ["adam"],
-        "deg_removed": [0],
-        "max_deg": [2],
-        "network_type": ["sph_pines_traditional"],
-        # "network_type" : ['sph_pines_transformer'],
-        # "transformer_units" : [20],
-        # "input_layer": ["cart_and_sph"],
-        "input_layer": [False],
-        "lr_anneal": [False],
-        "remove_point_mass": [False],  # remove point mass from polyhedral model
-        "override": [False],
-        # 'skip_normalization' : [True]
-        
+        "beta" : [0.9],
+
+        'schedule_type' : ['plateau'],
+        "patience" : [250],
+        "decay_rate" : [0.9],
+        "min_delta" : [0.0001],
+        "min_lr" : [0.0001],
+
+        "lr_anneal" : [False],
+        "remove_point_mass" : [False], # remove point mass from polyhedral model
+        "override" : [False]
     }
+    hparams.update(params)
     
     # Necessary to permuatate any combinations 
     args = configure_run_args(config, hparams)
@@ -151,16 +133,14 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
     return transformers
 
 
-def regress_nn(config, sampling_inteval):
-    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/"
+def regress_nn(config, sampling_interval, sub_directory=None):
+    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/" + sub_directory + "/"
+    os.makedirs(directory, exist_ok=True)
     
     planet = Eros()
     model_file = planet.model_potatok
     remove_point_mass = False
 
-    samples = 1000
-    batch_initialization = True
-    batch_size = 1000
     discard_data = True
     epochs = 100
 
@@ -187,7 +167,7 @@ def regress_nn(config, sampling_inteval):
     x_train = []
     y_train = []
 
-    trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_inteval)
+    trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
     pbar = ProgressBar(len(trajectories), enable=True)
 
     total_samples = 0
@@ -223,28 +203,38 @@ def regress_nn(config, sampling_inteval):
             regressor.model.config["num_units"][0],
             total_samples,
             time, 
-            sampling_inteval
-        )
+            sampling_interval
+            )
         regressor.model.config['PINN_constraint_fcn'] = [regressor.model.config['PINN_constraint_fcn'][0]]
+        os.makedirs(os.path.dirname(directory+file_name),exist_ok=True)
         regressor.model.save(directory + file_name)
         pbar.update(k)
 
 
 
 def main():
-    config = get_hparams()
-    regress_nn(config, sampling_interval=10*60)
-    config['num_units'] = [40]
-    regress_nn(config, sampling_interval=10*60)
-    config['num_units'] = [80]
-    regress_nn(config, sampling_interval=10*60)
 
-    config = get_hparams()
-    regress_nn(config, sampling_interval=1*60)
-    config['num_units'] = [40]
-    regress_nn(config, sampling_interval=1*60)
-    config['num_units'] = [80]
-    regress_nn(config, sampling_interval=1*60)
+    params = {'pinn_constraint_fcn' : ['pinn_a']}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, sub_directory='pinn_a')
+
+
+    # params = {'pinn_constraint_fcn' : ['pinn_alc']}
+    # config = get_hparams(params)
+    # regress_nn(config, sampling_interval=10*60, sub_directory='pinn_alc')
+
+
+    # params = {'network_type' : ['sph_pines_transformer'],
+    #           'transformer_units' : [20]}
+    # config = get_hparams(params)
+    # regress_nn(config, sampling_interval=10*60, sub_directory='transformer_pinn_a')
+
+
+    # params = {'network_type' : ['sph_pines_transformer'],
+    #           'pinn_constraint_fcn' : ['pinn_alc'],
+    #           'transformer_units' : [20]}
+    # config = get_hparams(params)
+    # regress_nn(config, sampling_interval=10*60, sub_directory='transformer_pinn_alc')
 
 if __name__ == "__main__":
     main()

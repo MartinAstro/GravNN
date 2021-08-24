@@ -7,7 +7,7 @@ class Bennu:
         self.body_name = "bennu"
         self.density = 1260.0  # kg/m^3  https://github.com/bbercovici/SBGAT/blob/master/SbgatCore/include/SbgatCore/Constants.hpp
         self.radius = 282.37  # meters
-
+        self.min_radius = 240.00
         G = 6.67430 * 10 ** -11
         self.mu = G * 7.329 * 10 ** 10  # self.density*(4./3.)*np.pi*self.radius**3*G
         self.obj_file = (
@@ -31,7 +31,14 @@ class Bennu:
             os.path.dirname(os.path.realpath(__file__))
             + "/../Files/GravityModels/g_06290mm_spc_obj_0000n00000_v008_39sh.json"
         )
-
+        self.obj_200k = (
+            os.path.dirname(os.path.realpath(__file__))
+            + "/../Files/ShapeModels/Bennu_v20_200k.obj"
+        )
+        self.stl_200k = (
+            os.path.dirname(os.path.realpath(__file__))
+            + "/../Files/ShapeModels/Bennu_v20_200k.stl"
+        )
 
 class Eros:
     def __init__(self):
@@ -93,7 +100,11 @@ class Eros:
             os.path.dirname(os.path.realpath(__file__))
             + "/../Files/GravityModels/Regressed/Eros/true.csv"
         )
-
+        
+        self.obj_200k = (
+            os.path.dirname(os.path.realpath(__file__))
+            + "/../Files/ShapeModels/eros200700.obj"
+        )
 
 class Toutatis:
     def __init__(self):

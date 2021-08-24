@@ -31,9 +31,14 @@ def main():
 
     df_file = "Data/Dataframes/no_pinn.data"
 
+    df_file = "Data/Dataframes/transformer_wo_annealing.data"
 
-    threads = 4
-    config = get_default_eros_config()
+    df_file = "Data/Dataframes/bennu_traditional_wo_annealing.data"
+
+
+    threads = 1
+    #config = get_default_eros_config()
+    config = get_default_bennu_config()
     #config = get_prototype_toutatis_config()
 
     #config = get_default_earth_config()
@@ -42,7 +47,9 @@ def main():
     #config = get_default_eros_config()
 
     hparams = {
-        "N_dist": [50000],
+        "grav_file": [Bennu().stl_200k],
+
+        # "N_dist": [50000],
         "N_train": [5000, 2500, 2500//2, 2500//4, 2500//8],
         "N_val" : [1500],
         "epochs": [7500],
@@ -51,8 +58,8 @@ def main():
         "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
 
-        "PINN_constraint_fcn": ["no_pinn"],
-        #"PINN_constraint_fcn": ["pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        # "PINN_constraint_fcn": ["pinn_aplc"],
+        "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
         "num_units": [20],
         "beta" : [0.9],
 

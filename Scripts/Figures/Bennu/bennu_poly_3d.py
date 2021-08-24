@@ -24,7 +24,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 gradient = np.linspace(0, 1, 256)
 
 def main():
-    
+    # https://www.asteroidmission.org/updated-bennu-shape-model-3d-files/
     planet = Bennu()
     obj_file = planet.obj_file
     sh_file = planet.sh_obj_file

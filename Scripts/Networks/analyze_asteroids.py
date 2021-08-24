@@ -19,6 +19,9 @@ def main():
     df_file = "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"
     df_file = "Data/Dataframes/no_pinn.data"
 
+    df_file = "Data/Dataframes/transformer_wo_annealing.data"
+
+
     interior_bound = Eros().physical_radius
     exterior_bound = Eros().physical_radius + 10000.0
     args = []

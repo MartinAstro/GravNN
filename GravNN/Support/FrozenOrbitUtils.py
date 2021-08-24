@@ -51,3 +51,16 @@ def sph2cart_tf(r_vec):
     z = r*tf.math.cos(phi)
 
     return tf.stack([x,y,z],1)
+
+
+def main():
+    f = 0.0
+    mu = 1.1e14
+    OE = tf.convert_to_tensor([[1.1E7, 0.1, np.pi/3, np.pi/3, 0.0, 0.0]])
+
+    r, v = oe2cart_tf(f, mu, OE)
+    print(r)
+    print(v)
+
+if __name__ == "__main__":
+    main()

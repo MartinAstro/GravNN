@@ -80,7 +80,7 @@ class CustomModel(tf.keras.Model):
         )
         return loss_components2
 
-    @tf.function()  # jit_compile=True)
+    @tf.function()#jit_compile=True)
     def train_step(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
         or some combination of these variables. These component losses are then scaled to be comparable
