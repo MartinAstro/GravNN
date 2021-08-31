@@ -43,7 +43,7 @@ def get_hparams(params={}):
         "lr_anneal" : [False],
         "remove_point_mass" : [False], # remove point mass from polyhedral model
         "override" : [False],
-        'skip_normalization' : [True]
+        'skip_normalization' : [False]
     }
     hparams.update(params)
     
@@ -247,7 +247,7 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
             total_samples,
             )
         regressor.model.config['PINN_constraint_fcn'] = [regressor.model.config['PINN_constraint_fcn'][0]]
-        directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/" 
+        directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/" 
         os.makedirs(os.path.dirname(directory+file_name),exist_ok=True)
         regressor.model.save(directory + file_name)
         pbar.update(k)

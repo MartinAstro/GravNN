@@ -150,7 +150,7 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
 
 
 class PinesSph2NetLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim, scalers, mins):
+    def __init__(self, input_dim, scalers, mins, ref_radius):
         """Layer used to normalize the r value of the Cart2PinesSphLayer
         between the values of [-1,1]
 
@@ -162,6 +162,7 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         super(PinesSph2NetLayer, self).__init__()
         self.scalers = tf.constant(scalers, dtype=tf.float32).numpy()
         self.mins = tf.constant(mins, dtype=tf.float32).numpy()
+        self.ref_radius = tf.constant(ref_radius, dtype=tf.float32).numpy()
 
     # @tf.function
     def call(self, inputs):
@@ -170,10 +171,13 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         r = inputs_transpose[0]
         beta = inputs_transpose[1]
         gamma = inputs_transpose[2]
-        alpha = inputs_transpose[2]
+        alpha = inputs_transpose[3]
 
         # Normalize r -> [-1,1]
-        r = tf.add(tf.multiply(r, self.scalers[0]), self.mins[0])
+        #r = tf.add(tf.multiply(r, self.scalers[0]), self.mins[0])
+
+        # (R/r) - 1 where R is the Brill Radius of Body
+        r = tf.subtract(tf.divide(1,r), 1)
         # r = tf.divide(1.0,r)
 
         # Convert deg -> rad -> periodic [-1,1]
@@ -197,6 +201,7 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
             {
                 "scalers": self.scalers,
                 "mins": self.mins,
+                "ref_radius":self.ref_radius
             }
         )
         config = super().get_config().copy()

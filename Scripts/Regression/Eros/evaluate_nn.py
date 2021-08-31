@@ -66,7 +66,7 @@ def main():
     #file_prefix = "pinn_ALC_None"
     # file_prefix = "pinn_A_5000"
     #file_prefix = "pinn_ALC_5000"  
-    models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/"+file_prefix+"**.data") # PINN_A, PINN_ALC
+    models = glob.glob(os.path.curdir + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/"+file_prefix+"**.data") # PINN_A, PINN_ALC
     models.sort()
 
     sampling_interval = 10*60

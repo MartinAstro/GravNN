@@ -154,6 +154,7 @@ def SphericalPinesTraditionalNet(**kwargs):
     custom_input_layer = kwargs["custom_input_layer"][0]
     dtype = kwargs["dtype"][0]
     skip_normalization = kwargs["skip_normalization"][0]
+    ref_radius = kwargs["ref_radius"][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
@@ -161,7 +162,7 @@ def SphericalPinesTraditionalNet(**kwargs):
     if not skip_normalization:
         scalers = kwargs["norm_scalers"][0]
         mins = kwargs["norm_mins"][0]
-        x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
+        x = PinesSph2NetLayer(inputs.shape, scalers, mins, ref_radius)(x)
 
     if custom_input_layer == "cart_and_sph":
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
@@ -219,11 +220,12 @@ def SphericalPinesTransformerNet(**kwargs):
     dtype = kwargs["dtype"][0]
     transformer_units = kwargs["transformer_units"][0]
     skip_normalization = kwargs["skip_normalization"][0]
+    ref_radius = kwargs["ref_radius"][0]
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
 
     if not skip_normalization:
-        x = PinesSph2NetLayer(inputs.shape, scalers, mins)(x)
+        x = PinesSph2NetLayer(inputs.shape, scalers, mins, ref_radius)(x)
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(

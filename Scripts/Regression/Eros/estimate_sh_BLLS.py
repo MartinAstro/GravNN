@@ -1,4 +1,5 @@
 import numpy as np
+import os 
 from GravNN.Regression.BLLS import BLLS
 from GravNN.Regression.utils import format_coefficients, populate_removed_degrees, save
 from GravNN.Trajectories import RandomAsteroidDist, DHGridDist, EphemerisDist
@@ -36,11 +37,11 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
     planet = Eros()
     model_file = planet.model_data
     model_file = planet.model_7790
-    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/RegressedRealModel/"
+    directory = os.path.curdir + "/GravNN/Files/GravityModels/RegressedRealModel/"
     
     # planet.radius = planet.physical_radius
     model_file = planet.obj_200k
-    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/"
+    directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/"
 
     N = regress_deg  
     M = remove_deg 
