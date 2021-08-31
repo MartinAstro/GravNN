@@ -1,6 +1,6 @@
 from GravNN.Trajectories import EphemerisDist
 from GravNN.CelestialBodies.Asteroids import Eros
-
+import numpy as np
 
 def generate_near_orbit_trajectories(sampling_inteval):
     orbits = [
@@ -45,3 +45,14 @@ def generate_near_orbit_trajectories(sampling_inteval):
         )
         trajectories.append(trajectory)
     return trajectories
+
+
+def single_near_trajectory():
+    trajectories = generate_near_orbit_trajectories(60*10)
+    trajectory = trajectories[0]
+    for i in range(1,len(trajectories)):
+        trajectory.positions = np.concatenate((trajectory.positions, trajectories[i].positions), axis=0)
+        trajectory.accelerations = np.concatenate((trajectory.accelerations, trajectories[i].accelerations), axis=0)
+        trajectory.times = np.concatenate((trajectory.times, trajectories[i].times), axis=0)
+
+    return trajectory

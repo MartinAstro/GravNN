@@ -1,3 +1,4 @@
+from GravNN.Trajectories.EphemerisDist import EphemerisDist
 import multiprocessing as mp
 from numba.core.types.abstract import Dummy
 import pandas as pd
@@ -5,6 +6,7 @@ from script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 from GravNN.Preprocessors.UniformScaler import UniformScaler
+from GravNN.Trajectories.utils import single_near_trajectory
 import time
 import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
@@ -55,7 +57,16 @@ def main():
         # "grav_file": [Bennu().stl_200k],
         "grav_file" : [Eros().obj_200k],
         # "N_dist": [50000],
-        "N_train": [2500, 2500//2, 2500//4],
+
+        
+        # "N_train": [2500, 2500//2, 2500//4],
+        # "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        # "acc_noise" : [0.0, 0.1, 0.2], # percent
+
+        "PINN_constraint_fcn": [ "pinn_a"],
+        "acc_noise" : [0.0], # percent
+
+
         "N_val" : [1500],
         "epochs": [7500],
 
@@ -64,7 +75,8 @@ def main():
         "batch_size": [131072 // 2],
 
         # "PINN_constraint_fcn": ["pinn_aplc"],
-        "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+
+
         "num_units": [20],
         "beta" : [0.9],
 
@@ -78,7 +90,6 @@ def main():
         "decay_rate" : [0.9],
         "min_delta" : [0.0001],
         "min_lr" : [0.0001],
-        "acc_noise" : [0.0, 0.1, 0.2], # percent
         #'batch_norm' :[True],
         #"network_type" : ['sph_pines_transformer'],
         #'transformer_units' : [20], 
@@ -86,6 +97,23 @@ def main():
         "remove_point_mass" : [False], # remove point mass from polyhedral model
         "override" : [False]
     }
+
+    traj_params = {
+        "N_train": [40000],
+        "N_val": [5000],
+        "custom_data_fcn" : [single_near_trajectory]
+        # "distribution" : [EphemerisDist],
+        # "source" : ["NEAR"],
+        # "target" : ["EROS"],
+        # "frame" : ["EROS_FIXED"],
+        # "start_time" : ["Feb 24, 2000"],
+        # "end_time" : ["Feb 06, 2001"],
+        # "sampling_interval" : [10*60],
+        # "celestial_body" : [Eros()],
+    }
+
+
+    hparams.update(traj_params)
 
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:

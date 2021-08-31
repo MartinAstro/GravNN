@@ -105,6 +105,10 @@ class Eros:
             os.path.dirname(os.path.realpath(__file__))
             + "/../Files/ShapeModels/eros200700.obj"
         )
+        self.truth = (
+            os.path.dirname(os.path.realpath(__file__))
+            + "/../Files/GravityModels/eros_truth_sh.csv"
+        )
 
 class Toutatis:
     def __init__(self):

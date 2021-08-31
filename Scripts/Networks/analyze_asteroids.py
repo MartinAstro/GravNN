@@ -22,6 +22,10 @@ def main():
     df_file = "Data/Dataframes/transformer_wo_annealing.data"
     df_file = "Data/Dataframes/eros_official_w_noise.data"
 
+
+    df_file = "Data/Dataframes/near_all_data.data"
+
+
     interior_bound = Eros().radius
     exterior_bound = Eros().radius*3
 
@@ -58,12 +62,12 @@ def analyze(idx, df_file, interior_bound, exterior_bound):
     config, model = load_config_and_model(model_id, df)
 
     analyzer = AsteroidAnalyzer(model, config, interior_bound, exterior_bound)
-    #surface_stats = analyzer.compute_surface_stats()
+    surface_stats = analyzer.compute_surface_stats()
     interior_stats = analyzer.compute_interior_stats()
     exterior_stats = analyzer.compute_exterior_stats()
 
     stats = {}
-    #stats.update(surface_stats)
+    stats.update(surface_stats)
     stats.update(interior_stats)
     stats.update(exterior_stats)
 

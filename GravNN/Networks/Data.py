@@ -119,13 +119,19 @@ def get_raw_data(config):
     grav_file = config["grav_file"][0]
 
     trajectory = config["distribution"][0](planet, radius_bounds, N_dist, **config)
-    if "Planet" in planet.__module__:
-        get_analytic_data_fcn = get_sh_data
-    else:
-        get_analytic_data_fcn = get_poly_data
-    x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-        trajectory, grav_file, **config
-    )
+
+    # If there is a custom data 
+    if 'custom_data_fcn' in config:
+        generating_fcn = config['custom_data_fcn'][0]
+        trajectory = generating_fcn()
+    else: 
+        if "Planet" in planet.__module__:
+            get_analytic_data_fcn = get_sh_data
+        else:
+            get_analytic_data_fcn = get_poly_data
+        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
+            trajectory, grav_file, **config
+        )
 
     if "extra_distribution" in config:
         extra_radius_bounds = [
@@ -278,6 +284,10 @@ def get_preprocessed_data(config):
         x_val = x_transformer.transform(x_val)
         a_val = a_transformer.transform(a_val)
         u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+        ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+        ref_r_vec = x_transformer.transformer(ref_r_vec)
+        config['ref_radius'] = [ref_r_vec[0]]
 
     elif config["scale_by"][0] == "none":
         x_transformer = config["dummy_transformer"][0]

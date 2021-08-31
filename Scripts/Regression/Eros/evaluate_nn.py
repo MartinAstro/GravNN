@@ -63,7 +63,7 @@ def main():
 
     # (pinn_A, pinn_ALC)_(None, 5000)
     file_prefix = "pinn_A_None"
-    #file_prefix = "pinn_ALC_None"
+    file_prefix = "pinn_ALC_None"
     # file_prefix = "pinn_A_5000"
     #file_prefix = "pinn_ALC_5000"  
     models = glob.glob(os.path.curdir + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/"+file_prefix+"**.data") # PINN_A, PINN_ALC
@@ -85,21 +85,20 @@ def main():
         pickle.dump(sample_list, f)
         pickle.dump(error_list, f)
 
+    plt.show()
 
+    min_radius = 0
+    max_radius = planet.radius 
+    sampling_interval = 10*60
+    dist_name = "r_inner_" + str(sampling_interval)
+    sample_list, error_list = evaluate_nn(min_radius, max_radius, planet.obj_200k, models)
+    generate_figure(plot_path, sample_list, error_list)
 
-    # sampling_interval = 1*60
-    # evaluate_nn_suite(min_radius, max_radius, sampling_interval, directory, dist_name)
-
-
-
-
-    # min_radius = 0
-    # max_radius = planet.radius 
-    # dist_name = "r_inner"
-    # sampling_interval = 10*60
-    # evaluate_nn_suite(min_radius, max_radius, sampling_interval, directory, dist_name)
-    # sampling_interval = 1*60
-    # evaluate_nn_suite(min_radius, max_radius, sampling_interval, directory, dist_name)
+    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/" + file_prefix + "/"
+    os.makedirs(data_directory, exist_ok=True)
+    with open(data_directory + "nn_estimate_" + dist_name + "_" + ".data", 'wb') as f:
+        pickle.dump(sample_list, f)
+        pickle.dump(error_list, f)
 
     plt.show()
 

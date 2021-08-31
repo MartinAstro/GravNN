@@ -9,11 +9,7 @@ import tensorflow as tf
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC, pinn_A_sph
 from GravNN.Networks.Annealing import update_constant
-from GravNN.Support.transformations import (
-    cart2sph,
-    invert_projection,
-    project_acceleration,
-)
+
 
 np.random.seed(1234)
 
@@ -41,11 +37,6 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config["dtype"][0]
 
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
-        tensors = utils._get_acceleration_nondim_constants(
-            config["PINN_constraint_fcn"][0], self.config
-        )
-        self.scale_tensor = tensors[0]
-        self.translate_tensor = tensors[1]
         PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
@@ -56,12 +47,7 @@ class CustomModel(tf.keras.Model):
         return self.eval(self.network, x, training)
 
     def compute_loss_components(self, y_hat, y):
-        """When training with multiple components of the lost function (say the potential and
-        the acceleration), the magnitude of the error will be very different and therefore so
-        will their contribution to their training (typically this means that the potential contributes
-        much more than the acceleration). This scaling function balances these two contributions such that
-        they both exist on the same order of magnitude (these scaling variables are precomputed in
-        model initialization).
+        """Separate the different loss component terms.
 
         Args:
             y_hat (tf.Tensor): predicted values
@@ -70,22 +56,16 @@ class CustomModel(tf.keras.Model):
         Returns:
             tf.Tensor: loss components for each contribution (i.e. dU, da, dL, dC)
         """
-        y_hat_scaled = (y_hat * self.scale_tensor) + self.translate_tensor
-        y_scaled = (y * self.scale_tensor) + self.translate_tensor
         loss_components = tf.reduce_mean(
-            tf.square(tf.subtract(y_hat_scaled, y_scaled)), 0
-        )
-        loss_components2 = tf.reduce_mean(
             tf.square(tf.subtract(y_hat, y)), 0
         )
-        return loss_components2
+        return loss_components
 
     @tf.function()#jit_compile=True)
     def train_step(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
-        or some combination of these variables. These component losses are then scaled to be comparable
-        orders of magnitude, scaled by the adaptive learning rate (if flag is True), summed, scaled again
-        (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
+        or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
+        summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
         occurs.
 
         Args:

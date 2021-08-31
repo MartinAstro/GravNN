@@ -78,13 +78,13 @@ def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
         planet.obj_200k)
 
     dist_name += "_"+str(sampling_interval)
-    models = glob.glob(directory + "EphemerisDist/BLLS_4*_0*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "EphemerisDist/BLLS_4*_-1*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
-    models = glob.glob(directory + "EphemerisDist/BLLS_8*_0*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "EphemerisDist/BLLS_8*_-1*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
-    models = glob.glob(directory + "EphemerisDist/BLLS_16*_0*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "EphemerisDist/BLLS_16*_-1*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
     plt.show()
@@ -95,16 +95,14 @@ def main():
     min_radius = planet.radius
     max_radius = planet.radius * 3
     dist_name = "r_outer"
-    # sampling_interval = 10*60
-    # evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
     sampling_interval = 10*60
     evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
 
-    # min_radius = 0
-    # max_radius = planet.radius 
-    # dist_name = "r_inner"
-    # sampling_interval = 10*60
-    # evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
+    min_radius = 0
+    max_radius = planet.radius 
+    dist_name = "r_inner"
+    sampling_interval = 10*60
+    evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
     # sampling_interval = 1*60
     # evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
 

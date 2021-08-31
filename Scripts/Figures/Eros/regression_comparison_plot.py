@@ -66,19 +66,28 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
     os.makedirs(directory, exist_ok=True)
 
-    planet = Eros()
+    #plot_r_outer_error(directory)
+    plot_r_inner_error(directory)
+    # plt.gca().set_prop_cycle(None)
+    # dist_name = 'r_outer'    
+    # sampling_interval = 60
+    # linestyle = '--'
+    # plot_regression_error(data_directory, dist_name, sampling_interval, linestyle)
+
+
+    plt.show()
+
+def plot_r_outer_error(directory):
     vis = VisualizationBase()
     vis.fig_size = vis.full_page
-    
+
     dist_name = 'r_outer'    
     sampling_interval = 600
     linestyle = '-'
     vis.newFig()
     sh_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
     plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
-    
 
-    
     nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_A_None/"
     plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
 
@@ -91,13 +100,40 @@ def main():
     # nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_ALC_5000/"
     # plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
 
+    plt.xlabel("Days Since Insersion")
+    plt.ylabel("Average Acceleration Error")
+    plt.legend()
+    plt.ylim(1E-1, 1E2)
 
-    # plt.gca().set_prop_cycle(None)
-    # dist_name = 'r_outer'    
-    # sampling_interval = 60
-    # linestyle = '--'
-    # plot_regression_error(data_directory, dist_name, sampling_interval, linestyle)
+    plt.twinx()
+    plot_orbits_as_violins()
+    plt.ylabel("Radius (km)")
 
+    vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
+
+
+def plot_r_inner_error(directory):
+    vis = VisualizationBase()
+    vis.fig_size = vis.full_page
+
+    dist_name = 'r_inner'    
+    sampling_interval = 600
+    linestyle = '-'
+    vis.newFig()
+    sh_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
+    plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
+
+    nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_A_None/"
+    plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    # nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_A_5000/"
+    # plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_ALC_None/"
+    plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    # nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_ALC_5000/"
+    # plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
 
     plt.xlabel("Days Since Insersion")
     plt.ylabel("Average Acceleration Error")
@@ -108,9 +144,8 @@ def main():
     plot_orbits_as_violins()
     plt.ylabel("Radius (km)")
 
-    vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
+    vis.save(plt.gcf(), directory + "regression_error_near_inner_shoemaker.pdf")
 
-    plt.show()
 
 if __name__ == "__main__":
     main()

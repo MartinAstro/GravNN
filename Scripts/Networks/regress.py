@@ -12,6 +12,7 @@ from GravNN.Regression.NN import NN
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories import RandomAsteroidDist, EphemerisDist
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories
+from script_utils import save_training
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 from GravNN.Networks.utils import (
@@ -140,40 +141,13 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
 
     return transformers
 
-def get_replay_buffer(x_train, y_train, buffer_size):
-    if len(x_train) < buffer_size:
-        return x_train, y_train
-    else:
-        # sample data that is temporally closer
-        # preference data that is at closer altitude
-        x_train_sph = cart2sph(np.array(x_train))
-        x_train_r = x_train_sph[:,0]
-        prob_r = np.abs(1-(x_train_r-np.min(x_train_r))/(np.max(x_train_r)-np.min(x_train_r)))
-        x_train_t = np.arange(len(prob_r))
-        prob_t = x_train_t/ np.max(x_train_t)
-
-        prob_sample = prob_r*prob_t
-        idx = prob_sample.argsort()[-buffer_size:][::-1]
-        print("Oldest Index = %d / %d" % (np.min(idx), len(x_train)))
-        return np.array(x_train)[idx,:], np.array(y_train)[idx,:]
-
-
-def get_replay_buffer_random(x_train, y_train, buffer_size, recency=3000):
-    if len(x_train) < buffer_size:
-        return x_train, y_train
-    else:
-        idx = np.arange(len(x_train))[::-1][recency:]
-        idx = np.concatenate(idx, np.random.choice(len(x_train) - recency, size=buffer_size, replace=False))
-        return np.array(x_train)[idx,:], np.array(y_train)[idx,:]
-
-def regress_nn(config, sampling_interval, replay_buffer=None):  
+def regress_nn(config, sampling_interval):  
     print(config['PINN_constraint_fcn'][0])
     planet = Eros()
     model_file = planet.obj_200k
     remove_point_mass = False
 
-    discard_data = False
-    epochs = 1000
+    epochs = config['epochs'][0]
 
     max_radius = planet.radius*3
     min_radius = planet.radius  # Brill radius - some extra room
@@ -202,7 +176,6 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
     y_train = []
 
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
-    pbar = ProgressBar(len(trajectories), enable=True)
 
     plt.figure()
     total_samples = 0
@@ -221,71 +194,25 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
             x_train = np.concatenate((x_train, x))
             y_train = np.concatenate((y_train, a))
 
-            
-        if replay_buffer is not None:
-            x_train_sample, y_train_sample = get_replay_buffer(x_train, y_train, replay_buffer)
-        else:
-            x_train_sample = x_train
-            y_train_sample = y_train
 
-        x_train_sample, y_train_sample = preprocess_data(x_train_sample, y_train_sample, transformers, config)
+    x_train, y_train = preprocess_data(x_train, y_train, transformers, config)
 
-        # Update the neural network with a batch of data
-        regressor.update(np.array(x_train_sample), np.array(y_train_sample), iterations=epochs)
+    # Update the neural network with a batch of data
+    regressor.update(np.array(x_train), np.array(y_train), iterations=epochs)
+    regressor.model.save(df_file=None)
 
-        plt.plot(regressor.model.history.history['loss'], label=str(k))
-        # plt.show()
-        if replay_buffer is not None or discard_data == False:
-            total_samples = len(x_train)
-        else:
-            total_samples += len(x_train)
-
-        # optionally dump old data
-        if discard_data: 
-            x_train = []
-            y_train = []
-
-        file_name = "%s/%s/%s_%s_%d.data" % (
-            planet.__class__.__name__,
-            trajectory.__class__.__name__,
-
-            config['PINN_constraint_fcn'][0].__name__,
-            str(replay_buffer), 
-            total_samples,
-            )
-        regressor.model.config['PINN_constraint_fcn'] = [regressor.model.config['PINN_constraint_fcn'][0]]
-        directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/" 
-        os.makedirs(os.path.dirname(directory+file_name),exist_ok=True)
-        regressor.model.save(directory + file_name)
-        pbar.update(k)
-        # if k % 5 == 0:
-        #     plt.legend()
-        #     plt.show()
-        #     plt.figure()
-    plt.legend()
-    plt.show()
+    plt.plot(regressor.model.history.history['loss'], label=str(k))  
+    return (config,)
 
 
 def main():
 
-
-
-    # params = {'PINN_constraint_fcn' : ['pinn_a']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, replay_buffer=None)
-
-    # params = {'PINN_constraint_fcn' : ['pinn_a']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, replay_buffer=5000)
-    
-    params = {'PINN_constraint_fcn' : ['pinn_alc']}
+    params = {'PINN_constraint_fcn' : ['pinn_alc'], 
+               'epochs' : [7500]}
     config = get_hparams(params)
-    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
-
-    # params = {'PINN_constraint_fcn' : ['pinn_alc']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60,  replay_buffer=5000)
-
+    config = regress_nn(config, sampling_interval=10*60)
+    save_training("Data/Dataframes/near_all_data.data", config)
+    plt.show()
 
 if __name__ == "__main__":
     main()
