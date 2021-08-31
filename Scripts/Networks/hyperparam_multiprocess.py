@@ -5,7 +5,7 @@ from script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 from GravNN.Preprocessors.UniformScaler import UniformScaler
-
+import time
 import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
@@ -35,10 +35,15 @@ def main():
 
     df_file = "Data/Dataframes/bennu_traditional_wo_annealing.data"
 
+    df_file = "Data/Dataframes/bennu_official_w_noise.data"
+    df_file = "Data/Dataframes/bennu_official_w_noise_2.data"
 
-    threads = 1
-    #config = get_default_eros_config()
-    config = get_default_bennu_config()
+    df_file = "Data/Dataframes/eros_official_w_noise.data"
+
+
+    threads = 4
+    config = get_default_eros_config()
+    # config = get_default_bennu_config()
     #config = get_prototype_toutatis_config()
 
     #config = get_default_earth_config()
@@ -47,10 +52,10 @@ def main():
     #config = get_default_eros_config()
 
     hparams = {
-        "grav_file": [Bennu().stl_200k],
-
+        # "grav_file": [Bennu().stl_200k],
+        "grav_file" : [Eros().obj_200k],
         # "N_dist": [50000],
-        "N_train": [5000, 2500, 2500//2, 2500//4, 2500//8],
+        "N_train": [2500, 2500//2, 2500//4],
         "N_val" : [1500],
         "epochs": [7500],
 
@@ -73,7 +78,7 @@ def main():
         "decay_rate" : [0.9],
         "min_delta" : [0.0001],
         "min_lr" : [0.0001],
-
+        "acc_noise" : [0.0, 0.1, 0.2], # percent
         #'batch_norm' :[True],
         #"network_type" : ['sph_pines_transformer'],
         #'transformer_units' : [20], 

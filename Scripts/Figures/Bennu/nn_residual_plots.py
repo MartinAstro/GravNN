@@ -10,6 +10,7 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Visualization.DataVisSuite import DataVisSuite
 from GravNN.Networks.Data import get_raw_data
+from GravNN.Networks.Constraints import *
 
 def make_fcn_name_latex_compatable(name):
     components = name.split("_")
@@ -41,7 +42,7 @@ def plot_moving_average(x, y, y_pred, percent=True, alpha=0.5,label=None, marker
     if not percent:
         diff = y - y_pred
     else:
-        diff = np.abs((y - y_pred)/y)*100.0
+        diff = np.abs(np.linalg.norm(y - y_pred, axis=1)/np.linalg.norm(y, axis=1))*100.0
     df = pd.DataFrame(data=diff, index=x)
     df.sort_index(inplace=True)
     rolling_avg = df.rolling(500, 100).mean()
@@ -56,15 +57,18 @@ def main():
     data_vis.fig_size = data_vis.tri_vert_page
 
     planet = Bennu()
-
-    #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v1.data"), "[0,10000]"
-    #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v2.data"), "[5000,10000]"
-    df, descriptor = pd.read_pickle("Data/Dataframes/useless_070621_v4.data"), "[5000,10000]"
+    model_file = planet.stl_200k
+    df, descriptor = pd.read_pickle("Data/Dataframes/bennu_traditional_wo_annealing.data"), "[0,R*3]"
+    #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v2.data"), "[R,R*3]"
+    #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070621_v4.data"), "[R,R*3] + Some"
     #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v3.data"), "[0,10000]"# PLC, ALC, APLC
 
+    df = df[df['N_train'] == 2500]
+    df = df[df['PINN_constraint_fcn'] != no_pinn]
+
     
-    test_trajectory = RandomAsteroidDist(planet, [0, planet.radius + 10000], 50000, grav_file=[planet.model_potatok])        
-    test_poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=test_trajectory).load(override=False)
+    test_trajectory = RandomAsteroidDist(planet, [0, planet.radius*3], 20000, grav_file=[model_file])        
+    test_poly_gm = Polyhedral(planet, model_file, trajectory=test_trajectory).load(override=False)
 
     data_vis.newFig()
     data_vis.newFig()
@@ -73,9 +77,9 @@ def main():
     x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
     x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
-    plt.figure(1)
-    overlay_hist(x_sph_train,twinx=False)
-    plt.gca().twinx()
+    # plt.figure(1)
+    # overlay_hist(x_sph_train,twinx=False)
+    # plt.gca().twinx()
     
     plt.figure(2)
     overlay_hist(x_sph_train,twinx=False)
@@ -92,16 +96,14 @@ def main():
             continue
 
         extra_samples = config.get('extra_N_train', [None])[0]
-        directory = (
-            os.path.abspath(".")
-            + "/Plots/Asteroid/"
-            + str(np.round(config["radius_min"][0], 2))
-            + "_"
-            + str(np.round(config["radius_max"][0], 2))
-            + "_"
-            + str(extra_samples)
-            + "/"
-        )
+        directory = os.path.abspath(".") \
+            + "/Plots/Asteroid/%s/%s_%s_%s/"  % (
+                planet.__class__.__name__,
+                str(np.round(config["radius_min"][0], 2)),
+                str(np.round(config["radius_max"][0], 2)),
+                str(extra_samples)
+            )
+        
         label = make_fcn_name_latex_compatable(config["PINN_constraint_fcn"][0].__name__)
         os.makedirs(directory, exist_ok=True)
 
@@ -109,9 +111,11 @@ def main():
         a = test_poly_gm.accelerations
         u = test_poly_gm.potentials
   
-        data_pred = model.generate_nn_data(x)
-        a_pred = data_pred['a']
-        u_pred = data_pred['u']
+        # data_pred = model.generate_nn_data(x)
+        # a_pred = data_pred['a']
+        # u_pred = data_pred['u']
+        
+        a_pred = model.generate_acceleration(x)
 
         x_sph, a_sph = get_spherical_data(x, a)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
@@ -119,21 +123,21 @@ def main():
         x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
         x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
-        plt.figure(1)
-        data_vis.plot_residuals(x_sph[:,0], u, u_pred, alpha=0.5, label=label, plot_truth=plot_truth, ylabel='Potential')
-        plot_moving_average(x_sph[:,0], u, u_pred, marker=marker_list[q], color=color_list[q])
+        # plt.figure(1)
+        # data_vis.plot_residuals(x_sph[:,0], u, u_pred, alpha=0.5, label=label, plot_truth=plot_truth, ylabel='Potential')
+        # plot_moving_average(x_sph[:,0], u, u_pred)#, marker=marker_list[q], color=color_list[q])
 
         plt.figure(2)
         data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, alpha=0.5,label=label, plot_truth=plot_truth, ylabel='Acceleration')
-        plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, marker=marker_list[q], color=color_list[q])
+        plot_moving_average(x_sph[:,0], a_sph, a_sph_pred)#, marker=marker_list[q], color=color_list[q])
 
         plot_truth=False
         q += 1
 
-    plt.figure(1)
-    # overlay_hist(x_sph_train)
-    data_vis.plot_radii(x_sph[:,0], vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
-    data_vis.save(plt.gcf(), directory+"Potential_Error_Dist.png")
+    # plt.figure(1)
+    # # overlay_hist(x_sph_train)
+    # data_vis.plot_radii(x_sph[:,0], vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
+    # data_vis.save(plt.gcf(), directory+"Potential_Error_Dist.png")
 
     plt.figure(2)
     # overlay_hist(x_sph_train)

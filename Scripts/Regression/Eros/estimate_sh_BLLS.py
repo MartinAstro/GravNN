@@ -39,7 +39,7 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
     directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/RegressedRealModel/"
     
     # planet.radius = planet.physical_radius
-    model_file = planet.model_potatok
+    model_file = planet.obj_200k
     directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/"
 
     N = regress_deg  

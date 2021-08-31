@@ -248,6 +248,7 @@ class CustomModel(tf.keras.Model):
         a_transformer = self.config["a_transformer"][0]
         x = x_transformer.transform(x)
 
+        x = tf.cast(x, tf.float32)
         u_pred, a_pred, laplace_pred, curl_pred = self.__acceleration_output((x, x))
         a_pred = a_transformer.inverse_transform(a_pred)
         return a_pred

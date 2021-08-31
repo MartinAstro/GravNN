@@ -24,7 +24,7 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
     directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
     os.makedirs(directory, exist_ok=True)
  
-    x, a_true, u = get_poly_data(trajectory, planet.model_potatok, point_mass_removed=[False])
+    x, a_true, u = get_poly_data(trajectory, planet.obj_200k, point_mass_removed=[False])
 
     sample_list = np.array([])
     error_list = np.array([])
@@ -74,8 +74,8 @@ def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
     planet = Eros()
     trajectory = RandomAsteroidDist(planet, [
         min_radius, max_radius], 
-        2500, 
-        planet.model_potatok)
+        20000, 
+        planet.obj_200k)
 
     dist_name += "_"+str(sampling_interval)
     models = glob.glob(directory + "EphemerisDist/BLLS_4*_0*"+str(sampling_interval)+".csv")
@@ -93,11 +93,11 @@ def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
 def main():
     planet = Eros()
     min_radius = planet.radius
-    max_radius = planet.radius + 10000.0
+    max_radius = planet.radius * 3
     dist_name = "r_outer"
     # sampling_interval = 10*60
     # evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
-    sampling_interval = 1*60
+    sampling_interval = 10*60
     evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
 
     # min_radius = 0

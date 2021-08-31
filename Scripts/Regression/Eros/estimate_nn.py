@@ -1,7 +1,9 @@
+from GravNN.Support.transformations import cart2sph
 import os
 import copy
 
 import numpy as np
+import matplotlib.pyplot as plt
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks.Configs import *
@@ -40,7 +42,8 @@ def get_hparams(params={}):
 
         "lr_anneal" : [False],
         "remove_point_mass" : [False], # remove point mass from polyhedral model
-        "override" : [False]
+        "override" : [False],
+        'skip_normalization' : [True]
     }
     hparams.update(params)
     
@@ -58,8 +61,8 @@ def get_hparams(params={}):
 
 def augment_y_data(a_train, config):
     pinn_constraint_fcn = config['PINN_constraint_fcn'][0].__name__
-    laplace_train = np.zeros((1,))
-    curl_train = np.zeros((3,))
+    laplace_train = np.zeros((len(a_train),1))
+    curl_train = np.zeros((len(a_train),3))
 
     # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint. 
     if pinn_constraint_fcn == "no_pinn":
@@ -78,8 +81,8 @@ def augment_y_data(a_train, config):
     return y_train
 
 def preprocess_data(x,y, transformers, config):
-    x_bar = transformers['x'].transform(x)
-    y_bar = transformers['a'].transform(y)
+    x_bar = transformers['x'].transform(np.array(x))
+    y_bar = transformers['a'].transform(np.array(y))
     y_bar = augment_y_data(y_bar, config)
     return x_bar, y_bar
 
@@ -132,28 +135,52 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
     
     return transformers
 
+def get_replay_buffer(x_train, y_train, buffer_size):
+    if len(x_train) < buffer_size:
+        return x_train, y_train
+    else:
+        # sample data that is temporally closer
+        # preference data that is at closer altitude
+        x_train_sph = cart2sph(np.array(x_train))
+        x_train_r = x_train_sph[:,0]
+        prob_r = np.abs(1-(x_train_r-np.min(x_train_r))/(np.max(x_train_r)-np.min(x_train_r)))
+        x_train_t = np.arange(len(prob_r))
+        prob_t = x_train_t/ np.max(x_train_t)
 
-def regress_nn(config, sampling_interval, sub_directory=None):
-    directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/" + sub_directory + "/"
-    os.makedirs(directory, exist_ok=True)
-    
+        prob_sample = prob_r*prob_t
+        idx = prob_sample.argsort()[-buffer_size:][::-1]
+        print("Oldest Index = %d / %d" % (np.min(idx), len(x_train)))
+        return np.array(x_train)[idx,:], np.array(y_train)[idx,:]
+
+
+def get_replay_buffer_random(x_train, y_train, buffer_size, recency=3000):
+    if len(x_train) < buffer_size:
+        return x_train, y_train
+    else:
+        idx = np.arange(len(x_train))[::-1][recency:]
+        idx = np.concatenate(idx, np.random.choice(len(x_train) - recency, size=buffer_size, replace=False))
+        return np.array(x_train)[idx,:], np.array(y_train)[idx,:]
+
+def regress_nn(config, sampling_interval, replay_buffer=None):  
+    print(config['PINN_constraint_fcn'][0])
     planet = Eros()
-    model_file = planet.model_potatok
+    model_file = planet.obj_200k
     remove_point_mass = False
 
     discard_data = True
-    epochs = 100
+    epochs = 1000
 
-    max_altitude = 10000.0
+    max_radius = planet.radius*3
+    min_radius = planet.radius  # Brill radius - some extra room
 
-    x_max = planet.radius + max_altitude
+    x_max = max_radius
     x_min = -x_max 
 
-    a_max = planet.mu/planet.radius**2
+    a_max = planet.mu/min_radius**2
     a_min = -a_max
 
-    u_max = planet.mu/planet.radius
-    u_min = planet.mu/(planet.radius + max_altitude)
+    u_max = planet.mu/(min_radius)
+    u_min = planet.mu/max_radius
 
     x_extrema = [[x_min, x_max, 0.0]]
     a_extrema = [[a_min, a_max, 0.0]]
@@ -170,6 +197,7 @@ def regress_nn(config, sampling_interval, sub_directory=None):
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
     pbar = ProgressBar(len(trajectories), enable=True)
 
+    plt.figure()
     total_samples = 0
     # For each orbit, train the network
     for k in range(len(trajectories)):
@@ -177,64 +205,80 @@ def regress_nn(config, sampling_interval, sub_directory=None):
         x, a, u = get_poly_data(
             trajectory, model_file, remove_point_mass=[remove_point_mass]
         )
-        for i in range(len(x)):
-            x_inst_bar, y_inst_bar = preprocess_data(x[i], a[i], transformers, config)
-            x_train.append(x_inst_bar)
-            y_train.append(y_inst_bar)
+
+        try:
+            for i in range(len(x)):
+                x_train.append(x[i])
+                y_train.append(a[i])
+        except:
+            x_train = np.concatenate((x_train, x))
+            y_train = np.concatenate((y_train, a))
+
+            
+        if replay_buffer is not None:
+            x_train_sample, y_train_sample = get_replay_buffer(x_train, y_train, replay_buffer)
+        else:
+            x_train_sample = x_train
+            y_train_sample = y_train
+
+        x_train_sample, y_train_sample = preprocess_data(x_train_sample, y_train_sample, transformers, config)
 
         # Update the neural network with a batch of data
-        regressor.update(np.array(x_train), np.array(y_train), iterations=epochs)
+        regressor.update(np.array(x_train_sample), np.array(y_train_sample), iterations=epochs)
 
-        total_samples += len(x_train)
+        plt.plot(regressor.model.history.history['loss'], label=str(k))
+        # plt.show()
+        if replay_buffer is not None or discard_data == False:
+            total_samples = len(x_train)
+        else:
+            total_samples += len(x_train)
 
         # optionally dump old data
         if discard_data: 
             x_train = []
             y_train = []
 
-        try:
-            time = trajectory.times[0]
-        except:
-            time = None 
-
-        file_name = "%s/%s/PINN_%d_%d_%d_%d.data" % (
+        file_name = "%s/%s/%s_%s_%d.data" % (
             planet.__class__.__name__,
             trajectory.__class__.__name__,
-            regressor.model.config["num_units"][0],
+
+            config['PINN_constraint_fcn'][0].__name__,
+            str(replay_buffer), 
             total_samples,
-            time, 
-            sampling_interval
             )
         regressor.model.config['PINN_constraint_fcn'] = [regressor.model.config['PINN_constraint_fcn'][0]]
+        directory = "/Users/johnmartin/Documents/GraduateSchool/Research/ML_Gravity/GravNN/Files/GravityModels/Regressed/" 
         os.makedirs(os.path.dirname(directory+file_name),exist_ok=True)
         regressor.model.save(directory + file_name)
         pbar.update(k)
-
+        # if k % 5 == 0:
+        #     plt.legend()
+        #     plt.show()
+        #     plt.figure()
+    plt.legend()
+    plt.show()
 
 
 def main():
 
-    params = {'pinn_constraint_fcn' : ['pinn_a']}
+
+
+    params = {'PINN_constraint_fcn' : ['pinn_a']}
     config = get_hparams(params)
-    regress_nn(config, sampling_interval=10*60, sub_directory='pinn_a')
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
 
-
-    # params = {'pinn_constraint_fcn' : ['pinn_alc']}
+    # params = {'PINN_constraint_fcn' : ['pinn_a']}
     # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, sub_directory='pinn_alc')
-
-
-    # params = {'network_type' : ['sph_pines_transformer'],
-    #           'transformer_units' : [20]}
+    # regress_nn(config, sampling_interval=10*60, replay_buffer=5000)
+    
+    # params = {'PINN_constraint_fcn' : ['pinn_alc']}
     # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, sub_directory='transformer_pinn_a')
+    # regress_nn(config, sampling_interval=10*60, replay_buffer=None)
 
-
-    # params = {'network_type' : ['sph_pines_transformer'],
-    #           'pinn_constraint_fcn' : ['pinn_alc'],
-    #           'transformer_units' : [20]}
+    # params = {'PINN_constraint_fcn' : ['pinn_alc']}
     # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, sub_directory='transformer_pinn_alc')
+    # regress_nn(config, sampling_interval=10*60,  replay_buffer=5000)
+
 
 if __name__ == "__main__":
     main()

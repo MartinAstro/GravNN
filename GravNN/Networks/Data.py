@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 import copy
+from scipy.spatial.transform import Rotation
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from GravNN.GravityModels.PointMass import PointMass
@@ -201,6 +202,12 @@ def get_preprocessed_data(config):
     a_train = a_train + config["acc_noise"][0] * np.std(a_train) * np.random.randn(
         a_train.shape[0], a_train.shape[1]
     )
+
+    a_mag = np.linalg.norm(a_train, axis=1).reshape(len(a_train),1)
+    a_unit = np.random.uniform(-1,1, size=np.shape(a_train))
+    a_unit = a_unit / np.linalg.norm(a_unit, axis=1).reshape(len(a_unit), 1)
+    a_error = config['acc_noise'][0]*a_mag*a_unit # 10% of the true magnitude 
+    a_train = a_train + a_error
 
     # Preprocessing
     x_transformer = config["x_transformer"][0]

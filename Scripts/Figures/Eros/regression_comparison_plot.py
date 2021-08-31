@@ -20,8 +20,12 @@ def get_sh_file_info(file_path):
 def get_nn_file_info(file_path):
     model_name = os.path.basename(file_path).split('.')[0]
     sampling_interval = int(model_name.split("_")[4])
-    num_units = int(model_name.split("_")[5])
-    return sampling_interval, num_units
+    batch = os.path.basename(os.path.dirname(file_path)).split("_")[2]
+    network_type = os.path.basename(os.path.dirname(file_path)).split("_")[1]
+    if batch != 'None':
+        batch = int(batch)
+    
+    return sampling_interval, batch, network_type
 
 def plot_orbits_as_violins():
     trajectories = generate_near_orbit_trajectories(10*60)
@@ -37,7 +41,7 @@ def plot_orbits_as_violins():
     
     plt.violinplot(radial_dists, positions=orbit_start_times, widths=10)
 
-def plot_regression_error(data_directory, dist_name, sampling_interval, linestyle):
+def plot_sh_error(data_directory, dist_name, sampling_interval, linestyle):
     files = glob.glob(data_directory + "sh_estimate_"+ dist_name + "_" + str(sampling_interval) + "_*.data")
     files.sort()
     for file in files:
@@ -45,17 +49,17 @@ def plot_regression_error(data_directory, dist_name, sampling_interval, linestyl
         with open(file, 'rb') as f:
             sh_samples = pickle.load(f)
             sh_errors = pickle.load(f)
-        plt.semilogy(sh_samples*sampling_interval/86400, sh_errors, label='SH ' + str(sampling_interval) + ' ' + str(max_deg), linestyle=linestyle)
+        plt.semilogy(sh_samples*sampling_interval/86400, sh_errors, label='SH ' + str(max_deg), linestyle=linestyle)
 
-
+def plot_nn_error(data_directory, dist_name, sampling_interval, linestyle):
     files = glob.glob(data_directory+ "nn_estimate_"+ dist_name + "_" + str(sampling_interval) + "*.data")
     files.sort()
     for file in files:
-        sampling_interval, num_units = get_nn_file_info(file)
+        sampling_interval, batch_size, network_type = get_nn_file_info(file)
         with open(file, 'rb') as f:
             nn_samples = pickle.load(f)
             nn_errors = pickle.load(f)
-        plt.semilogy(nn_samples*sampling_interval/86400, nn_errors, label='PINN ' + str(sampling_interval) + ' ' + str(num_units), linestyle=linestyle)
+        plt.semilogy(nn_samples*sampling_interval/86400, nn_errors, label='PINN ' + network_type + ' ' + str(batch_size), linestyle=linestyle)
 
 
 def main():
@@ -63,19 +67,29 @@ def main():
     os.makedirs(directory, exist_ok=True)
 
     planet = Eros()
-    trajectory = DHGridDist(planet, planet.radius*2, 90)
-    x, a_true, u = get_poly_data(trajectory, planet.model_potatok, point_mass_removed=[False])
     vis = VisualizationBase()
     vis.fig_size = vis.full_page
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
-
     
     dist_name = 'r_outer'    
     sampling_interval = 600
     linestyle = '-'
     vis.newFig()
-    plot_regression_error(data_directory, dist_name, sampling_interval, linestyle)
+    sh_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
+    plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
+    
 
+    
+    nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_A_None/"
+    plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    # nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_A_5000/"
+    # plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_ALC_None/"
+    plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
+
+    # nn_directory = os.path.abspath('.') + "/GravNN/Files/Regression/pinn_ALC_5000/"
+    # plot_nn_error(nn_directory, dist_name, sampling_interval, linestyle)
 
 
     # plt.gca().set_prop_cycle(None)

@@ -63,7 +63,7 @@ class AsteroidAnalyzer:
 
     def compute_interior_stats(self):
         trajectory = RandomAsteroidDist(
-            self.planet, [0, self.interior_bound], 50000, self.model_file
+            self.planet, [0, self.interior_bound], 20000, self.model_file
         )
         stats = self.compute_stats(trajectory, "interior")
         return stats
@@ -72,7 +72,7 @@ class AsteroidAnalyzer:
         trajectory = RandomAsteroidDist(
             self.planet,
             [self.interior_bound, self.exterior_bound],
-            50000,
+            20000,
             self.model_file,
         )
         stats = self.compute_stats(trajectory, "exterior")

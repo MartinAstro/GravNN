@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 def get_default_eros_config():
     data_config = {
         "planet": [Eros()],
-        "grav_file": [Eros().model_potatok],
+        "grav_file": [Eros().obj_200k],
         "distribution": [RandomAsteroidDist],
         "N_dist": [20000],
         "N_train": [2500],
