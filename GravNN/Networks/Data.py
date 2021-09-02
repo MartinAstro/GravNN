@@ -286,8 +286,8 @@ def get_preprocessed_data(config):
         u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
         ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
-        ref_r_vec = x_transformer.transformer(ref_r_vec)
-        config['ref_radius'] = [ref_r_vec[0]]
+        ref_r_vec = x_transformer.transform(ref_r_vec)
+        config['ref_radius'] = [ref_r_vec[0,0]]
 
     elif config["scale_by"][0] == "none":
         x_transformer = config["dummy_transformer"][0]
