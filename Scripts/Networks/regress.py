@@ -211,7 +211,13 @@ def main():
                'epochs' : [7500]}
     config = get_hparams(params)
     config = regress_nn(config, sampling_interval=10*60)
-    save_training("Data/Dataframes/near_all_data.data", config)
+    save_training("Data/Dataframes/near_all_data_7500.data", config)
+
+    params = {'PINN_constraint_fcn' : ['pinn_a'], 
+               'epochs' : [7500]}
+    config = get_hparams(params)
+    config = regress_nn(config, sampling_interval=10*60)
+    save_training("Data/Dataframes/near_all_data_7500.data", config)
     plt.show()
 
 if __name__ == "__main__":

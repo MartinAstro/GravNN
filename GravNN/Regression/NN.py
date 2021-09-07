@@ -24,13 +24,16 @@ from GravNN.Networks.Schedules import get_schedule
 
 tf = configure_tensorflow()
 
-np.random.seed(1234)
-tf.random.set_seed(0)
+
 # tf.config.run_functions_eagerly(True)
 tf.keras.backend.clear_session()
 
 class NN:
     def __init__(self, config):
+        tf.keras.backend.clear_session()
+
+        np.random.seed(config['seed'][0])
+        tf.random.set_seed(config['seed'][0])
         # Get data, network, optimizer, and generate model
         compute_input_layer_normalization_constants(config)
         self.config = config
@@ -42,7 +45,7 @@ class NN:
 
 
     def update(self, rVec, aVec, iterations=5):
-        callback = tf.keras.callbacks.EarlyStopping('loss',min_delta=1E-3, patience=100, restore_best_weights=False, verbose=1)
+        callback = tf.keras.callbacks.EarlyStopping('loss',min_delta=1E-6, patience=2000, restore_best_weights=False, verbose=1)
         history = self.model.fit(
                         x=tf.convert_to_tensor(rVec.astype(np.float32)),
                         y=tf.convert_to_tensor(aVec.astype(np.float32)),

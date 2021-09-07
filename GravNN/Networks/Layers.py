@@ -177,7 +177,7 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         r = tf.add(tf.multiply(r, self.scalers[0]), self.mins[0])
 
         # (R/r) - 1 where R is the Brill Radius of Body
-        #r = tf.subtract(tf.divide(self.ref_radius,r), 1)
+        # r = tf.subtract(tf.divide(self.ref_radius,r), 1)
         # r = tf.divide(1.0,r)
 
         # Convert deg -> rad -> periodic [-1,1]
