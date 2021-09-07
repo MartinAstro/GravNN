@@ -42,6 +42,7 @@ def main():
 
     df_file = "Data/Dataframes/eros_official_w_noise.data"
 
+    df_file = "Data/Dataframes/eros_official_w_noise_5_seeds.data"
 
     threads = 4
     config = get_default_eros_config()
@@ -59,16 +60,17 @@ def main():
         # "N_dist": [50000],
 
         
-        # "N_train": [2500, 2500//2, 2500//4],
-        # "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
-        # "acc_noise" : [0.0, 0.1, 0.2], # percent
+        "N_train": [2500, 2500//2, 2500//4],
+        "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        "acc_noise" : [0.0, 0.1, 0.2], # percent
 
-        "PINN_constraint_fcn": [ "pinn_a"],
-        "acc_noise" : [0.0], # percent
+        # "PINN_constraint_fcn": [ "pinn_a"],
+        # "acc_noise" : [0.0], # percent
 
 
         "N_val" : [1500],
         "epochs": [7500],
+        'seed' : [0,1,2,3,4],
 
 
         "learning_rate": [0.001*2],
@@ -139,8 +141,8 @@ def run(config_original, hparams):
 
     tf = configure_tensorflow()
     mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
-    np.random.seed(1234)
-    tf.random.set_seed(0)
+    np.random.seed(hparams['seed'][0])
+    tf.random.set_seed(hparams['seed'][0])
     #tf.config.run_functions_eagerly(True)
     tf.keras.backend.clear_session()
 

@@ -173,7 +173,7 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
     remove_point_mass = False
 
     discard_data = False
-    epochs = 1000
+    epochs = 7500
 
     max_radius = planet.radius*3
     min_radius = planet.radius  # Brill radius - some extra room
@@ -254,7 +254,7 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
             total_samples,
             )
         regressor.model.config['PINN_constraint_fcn'] = [regressor.model.config['PINN_constraint_fcn'][0]]
-        directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/" 
+        directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/seed_" + str(config['seed'][0]) + "/"
         os.makedirs(os.path.dirname(directory+file_name),exist_ok=True)
         regressor.model.save(directory + file_name)
         pbar.update(k)
@@ -263,28 +263,63 @@ def regress_nn(config, sampling_interval, replay_buffer=None):
         #     plt.show()
         #     plt.figure()
     plt.legend()
-    plt.show()
+    #plt.show()
 
 
 def main():
 
 
 
-    # params = {'PINN_constraint_fcn' : ['pinn_a']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+    params = {'PINN_constraint_fcn' : ['pinn_a']}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
 
-    # params = {'PINN_constraint_fcn' : ['pinn_a']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60, replay_buffer=5000)
-    
+    params = {'PINN_constraint_fcn' : ['pinn_a'],
+                'seed' : [1]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_a'],
+                'seed' : [2]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_a'],
+                'seed' : [3]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_a'],
+                'seed' : [4]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+ 
+ 
+
     params = {'PINN_constraint_fcn' : ['pinn_alc']}
     config = get_hparams(params)
     regress_nn(config, sampling_interval=10*60, replay_buffer=None)
 
-    # params = {'PINN_constraint_fcn' : ['pinn_alc']}
-    # config = get_hparams(params)
-    # regress_nn(config, sampling_interval=10*60,  replay_buffer=5000)
+    params = {'PINN_constraint_fcn' : ['pinn_alc'],
+                'seed' : [1]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_alc'],
+                'seed' : [2]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_alc'],
+                'seed' : [3]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
+
+    params = {'PINN_constraint_fcn' : ['pinn_alc'],
+                'seed' : [4]}
+    config = get_hparams(params)
+    regress_nn(config, sampling_interval=10*60, replay_buffer=None)
 
 
 if __name__ == "__main__":
