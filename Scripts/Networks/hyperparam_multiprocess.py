@@ -47,6 +47,9 @@ def main():
 
     df_file = "Data/Dataframes/eros_official_w_noise_5_seeds.data"
 
+
+    df_file = "Data/Dataframes/eros_official_noise_annealing.data"
+
     threads = 4
     config = get_default_eros_config()
     # config = get_default_bennu_config()
@@ -64,22 +67,25 @@ def main():
 
         
         "N_train": [2500, 2500//2, 2500//4],
-        "PINN_constraint_fcn": ["no_pinn", "pinn_a", "pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        "PINN_constraint_fcn": ["pinn_ap", 'pinn_aplc', 'pinn_alc'],
         "acc_noise" : [0.0, 0.1, 0.2], # percent
+        'seed' : [0],#,1,2,3,4],
+        "network_type" :['sph_pines_traditional'],
+        # "network_type" : ['sph_pines_transformer'],
+        # 'transformer_units' : [20], 
+        "lr_anneal" : [True],
 
         # "PINN_constraint_fcn": [ "pinn_a"],
         # "acc_noise" : [0.0], # percent
 
 
-        "ref_radius" : [Eros().radius*3/2],
+        #"ref_radius" : [Eros().radius*3/2],
         "N_val" : [1500],
         "epochs": [7500],
-        "dropout" : [0.1],
+        "dropout" : [0.0],
 
         "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
-        'seed' : [0,1,2,3,4],
-        "acc_noise" : [0.0, 0.1, 0.2], # percent
 
         # "PINN_constraint_fcn": ["pinn_aplc"],
 
@@ -98,9 +104,7 @@ def main():
         "min_delta" : [0.0001],
         "min_lr" : [0.0001],
         #'batch_norm' :[True],
-        "network_type" : ['sph_pines_transformer'],
-        'transformer_units' : [20], 
-        "lr_anneal" : [False],
+
         "remove_point_mass" : [False], # remove point mass from polyhedral model
         "override" : [False]
     }
@@ -144,8 +148,8 @@ def run(config_original, hparams):
 
     tf = configure_tensorflow()
     mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
-    np.random.seed(hparams['seed'][0])
-    tf.random.set_seed(hparams['seed'][0])
+    np.random.seed(hparams['seed'])
+    tf.random.set_seed(hparams['seed'])
     #tf.config.run_functions_eagerly(True)
     tf.keras.backend.clear_session()
 

@@ -65,9 +65,6 @@ def main():
     dist_name = "r_inner"
     evaluate_sh_suite(trajectory, dist_name)
 
-
-    min_radius = 0
-    max_radius = planet.radius 
     trajectory = SurfaceDist(planet, planet.obj_200k)
     dist_name = "r_surface"
     evaluate_sh_suite(trajectory, dist_name)
