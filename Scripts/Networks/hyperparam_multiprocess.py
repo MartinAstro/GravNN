@@ -41,6 +41,9 @@ def main():
     df_file = "Data/Dataframes/bennu_official_w_noise_2.data"
 
     df_file = "Data/Dataframes/eros_official_w_noise.data"
+    df_file = "Data/Dataframes/eros_official_w_noise_trad.data"
+    df_file = "Data/Dataframes/eros_official_w_noise_transformer.data"
+    df_file = "Data/Dataframes/eros_official_w_noise_transformer_dropout.data"
 
     df_file = "Data/Dataframes/eros_official_w_noise_5_seeds.data"
 
@@ -68,13 +71,15 @@ def main():
         # "acc_noise" : [0.0], # percent
 
 
+        "ref_radius" : [Eros().radius*3/2],
         "N_val" : [1500],
         "epochs": [7500],
-        'seed' : [0,1,2,3,4],
-
+        "dropout" : [0.1],
 
         "learning_rate": [0.001*2],
         "batch_size": [131072 // 2],
+        'seed' : [0,1,2,3,4],
+        "acc_noise" : [0.0, 0.1, 0.2], # percent
 
         # "PINN_constraint_fcn": ["pinn_aplc"],
 
@@ -93,29 +98,27 @@ def main():
         "min_delta" : [0.0001],
         "min_lr" : [0.0001],
         #'batch_norm' :[True],
-        #"network_type" : ['sph_pines_transformer'],
-        #'transformer_units' : [20], 
+        "network_type" : ['sph_pines_transformer'],
+        'transformer_units' : [20], 
         "lr_anneal" : [False],
         "remove_point_mass" : [False], # remove point mass from polyhedral model
         "override" : [False]
     }
 
-    traj_params = {
-        "N_train": [40000],
-        "N_val": [5000],
-        "custom_data_fcn" : [single_near_trajectory]
-        # "distribution" : [EphemerisDist],
-        # "source" : ["NEAR"],
-        # "target" : ["EROS"],
-        # "frame" : ["EROS_FIXED"],
-        # "start_time" : ["Feb 24, 2000"],
-        # "end_time" : ["Feb 06, 2001"],
-        # "sampling_interval" : [10*60],
-        # "celestial_body" : [Eros()],
-    }
-
-
-    hparams.update(traj_params)
+    # traj_params = {
+    #     "N_train": [40000],
+    #     "N_val": [5000],
+    #     "custom_data_fcn" : [single_near_trajectory]
+    #     # "distribution" : [EphemerisDist],
+    #     # "source" : ["NEAR"],
+    #     # "target" : ["EROS"],
+    #     # "frame" : ["EROS_FIXED"],
+    #     # "start_time" : ["Feb 24, 2000"],
+    #     # "end_time" : ["Feb 06, 2001"],
+    #     # "sampling_interval" : [10*60],
+    #     # "celestial_body" : [Eros()],
+    # }
+    # hparams.update(traj_params)
 
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:

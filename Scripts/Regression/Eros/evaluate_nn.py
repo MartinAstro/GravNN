@@ -22,18 +22,10 @@ def evaluate_network_error(model, trajectory, a_true,):
     return samples, np.average(a_error)
 
 
-def get_trajectory_and_acceleration(model_file, min_radius, max_radius):
+def evaluate_nn(trajectory, model_file, models):
     planet = Eros()
-    trajectory = RandomAsteroidDist(planet, [
-        min_radius, max_radius], 
-        20000, 
-        model_file)
     x, a_true, u = get_poly_data(trajectory, model_file, point_mass_removed=[False])
-    return trajectory, a_true
 
-
-def evaluate_nn(min_radius, max_radius, model_file, models):
-    trajectory, a_true = get_trajectory_and_acceleration(model_file, min_radius, max_radius)
     sample_list = []
     error_list = []
     for model in models:
@@ -57,48 +49,62 @@ def generate_figure(directory, sample_list, error_list):
     plt.ylabel("Average Acceleration Error")
     vis.save(plt.gcf(), directory + "nn_error_near_shoemaker.pdf")
 
-
+def get_constraint_str(prefix):
+    words = prefix.split("_")
+    function = words[0].lower() + "_" + words[1].lower()
+    return function
 
 def main():
-
+    prefix_list = ['pinn_A_None', 'pinn_ALC_None']
     # (pinn_A, pinn_ALC)_(None, 5000)
-    file_prefix = "pinn_A_None"
-    file_prefix = "pinn_ALC_None"
-    # file_prefix = "pinn_A_5000"
-    #file_prefix = "pinn_ALC_5000"  
-    models = glob.glob(os.path.curdir + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/"+file_prefix+"**.data") # PINN_A, PINN_ALC
-    models.sort()
+    for seed in range(0,5):
+        for file_prefix in prefix_list: 
+            constraint = get_constraint_str(file_prefix)
+            model_directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/" \
+                                                "Eros/EphemerisDist/"+ constraint+ "/" \
+                                                "seed_" + str(seed) + "/"
+            models = glob.glob( model_directory +file_prefix + "**.data") # PINN_A, PINN_ALC
+            models.sort()
 
-    sampling_interval = 10*60
-    planet = Eros()
-    min_radius = planet.radius
-    max_radius = planet.radius*3
-    dist_name = "r_outer_" + str(sampling_interval)
-    sample_list, error_list = evaluate_nn(min_radius, max_radius, planet.obj_200k, models)
+            planet = Eros()
+            sampling_interval = 10*60
+            plot_path = os.path.abspath('.') +"/Plots/Asteroid/Regression/" + file_prefix + "_"
 
-    plot_path = os.path.abspath('.') +"/Plots/Asteroid/Regression/" + file_prefix + "_"
-    generate_figure(plot_path, sample_list, error_list)
+            min_radius = planet.radius
+            max_radius = planet.radius*3
+            trajectory = RandomAsteroidDist(planet, [
+                    min_radius, max_radius], 
+                    20000, 
+                    planet.obj_200k)
+            dist_name = "r_outer_" + str(sampling_interval)
+            sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
+            generate_figure(plot_path, sample_list, error_list)
+            with open(model_directory + "nn_estimate_" + dist_name + ".data", 'wb') as f:
+                pickle.dump(sample_list, f)
+                pickle.dump(error_list, f)
 
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/" + file_prefix + "/"
-    os.makedirs(data_directory, exist_ok=True)
-    with open(data_directory + "nn_estimate_" + dist_name + "_" + ".data", 'wb') as f:
-        pickle.dump(sample_list, f)
-        pickle.dump(error_list, f)
 
-    plt.show()
+            min_radius = 0
+            max_radius = planet.radius 
+            trajectory = RandomAsteroidDist(planet, [
+                    min_radius, max_radius], 
+                    20000, 
+                    planet.obj_200k)
+            dist_name = "r_inner_" + str(sampling_interval)
+            sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
+            generate_figure(plot_path, sample_list, error_list)
+            with open(model_directory + "nn_estimate_" + dist_name + ".data", 'wb') as f:
+                pickle.dump(sample_list, f)
+                pickle.dump(error_list, f)
 
-    min_radius = 0
-    max_radius = planet.radius 
-    sampling_interval = 10*60
-    dist_name = "r_inner_" + str(sampling_interval)
-    sample_list, error_list = evaluate_nn(min_radius, max_radius, planet.obj_200k, models)
-    generate_figure(plot_path, sample_list, error_list)
 
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/" + file_prefix + "/"
-    os.makedirs(data_directory, exist_ok=True)
-    with open(data_directory + "nn_estimate_" + dist_name + "_" + ".data", 'wb') as f:
-        pickle.dump(sample_list, f)
-        pickle.dump(error_list, f)
+            trajectory = SurfaceDist(planet, planet.obj_200k)
+            dist_name = "r_surface_" + str(sampling_interval)
+            sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
+            generate_figure(plot_path, sample_list, error_list)
+            with open(model_directory + "nn_estimate_" + dist_name + ".data", 'wb') as f:
+                pickle.dump(sample_list, f)
+                pickle.dump(error_list, f)
 
     plt.show()
 

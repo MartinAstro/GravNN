@@ -27,9 +27,17 @@ def get_sh_file_info(file_path):
 
 def get_nn_file_info(file_path):
     model_name = os.path.basename(file_path).split('.')[0]
-    sampling_interval = int(model_name.split("_")[4])
-    num_units = int(model_name.split("_")[5])
-    return sampling_interval, num_units
+    sampling_interval = int(model_name.split("_")[-1])
+    return sampling_interval
+
+def compute_confidence_interval_and_average(y):
+    y = np.array(y)
+    avg_y = np.mean(y, axis=0)
+    std_y = np.std(y, axis=0)
+    # 95% confidence interval
+    ci = 1.96 * std_y/avg_y
+    return ci, avg_y
+    
 
 def plot_orbits_as_violins():
     trajectories = generate_near_orbit_trajectories(10*60)
@@ -45,61 +53,39 @@ def plot_orbits_as_violins():
     
     plt.violinplot(radial_dists, positions=orbit_start_times, widths=10)
 
-def plot_regression_error(data_directory, pinn_type, dist_name, sampling_interval, linestyle):
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/" + pinn_type +  "/nn_estimate_"+ dist_name + "_" + str(sampling_interval) + "*.data"
+def plot_regression_error(pinn_type, dist_name, sampling_interval, linestyle):
+    data_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/" + pinn_type +  "/**/nn_estimate_"+ dist_name + "_" + str(sampling_interval) + "*.data"
     files = glob.glob(data_directory)
+    nn_samples = []
+    nn_errors = []
     files.sort()
     for file in files:
-        sampling_interval, num_units = get_nn_file_info(file)
+        sampling_interval = get_nn_file_info(file)
         with open(file, 'rb') as f:
-            nn_samples = pickle.load(f)
-            nn_errors = pickle.load(f)
-        plt.semilogy(nn_samples*sampling_interval/86400, nn_errors, label=convert_type_to_latex(pinn_type) + " " + str(sampling_interval) + ' ' + str(num_units), linestyle=linestyle)
+            nn_samples.append(pickle.load(f))
+            nn_errors.append(pickle.load(f))
+    
+    ci, avg_y = compute_confidence_interval_and_average(nn_errors)
+    plt.semilogy(nn_samples[0]*sampling_interval/86400, avg_y, label=convert_type_to_latex(pinn_type) + " " + str(sampling_interval), linestyle=linestyle)
+    plt.gca().fill_between(nn_samples[0]*sampling_interval/86400, (avg_y-ci), (avg_y+ci), alpha=.1)
 
 
 def main():
-    directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
-    os.makedirs(directory, exist_ok=True)
-
-    planet = Eros()
-    trajectory = DHGridDist(planet, planet.radius*2, 90)
-    x, a_true, u = get_poly_data(trajectory, planet.model_potatok, point_mass_removed=[False])
     vis = VisualizationBase()
     vis.fig_size = vis.full_page
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
     vis.newFig()
 
     pinn_type = 'pinn_a'
     dist_name = 'r_outer'    
     sampling_interval = 600
     linestyle = '-'
-    plot_regression_error(data_directory, pinn_type, dist_name, sampling_interval, linestyle)
+    plot_regression_error(pinn_type, dist_name, sampling_interval, linestyle)
 
     pinn_type = 'pinn_alc'
     dist_name = 'r_outer'    
     sampling_interval = 600
     linestyle = '-'
-    plot_regression_error(data_directory, pinn_type, dist_name, sampling_interval, linestyle)
-
-    pinn_type = 'transformer_pinn_a'
-    dist_name = 'r_outer'    
-    sampling_interval = 600
-    linestyle = '-'
-    plot_regression_error(data_directory, pinn_type, dist_name, sampling_interval, linestyle)
-
-    pinn_type = 'transformer_pinn_alc'
-    dist_name = 'r_outer'    
-    sampling_interval = 600
-    linestyle = '-'
-    plot_regression_error(data_directory, pinn_type, dist_name, sampling_interval, linestyle)
-
-
-    # plt.gca().set_prop_cycle(None)
-    # dist_name = 'r_outer'    
-    # sampling_interval = 60
-    # linestyle = '--'
-    # plot_regression_error(data_directory, dist_name, sampling_interval, linestyle)
-
+    plot_regression_error(pinn_type, dist_name, sampling_interval, linestyle)
 
     plt.xlabel("Days Since Insersion")
     plt.ylabel("Average Acceleration Error")
@@ -110,6 +96,9 @@ def main():
     plot_orbits_as_violins()
     plt.ylabel("Radius (km)")
 
+
+    directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
+    os.makedirs(directory, exist_ok=True)
     vis.save(plt.gcf(), directory + "nn_regression_error_near_shoemaker.pdf")
 
     plt.show()

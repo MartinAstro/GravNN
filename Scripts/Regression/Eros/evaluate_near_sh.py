@@ -20,10 +20,6 @@ def get_file_info(file_path):
     return samples, max_deg, time
 
 def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
-    
-    directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
-    os.makedirs(directory, exist_ok=True)
- 
     x, a_true, u = get_poly_data(trajectory, planet.obj_200k, point_mass_removed=[False])
 
     sample_list = np.array([])
@@ -49,7 +45,6 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
     vis.fig_size = vis.half_page
     vis.newFig()
     plt.semilogy(sample_list*sampling_interval/(86400), error_list)
-    # plt.xlabel("Samples")
     plt.xlabel("Days Since Insersion")
     plt.ylabel("Average Acceleration Error")
     plt.ylim(1E0, np.max(error_list))
@@ -58,9 +53,11 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
     # x, a, u = get_sh_data(trajectory, file_name, max_deg=4, deg_removed=-1, override=[True])
     # a_error = np.linalg.norm(a - a_true)/np.linalg.norm(a_true)*100
 
+    directory = os.path.abspath('.') + "/Plots/Asteroid/Regression/"
+    os.makedirs(directory, exist_ok=True)
     vis.save(plt.gcf(), directory + "sh_error_near_shoemaker_"+ str(max_deg) + "_" + dist_name + ".pdf")
 
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
+    data_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
     os.makedirs(data_directory,exist_ok=True)
     with open(data_directory + "sh_estimate_" + dist_name + "_" + str(max_deg) + ".data", 'wb') as f:
         pickle.dump(sample_list, f)
@@ -70,7 +67,7 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
 
 
 def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
-    directory = "GravNN/Files/GravityModels/Regressed/Eros/"
+    directory = "GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
     planet = Eros()
     trajectory = RandomAsteroidDist(planet, [
         min_radius, max_radius], 
@@ -78,13 +75,13 @@ def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
         planet.obj_200k)
 
     dist_name += "_"+str(sampling_interval)
-    models = glob.glob(directory + "EphemerisDist/BLLS_4*_-1*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "BLLS_4*_0*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
-    models = glob.glob(directory + "EphemerisDist/BLLS_8*_-1*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "BLLS_8*_0*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
-    models = glob.glob(directory + "EphemerisDist/BLLS_16*_-1*"+str(sampling_interval)+".csv")
+    models = glob.glob(directory + "BLLS_16*_0*"+str(sampling_interval)+".csv")
     evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
 
     plt.show()

@@ -205,10 +205,6 @@ def get_preprocessed_data(config):
     print_stats(a_train, "Acceleration")
     print_stats(u_train, "Potential")
 
-    a_train = a_train + config["acc_noise"][0] * np.std(a_train) * np.random.randn(
-        a_train.shape[0], a_train.shape[1]
-    )
-
     a_mag = np.linalg.norm(a_train, axis=1).reshape(len(a_train),1)
     a_unit = np.random.uniform(-1,1, size=np.shape(a_train))
     a_unit = a_unit / np.linalg.norm(a_unit, axis=1).reshape(len(a_unit), 1)

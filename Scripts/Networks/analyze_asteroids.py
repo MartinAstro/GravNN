@@ -23,7 +23,7 @@ def main():
     df_file = "Data/Dataframes/eros_official_w_noise.data"
 
 
-    df_file = "Data/Dataframes/near_all_data.data"
+    # df_file = "Data/Dataframes/near_all_data.data"
 
 
     interior_bound = Eros().radius

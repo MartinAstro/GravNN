@@ -59,15 +59,14 @@ def plot_regression_error(data_directory, dist_name, sampling_interval, linestyl
 
 
 def main():
-    directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
-    os.makedirs(directory, exist_ok=True)
+
 
     planet = Bennu()
     trajectory = DHGridDist(planet, planet.radius*2, 90)
     x, a_true, u = get_poly_data(trajectory, planet.model_potatok, point_mass_removed=[False])
     vis = VisualizationBase()
     vis.fig_size = vis.full_page
-    data_directory = os.path.abspath('.') + "/GravNN/Files/Regression/"
+    data_directory = os.path.abspath('.') + "/GravNN/GravityModels/Regressed/"
 
     
     dist_name = 'r_outer'    
@@ -94,6 +93,8 @@ def main():
     plot_orbits_as_violins()
     plt.ylabel("Radius (km)")
 
+    directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
+    os.makedirs(directory, exist_ok=True)
     vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
 
     plt.show()
