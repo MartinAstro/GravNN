@@ -49,8 +49,12 @@ def main():
 
 
     df_file = "Data/Dataframes/eros_official_noise_annealing.data"
+    df_file = "Data/Dataframes/eros_official_noise_transformer_no_annealing.data"
+    df_file = "Data/Dataframes/eros_official_noise_transformer_annealing.data"
 
-    threads = 4
+    df_file = "Data/Dataframes/eros_official_transformer_pinn_40.data"
+
+    threads = 2
     config = get_default_eros_config()
     # config = get_default_bennu_config()
     #config = get_prototype_toutatis_config()
@@ -67,13 +71,14 @@ def main():
 
         
         "N_train": [2500, 2500//2, 2500//4],
-        "PINN_constraint_fcn": ["pinn_ap", 'pinn_aplc', 'pinn_alc'],
+        "PINN_constraint_fcn": ['pinn_alc'],
         "acc_noise" : [0.0, 0.1, 0.2], # percent
         'seed' : [0],#,1,2,3,4],
-        "network_type" :['sph_pines_traditional'],
-        # "network_type" : ['sph_pines_transformer'],
-        # 'transformer_units' : [20], 
-        "lr_anneal" : [True],
+        # "network_type" :['sph_pines_traditional'],
+        "network_type" : ['sph_pines_transformer', 'sph_pines_traditional'],
+        'transformer_units' : [40], 
+        "num_units": [40],
+        "lr_anneal" : [False],
 
         # "PINN_constraint_fcn": [ "pinn_a"],
         # "acc_noise" : [0.0], # percent
@@ -90,7 +95,6 @@ def main():
         # "PINN_constraint_fcn": ["pinn_aplc"],
 
 
-        "num_units": [20],
         "beta" : [0.9],
 
         # "schedule_type" : ['exp_decay'],

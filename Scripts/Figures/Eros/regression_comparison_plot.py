@@ -1,5 +1,6 @@
 from logging import error
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 import glob
 import os
@@ -90,10 +91,39 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
     os.makedirs(directory, exist_ok=True)
 
-    plot_r_outer_error(directory)
-    plot_r_inner_error(directory)
+
+    vis = VisualizationBase()
+    vis.fig_size = vis.full_page
+    vis.newFig()
+
+    plot_error("r_outer", '-')
+    plot_error("r_inner", '--')
+    plot_error("r_surface", ':')
     
-    # plt.gca().set_prop_cycle(None)
+    plt.xlabel("Days Since Insersion")
+    plt.ylabel("Average Acceleration Error")
+    plt.ylim(5E-1, 1E2)
+
+    lines = plt.gca().get_lines()
+    legend1 = plt.legend(handles=lines[0:5],loc='upper left')
+
+    exterior_line = mlines.Line2D([], [], color='black', marker='',
+                            markersize=15, linestyle='-', label='Exterior')
+    interior_line = mlines.Line2D([], [], color='black', marker='',
+                            markersize=15, linestyle='--', label='Interior')
+    surface_line = mlines.Line2D([], [], color='black', marker='',
+                            markersize=15, linestyle=':', label='Surface')
+    plt.legend(handles=[exterior_line, interior_line, surface_line])
+    plt.gca().add_artist(legend1)
+
+
+    plt.twinx()
+    plot_orbits_as_violins()
+    plt.ylabel("Radius (km)")
+
+
+    vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
+
     # dist_name = 'r_outer'    
     # sampling_interval = 60
     # linestyle = '--'
@@ -102,14 +132,9 @@ def main():
 
     plt.show()
 
-def plot_r_outer_error(directory):
-    vis = VisualizationBase()
-    vis.fig_size = vis.full_page
 
-    dist_name = 'r_outer'    
+def plot_error(dist_name, linestyle):
     sampling_interval = 600
-    linestyle = '-'
-    vis.newFig()
     sh_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
     plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
 
@@ -118,47 +143,7 @@ def plot_r_outer_error(directory):
 
     pinn_type = 'pinn_alc'
     plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle)
-
-    plt.xlabel("Days Since Insersion")
-    plt.ylabel("Average Acceleration Error")
-    plt.legend()
-    plt.ylim(1E-1, 1E2)
-
-    plt.twinx()
-    plot_orbits_as_violins()
-    plt.ylabel("Radius (km)")
-
-    vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
-
-
-def plot_r_inner_error(directory):
-    vis = VisualizationBase()
-    vis.fig_size = vis.full_page
-
-    dist_name = 'r_inner'    
-    sampling_interval = 600
-    linestyle = '-'
-    vis.newFig()
-    sh_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
-    plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
-    
-    pinn_type = 'pinn_a'
-    plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle)
-
-    pinn_type = 'pinn_alc'
-    plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle)
-
-    plt.xlabel("Days Since Insersion")
-    plt.ylabel("Average Acceleration Error")
-    plt.legend()
-    plt.ylim(1E1, 1E4)
-
-    plt.twinx()
-    plot_orbits_as_violins()
-    plt.ylabel("Radius (km)")
-
-    vis.save(plt.gcf(), directory + "regression_error_near_inner_shoemaker.pdf")
-
+    plt.gca().set_prop_cycle(None)
 
 if __name__ == "__main__":
     main()

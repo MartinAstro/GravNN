@@ -43,7 +43,9 @@ def get_default_eros_config():
         "network_type": ["sph_pines_traditional"],
         "custom_input_layer": [None],
         "ref_radius" : [Eros().radius],
-        'seed' : [0]
+        'seed' : [0],
+        'transformer_units' : [20]
+
     }
 
     config = {}

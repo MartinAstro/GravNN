@@ -20,8 +20,11 @@ def main():
     df_file = "Data/Dataframes/no_pinn.data"
 
     df_file = "Data/Dataframes/transformer_wo_annealing.data"
-    df_file = "Data/Dataframes/eros_official_w_noise.data"
 
+    df_file = "Data/Dataframes/eros_official_noise_transformer_no_annealing.data"
+    df_file = "Data/Dataframes/eros_official_noise_transformer_annealing.data"
+
+    df_file = "Data/Dataframes/eros_official_transformer_pinn_40.data"
 
     # df_file = "Data/Dataframes/near_all_data.data"
 

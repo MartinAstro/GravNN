@@ -5,42 +5,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 from sigfig import round
-def remove_rule_lines(table):
-    lines = table.splitlines(True)
-    new_table = []
-    for line in lines:
-        if 'rule' in line:
-            new_line = '\\hline\n'
-        else:
-            new_line = line
-            new_line = new_line.replace('pm', '$\\pm$')
-            new_line = new_line.replace('textcolor', '\\textcolor')
-            new_line = new_line.replace('\{', '{')
-            new_line = new_line.replace('\}', '}')
-            new_line = new_line.replace('\$', '$')
-            new_line = new_line.replace('rt', '\\rt')
-            new_line = new_line.replace('bt', '\\bt')
-            new_line = new_line.replace('gt', '\\gt')
-            new_line = new_line.replace('yt', '\\yt')
-            new_line = new_line.replace('lt', '\\lt')
-            new_line = new_line.replace('mt', '\\mt')
-
-        new_table.append(new_line)
-    return "".join(new_table)
-
-def get_color(value):
-    if value >= 1000:
-        color = r'mt'
-    elif value <1000 and value >= 100:
-        color = r'rt'
-    elif value < 100 and value >= 10:
-        color = r'yt'
-    else:
-        if value < 5:
-            color = r'gt'
-        else:
-            color = r'lt'
-    return color
+from utils import get_color, remove_rule_lines
 
 # convert dataframe into proper string formatting
 def convert_to_formatted_string(df, category):
@@ -72,7 +37,7 @@ def convert_to_formatted_string(df, category):
     str_df = pd.DataFrame(data=[[value]], columns=["%" + str(percent*100)]).set_index(index)
     return str_df
 
-def generate_table(df2, index, category):
+def generate_table(df2, index, category, prefix=""):
     table_df = pd.DataFrame()
     for i in range(len(df2)):
         row = df2.iloc[i]
@@ -88,36 +53,62 @@ def generate_table(df2, index, category):
     table = table_df.to_latex(caption=caption, label=label, column_format=column_format)
     table = remove_rule_lines(table)
 
-    file_name = "Notes/PINN_Asteroid_Journal/Assets/" + category + "_nn_table.tex"
+    file_name = "Notes/PINN_Asteroid_Journal/Assets/" + prefix + category + "_nn_table.tex"
     with open(file_name, 'w') as f:
         f.write(table)
     print(table)
 
 
-
-def main():
-    df = pd.read_pickle("Data/Dataframes/eros_official_w_noise.data")
-    # df = pd.read_pickle("Data/Dataframes/eros_official_w_noise_Rr.data")
-    # df = pd.read_pickle("Data/Dataframes/eros_official_w_noise_trad.data")
-    # df = pd.read_pickle("Data/Dataframes/eros_official_w_noise_transformer.data")
-    #df = pd.read_pickle("Data/Dataframes/eros_official_w_noise_transformer_dropout.data")
-
+def generate_all_tables(df, prefix):
     constraints_as_strings = []
-    for fcn in df['PINN_constraint_fcn']:
+    for i in range(len(df['PINN_constraint_fcn'])):
+        fcn = df['PINN_constraint_fcn'].iloc[i]
+        network_type = df['network_type'].iloc[i]
         name = fcn.__name__
         words = name.split("_")
-        new_name = words[0].upper() + " " + words[1].upper()
+        if 'Transformer' in network_type.__name__:
+            network_name = 'Transformer'
+        else:
+            network_name = "PINN"
+        if words[0].upper() == "NO" and network_name == "PINN":
+            new_name = "PINN 00"
+        elif words[0].upper() == "NO" and network_name == "Transformer":
+            new_name = "Transformer 00"
+        else:
+            new_name = network_name + " " + words[1].upper()
         constraints_as_strings.append(new_name)
     df['PINN_constraint_fcn'] = constraints_as_strings
+
+
+    # df = df[df['PINN_constraint_fcn'] != 'PINN AP']
+    # df = df[df['PINN_constraint_fcn'] != 'PINN APLC']
 
     df = df.sort_values(by=['N_train', 'PINN_constraint_fcn', 'acc_noise'], ascending=[False, True,True])
     index = pd.MultiIndex.from_product([df['N_train'].unique(), df['PINN_constraint_fcn'].unique(), df['acc_noise'].unique()], names=['N', 'Constraint', 'Noise'])
     df2 = df.set_index(index)
 
     # generate_table('surface')
-    generate_table(df2, index, 'surface')
-    generate_table(df2, index, 'interior')
-    generate_table(df2, index, 'exterior')
+    generate_table(df2, index, 'surface', prefix)
+    generate_table(df2, index, 'interior', prefix)
+    generate_table(df2, index, 'exterior', prefix)
+
+def main():
+    df = pd.read_pickle("Data/Dataframes/eros_official_w_noise.data")
+    prefix = "pinn_"
+    generate_all_tables(df, prefix)
+
+    df =  pd.read_pickle("Data/Dataframes/eros_official_noise_transformer_no_annealing.data")
+    prefix = "transformer_"
+    generate_all_tables(df, prefix)
+
+    df = pd.read_pickle("Data/Dataframes/eros_official_noise_transformer_annealing.data")
+    prefix = "annealing_transformer_"
+
+    df = pd.read_pickle("Data/Dataframes/eros_official_transformer_pinn_40.data")
+    prefix = "pinn40_"
+
+    generate_all_tables(df, prefix)
+
 
 if __name__ == '__main__':
     main()

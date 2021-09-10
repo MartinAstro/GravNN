@@ -11,7 +11,7 @@ from GravNN.Preprocessors.UniformScaler import UniformScaler
 from GravNN.Regression.NN import NN
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories import RandomAsteroidDist, EphemerisDist
-from GravNN.Trajectories.utils import generate_near_orbit_trajectories
+from GravNN.Trajectories.utils import generate_near_orbit_trajectories, generate_near_hopper_trajectories
 from script_utils import save_training
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
@@ -141,7 +141,7 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
 
     return transformers
 
-def regress_nn(config, sampling_interval):  
+def regress_nn(config, sampling_interval, include_hoppers=False):  
     print(config['PINN_constraint_fcn'][0])
     planet = Eros()
     model_file = planet.obj_200k
@@ -176,7 +176,7 @@ def regress_nn(config, sampling_interval):
     y_train = []
 
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
-
+    hopper_trajectories = generate_near_hopper_trajectories(sampling_interval)
     plt.figure()
     total_samples = 0
     # For each orbit, train the network
@@ -185,6 +185,14 @@ def regress_nn(config, sampling_interval):
         x, a, u = get_poly_data(
             trajectory, model_file, remove_point_mass=[remove_point_mass]
         )
+
+        if include_hoppers:
+            trajectory = hopper_trajectories[k]
+            x_hop, a_hop, u_hop = get_poly_data(
+                trajectory, model_file, remove_point_mass=[remove_point_mass]
+            )
+            x = np.vstack((x, x_hop))
+            a = np.vstack((a, a_hop))
 
         try:
             for i in range(len(x)):
@@ -208,16 +216,35 @@ def regress_nn(config, sampling_interval):
 def main():
 
     params = {'PINN_constraint_fcn' : ['pinn_alc'], 
-               'epochs' : [7500]}
+              'network_type' : ['sph_pines_transformer'],
+              'epochs' : [7500]}
     config = get_hparams(params)
     config = regress_nn(config, sampling_interval=10*60)
-    save_training("Data/Dataframes/near_all_data_7500.data", config)
+    save_training("Data/Dataframes/near_transformer_data_7500.data", config)
 
-    params = {'PINN_constraint_fcn' : ['pinn_a'], 
+
+    params = {'PINN_constraint_fcn' : ['pinn_alc'], 
+              'network_type' : ['sph_pines_transformer'],
                'epochs' : [7500]}
     config = get_hparams(params)
-    config = regress_nn(config, sampling_interval=10*60)
-    save_training("Data/Dataframes/near_all_data_7500.data", config)
+    config = regress_nn(config, sampling_interval=10*60, include_hoppers=True)
+    save_training("Data/Dataframes/near_transformer_hopper_data_7500.data", config)
+
+    # params = {'PINN_constraint_fcn' : ['pinn_alc'], 
+    #            'epochs' : [7500]}
+    # config = get_hparams(params)
+    # config = regress_nn(config, sampling_interval=10*60)
+    # save_training("Data/Dataframes/near_all_data_7500.data", config)
+
+
+
+    # params = {'PINN_constraint_fcn' : ['pinn_a'], 
+    #            'epochs' : [7500]}
+    # config = get_hparams(params)
+    # config = regress_nn(config, sampling_interval=10*60)
+    # save_training("Data/Dataframes/near_all_data_7500.data", config)
+
+
     plt.show()
 
 if __name__ == "__main__":

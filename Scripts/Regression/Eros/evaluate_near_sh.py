@@ -1,3 +1,4 @@
+from GravNN.Trajectories.SurfaceDist import SurfaceDist
 from GravNN.Trajectories import RandomAsteroidDist
 import matplotlib.pyplot as plt
 import numpy as np
@@ -66,13 +67,9 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
 
 
 
-def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
+def evaluate_sh_suite(trajectory, sampling_interval, dist_name):
     directory = "GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
     planet = Eros()
-    trajectory = RandomAsteroidDist(planet, [
-        min_radius, max_radius], 
-        20000, 
-        planet.obj_200k)
 
     dist_name += "_"+str(sampling_interval)
     models = glob.glob(directory + "BLLS_4*_0*"+str(sampling_interval)+".csv")
@@ -89,20 +86,29 @@ def evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name):
 
 def main():
     planet = Eros()
-    min_radius = planet.radius
-    max_radius = planet.radius * 3
-    dist_name = "r_outer"
-    sampling_interval = 10*60
-    evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
+    # trajectory = RandomAsteroidDist(planet, [
+    #     planet.radius, planet.radius * 3], 
+    #     20000, 
+    #     planet.obj_200k)
+    # dist_name = "r_outer"
+    # sampling_interval = 10*60
+    # evaluate_sh_suite(trajectory, sampling_interval, dist_name)
 
-    min_radius = 0
-    max_radius = planet.radius 
-    dist_name = "r_inner"
-    sampling_interval = 10*60
-    evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
-    # sampling_interval = 1*60
-    # evaluate_sh_suite(min_radius, max_radius, sampling_interval, dist_name)
+    # min_radius = 0
+    # max_radius = planet.radius 
+    # trajectory = RandomAsteroidDist(planet, [
+    #     min_radius, max_radius], 
+    #     20000, 
+    #     planet.obj_200k)
+    # dist_name = "r_inner"
+    # sampling_interval = 10*60
+    # evaluate_sh_suite(trajectory, sampling_interval, dist_name)
 
+
+    trajectory = SurfaceDist(planet, planet.obj_200k)
+    dist_name = "r_surface"
+    sampling_interval = 10*60
+    evaluate_sh_suite(trajectory, sampling_interval, dist_name)
 
 
 if __name__ == "__main__":
