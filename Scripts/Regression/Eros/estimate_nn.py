@@ -214,9 +214,9 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
         # Don't include the hoppers in the sample count because those samples are used to compute the times
         # in the plotting routines.
         if include_hoppers:
-            trajectory = hopper_trajectories[k]
+            hop_trajectory = hopper_trajectories[k]
             x_hop, a_hop, u_hop = get_poly_data(
-                trajectory, planet.obj_200k, remove_point_mass=[False]
+                hop_trajectory, planet.obj_200k, remove_point_mass=[False]
             )
             x_train = np.concatenate((x_train, x_hop))
             y_train = np.concatenate((y_train, a_hop))
@@ -234,12 +234,13 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
         )
         plt.plot(regressor.model.history.history["loss"], label=str(k))
 
-        file_name = "%s/%s/%s_%s_%d.data" % (
+        file_name = "%s/%s/%s/%s/%s/%s/%d.data" % (
             planet.__class__.__name__,
             trajectory.__class__.__name__,
             config["network_type"][0].__name__,
-            "seed_" + str(config["seed"][0]),
+            config["PINN_constraint_fcn"][0].__name__.lower(),
             str(include_hoppers),
+            "seed_" + str(config["seed"][0]),
             total_samples,
         )
         regressor.model.config["PINN_constraint_fcn"] = [
@@ -272,7 +273,7 @@ def main():
     # network_type = 'sph_pines_traditional'
     # estimate(constraint, network_type, num_seeds=5)
 
-    hparams = {"constraint": ["pinn_alc"], "network_type": ["sph_pines_transformer"], 'acc_noise' : [0.1]}
+    hparams = {"PINN_constraint_fcn": ["pinn_alc"], "network_type": ["sph_pines_transformer"], 'acc_noise' : [0.1]}
     estimate(hparams, num_seeds=1, include_hoppers=False)
     estimate(hparams, num_seeds=1, include_hoppers=True)
 
