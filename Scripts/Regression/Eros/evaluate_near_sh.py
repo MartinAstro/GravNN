@@ -11,31 +11,29 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def get_file_info(file_path):
+    directories = os.path.dirname(file_path).split('/')
     model_name = os.path.basename(file_path).split('.')[0]
-    samples = int(model_name.split("_")[3])
-    max_deg = int(model_name.split("_")[1])
-    try: 
-        time = int(model_name.split("_")[4])
-    except:
-        time = None
-    return samples, max_deg, time
+    samples = int(model_name)
+    max_deg_dir = directories[-3]
+    max_deg = int(max_deg_dir.split("_")[1])
+    return samples, max_deg
 
-def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
+def evaluate_sh(planet, N, trajectory, dist_name, sampling_interval, hoppers=False):
+    
+    models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/**/%s/*.csv" % (N, str(hoppers)))
     x, a_true, u = get_poly_data(trajectory, planet.obj_200k, point_mass_removed=[False])
 
     sample_list = np.array([])
     error_list = np.array([])
-    time_list = np.array([])
 
     models.sort()
     for model in models:
-        samples, max_deg, time = get_file_info(model)
+        samples, max_deg = get_file_info(model)
         x, a, u = get_sh_data(trajectory, model, max_deg=max_deg, deg_removed=-1,override=[True])
         a_error = np.linalg.norm(a - a_true, axis=1)/np.linalg.norm(a_true,axis=1)*100
 
         sample_list = np.hstack((sample_list, samples))
         error_list = np.hstack((error_list, np.average(a_error)))
-        time_list = np.hstack((time_list, time))
 
     # Sort models based on cumulative sample count
     idx = np.argsort(sample_list)
@@ -50,66 +48,51 @@ def evaluate_sh(planet, models, trajectory, dist_name, sampling_interval):
     plt.ylabel("Average Acceleration Error")
     plt.ylim(1E0, np.max(error_list))
 
-    # file_name = "GravNN/Files/GravityModels/Regressed/Eros/true.csv"
-    # x, a, u = get_sh_data(trajectory, file_name, max_deg=4, deg_removed=-1, override=[True])
-    # a_error = np.linalg.norm(a - a_true)/np.linalg.norm(a_true)*100
-
     directory = os.path.abspath('.') + "/Plots/Asteroid/Regression/"
     os.makedirs(directory, exist_ok=True)
     vis.save(plt.gcf(), directory + "sh_error_near_shoemaker_"+ str(max_deg) + "_" + dist_name + ".pdf")
 
-    data_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
+    data_directory = os.path.dirname(models[-1]) + "/Data"
     os.makedirs(data_directory,exist_ok=True)
-    with open(data_directory + "sh_estimate_" + dist_name + "_" + str(max_deg) + ".data", 'wb') as f:
+    with open(data_directory + "/sh_estimate_" + dist_name + ".data", 'wb') as f:
         pickle.dump(sample_list, f)
         pickle.dump(error_list, f)
 
-
-
-
-def evaluate_sh_suite(trajectory, sampling_interval, dist_name):
-    directory = "GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
+def evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers):
     planet = Eros()
-
     dist_name += "_"+str(sampling_interval)
-    models = glob.glob(directory + "BLLS_4*_0*"+str(sampling_interval)+".csv")
-    evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
-
-    models = glob.glob(directory + "BLLS_8*_0*"+str(sampling_interval)+".csv")
-    evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
-
-    models = glob.glob(directory + "BLLS_16*_0*"+str(sampling_interval)+".csv")
-    evaluate_sh(planet, models, trajectory, dist_name, sampling_interval)
-
-    plt.show()
-
+    evaluate_sh(planet, 4, trajectory, dist_name, sampling_interval, hoppers)
+    evaluate_sh(planet, 8, trajectory, dist_name, sampling_interval, hoppers)
+    evaluate_sh(planet, 16, trajectory, dist_name, sampling_interval, hoppers)
 
 def main():
     planet = Eros()
-    # trajectory = RandomAsteroidDist(planet, [
-    #     planet.radius, planet.radius * 3], 
-    #     20000, 
-    #     planet.obj_200k)
-    # dist_name = "r_outer"
-    # sampling_interval = 10*60
-    # evaluate_sh_suite(trajectory, sampling_interval, dist_name)
+    hoppers = False
+    trajectory = RandomAsteroidDist(planet, [
+        planet.radius, planet.radius * 3], 
+        20000, 
+        planet.obj_200k)
+    dist_name = "r_outer"
+    sampling_interval = 10*60
+    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
 
-    # min_radius = 0
-    # max_radius = planet.radius 
-    # trajectory = RandomAsteroidDist(planet, [
-    #     min_radius, max_radius], 
-    #     20000, 
-    #     planet.obj_200k)
-    # dist_name = "r_inner"
-    # sampling_interval = 10*60
-    # evaluate_sh_suite(trajectory, sampling_interval, dist_name)
+    min_radius = 0
+    max_radius = planet.radius 
+    trajectory = RandomAsteroidDist(planet, [
+        min_radius, max_radius], 
+        20000, 
+        planet.obj_200k)
+    dist_name = "r_inner"
+    sampling_interval = 10*60
+    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
 
 
     trajectory = SurfaceDist(planet, planet.obj_200k)
     dist_name = "r_surface"
     sampling_interval = 10*60
-    evaluate_sh_suite(trajectory, sampling_interval, dist_name)
+    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
 
+    plt.show()
 
 if __name__ == "__main__":
     main()

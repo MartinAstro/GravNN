@@ -5,7 +5,7 @@ from GravNN.Regression.utils import format_coefficients, populate_removed_degree
 from GravNN.Trajectories import RandomAsteroidDist, DHGridDist, EphemerisDist
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
-from GravNN.Trajectories.utils import generate_near_orbit_trajectories
+from GravNN.Trajectories.utils import generate_near_hopper_trajectories, generate_near_orbit_trajectories
 from GravNN.Support.ProgressBar import ProgressBar
 import matplotlib.pyplot as plt
 
@@ -32,22 +32,30 @@ def plot_coef_history(t_hist, x_hat_hist, remove_deg, start_idx=0):
                 m = 0
 
 
-def BLLS_SH(regress_deg, remove_deg, sampling_interval):
+def preprocess_data(x_dumb, a_dumb, acc_noise):
+
+    x_dumb = np.array(x_dumb)
+    a_dumb = np.array(a_dumb)
+
+    # (Optionally) Add noise
+    a_mag = np.linalg.norm(a_dumb, axis=1).reshape(len(a_dumb), 1)
+    a_unit = np.random.uniform(-1, 1, size=np.shape(a_dumb))
+    a_unit = a_unit / np.linalg.norm(a_unit, axis=1).reshape(len(a_unit), 1)
+    a_error = acc_noise * a_mag * a_unit  # 10% of the true magnitude
+    a_dumb = a_dumb + a_error
+
+    return x_dumb, a_dumb
+
+def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
     # This has the true SH coef of Eros -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Eros()
-    model_file = planet.model_data
-    model_file = planet.model_7790
-    directory = os.path.curdir + "/GravNN/Files/GravityModels/RegressedRealModel/"
-    
-    # planet.radius = planet.physical_radius
     model_file = planet.obj_200k
-    directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/"
 
     N = regress_deg  
     M = remove_deg 
 
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
-
+    hopper_trajectories = generate_near_hopper_trajectories(sampling_inteval=sampling_interval)
     # Initialize the regressor
     regressor = BLLS(N, planet, M)
 
@@ -55,51 +63,77 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval):
     x_hat_hist = []
     t_hist = []
 
-    r_batch = np.array([]).reshape(0,3)
-    a_batch = np.array([]).reshape(0,3)
+    x_train = []
+    y_train = []
 
+    total_samples = 0
+    hopper_samples = 0
     remove_point_mass = False if M == -1 else True
     pbar = ProgressBar(len(trajectories), enable=True)
 
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
-        r, a, u = get_poly_data(
+        x, a, u = get_poly_data(
             trajectory,
             model_file,
             remove_point_mass=[remove_point_mass],
             override=[False],
         )
+        try:
+            for i in range(len(x)):
+                x_train.append(x[i])
+                y_train.append(a[i])
+        except:
+            x_train = np.concatenate((x_train, x))
+            y_train = np.concatenate((y_train, a))
 
-        r_batch = np.vstack((r_batch, r))
-        a_batch = np.vstack((a_batch, a))
-        
-        x_hat = regressor.update(r_batch, a_batch)
+
+        # Don't include the hoppers in the sample count because those samples are used to compute the times
+        # in the plotting routines.
+        if include_hoppers:
+            hop_trajectory = hopper_trajectories[k]
+            x_hop, a_hop, u_hop = get_poly_data(
+                hop_trajectory, planet.obj_200k, remove_point_mass=[False]
+            )
+            hopper_samples += len(x_hop)
+            x_train = np.concatenate((x_train, x_hop))
+            y_train = np.concatenate((y_train, a_hop))
+       
+
+        total_samples = len(x_train) - hopper_samples
+
+        x_train_sample, y_train_sample = preprocess_data(x_train, y_train, acc_noise=0.1)
+
+        x_hat = regressor.update(x_train_sample, y_train_sample)
         x_hat_hist.append(x_hat)
         t_hist.append(trajectory.times)
         time = trajectory.times[0]
   
         pbar.update(k)
         C_lm, S_lm = format_coefficients(x_hat, N, M)
-        file_name = "%s/%s/BLLS/BLLS_%d_%d_%d_%d_%d.csv" % (
+        file_name = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/%s/%s/BLLS/N_%d/M_%d/%s/%d.csv" % (
             planet.__class__.__name__,
             trajectory.__class__.__name__,
             N,
             M,
-            len(r_batch),
-            time,
-            sampling_interval
+            str(include_hoppers),
+            total_samples
         )
-        save(directory + file_name, planet, C_lm, S_lm)
+        save(file_name, planet, C_lm, S_lm)
     plot_coef_history(t_hist, x_hat_hist, M, start_idx=0)
     
     #plt.show()
 
 
 def main():
-    # 10 minute sample interval
-    BLLS_SH(4, -1, 10*60)
-    BLLS_SH(8, -1, 10*60)
-    BLLS_SH(16, -1, 10*60)
+    # # 10 minute sample interval
+    # BLLS_SH(4, 0, 10*60, include_hoppers=True)
+    # BLLS_SH(8, 0, 10*60, include_hoppers=True)
+    # BLLS_SH(16, 0, 10*60, include_hoppers=True)
+
+    BLLS_SH(4, 0, 10*60, include_hoppers=False)
+    BLLS_SH(8, 0, 10*60, include_hoppers=False)
+    BLLS_SH(16, 0, 10*60, include_hoppers=False)
 
     # 1 minute sample interval
     # BLLS_SH(4, 0, 1*60)

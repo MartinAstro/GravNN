@@ -196,6 +196,7 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
 
     plt.figure()
     total_samples = 0
+    hopper_samples = 0
     # For each orbit, train the network
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
@@ -209,7 +210,6 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
             x_train = np.concatenate((x_train, x))
             y_train = np.concatenate((y_train, a))
 
-        total_samples += len(x_train)
 
         # Don't include the hoppers in the sample count because those samples are used to compute the times
         # in the plotting routines.
@@ -218,8 +218,12 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
             x_hop, a_hop, u_hop = get_poly_data(
                 hop_trajectory, planet.obj_200k, remove_point_mass=[False]
             )
+            hopper_samples += len(x_hop)
             x_train = np.concatenate((x_train, x_hop))
             y_train = np.concatenate((y_train, a_hop))
+
+        total_samples = len(x_train) - hopper_samples
+
 
         x_train_sample = x_train
         y_train_sample = y_train
@@ -273,9 +277,12 @@ def main():
     # network_type = 'sph_pines_traditional'
     # estimate(constraint, network_type, num_seeds=5)
 
-    hparams = {"PINN_constraint_fcn": ["pinn_alc"], "network_type": ["sph_pines_transformer"], 'acc_noise' : [0.1]}
+    hparams = {"PINN_constraint_fcn": ["pinn_alc"], 
+    "network_type": ["sph_pines_transformer"], 
+    'acc_noise' : [0.1],
+    'learning_rate' : [0.001]}
     estimate(hparams, num_seeds=1, include_hoppers=False)
-    estimate(hparams, num_seeds=1, include_hoppers=True)
+    #estimate(hparams, num_seeds=1, include_hoppers=True)
 
 
 if __name__ == "__main__":

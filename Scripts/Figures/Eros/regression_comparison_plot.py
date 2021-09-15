@@ -10,12 +10,14 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Trajectories.utils import generate_near_orbit_trajectories
+from GravNN.Trajectories.utils import generate_near_orbit_trajectories, generate_near_hopper_trajectories
 from GravNN.Support.transformations import cart2sph
 def get_sh_file_info(file_path):
     model_name = os.path.basename(file_path).split('.')[0]
+    directories = os.path.dirname(file_path).split('/')
     sampling_interval = int(model_name.split("_")[4])
-    max_deg = int(model_name.split("_")[5])
+    max_deg_dir = directories[-4]
+    max_deg = int(max_deg_dir.split("_")[1])
     return sampling_interval, max_deg
 
 def get_nn_file_info(file_path):
@@ -39,28 +41,27 @@ def compute_confidence_interval_and_average(y):
     ci = 1.96 * std_y/avg_y
     return ci, avg_y
 
-def plot_orbits_as_violins():
-    trajectories = generate_near_orbit_trajectories(10*60)
+def plot_orbits_as_violins(trajectories, near_trajectories, color='black'):
     radial_dists = []
     orbit_start_times = []
-    t0 = trajectories[0].times[0]
-    for trajectory in trajectories:
-        x = cart2sph(trajectory.positions)
+    t0 = near_trajectories[0].times[0]
+    for i in range(0,len(trajectories)):
+        x = cart2sph(trajectories[i].positions)
         r = x[:,0]
-        t = trajectory.times
+        t = near_trajectories[i].times
         radial_dists.append(r/1000)
         orbit_start_times.append((t[0]-t0)/86400)
     
     bodies = plt.violinplot(radial_dists, positions=orbit_start_times, widths=10)
     for pc in bodies['bodies']:
-        pc.set_color('black')
-    bodies['cmaxes'].set_color('black')
-    bodies['cmins'].set_color('black')
-    bodies['cbars'].set_color('black')
+        pc.set_color(color)
+    bodies['cmaxes'].set_color(color)
+    bodies['cmins'].set_color(color)
+    bodies['cbars'].set_color(color)
     # bodies.set_color('black')
 
 def plot_sh_error(data_directory, dist_name, sampling_interval, linestyle):
-    files = glob.glob(data_directory + "sh_estimate_"+ dist_name + "_" + str(sampling_interval) + "_*.data")
+    files = glob.glob(data_directory + "Data/sh_estimate_"+ dist_name + "*.data")
     files.sort()
     for file in files:
         sampling_interval, max_deg = get_sh_file_info(file)
@@ -69,8 +70,11 @@ def plot_sh_error(data_directory, dist_name, sampling_interval, linestyle):
             sh_errors = pickle.load(f)
         plt.semilogy(sh_samples*sampling_interval/86400, sh_errors, label='SH ' + str(max_deg), linestyle=linestyle)
 
-def plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle):
-    data_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/" + pinn_type +  "/**/nn_estimate_"+ dist_name + "_" + str(sampling_interval) + "*.data"
+def plot_nn_error(network_type, pinn_type, hoppers, dist_name, sampling_interval, linestyle):
+    data_directory = os.path.abspath('.') + \
+        "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/" \
+            "%s/%s/%s/**/Data/nn_estimate_%s_%d*.data" % \
+        (network_type, pinn_type, str(hoppers) ,dist_name, sampling_interval)
     files = glob.glob(data_directory)
     nn_samples = []
     nn_errors = []
@@ -86,6 +90,19 @@ def plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle):
     plt.gca().fill_between(nn_samples[0]*sampling_interval/86400, (avg_y-ci), (avg_y+ci), alpha=.1)
 
 
+def plot_error(dist_name, hoppers, linestyle):
+    sampling_interval = 600
+    sh_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/**/**/%s/" % str(hoppers)
+    plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
+
+    network_type = "SphericalPinesTransformerNet"
+    # pinn_type = 'pinn_a'
+    # plot_nn_error(network_type, pinn_type, hoppers, dist_name, sampling_interval, linestyle)
+
+    pinn_type = 'pinn_alc'
+    plot_nn_error(network_type, pinn_type, hoppers,  dist_name, sampling_interval, linestyle)
+    plt.gca().set_prop_cycle(None)
+
 
 def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/Regression/"
@@ -96,16 +113,19 @@ def main():
     vis.fig_size = vis.full_page
     vis.newFig()
 
-    plot_error("r_outer", '-')
-    plot_error("r_inner", '--')
-    plot_error("r_surface", ':')
+    hoppers=False
+
+    plot_error("r_outer", hoppers, '-')
+    plot_error("r_inner", hoppers, '--')
+    plot_error("r_surface", hoppers, ':')
     
-    plt.xlabel("Days Since Insersion")
+    plt.xlabel("Days Since Insertion")
     plt.ylabel("Average Acceleration Error")
-    plt.ylim(5E-1, 1E2)
+    plt.ylim(1E-1, 1E3)
 
     lines = plt.gca().get_lines()
-    legend1 = plt.legend(handles=lines[0:5],loc='upper left')
+    # TODO: change index if you include pinn_a
+    legend1 = plt.legend(handles=lines[0:4],loc='upper left')
 
     exterior_line = mlines.Line2D([], [], color='black', marker='',
                             markersize=15, linestyle='-', label='Exterior')
@@ -113,37 +133,26 @@ def main():
                             markersize=15, linestyle='--', label='Interior')
     surface_line = mlines.Line2D([], [], color='black', marker='',
                             markersize=15, linestyle=':', label='Surface')
-    plt.legend(handles=[exterior_line, interior_line, surface_line])
+    plt.legend(handles=[exterior_line, interior_line, surface_line], loc='upper right')
     plt.gca().add_artist(legend1)
 
 
     plt.twinx()
-    plot_orbits_as_violins()
+    near_trajectories = generate_near_orbit_trajectories(60*10)
+    hopper_trajectories = generate_near_hopper_trajectories(60*10)
+    plot_orbits_as_violins(near_trajectories, near_trajectories, color='black')
+    if hoppers: 
+        plot_orbits_as_violins(hopper_trajectories, near_trajectories, color='magenta')
+
     plt.ylabel("Radius (km)")
 
 
-    vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
 
-    # dist_name = 'r_outer'    
-    # sampling_interval = 60
-    # linestyle = '--'
-    # plot_regression_error(data_directory, dist_name, sampling_interval, linestyle)
-
-
+    vis.save(plt.gcf(), directory + "transformer_regression_error_near_shoemaker_%s.pdf" % str(hoppers))
+    # vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
+    
     plt.show()
 
-
-def plot_error(dist_name, linestyle):
-    sampling_interval = 600
-    sh_directory = os.path.abspath('.') + "/GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/"
-    plot_sh_error(sh_directory, dist_name, sampling_interval, linestyle)
-
-    pinn_type = 'pinn_a'
-    plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle)
-
-    pinn_type = 'pinn_alc'
-    plot_nn_error(pinn_type, dist_name, sampling_interval, linestyle)
-    plt.gca().set_prop_cycle(None)
 
 if __name__ == "__main__":
     main()

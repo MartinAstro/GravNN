@@ -8,7 +8,7 @@ def main():
     planet = Eros()
     config = get_default_eros_config()
     max_deg = 4
-    remove_deg = -1
+    remove_deg = 0
     for N_train in [2500, 2500//2, 2500//4]:
         for noise in [0.0, 0.1, 0.2]:
             for max_deg in [4, 8, 16]:
