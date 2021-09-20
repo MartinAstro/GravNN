@@ -61,7 +61,7 @@ class DataVisualization(VisualizationBase):
         # plt.gca().yaxis.set_label_position('right')
         plt.ylabel(ylabel2)
 
-    def plot_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0, plot_truth=True):
+    def plot_residuals(self, x, y, y_pred, label='Pred', ylabel=None, title=None, vlines=None, vline_labels=None, percent=False, alpha=1.0):
         if percent:
             diff = np.linalg.norm(y-y_pred, axis=1)
             # diff = y - y_pred

@@ -1,4 +1,6 @@
 import pandas as pd
+import plotly.io as pio
+pio.kaleido.scope.mathjax = None
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
@@ -132,9 +134,10 @@ def main():
     # fig = go.Figure()
     # model_types = np.unique(sub_df.index.get_level_values(2).to_numpy())
     # x = sub_df.index.get_level_values(1).to_numpy() # Groups the box-plots into natural clusters
-    for distribution in ['exterior', 'interior', 'surface']:
+    # for distribution in ['exterior', 'interior', 'surface']:
+    for distribution in ['surface']:
         fig = make_subplots(rows=3,cols=1, shared_xaxes=False, subplot_titles=("Noise: 0%", "Noise: 10%", "Noise: 20%"))
-        sub_df = df[(slice(0.0))]
+        sub_df = df.loc[0.0]
         num_models = len(sub_df)
         step = 1
         for i in range(0, num_models, step):
@@ -143,50 +146,50 @@ def main():
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
-                                x=np.repeat("N=" + str(row.name[1]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[2]), 
-                                name=row.name[2], 
-                                offsetgroup=str(row.name[2]),
-                                marker_color=get_color(row.name[2]), 
+                                x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
+                                legendgroup=get_legend_group(row.name[1]), 
+                                name=row.name[1], 
+                                offsetgroup=str(row.name[1]),
+                                marker_color=get_color(row.name[1]), 
                                 marker_size=2,
                                 showlegend=showlegend)
                         , row=1, col=1
                         )
-
-        sub_df = df[(slice(0.1))]
+            print(i)
+        sub_df = df.loc[0.1]
         for i in range(0, num_models, step):
             row = sub_df.iloc[i]
             showlegend = True if i < 13 else False
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
-                                x=np.repeat("N=" + str(row.name[1]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[2]), 
-                                name=row.name[2], 
-                                offsetgroup=str(row.name[2]),
-                                marker_color=get_color(row.name[2]), 
+                                x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
+                                legendgroup=get_legend_group(row.name[1]), 
+                                name=row.name[1], 
+                                offsetgroup=str(row.name[1]),
+                                marker_color=get_color(row.name[1]), 
                                 marker_size=2,
                                 showlegend=False)
                         , row=2, col=1
                         )
-
-        sub_df = df[(slice(0.2))]
+            print(i)
+        sub_df = df.loc[0.2]
         for i in range(0, num_models, step):
             row = sub_df.iloc[i]
             showlegend = True if i < 13 else False
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
-                                x=np.repeat("N=" + str(row.name[1]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[2]), 
-                                name=row.name[2], 
-                                offsetgroup=str(row.name[2]),
-                                marker_color=get_color(row.name[2]),
+                                x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
+                                legendgroup=get_legend_group(row.name[1]), 
+                                name=row.name[1], 
+                                offsetgroup=str(row.name[1]),
+                                marker_color=get_color(row.name[1]),
                                 marker_size=2, 
                                 showlegend=False)
                         , row=3, col=1
                         )
-
+            print(i)
 
         fig.update_yaxes({'type' : "log",
                         'linecolor' : 'black',
@@ -219,11 +222,11 @@ def main():
             font={'family' : 'serif',
             })
         
-
+        print("Plotting Image")
         
 
-        fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + ".pdf")
-    fig.show()
+        fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + ".pdf", engine='orca', validate=False)
+    #fig.show()
 
 if __name__ == '__main__':
     main()

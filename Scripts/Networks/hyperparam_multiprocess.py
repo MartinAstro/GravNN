@@ -54,7 +54,11 @@ def main():
 
     df_file = "Data/Dataframes/eros_official_transformer_pinn_40.data"
 
-    threads = 2
+
+    df_file = "Data/Dataframes/eros_altitude_revisited.data"
+
+
+    threads = 4
     config = get_default_eros_config()
     # config = get_default_bennu_config()
     #config = get_prototype_toutatis_config()
@@ -67,18 +71,24 @@ def main():
     hparams = {
         # "grav_file": [Bennu().stl_200k],
         "grav_file" : [Eros().obj_200k],
+        "radius_max" : [Eros().radius * 3],
+        "radius_min" : [Eros().radius * 2, 0],
+        "N_train" : [2500],
+        "acc_noise" : [0.0, 0.2],
+        "network_type" : ['sph_pines_traditional'],
+
         # "N_dist": [50000],
 
         
-        "N_train": [2500, 2500//2, 2500//4],
-        "PINN_constraint_fcn": ['pinn_alc'],
-        "acc_noise" : [0.0, 0.1, 0.2], # percent
-        'seed' : [0],#,1,2,3,4],
-        # "network_type" :['sph_pines_traditional'],
-        "network_type" : ['sph_pines_transformer', 'sph_pines_traditional'],
-        'transformer_units' : [40], 
-        "num_units": [40],
-        "lr_anneal" : [False],
+        #"N_train": [2500, 2500//2, 2500//4],
+        #"PINN_constraint_fcn": ['pinn_alc'],
+        # "acc_noise" : [0.0, 0.1, 0.2], # percent
+        # 'seed' : [0],#,1,2,3,4],
+        # # "network_type" :['sph_pines_traditional'],
+        # "network_type" : ['sph_pines_transformer', 'sph_pines_traditional'],
+        # 'transformer_units' : [40], 
+        # "num_units": [40],
+        # "lr_anneal" : [False],
 
         # "PINN_constraint_fcn": [ "pinn_a"],
         # "acc_noise" : [0.0], # percent
@@ -113,21 +123,6 @@ def main():
         "override" : [False]
     }
 
-    # traj_params = {
-    #     "N_train": [40000],
-    #     "N_val": [5000],
-    #     "custom_data_fcn" : [single_near_trajectory]
-    #     # "distribution" : [EphemerisDist],
-    #     # "source" : ["NEAR"],
-    #     # "target" : ["EROS"],
-    #     # "frame" : ["EROS_FIXED"],
-    #     # "start_time" : ["Feb 24, 2000"],
-    #     # "end_time" : ["Feb 06, 2001"],
-    #     # "sampling_interval" : [10*60],
-    #     # "celestial_body" : [Eros()],
-    # }
-    # hparams.update(traj_params)
-
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
@@ -152,8 +147,12 @@ def run(config_original, hparams):
 
     tf = configure_tensorflow()
     mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
-    np.random.seed(hparams['seed'])
-    tf.random.set_seed(hparams['seed'])
+    try:
+        np.random.seed(hparams['seed'])
+        tf.random.set_seed(hparams['seed'])
+    except:
+        np.random.seed(config_original['seed'][0])
+        tf.random.set_seed(config_original['seed'][0])
     #tf.config.run_functions_eagerly(True)
     tf.keras.backend.clear_session()
 
