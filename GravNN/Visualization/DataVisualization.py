@@ -85,7 +85,7 @@ class DataVisualization(VisualizationBase):
                 if vline_labels is not None:
                     x_data = line.get_xdata()
                     y_data = line.get_ydata()
-                    plt.annotate(vline_labels[i], xy=(x_data[-1], (ax.viewLim.ymax - ax.viewLim.ymin) / 3.0) + ax.viewLim.ymin, rotation='vertical', c=line.get_color(), textcoords='data')
+                    plt.annotate(vline_labels[i], xy=(x_data[-1], 10**((np.log10(ax.viewLim.ymax) - np.log10(ax.viewLim.ymin)) / 3.0) + np.log10(ax.viewLim.ymin)), rotation='vertical', c=line.get_color(), textcoords='data')
                 i += 1
 
 

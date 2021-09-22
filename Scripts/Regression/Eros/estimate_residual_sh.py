@@ -54,9 +54,9 @@ def main():
             config["extra_distribution"] = [RandomAsteroidDist]
             config["extra_radius_min"] = [0]
             config["extra_radius_max"] = [Eros().radius*2]
-            config["extra_N_dist"] = [50000]
+            config["extra_N_dist"] = [1000]
             config["extra_N_train"] = [250]
-            config["extra_N_val"] = [5000]
+            config["extra_N_val"] = [500]
 
             dataset, _, _ = get_preprocessed_data(config)
             C_lm, S_lm = compute_coefficients(dataset, max_deg, planet)

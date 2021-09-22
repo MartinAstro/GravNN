@@ -66,7 +66,6 @@ def get_eros_r_star_config(multiplier=1):
 
 
 def get_eros_r_bar_config(multiplier=1):
-    config = get_default_eros_config()
     modifications = {
         "N_train": [2500 * multiplier],
         "N_val": [1500 * multiplier],
@@ -75,8 +74,7 @@ def get_eros_r_bar_config(multiplier=1):
         "extra_distribution": [RandomAsteroidDist],
         "extra_radius_min": [0],
         "extra_radius_max": [Eros().radius + 5000.0],
-        "extra_N_dist": [50000],
+        "extra_N_dist": [1000],
         "extra_N_train": [250 * multiplier],
-        "extra_N_val": [5000],
+        "extra_N_val": [500],
     }
-    config.update(modifications)

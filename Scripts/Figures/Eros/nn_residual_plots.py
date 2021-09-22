@@ -40,10 +40,23 @@ def plot_moving_average(x, y, y_pred, percent=True, color='black'):
 
 def main():
 
-    # df = pd.read_pickle("Data/Dataframes/useless_070621_v4.data")
-    df = pd.read_pickle("Data/Dataframes/eros_altitude_revisited.data")
-    # sh_regress_files = ['GravNN/Files/GravityModels/Regressed/BLLS/0_3R_None_0.0.csv', 
-    #                     'GravNN/Files/GravityModels/Regressed/BLLS/0_3R_None_0.2.csv']
+    df = pd.read_pickle("Data/Dataframes/eros_residual_r.data")
+    sh_regress_files = ['0R_3R/N_4_Noise_0.00.csv', 
+                        '0R_3R/N_4_Noise_0.20.csv',
+                        '0R_3R/N_16_Noise_0.00.csv', 
+                        '0R_3R/N_16_Noise_0.20.csv']
+
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r_bar.data")
+    # sh_regress_files = ['2R_3R_Plus/N_4_Noise_0.00.csv', 
+    #                     '2R_3R_Plus/N_4_Noise_0.20.csv',
+    #                     '2R_3R_Plus/N_16_Noise_0.00.csv', 
+    #                     '2R_3R_Plus/N_16_Noise_0.20.csv']
+
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r_star.data")
+    # sh_regress_files = ['2R_3R/N_4_Noise_0.00.csv', 
+    #                     '2R_3R/N_4_Noise_0.20.csv',
+    #                     '2R_3R/N_16_Noise_0.00.csv', 
+    #                     '2R_3R/N_16_Noise_0.20.csv']
 
     data_vis = DataVisSuite(halt_formatting=False)
     data_vis.fig_size = data_vis.tri_vert_page
@@ -67,12 +80,13 @@ def main():
 
     # Plot training distribution
     overlay_hist(x_sph_train,twinx=False)
+    plt.grid(False)
     plt.gca().twinx()
-    
-
+    plt.grid(True, which='both')
+    plt.gca().set_axisbelow(True)
     # Plot PINN Error
     marker_list = ['v', '.', 's']
-    color_list = ['black', 'gray', 'light gray']
+    color_list = ['black', 'gray']
     for i in range(len(df['id'].values)):
         model_id = df['id'].values[i]
         config, model = load_config_and_model(model_id, df)
@@ -88,31 +102,38 @@ def main():
 
     # Plot SH Error
     marker_list = ['v', '.', 's']
-    color_list = ['black', 'gray', 'light gray']
+    color_list = ['magenta', 'yellow', 'cyan', 'pink']
     for i in range(len(sh_regress_files)):
-        sh_file = sh_regress_files[i]
-        regressed_gm = SphericalHarmonics(planet, sh_file, degree=4, trajectory=test_trajectory).load(override=True)
+        sh_file = 'GravNN/Files/GravityModels/Regressed/Eros/Residual/' + sh_regress_files[i]
+        degree = int(os.path.basename(sh_file).split("N_")[1].split("_")[0])
+        regressed_gm = SphericalHarmonics(sh_file, degree, trajectory=test_trajectory).load(override=True)
 
         a_pred = regressed_gm.accelerations
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
-        acc_noise = str(os.path.basename(sh_file).split("_")[-1])
-        label = "SH %s" % acc_noise
+        acc_noise = float(os.path.basename(sh_file).split("_")[-1].split(".csv")[0])
+        label = "SH %d %.1f" % (degree, acc_noise)
         data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, 
                                 alpha=0.5,label=label, 
                                 ylabel='Acceleration')
         plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i])
 
+    plt.gca().set_yscale('log')
+    plt.gca().set_ylim([1E-2, 5E2])
+    plt.gca().set_xlim([-1000, 51000])
+    plt.legend(loc='lower left')
+
     data_vis.plot_radii(x_sph[:,0], 
                         vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], 
                         vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
+
 
     directory = os.path.abspath(".") + "/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
 
     file_name = "%s_%s_%s_Residual.png" %(
-        str(np.round(config["radius_min"][0], 2)),
-        str(np.round(config["radius_max"][0], 2)),
+        str(int(np.round(config["radius_min"][0], 2))),
+        str(int(np.round(config["radius_max"][0], 2))),
         str(config.get('extra_N_train', [None])[0]))
     
     data_vis.save(plt.gcf(), directory+file_name)
