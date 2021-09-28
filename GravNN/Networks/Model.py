@@ -7,7 +7,7 @@ import pandas as pd
 import tensorflow as tf
 
 from GravNN.Networks import utils
-from GravNN.Networks.Constraints import no_pinn, pinn_A, pinn_AL, pinn_ALC, pinn_A_sph
+from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
 
 
@@ -74,36 +74,39 @@ class CustomModel(tf.keras.Model):
         Returns:
             dict: dictionary of metrics passed to the callback.
         """
-        x, y = data
-        with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=True)
-            loss_components = self.compute_loss_components(y_hat, y)
-            updated_loss_components = self.scale_loss(
-                loss_components, self.adaptive_constant
+        with tf.xla.experimental.jit_scope(
+            compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
+
+            x, y = data
+            with tf.GradientTape(persistent=True) as tape:
+                y_hat = self(x, training=True)
+                loss_components = self.compute_loss_components(y_hat, y)
+                updated_loss_components = self.scale_loss(
+                    loss_components, self.adaptive_constant
+                )
+                loss = tf.reduce_sum(tf.stack(updated_loss_components))
+                loss = self.optimizer.get_scaled_loss(loss)
+
+            # calculate new adaptive constant
+            adaptive_constant = self.calc_adaptive_constant(
+                tape,
+                updated_loss_components,
+                self.adaptive_constant,
+                self.beta,
+                self.trainable_weights,
             )
-            loss = tf.reduce_sum(tf.stack(updated_loss_components))
-            loss = self.optimizer.get_scaled_loss(loss)
 
-        # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(
-            tape,
-            updated_loss_components,
-            self.adaptive_constant,
-            self.beta,
-            self.trainable_weights,
-        )
+            # # These lines are needed if using the gradient callback.
+            # grad_comp_list = []
+            # for loss_comp in updated_loss_components:
+            #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
+            #     grad_comp_list.append(gradient_components)
 
-        # # These lines are needed if using the gradient callback.
-        # grad_comp_list = []
-        # for loss_comp in updated_loss_components:
-        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-        #     grad_comp_list.append(gradient_components)
+            gradients = tape.gradient(loss, self.network.trainable_variables)
+            gradients = self.optimizer.get_unscaled_gradients(gradients)
+            del tape
 
-        gradients = tape.gradient(loss, self.network.trainable_variables)
-        gradients = self.optimizer.get_unscaled_gradients(gradients)
-        del tape
-
-        self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
         return {
             "loss": loss,
@@ -380,7 +383,7 @@ class CustomModel(tf.keras.Model):
         """Method responsible for timestamping the network, adding the training history to the configuration dictionary,
         and formatting other variables into the configuration dictionary.
         """
-        timestamp = pd.Timestamp(time.time(), unit="s").round("s").ctime()
+        timestamp = pd.Timestamp(time.time(), unit="s").round("ms").ctime()
         self.directory = (
             os.path.abspath(".")
             + "/Data/Networks/"
@@ -411,6 +414,7 @@ class CustomModel(tf.keras.Model):
             be appended or the loaded dataframe itself. Defaults to None.
         """
         # add final entries to config dictionary
+        #time.sleep(np.random.randint(0,5)) # Make the process sleep with hopes that it decreases the likelihood that two networks save at the same time TODO: make this a lock instead.
         self.prep_save()
 
         # convert to dataframe

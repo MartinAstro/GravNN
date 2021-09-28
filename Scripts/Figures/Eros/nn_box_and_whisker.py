@@ -10,6 +10,10 @@ from GravNN.Trajectories import RandomAsteroidDist, SurfaceDist
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.CelestialBodies.Asteroids import Eros
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+
 planet = Eros()
 model_file = planet.obj_200k
 interior_bound = planet.radius
@@ -225,7 +229,12 @@ def main():
         print("Plotting Image")
         
 
-        fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + ".pdf", engine='orca', validate=False)
+
+        app = dash.Dash()
+        app.layout = html.Div([dcc.Graph(figure=fig, config={'staticPlot':True})])
+        app.run_server(debug=False, use_reloader=False)
+
+        # fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + ".pdf", engine='orca', validate=False)
     #fig.show()
 
 if __name__ == '__main__':

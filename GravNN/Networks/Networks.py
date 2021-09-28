@@ -1,5 +1,6 @@
 from GravNN.Networks.Layers import (
     Cart2SphLayer,
+    PinesSph2NetRefLayer,
     Sph2NetLayer,
     PinesSph2NetLayer,
     Cart2PinesSphLayer,
@@ -189,7 +190,7 @@ def SphericalPinesTraditionalNet(**kwargs):
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
 
-
+#@tf.function(jit_compile=True)
 def SphericalPinesTransformerNet(**kwargs):
     """Transformer model that takes 4D spherical coordinates as inputs. This architecture was recommended by the
     Wang2020 PINN Gradient Pathologies paper to help expose symmetries and invariances between different layers within the network.
@@ -219,13 +220,17 @@ def SphericalPinesTransformerNet(**kwargs):
     mins = kwargs["norm_mins"][0]
     dtype = kwargs["dtype"][0]
     transformer_units = kwargs["transformer_units"][0]
-    skip_normalization = kwargs["skip_normalization"][0]
+    normalization_strategy = kwargs["normalization_strategy"][0]
     ref_radius = kwargs["ref_radius"][0]
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
 
-    if not skip_normalization:
+
+    if normalization_strategy == 'radial':
+        x = PinesSph2NetRefLayer(inputs.shape, scalers, mins, ref_radius)(x)
+    if normalization_strategy == 'uniform':
         x = PinesSph2NetLayer(inputs.shape, scalers, mins, ref_radius)(x)
+
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(

@@ -44,8 +44,8 @@ def get_default_eros_config():
         "custom_input_layer": [None],
         "ref_radius" : [Eros().radius],
         'seed' : [0],
-        'transformer_units' : [20]
-
+        'transformer_units' : [20],
+        'normalization_strategy' : ['uniform'],
     }
 
     config = {}

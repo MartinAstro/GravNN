@@ -27,7 +27,7 @@ def overlay_hist(x_sph_train,twinx=True):
     plt.hist(x_sph_train[:,0], bins=30,alpha=0.7,  range=[np.min(x_sph_train[:,0]), np.max(x_sph_train[:,0])], color='gray')#edgecolor='black', linewidth=0.5, fill=True)
     plt.ylabel("Frequency")
 
-def plot_moving_average(x, y, y_pred, percent=True, color='black'):
+def plot_moving_average(x, y, y_pred, percent=True, color='black', linestyle='-', label=None):
     if not percent:
         diff = y - y_pred
     else:
@@ -35,28 +35,57 @@ def plot_moving_average(x, y, y_pred, percent=True, color='black'):
     df = pd.DataFrame(data=diff, index=x)
     df.sort_index(inplace=True)
     rolling_avg = df.rolling(500, 100).mean()
-    plt.plot(df.index, rolling_avg, c=color)       
-
+    line,  = plt.plot(df.index, rolling_avg, c=color, linestyle=linestyle, label=label)       
+    return line
 
 def main():
 
-    df = pd.read_pickle("Data/Dataframes/eros_residual_r.data")
-    sh_regress_files = ['0R_3R/N_4_Noise_0.00.csv', 
-                        '0R_3R/N_4_Noise_0.20.csv',
-                        '0R_3R/N_16_Noise_0.00.csv', 
-                        '0R_3R/N_16_Noise_0.20.csv']
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r.data")
+    # sh_regress_files = ['0R_3R/N_4_Noise_0.00.csv', 
+    #                     '0R_3R/N_4_Noise_0.20.csv',
+    #                     '0R_3R/N_8_Noise_0.00.csv', 
+    #                     '0R_3R/N_8_Noise_0.20.csv']
 
     # df = pd.read_pickle("Data/Dataframes/eros_residual_r_bar.data")
     # sh_regress_files = ['2R_3R_Plus/N_4_Noise_0.00.csv', 
     #                     '2R_3R_Plus/N_4_Noise_0.20.csv',
-    #                     '2R_3R_Plus/N_16_Noise_0.00.csv', 
-    #                     '2R_3R_Plus/N_16_Noise_0.20.csv']
+    #                     '2R_3R_Plus/N_8_Noise_0.00.csv', 
+    #                     '2R_3R_Plus/N_8_Noise_0.20.csv']
 
     # df = pd.read_pickle("Data/Dataframes/eros_residual_r_star.data")
     # sh_regress_files = ['2R_3R/N_4_Noise_0.00.csv', 
     #                     '2R_3R/N_4_Noise_0.20.csv',
-    #                     '2R_3R/N_16_Noise_0.00.csv', 
-    #                     '2R_3R/N_16_Noise_0.20.csv']
+    #                     '2R_3R/N_8_Noise_0.00.csv', 
+    #                     '2R_3R/N_8_Noise_0.20.csv']
+
+
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r_alc.data")
+    # sh_regress_files = ['0R_3R/N_4_Noise_0.00.csv', 
+    #                     '0R_3R/N_4_Noise_0.20.csv',
+    #                     '0R_3R/N_8_Noise_0.00.csv', 
+    #                     '0R_3R/N_8_Noise_0.20.csv']
+
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r_bar_alc.data")
+    # sh_regress_files = ['2R_3R_Plus/N_4_Noise_0.00.csv', 
+    #                     '2R_3R_Plus/N_4_Noise_0.20.csv',
+    #                     '2R_3R_Plus/N_8_Noise_0.00.csv', 
+    #                     '2R_3R_Plus/N_8_Noise_0.20.csv']
+
+    # df = pd.read_pickle("Data/Dataframes/eros_residual_r_star_alc.data")
+    # sh_regress_files = ['2R_3R/N_4_Noise_0.00.csv', 
+    #                     '2R_3R/N_4_Noise_0.20.csv',
+    #                     '2R_3R/N_8_Noise_0.00.csv', 
+    #                     '2R_3R/N_8_Noise_0.20.csv']
+
+    # Transformer
+
+    df = pd.read_pickle("Data/Dataframes/eros_residual_r_bar_trans_alc.data")
+    sh_regress_files = ['2R_3R_Plus/N_4_Noise_0.00.csv', 
+                        '2R_3R_Plus/N_4_Noise_0.20.csv',
+                        '2R_3R_Plus/N_8_Noise_0.00.csv', 
+                        '2R_3R_Plus/N_8_Noise_0.20.csv']
+
+
 
     data_vis = DataVisSuite(halt_formatting=False)
     data_vis.fig_size = data_vis.tri_vert_page
@@ -87,6 +116,7 @@ def main():
     # Plot PINN Error
     marker_list = ['v', '.', 's']
     color_list = ['black', 'gray']
+    PINN_legend = []
     for i in range(len(df['id'].values)):
         model_id = df['id'].values[i]
         config, model = load_config_and_model(model_id, df)
@@ -96,13 +126,17 @@ def main():
 
         label = "PINN %s" % str(config['acc_noise'][0])
         data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, 
-                                alpha=0.5,label=label, 
+                                alpha=0.5,
+                                #label=label, 
                                 ylabel='Acceleration')
-        plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i])
-
+        line = plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i], linestyle='-', label=label)
+        PINN_legend.append(line)
+    first_legend = plt.legend(handles=PINN_legend, loc='lower right')
+    plt.gca().add_artist(first_legend)
     # Plot SH Error
     marker_list = ['v', '.', 's']
     color_list = ['magenta', 'yellow', 'cyan', 'pink']
+    SH_legend = []
     for i in range(len(sh_regress_files)):
         sh_file = 'GravNN/Files/GravityModels/Regressed/Eros/Residual/' + sh_regress_files[i]
         degree = int(os.path.basename(sh_file).split("N_")[1].split("_")[0])
@@ -113,16 +147,16 @@ def main():
 
         acc_noise = float(os.path.basename(sh_file).split("_")[-1].split(".csv")[0])
         label = "SH %d %.1f" % (degree, acc_noise)
-        data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, 
-                                alpha=0.5,label=label, 
-                                ylabel='Acceleration')
-        plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i])
-
+        # data_vis.plot_residuals(x_sph[:,0], a_sph, a_sph_pred, 
+        #                         alpha=0.2,label=label, 
+        #                         ylabel='Acceleration')
+        line = plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i], linestyle='--', label=label)
+        SH_legend.append(line)
     plt.gca().set_yscale('log')
     plt.gca().set_ylim([1E-2, 5E2])
     plt.gca().set_xlim([-1000, 51000])
-    plt.legend(loc='lower left')
-
+    plt.legend(handles=SH_legend, loc='lower left')
+    plt.xlabel("Radius from COM [m]")
     data_vis.plot_radii(x_sph[:,0], 
                         vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], 
                         vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
@@ -131,10 +165,11 @@ def main():
     directory = os.path.abspath(".") + "/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
 
-    file_name = "%s_%s_%s_Residual.png" %(
+    file_name = "%s_%s_%s_%s_Residual.png" %(
         str(int(np.round(config["radius_min"][0], 2))),
         str(int(np.round(config["radius_max"][0], 2))),
-        str(config.get('extra_N_train', [None])[0]))
+        str(config.get('extra_N_train', [None])[0]),
+        config['PINN_constraint_fcn'][0].__name__)
     
     data_vis.save(plt.gcf(), directory+file_name)
     plt.show()

@@ -7,26 +7,18 @@ import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
-    df_file = "Data/Dataframes/eros_residual_r.data"
 
-    threads = 2
-    config = get_default_eros_config()
-
+    df_file = "Data/Dataframes/bennu_residual.data" 
     hparams = {
-        "grav_file" : [Eros().obj_200k],
-        "radius_max" : [Eros().radius * 3],
-        "radius_min" : [Eros().radius * 2],
-        "N_train" : [2500],
-        "acc_noise" : [0.0, 0.2],
-        "network_type" : ['sph_pines_traditional'],
-
-        "extra_distribution" : [RandomAsteroidDist],
-        "extra_radius_min" : [0],
-        "extra_radius_max" : [Eros().radius*2],
-        "extra_N_dist" : [1000],
-        "extra_N_train" : [250],
-        "extra_N_val" : [500],
-
+        "grav_file" : [Bennu().stl_200k],
+        "radius_max" : [Bennu().radius * 3],
+        "radius_min" : [0],
+        "N_train" : [5000],
+        "acc_noise" : [0.0],#, 0.2],
+        "network_type" : ['sph_pines_transformer'],
+        'PINN_constraint_fcn' : ['pinn_alc'],
+        'normalization_strategy' : ['radial'],#, 'uniform'],
+        'ref_radius' : [Bennu().radius],
         "N_val" : [1500],
         "epochs": [7500],
         "dropout" : [0.0],
@@ -39,6 +31,9 @@ def main():
         "remove_point_mass" : [False], # remove point mass from polyhedral model
         "override" : [False]
     }
+    config = get_default_bennu_config()
+    threads = 2
+   
     hparams.update(ReduceLrOnPlateauConfig())
 
     args = configure_run_args(config, hparams)
@@ -71,7 +66,7 @@ def run(config_original, hparams):
     except:
         np.random.seed(config_original['seed'][0])
         tf.random.set_seed(config_original['seed'][0])
-    #tf.config.run_functions_eagerly(True)
+    tf.config.run_functions_eagerly(False)
     tf.keras.backend.clear_session()
 
     # Standardize Configuration

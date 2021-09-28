@@ -11,13 +11,6 @@ def main():
     """
     Multiprocess the analysis pipeline for each network within the dataframe
     """
-    df_file = 'Data/Dataframes/traditional_w_constraints_annealing.data'
-    df_file = "Data/Dataframes/transformers_wo_constraints.data"
-    df_file = "Data/Dataframes/small_data_pinn_constraints_wo_annealing.data"
-    df_file = "Data/Dataframes/small_data_pinn_constraints_w_annealing_lr_plateau.data"
-    df_file = "Data/Dataframes/medium_data_pinn_constraints_wo_annealing_lr_plateau.data"
-    df_file = "Data/Dataframes/v_v_tiny_data_pinn_constraints_wo_annealing_lr_plateau.data"
-    df_file = "Data/Dataframes/no_pinn.data"
 
     df_file = "Data/Dataframes/transformer_wo_annealing.data"
 
@@ -26,16 +19,18 @@ def main():
 
     df_file = "Data/Dataframes/eros_official_transformer_pinn_40.data"
 
-    # df_file = "Data/Dataframes/near_all_data.data"
-
 
     interior_bound = Eros().radius
     exterior_bound = Eros().radius*3
 
+
+
+
     # df_file = "Data/Dataframes/bennu_traditional_wo_annealing.data"
     # df_file = "Data/Dataframes/bennu_official_w_noise_2.data"
-    # interior_bound = Bennu().radius
-    # exterior_bound = Bennu().radius*3
+    df_file = "Data/Dataframes/bennu_residual.data"
+    interior_bound = Bennu().radius
+    exterior_bound = Bennu().radius*3
 
 
     args = []

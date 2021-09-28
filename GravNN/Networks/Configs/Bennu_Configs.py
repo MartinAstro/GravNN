@@ -13,7 +13,7 @@ def get_default_bennu_config():
         "N_train": [2500],
         "N_val": [1500],
         "radius_min": [0],
-        "radius_max": [Bennu().radius*3],
+        "radius_max": [Bennu().radius * 3],
         "acc_noise": [0.00],
         "basis": [None],
         "mixed_precision": [False],
@@ -42,6 +42,11 @@ def get_default_bennu_config():
         "input_layer": [False],
         "network_type": ["sph_pines_traditional"],
         "custom_input_layer": [None],
+        "ref_radius" : [Bennu().radius],
+        'seed' : [0],
+        'transformer_units' : [20],
+        'normalization_strategy' : ['uniform'],
+
     }
 
     config = {}
@@ -50,29 +55,27 @@ def get_default_bennu_config():
     return config
 
 
-def get_Bennu_r_star_config(multiplier=1):
+def get_bennu_r_star_config(multiplier=1):
     config = get_default_bennu_config()
     modifications = {
         "N_train": [2500 * multiplier],
         "N_val": [5000],
-        "radius_min": [Bennu().radius],
-        "radius_max": [Bennu().radius*5],
+        "radius_min": [Bennu().radius + 5000.0],
+        "radius_max": [Bennu().radius + 10000.0],
     }
     config.update(modifications)
 
 
-def get_Bennu_r_bar_config(multiplier=1):
-    config = get_default_bennu_config()
+def get_bennu_r_bar_config(multiplier=1):
     modifications = {
         "N_train": [2500 * multiplier],
         "N_val": [1500 * multiplier],
-        "radius_min": [Bennu().radius],
-        "radius_max": [Bennu().radius*5],
+        "radius_min": [Bennu().radius + 5000.0],
+        "radius_max": [Bennu().radius + 10000.0],
         "extra_distribution": [RandomAsteroidDist],
         "extra_radius_min": [0],
-        "extra_radius_max": [Bennu().radius],
-        "extra_N_dist": [5000],
+        "extra_radius_max": [Bennu().radius + 5000.0],
+        "extra_N_dist": [1000],
         "extra_N_train": [250 * multiplier],
         "extra_N_val": [500],
     }
-    config.update(modifications)

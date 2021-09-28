@@ -219,7 +219,6 @@ def _get_PI_constraint(value):
         pinn_ALC,
         pinn_APL,
         pinn_APLC,
-        pinn_A_sph,
     )
     from GravNN.Networks.Annealing import (
         no_pinn_anneal,
@@ -251,7 +250,6 @@ def _get_PI_constraint(value):
         "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],
         "pinn_apl": [pinn_APL, pinn_APL_anneal, [-1.0, 1.0, 1.0]],
         "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]],
-        "pinn_a_sph": [pinn_A_sph, pinn_A_anneal, [-1.0]],  # scaling ignored
     }[value.lower()]
 
 

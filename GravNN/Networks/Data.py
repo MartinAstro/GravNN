@@ -283,7 +283,7 @@ def get_preprocessed_data(config):
 
         ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
         ref_r_vec = x_transformer.transform(ref_r_vec)
-        config['ref_radius'] = [ref_r_vec[0,0]]
+        config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
 
     elif config["scale_by"][0] == "none":
         x_transformer = config["dummy_transformer"][0]

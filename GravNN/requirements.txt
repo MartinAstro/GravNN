@@ -1,16 +1,20 @@
-numpy
+numpy == 1.19.2
 matplotlib
 numba
 pandas
-tensorflow==2.4
+tensorflow>=2.4
 sklearn
 pyshtools
+plotly
+dash
 trimesh
 sigfig
 tqdm
 colorama
 tensorflow_model_optimization
-spiceypy
+kaleido
+# spiceypy
 #tensorflow_probability==0.8
 sphinx-rtd-theme
 sphinx
+seaborn
