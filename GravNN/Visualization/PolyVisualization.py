@@ -63,9 +63,9 @@ class PolyVisualization(VisualizationBase):
 
         return fig, ax
 
-    def plot_position_data(self, data):
-        x = data/1000.0
+    def plot_position_data(self, data, alpha=1.0):
+        x = data#/1000.0
         ax = plt.gca()
-        plt.gcf().axes[0].scatter(x[:,0], x[:,1], x[:,2],s=1)
+        plt.gcf().axes[0].scatter(x[:,0], x[:,1], x[:,2],s=1, alpha=alpha)
         # ax = plt.figure().add_subplot(projection='3d')
         # ax.scatter(x[:,0], x[:,1], x[:,2], s=1)
