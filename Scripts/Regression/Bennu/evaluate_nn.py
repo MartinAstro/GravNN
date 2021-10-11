@@ -59,7 +59,7 @@ def get_constraint_str(prefix):
 def main():
     planet = Bennu()
     for seed in range(0,5):
-        for hopper in [False]:#, False]:
+        for hopper in [True]:#, False]:
             for constraint in ['pinn_alc']:#['pinn_a', 'pinn_alc']:
                 network_type = "SphericalPinesTransformerNet"
                 model_directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/%s/%s/%s/%s/%s/%s/" % (
@@ -109,13 +109,13 @@ def main():
                     pickle.dump(error_list, f)
 
 
-                # trajectory = SurfaceDist(planet, planet.stl_200k)
-                # dist_name = "r_surface_" + str(sampling_interval)
-                # sample_list, error_list = evaluate_nn(trajectory, planet.stl_200k, models)
-                # # generate_figure(plot_path, sample_list, error_list)
-                # with open(model_directory + "Data/nn_estimate_" + dist_name + ".data", 'wb') as f:
-                #     pickle.dump(sample_list, f)
-                #     pickle.dump(error_list, f)
+                trajectory = SurfaceDist(planet, planet.stl_200k)
+                dist_name = "r_surface_" + str(sampling_interval)
+                sample_list, error_list = evaluate_nn(trajectory, planet.stl_200k, models)
+                # generate_figure(plot_path, sample_list, error_list)
+                with open(model_directory + "Data/nn_estimate_" + dist_name + ".data", 'wb') as f:
+                    pickle.dump(sample_list, f)
+                    pickle.dump(error_list, f)
 
     plt.show()
 

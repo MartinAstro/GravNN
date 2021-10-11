@@ -5,7 +5,7 @@ from GravNN.Regression.utils import format_coefficients, populate_removed_degree
 from GravNN.Trajectories import RandomAsteroidDist, DHGridDist, EphemerisDist
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
-from GravNN.Trajectories.utils import generate_near_hopper_trajectories, generate_near_orbit_trajectories, generate_orex_orbit_trajectories
+from GravNN.Trajectories.utils import generate_orex_hopper_trajectories, generate_near_orbit_trajectories, generate_orex_orbit_trajectories
 from GravNN.Support.ProgressBar import ProgressBar
 import matplotlib.pyplot as plt
 
@@ -56,7 +56,7 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
 
     trajectories = generate_orex_orbit_trajectories(sampling_inteval=sampling_interval)
     
-    #hopper_trajectories = generate_near_hopper_trajectories(sampling_inteval=sampling_interval)
+    hopper_trajectories = generate_orex_hopper_trajectories(sampling_inteval=sampling_interval)
     
     # Initialize the regressor
     regressor = BLLS(N, planet, M)
@@ -129,13 +129,13 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
 
 def main():
     # # 10 minute sample interval
-    # BLLS_SH(4, 0, 10*60, include_hoppers=True)
-    # BLLS_SH(8, 0, 10*60, include_hoppers=True)
-    # BLLS_SH(16, 0, 10*60, include_hoppers=True)
+    BLLS_SH(4, 0, 10*60, include_hoppers=True)
+    BLLS_SH(8, 0, 10*60, include_hoppers=True)
+    BLLS_SH(16, 0, 10*60, include_hoppers=True)
 
-    BLLS_SH(4, 0, 10*60, include_hoppers=False)
-    BLLS_SH(8, 0, 10*60, include_hoppers=False)
-    BLLS_SH(16, 0, 10*60, include_hoppers=False)
+    # BLLS_SH(4, 0, 10*60, include_hoppers=False)
+    # BLLS_SH(8, 0, 10*60, include_hoppers=False)
+    # BLLS_SH(16, 0, 10*60, include_hoppers=False)
 
     # 1 minute sample interval
     # BLLS_SH(4, 0, 1*60)

@@ -10,7 +10,7 @@ from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Trajectories.utils import generate_orex_orbit_trajectories#generate_orex_hopper_trajectories
+from GravNN.Trajectories.utils import generate_orex_orbit_trajectories, generate_orex_hopper_trajectories
 from GravNN.Support.transformations import cart2sph
 def get_sh_file_info(file_path):
     model_name = os.path.basename(file_path).split('.')[0]
@@ -115,7 +115,7 @@ def main():
     vis.fig_size = vis.full_page
     vis.newFig()
 
-    hoppers=False
+    hoppers=True
 
     plot_error("r_outer", hoppers, '-')
     plot_error("r_inner", hoppers, '--')
@@ -147,11 +147,11 @@ def main():
         plot_orbits_as_violins(hopper_trajectories, orex_trajectories, color='magenta')
 
     plt.ylabel("Radius (km)")
+    plt.ylim([0, 20])
 
 
 
     vis.save(plt.gcf(), directory + "transformer_regression_error_orex_%s.pdf" % str(hoppers))
-    # vis.save(plt.gcf(), directory + "regression_error_orex_shoemaker.pdf")
     
     plt.show()
 

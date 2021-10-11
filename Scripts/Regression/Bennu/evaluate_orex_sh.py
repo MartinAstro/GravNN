@@ -67,7 +67,7 @@ def evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers):
 
 def main():
     planet = Bennu()
-    hoppers = False
+    hoppers = True
     trajectory = RandomAsteroidDist(planet, [
         planet.radius, planet.radius * 3], 
         20000, 
