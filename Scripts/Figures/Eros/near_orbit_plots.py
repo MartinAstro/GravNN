@@ -54,9 +54,19 @@ def main():
         ax = plt.gca()
         ax.plot3D(positions[:,0], positions[:,1], positions[:,2], 'gray')
         
-        ax.axes.set_xlim3d(left=np.min(positions[:,0]), right=np.max(positions[:,0])) 
-        ax.axes.set_ylim3d(bottom=np.min(positions[:,1]), top=np.max(positions[:,1])) 
-        ax.axes.set_zlim3d(bottom=np.min([np.min(positions[:,2]), -Eros().radius]), top=np.max([np.max(positions[:,2]), Eros().radius])) 
+        # ax.axes.set_xlim3d(left=np.min(positions[:,0]), right=np.max(positions[:,0])) 
+        # ax.axes.set_ylim3d(bottom=np.min(positions[:,1]), top=np.max(positions[:,1])) 
+        # ax.axes.set_zlim3d(bottom=np.min([np.min(positions[:,2]), -Eros().radius]), top=np.max([np.max(positions[:,2]), Eros().radius])) 
+
+        max = np.max(positions)
+        min = np.min(positions)
+
+        bound = np.max(np.abs([max, min]))
+
+        ax.axes.set_xlim3d(left=-bound, right=bound) 
+        ax.axes.set_ylim3d(bottom=-bound, top=bound) 
+        ax.axes.set_zlim3d(bottom=-bound, top=bound) 
+        
         poly_vis.save(plt.gcf(), directory + "NEAR_Orbit_"+str(i)+ ".pdf")
     #plt.show()
 
