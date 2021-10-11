@@ -1,0 +1,3 @@
+
+# Exclude generated ipynb from linguist github statistics (https://github.com/github/linguist/blob/master/docs/overrides.md) 
+*.ipynb linguist-documentation
