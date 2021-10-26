@@ -1,6 +1,7 @@
 from logging import error
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib.patches import Rectangle
 import numpy as np
 import glob
 import os
@@ -12,6 +13,7 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories, generate_near_hopper_trajectories
 from GravNN.Support.transformations import cart2sph
+
 def get_sh_file_info(file_path):
     model_name = os.path.basename(file_path).split('.')[0]
     directories = os.path.dirname(file_path).split('/')
@@ -25,11 +27,12 @@ def get_nn_file_info(file_path):
     sampling_interval = int(model_name.split("_")[-1])
     return sampling_interval
 
-def convert_type_to_latex(name):
+def convert_type_to_latex(name, network_type):
     words = name.split("_")
-    output = words[0].upper() + " " + words[1].upper() 
-    if words[0] == 'transformer':
-        output += words[3].upper() 
+    if 'Transformer' in network_type:
+        output =  "PIT" + " " + words[1].upper() 
+    else:
+        output = words[0].upper() + " " + words[1].upper() 
     return output
 
 
@@ -86,7 +89,7 @@ def plot_nn_error(network_type, pinn_type, hoppers, dist_name, sampling_interval
             nn_errors.append(pickle.load(f))
     
     ci, avg_y = compute_confidence_interval_and_average(nn_errors)
-    plt.semilogy(nn_samples[0]*sampling_interval/86400, avg_y, label=convert_type_to_latex(pinn_type) + " " + str(sampling_interval), linestyle=linestyle)
+    plt.semilogy(nn_samples[0]*sampling_interval/86400, avg_y, label=convert_type_to_latex(pinn_type, network_type), linestyle=linestyle)
     plt.gca().fill_between(nn_samples[0]*sampling_interval/86400, (avg_y-ci), (avg_y+ci), alpha=.1)
 
 
@@ -141,8 +144,18 @@ def main():
     near_trajectories = generate_near_orbit_trajectories(60*10)
     hopper_trajectories = generate_near_hopper_trajectories(60*10)
     plot_orbits_as_violins(near_trajectories, near_trajectories, color='black')
+    
+    # Add rectangle patch which shows the min and max radii of the asteroid
+    poly_gm = Polyhedral(Eros(), Eros().obj_200k)
+    min_radius = np.min(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
+    max_radius = np.max(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
+    rect = Rectangle(xy=(0,min_radius), height=max_radius - min_radius, width=350, alpha=0.3, color='skyblue')
+    plt.gca().add_patch(rect)
+
     if hoppers: 
         plot_orbits_as_violins(hopper_trajectories, near_trajectories, color='magenta')
+    else:
+        plt.gca().annotate("Permissible Altitudes Below Brillouin Radius", xy=(0.5,0.5), xytext=(0.25,0.25), xycoords=rect, textcoords=rect, color='dodgerblue', fontsize=6)
 
     plt.ylabel("Radius (km)")
 

@@ -1,4 +1,5 @@
 from logging import error
+from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
@@ -115,7 +116,7 @@ def main():
     vis.fig_size = vis.full_page
     vis.newFig()
 
-    hoppers=True
+    hoppers=False
 
     plot_error("r_outer", hoppers, '-')
     plot_error("r_inner", hoppers, '--')
@@ -142,9 +143,20 @@ def main():
     plt.twinx()
     orex_trajectories = generate_orex_orbit_trajectories(60*10)
     plot_orbits_as_violins(orex_trajectories, orex_trajectories, color='black')
+
+    # Add rectangle patch which shows the min and max radii of the asteroid
+    poly_gm = Polyhedral(Bennu(), Bennu().stl_200k)
+    min_radius = np.min(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
+    max_radius = np.max(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
+    rect = Rectangle(xy=(0,min_radius), height=max_radius - min_radius, width=650, alpha=0.3, color='skyblue')
+    plt.gca().add_patch(rect)
+
+
     if hoppers: 
         hopper_trajectories = generate_orex_hopper_trajectories(60*10)
         plot_orbits_as_violins(hopper_trajectories, orex_trajectories, color='magenta')
+    else:
+        plt.gca().annotate("Permissible Altitudes Below Brillouin Radius", xy=(0.5,0.5), xytext=(0.25,0.25), xycoords=rect, textcoords=rect, color='dodgerblue', fontsize=6)
 
     plt.ylabel("Radius (km)")
     plt.ylim([0, 20])
