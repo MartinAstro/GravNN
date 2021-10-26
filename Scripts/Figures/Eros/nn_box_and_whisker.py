@@ -3,6 +3,8 @@ import plotly.io as pio
 pio.kaleido.scope.mathjax = None
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from plotly.express import line
+
 import numpy as np
 import glob
 from GravNN.Networks.Model import load_config_and_model
@@ -97,11 +99,11 @@ def get_color(model):
         'PINN AP' : 'rgba(123, 64, 150, 0.5)',
         'PINN ALC' : 'rgba(143, 64, 200, 0.5)',
         'PINN APLC' : 'rgba(163, 64, 250, 0.5)',
-        'Transformer 00' : 'rgba(13, 50, 104, 0.5)',
-        'Transformer A' : 'rgba(13, 100, 84, 0.5)',
-        'Transformer AP' : 'rgba(13, 150, 64, 0.5)',
-        'Transformer ALC' : 'rgba(13, 200, 44, 0.5)',
-        'Transformer APLC' : 'rgba(13, 250, 24, 0.5)',
+        'PIT 00' : 'rgba(13, 50, 104, 0.5)',
+        'PIT A' : 'rgba(13, 100, 84, 0.5)',
+        'PIT AP' : 'rgba(13, 150, 64, 0.5)',
+        'PIT ALC' : 'rgba(13, 200, 44, 0.5)',
+        'PIT APLC' : 'rgba(13, 250, 24, 0.5)',
         'SH 4' : 'rgba(153, 50, 14, 0.5)',
         'SH 8' : 'rgba(203, 30, 14, 0.5)',
         'SH 16' : 'rgba(253, 10, 14, 0.5)',
@@ -121,15 +123,21 @@ def get_legend_group(model):
         'PINN AP' : 'PINN',
         'PINN ALC' : 'PINN',
         'PINN APLC' : 'PINN',
-        'Transformer 00' : 'Transformer',
-        'Transformer A' : 'Transformer',
-        'Transformer AP' : 'Transformer',
-        'Transformer ALC' : 'Transformer',
-        'Transformer APLC' : 'Transformer',
+        'PIT 00' : 'PIT',
+        'PIT A' : 'PIT',
+        'PIT AP' : 'PIT',
+        'PIT ALC' : 'PIT',
+        'PIT APLC' : 'PIT',
         'SH 4' : 'SH',
         'SH 8' : 'SH',
         'SH 16' : 'SH'
     }[model]
+
+def add_lines(fig):
+    fig.add_hline(1, line=go.layout.shape.Line(color='green'), opacity=0.3)
+    fig.add_hline(10, line=go.layout.shape.Line(color='yellow'), opacity=0.3)
+    fig.add_hline(100, line=go.layout.shape.Line(color='red'), opacity=0.3)
+    return fig 
 
 def main():
     df = pd.read_pickle("Data/Dataframes/box_and_whisker.data")
@@ -138,7 +146,7 @@ def main():
     # fig = go.Figure()
     # model_types = np.unique(sub_df.index.get_level_values(2).to_numpy())
     # x = sub_df.index.get_level_values(1).to_numpy() # Groups the box-plots into natural clusters
-    # for distribution in ['exterior', 'interior', 'surface']:
+    # for distribution in ['exterior', 'interior']:
     for distribution in ['surface']:
         fig = make_subplots(rows=3,cols=1, shared_xaxes=False, subplot_titles=("Noise: 0%", "Noise: 10%", "Noise: 20%"))
         sub_df = df.loc[0.0]
@@ -146,54 +154,62 @@ def main():
         step = 1
         for i in range(0, num_models, step):
             row = sub_df.iloc[i]
+            model_name = row.name[1].replace("Transformer", "PIT")
             showlegend = True if i < 13 else False
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
                                 x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[1]), 
-                                name=row.name[1], 
-                                offsetgroup=str(row.name[1]),
-                                marker_color=get_color(row.name[1]), 
+                                legendgroup=get_legend_group(model_name), 
+                                name=model_name, 
+                                offsetgroup=str(model_name),
+                                marker_color=get_color(model_name), 
                                 marker_size=2,
                                 showlegend=showlegend)
                         , row=1, col=1
                         )
             print(i)
+        fig = add_lines(fig)
+
         sub_df = df.loc[0.1]
         for i in range(0, num_models, step):
             row = sub_df.iloc[i]
+            model_name = row.name[1].replace("Transformer", "PIT")
             showlegend = True if i < 13 else False
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
                                 x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[1]), 
-                                name=row.name[1], 
-                                offsetgroup=str(row.name[1]),
-                                marker_color=get_color(row.name[1]), 
+                                legendgroup=get_legend_group(model_name), 
+                                name=model_name, 
+                                offsetgroup=str(model_name),
+                                marker_color=get_color(model_name), 
                                 marker_size=2,
                                 showlegend=False)
                         , row=2, col=1
                         )
             print(i)
+        fig = add_lines(fig)
+
         sub_df = df.loc[0.2]
         for i in range(0, num_models, step):
             row = sub_df.iloc[i]
+            model_name = row.name[1].replace("Transformer", "PIT")
             showlegend = True if i < 13 else False
             config, model = load_model(row[0])
             percent_error = get_stat(distribution)(model, config)
             fig.add_trace(go.Box(y=percent_error, 
                                 x=np.repeat("N=" + str(row.name[0]),len(percent_error)), 
-                                legendgroup=get_legend_group(row.name[1]), 
-                                name=row.name[1], 
-                                offsetgroup=str(row.name[1]),
-                                marker_color=get_color(row.name[1]),
+                                legendgroup=get_legend_group(model_name), 
+                                name=model_name, 
+                                offsetgroup=str(model_name),
+                                marker_color=get_color(model_name),
                                 marker_size=2, 
                                 showlegend=False)
                         , row=3, col=1
                         )
             print(i)
+        fig = add_lines(fig)
 
         fig.update_yaxes({'type' : "log",
                         'linecolor' : 'black',
@@ -201,7 +217,10 @@ def main():
                         'gridcolor':'LightGray',
                         'title' :'Percent Error', 
                         'type' : 'log',
-                        'range' :[-1,2]})
+                        'range' :[-1,2],
+                        'dtick' : 'D1',
+                        'tickvals' : [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100],
+                        'ticktext' : ['0.1', '', '', '', '', '', '', '', '', '1', "","","","","","","","",'10', '', '', '', '', '', '', '', '', '100']})
         fig.update_xaxes({'zerolinecolor' : "black",
                         'title' : 'Data Samples'})
         # update global parameters 
@@ -229,12 +248,13 @@ def main():
         print("Plotting Image")
         
 
-
-        app = dash.Dash()
-        app.layout = html.Div([dcc.Graph(figure=fig, config={'staticPlot':True})])
-        app.run_server(debug=False, use_reloader=False)
-
-        # fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + ".pdf", engine='orca', validate=False)
+        # if distribution == 'surface':
+        #     app = dash.Dash()
+        #     app.layout = html.Div([dcc.Graph(figure=fig, config={'staticPlot':True})])
+        #     app.run_server(debug=False, use_reloader=False)
+        # else:
+            # fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + "_v2.pdf")
+        fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + "_v2.jpeg")
     #fig.show()
 
 if __name__ == '__main__':
