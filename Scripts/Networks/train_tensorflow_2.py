@@ -2,38 +2,17 @@ import multiprocessing as mp
 from script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
-
+from Hyperparam_inits import hyperparams_eros
 import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
 
-    df_file = "Data/Dataframes/bennu_residual.data" 
-    hparams = {
-        "grav_file" : [Bennu().stl_200k],
-        "radius_max" : [Bennu().radius * 3],
-        "radius_min" : [0],
-        "N_train" : [5000],
-        "acc_noise" : [0.0],#, 0.2],
-        "network_type" : ['sph_pines_transformer'],
-        'PINN_constraint_fcn' : ['pinn_alc'],
-        'normalization_strategy' : ['radial'],#, 'uniform'],
-        'ref_radius' : [Bennu().radius],
-        "N_val" : [1500],
-        "epochs": [7500],
-        "dropout" : [0.0],
-
-        "learning_rate": [0.001*2],
-        "batch_size": [131072 // 2],
-        "beta" : [0.9],
-
-        #'batch_norm' :[True],
-        "remove_point_mass" : [False], # remove point mass from polyhedral model
-        "override" : [False]
-    }
-    config = get_default_bennu_config()
     threads = 2
-   
+    df_file = "Data/Dataframes/eros_residual_r_v2.data" 
+
+    config = get_default_eros_config()
+    hparams = hyperparams_eros.get_r_experiment()
     hparams.update(ReduceLrOnPlateauConfig())
 
     args = configure_run_args(config, hparams)
