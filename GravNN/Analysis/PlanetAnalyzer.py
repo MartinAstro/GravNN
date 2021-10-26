@@ -118,8 +118,7 @@ class PlanetAnalyzer():
         for name, map_traj in test_trajectories.items():
             # SH Data and NN Data
             x, a, u = get_sh_data(map_traj, self.config['grav_file'][0] , **self.config)
-            data_pred = self.model.generate_nn_data(x)
-            acc_pred = data_pred['a']
+            acc_pred = self.model.generate_acceleration(x)
             
             # Generate map statistics on sets A, F, and C (2 and 3 sigma)
             diff, diff_stats = diff_map_and_stats(name, map_traj, a, acc_pred)
@@ -143,7 +142,7 @@ class PlanetAnalyzer():
             trajectory = FibonacciDist(planet, planet.radius + alt, points)
             model_file = trajectory.celestial_body.sh_hf_file
             x, a, u = get_sh_data(trajectory, model_file, **self.config)
-            acc_pred = self.model.generate_nn_data(x)['a']
+            acc_pred = self.model.generate_acceleration(x)
 
             diff, diff_stats = diff_map_and_stats("", trajectory, a, acc_pred, 'mean')
             extras = {
