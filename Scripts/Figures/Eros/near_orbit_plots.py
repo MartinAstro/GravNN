@@ -47,7 +47,7 @@ def main():
 
     # https://www.jhuapl.edu/Content/techdigest/pdf/V23-N01/23-01-Holdridge.pdf -- NEAR Orbits
     for i in range(0, len(orbits)-1):
-        poly_vis.plot_polyhedron(surf_trajectory.mesh, np.linalg.norm(a,axis=1))
+        poly_vis.plot_polyhedron(surf_trajectory.mesh, np.linalg.norm(a,axis=1),cbar=False)
         utc = [orbits[i], orbits[i+1]]
         trajectory = EphemerisDist("NEAR", "EROS", "EROS_FIXED", orbits[i], orbits[i+1], 10*60)
         positions = trajectory.positions
@@ -66,8 +66,8 @@ def main():
         ax.axes.set_xlim3d(left=-bound, right=bound) 
         ax.axes.set_ylim3d(bottom=-bound, top=bound) 
         ax.axes.set_zlim3d(bottom=-bound, top=bound) 
-        
-        poly_vis.save(plt.gcf(), directory + "NEAR_Orbit_"+str(i)+ ".pdf")
+        if i == 1 or i == 7 or i == 9 or i == 19:
+            poly_vis.save(plt.gcf(), directory + "NEAR_Orbit_"+str(i)+ ".pdf")
     #plt.show()
 
 if __name__ == '__main__':

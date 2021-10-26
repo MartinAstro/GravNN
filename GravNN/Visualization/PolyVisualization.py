@@ -31,25 +31,31 @@ class PolyVisualization(VisualizationBase):
             self.scale = 1.0
         pass
 
-    def plot_polyhedron(self, mesh, accelerations, label=None, vlim=None,log=False):
+    def plot_polyhedron(self, mesh, accelerations, label=None, vlim=None,log=False, cbar=True, surface_colors=True):
         fig, ax = self.new3DFig()
-        cmap = plt.get_cmap('bwr')
-        tri = Poly3DCollection(mesh.triangles*1000, cmap=cmap)
-        vlim_min = np.min(accelerations)
-        vlim_max = np.max(accelerations)
-        scaled_acceleration = (accelerations - np.min(accelerations))/(np.max(accelerations) - np.min(accelerations))
-        for i in range(len(mesh.faces)):
-            color = np.array(cmap(int(scaled_acceleration[i]*255)))*255
-            mesh.visual.face_colors[i] = color
-        tri.set_facecolor(mesh.visual.face_colors/255)
-        tri.set_edgecolor(mesh.visual.face_colors/255)
+
+        if surface_colors:
+            cmap = plt.get_cmap('bwr')
+            tri = Poly3DCollection(mesh.triangles*1000, cmap=cmap)
+
+            scaled_acceleration = (accelerations - np.min(accelerations))/(np.max(accelerations) - np.min(accelerations))
+            for i in range(len(mesh.faces)):
+                color = np.array(cmap(int(scaled_acceleration[i]*255)))*255
+                mesh.visual.face_colors[i] = color
+            tri.set_facecolor(mesh.visual.face_colors/255)
+            tri.set_edgecolor(mesh.visual.face_colors/255)
+        else:
+            cmap = plt.get_cmap('Greys')
+            tri = Poly3DCollection(mesh.triangles*1000, cmap=cmap)
+
         p = ax.add_collection3d(tri)
         min_lim = np.min(mesh.vertices*1000)
         max_lim = np.max(mesh.vertices*1000)
         ax.axes.set_xlim3d(left=min_lim, right=max_lim) 
         ax.axes.set_ylim3d(bottom=min_lim, top=max_lim) 
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim) 
-        
+        vlim_min = np.min(accelerations)
+        vlim_max = np.max(accelerations)
         if log:
             norm = SymLogNorm(linthresh=1E-4, vmin=vlim_min, vmax=vlim_max)
         else:
@@ -57,15 +63,16 @@ class PolyVisualization(VisualizationBase):
         arg = cm.ScalarMappable(norm=norm, cmap=cmap)
         ticks = np.linspace(vlim_min, vlim_max, 5)
 
-        cBar = plt.colorbar(arg,  pad=0.20, fraction=0.15, norm=norm)#ticks=ticks,boundaries=vlim,
-        if label is not None:
-            cBar.ax.set_ylabel(label)
+        if cbar: 
+            cBar = plt.colorbar(arg,  pad=0.20, fraction=0.15, norm=norm)#ticks=ticks,boundaries=vlim,
+            if label is not None:
+                cBar.ax.set_ylabel(label)
 
         return fig, ax
 
-    def plot_position_data(self, data, alpha=1.0):
+    def plot_position_data(self, data, alpha=1.0, color='blue'):
         x = data#/1000.0
         ax = plt.gca()
-        plt.gcf().axes[0].scatter(x[:,0], x[:,1], x[:,2],s=1, alpha=alpha)
+        plt.gcf().axes[0].scatter(x[:,0], x[:,1], x[:,2],s=1, c=color, alpha=alpha)
         # ax = plt.figure().add_subplot(projection='3d')
         # ax.scatter(x[:,0], x[:,1], x[:,2], s=1)
