@@ -104,7 +104,7 @@ class SphericalHarmonics(GravityModelBase):
         self.file_directory += (
             os.path.splitext(os.path.basename(__file__))[0]
             + "_"
-            + os.path.basename(self.file).split(".")[0]
+            + os.path.basename(self.file).split(".csv")[0].split(".txt")[0]
             + "_"
             + str(self.degree)
             + "/"
@@ -261,8 +261,14 @@ if __name__ == "__main__":
     from GravNN.Trajectories import FibonacciDist
 
     planet = Earth()
-    traj = FibonacciDist(planet, planet.radius, 1000)
-    grav_model = SphericalHarmonics(planet.sh_hf_file, 1000, traj)
-    grav_model.load(override=True)
-    acc = grav_model.accelerations
-    pot = grav_model.potentials
+    # traj = FibonacciDist(planet, planet.radius, 1000)
+    # grav_model = SphericalHarmonics(planet.sh_hf_file, 1000, traj)
+    # grav_model.load(override=True)
+    # acc = grav_model.accelerations
+    # pot = grav_model.potentials
+
+    grav_model = SphericalHarmonics(planet.sh_hf_file, 13)
+    print(grav_model.compute_acceleration([[Earth().radius, 0, 0]]))
+    # grav_model.load(override=True)
+    # acc = grav_model.accelerations
+    # pot = grav_model.potentials
