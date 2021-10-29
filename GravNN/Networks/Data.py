@@ -149,8 +149,9 @@ def get_raw_data(config):
 
     # This condition is for meant to correct for when gravity models didn't always have the proper sign of the potential.
     # TODO: This should be removed prior to production.
-    deg_removed = config.get("deg_removed", None)
-    if np.max(u_unscaled) > 0.0 and deg_removed is not None:
+    deg_removed = config.get("deg_removed", -1)
+    # if part of the model is removed (i.e. point mass) it is reasonable for some of the potential to be > 0.0, so only rerun if there is no degree removed.
+    if np.max(u_unscaled) > 0.0 and deg_removed == -1:
         print(
             "WARNING:\t This pickled acceleration/potential pair was generated when the potential had a wrong sign. \n \t Regenerating the data"
         )
@@ -162,8 +163,9 @@ def get_raw_data(config):
         config["override"] = [False]
         print("WARNING: The max potential is now: " + str(np.max(u_unscaled)))
 
+    seed = config.get('seed', [42])[0]
     x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
-        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0]
+        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0], random_state=seed
     )
 
     if "extra_distribution" in config:
@@ -411,7 +413,7 @@ def single_training_validation_split(X, N_train, N_val, random_state=42):
     and validation sets"""
     X = shuffle(X, random_state=random_state)
     X_train = X[:N_train]
-    X_val = X[:N_val]
+    X_val = X[N_train:N_train+N_val]
     return X_train, X_val
 
 

@@ -39,6 +39,10 @@ class UniformScaler:
         return X
 
     def transform(self, data):
+        # Some older networks will load an old version of uniform scaler
+        # that didn't have scaler attribute. Therefore, add it if not present
+        if not hasattr(self, 'scaler'):
+            self.scaler = None
 
         if self.scaler is not None:
             X = data * self.scaler
@@ -47,6 +51,10 @@ class UniformScaler:
         return X
 
     def inverse_transform(self, data):
+        # Some older networks will load an old version of uniform scaler
+        # that didn't have scaler attribute. Therefore, add it if not present
+        if not hasattr(self, 'scaler'):
+            self.scaler = None
         if self.scaler is not None:
             return data / self.scaler
         else:

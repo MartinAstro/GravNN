@@ -30,6 +30,7 @@ def get_default_earth_config():
         "epochs": [100000],
         "optimizer": ["adam"],
         "batch_size": [40000],
+        "lr_anneal": [False],
         "initializer": ["glorot_normal"],
         "dropout": [0.0],
         "x_transformer": [MinMaxScaler(feature_range=(-1, 1))],

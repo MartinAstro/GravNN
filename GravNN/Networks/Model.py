@@ -34,14 +34,14 @@ class CustomModel(tf.keras.Model):
         self.mixed_precision = tf.constant(
             self.config["mixed_precision"][0], dtype=tf.bool
         )
-        self.variable_cast = config["dtype"][0]
+        self.variable_cast = config.get("dtype", [tf.float32])[0]
 
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
         PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
-        self.beta = tf.Variable(self.config["beta"][0], dtype=tf.float32)
+        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
@@ -124,18 +124,30 @@ class CustomModel(tf.keras.Model):
         loss = tf.reduce_sum(updated_loss_components)
         return {"loss": loss}
 
-    def __acceleration_output(self, dataset):
+    def __acceleration_output(self, dataset, batch_size):
         x, y = dataset
-        if self.config["PINN_constraint_fcn"][0] == no_pinn:
-            a = self.network(x) 
-            return  None, a, None, None
 
-        assert self.config["PINN_constraint_fcn"][0] != no_pinn
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            u = self.network(x)  # shape = (k,) #! evaluate network
-        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        return None, tf.multiply(-1.0, u_x), None, None
+        def chunks(lst, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(lst), n):
+                yield lst[i:i + n]
+        
+        data = chunks(x, batch_size)
+        for x in data:
+            if self.config["PINN_constraint_fcn"][0] == no_pinn:
+                a = self.network(x) 
+            else:
+                with tf.GradientTape() as g2:
+                    g2.watch(x)
+                    u = self.network(x)  # shape = (k,) #! evaluate network
+                u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+                a = tf.multiply(-1.0, u_x)
+            try:
+                accelerations = np.append(accelerations, a, axis=0)
+            except:
+                accelerations = a
+
+        return None, accelerations, None, None
 
     def __nn_output(self, dataset):
         x, y = dataset
@@ -215,8 +227,8 @@ class CustomModel(tf.keras.Model):
         u_pred = u_transformer.inverse_transform(u_pred)
         return u_pred
 
-    @tf.function(jit_compile=True)
-    def generate_acceleration(self, x):
+    #@tf.function(jit_compile=True)
+    def generate_acceleration(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -232,7 +244,7 @@ class CustomModel(tf.keras.Model):
         x = x_transformer.transform(x)
 
         x = tf.cast(x, tf.float32)
-        u_pred, a_pred, laplace_pred, curl_pred = self.__acceleration_output((x, x))
+        u_pred, a_pred, laplace_pred, curl_pred = self.__acceleration_output((x, x),batch_size)
         a_pred = a_transformer.inverse_transform(a_pred)
         return a_pred
 
@@ -444,6 +456,12 @@ def backwards_compatibility(config):
     Returns:
         dict: new configuration dictionary
     """
+    if float(config["id"][0]) < 2459343.9948726853:
+        try:
+            if np.isnan(config["PINN_flag"][0]): # nan case
+                config["PINN_constraint_fcn"] = [no_pinn]
+        except:
+            pass
     if float(config["id"][0]) < 2459322.587314815:
         if config["PINN_flag"][0] == "none":
             config["PINN_constraint_fcn"] = [no_pinn]
@@ -453,13 +471,15 @@ def backwards_compatibility(config):
             config["PINN_constraint_fcn"] = [pinn_APL]
         elif config["PINN_flag"][0] == "convervative":
             config["PINN_constraint_fcn"] = [pinn_APLC]
-
+    
         if "class_weight" not in config:
             config["class_weight"] = [1.0]
 
         if "dtype" not in config:
             config["dtype"] = [tf.float32]
+    
 
+    
     if "lr_anneal" not in config:
         config["lr_anneal"] = [False]
     return config
