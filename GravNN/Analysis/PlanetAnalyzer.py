@@ -38,10 +38,13 @@ def nearest_analytic(map_stat_series, value):
     return nearest_param
 
 
-def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'median']):
+def diff_map_and_stats(name, trajectory, a, acc_pred, stats=['mean', 'std', 'median'], percent=False):
     state_obj_true = StateObject(trajectory=trajectory, accelerations=a)
     state_obj_pred = StateObject(trajectory=trajectory, accelerations=acc_pred)
-    diff = state_obj_pred - state_obj_true
+    if percent: 
+        diff = (state_obj_pred - state_obj_true) / state_obj_true * 100
+    else:
+        diff = (state_obj_pred - state_obj_true)
 
     # This ensures the same features are being evaluated independent of what degree is taken off at beginning
     one_sigma_mask, one_sigma_mask_compliment = sigma_mask(state_obj_true.total, 1)
@@ -112,7 +115,7 @@ class PlanetAnalyzer():
         }
         return param_stats
 
-    def compute_rse_stats(self, test_trajectories):
+    def compute_rse_stats(self, test_trajectories, percent=False):
         stats = {}
 
         for name, map_traj in test_trajectories.items():
@@ -121,7 +124,7 @@ class PlanetAnalyzer():
             acc_pred = self.model.generate_acceleration(x)
             
             # Generate map statistics on sets A, F, and C (2 and 3 sigma)
-            diff, diff_stats = diff_map_and_stats(name, map_traj, a, acc_pred)
+            diff, diff_stats = diff_map_and_stats(name, map_traj, a, acc_pred, percent=percent)
             map_stats = { 
                     **diff_stats,
                     name+'_max_error' : [np.max(diff.total)]
