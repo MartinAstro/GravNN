@@ -16,6 +16,8 @@ def main():
     df_file = "Data/Dataframes/earth_trajectory_v2.data"
     df_file = 'Data/Dataframes/earth_trajectory_deg2.data'
     # df_file = 'Data/Dataframes/moon_pinn_df.data'
+    # df_file = "Data/Dataframes/traditional_nn_df_percent.data"
+    df_file = "Data/Dataframes/pinn_df_percent.data"
 
     #planet = Moon()
     planet = Earth()
@@ -25,7 +27,8 @@ def main():
     points = 250000  # 64800
     #test_trajectories = {"Brillouin_deg0": FibonacciDist(planet, planet.radius, points)}
     #test_trajectories = {"Brillouin_deg_n1": FibonacciDist(planet, planet.radius, points)}
-    test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
+    # test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
+    test_trajectories = {"Brillouin_percent": FibonacciDist(planet, planet.radius, points)}
 
     args = []
     for idx in range(0,10):
@@ -55,7 +58,7 @@ def analyze(idx, df_file, planet, analyze_altitude, test_trajectories, points):
     config, model = load_config_and_model(model_id, df)
 
     analyzer = PlanetAnalyzer(model, config)
-    rse_entries = analyzer.compute_rse_stats(test_trajectories)
+    rse_entries = analyzer.compute_rse_stats(test_trajectories, percent=True)
 
     if analyze_altitude:
         sh_stats_df, altitudes = get_altitude_list(planet)
