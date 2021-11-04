@@ -122,3 +122,47 @@ def invert_projection(positions, accelerations):
                             #np.dot(NB[1,:], accelerations[i]),
                             #np.dot(NB[2,:], accelerations[i])]
     return invert_acc
+
+@njit(parallel=True, cache=True)
+def spherePines2cart(data):
+    """Convert Pines (4D) spherical coordinates into cartesian coordinates. 
+
+    Args:
+        data: [[4xM] with r (0, inf), s (-1,1), t (-1,1), u (-1,1)]
+
+    Returns:
+        [np.array]: [cartesian output dimension [3xM]]
+    """
+    r = data[:,0] #[0, inf]
+    s = data[:,1] 
+    t = data[:,2]
+    u = data[:,3]
+
+    x = r*s
+    y = r*t
+    z = r*u
+
+    return np.column_stack((x,y,z))
+
+
+@njit(parallel=True,cache=True)
+def cart2sphPines(carts):
+    """Converts cartesian coordinates into Pines' spherical coordinates.
+
+    Args:
+        carts: [[3xM] formatted as x, y, z]
+
+    Returns:
+        [np.array]: [[4xM] with r (0, inf), s (-1,1), t (-1,1), u (-1,1)]
+    """
+    spheres = np.zeros((4,carts.shape[1]))#spheres = []
+    for i in prange(0,len(carts)):
+        X, Y, Z = carts[i]
+
+        r = np.sqrt(X**2 + Y**2 + Z**2)  # r
+        s = X/r
+        t = Y/r
+        u = Z/r
+
+        spheres[i] = [r, s, t, u]
+    return spheres
