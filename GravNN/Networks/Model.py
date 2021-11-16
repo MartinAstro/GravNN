@@ -38,6 +38,7 @@ class CustomModel(tf.keras.Model):
 
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
         PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
+        self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
@@ -124,18 +125,33 @@ class CustomModel(tf.keras.Model):
         loss = tf.reduce_sum(updated_loss_components)
         return {"loss": loss}
 
-    def __acceleration_output(self, dataset):
-        x, y = dataset
-        if self.config["PINN_constraint_fcn"][0] == no_pinn:
-            a = self.network(x) 
-            return  None, a, None, None
 
-        assert self.config["PINN_constraint_fcn"][0] != no_pinn
+    @tf.function(jit_compile=True)
+    def _nn_acceleration_output(self, x):
+        a = self.network(x) 
+        return a
+    
+    #@tf.function(jit_compile=True)
+    @tf.function()
+    def _pinn_acceleration_output(self, x):
         with tf.GradientTape() as g2:
             g2.watch(x)
             u = self.network(x)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        return None, tf.multiply(-1.0, u_x), None, None
+        return tf.multiply(-1.0, u_x)
+
+    @tf.function(jit_compile=True)
+    def __acceleration_output(self, dataset):
+        x, y = dataset
+        if self.config["PINN_constraint_fcn"][0] == no_pinn:
+            a = self.network(x) 
+            return a
+
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = self.network(x)  # shape = (k,) #! evaluate network
+        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        return tf.multiply(-1.0, u_x)
 
     def __nn_output(self, dataset):
         x, y = dataset
@@ -215,7 +231,7 @@ class CustomModel(tf.keras.Model):
         u_pred = u_transformer.inverse_transform(u_pred)
         return u_pred
 
-    @tf.function(jit_compile=True)
+    # @tf.function(jit_compile=True)
     def generate_acceleration(self, x):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -231,8 +247,12 @@ class CustomModel(tf.keras.Model):
         a_transformer = self.config["a_transformer"][0]
         x = x_transformer.transform(x)
 
-        x = tf.cast(x, tf.float32)
-        u_pred, a_pred, laplace_pred, curl_pred = self.__acceleration_output((x, x))
+        x = tf.constant(x, dtype=tf.float32)
+        # x = tf.cast(x, tf.float32)
+        if self.is_pinn:
+            a_pred = self._pinn_acceleration_output(x)
+        else:
+            a_pred = self._nn_acceleration_output(x)
         a_pred = a_transformer.inverse_transform(a_pred)
         return a_pred
 

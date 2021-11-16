@@ -1,7 +1,7 @@
 from GravNN.Networks.utils import configure_tensorflow
 import numpy as np
 tf = configure_tensorflow()
-def oe2cart_tf(f, mu, OE):
+def trad2cart_tf(f, mu, OE):
 
     a = OE[:,0]
     e = OE[:,1]
@@ -58,7 +58,7 @@ def main():
     mu = 1.1e14
     OE = tf.convert_to_tensor([[1.1E7, 0.1, np.pi/3, np.pi/3, 0.0, 0.0]])
 
-    r, v = oe2cart_tf(f, mu, OE)
+    r, v = trad2cart_tf(f, mu, OE)
     print(r)
     print(v)
 
