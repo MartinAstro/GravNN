@@ -155,7 +155,7 @@ def cart2sphPines(carts):
     Returns:
         [np.array]: [[4xM] with r (0, inf), s (-1,1), t (-1,1), u (-1,1)]
     """
-    spheres = np.zeros((4,carts.shape[1]))#spheres = []
+    spheres = np.zeros((carts.shape[0], 4))#spheres = []
     for i in prange(0,len(carts)):
         X, Y, Z = carts[i]
 
