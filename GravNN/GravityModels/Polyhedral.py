@@ -41,10 +41,9 @@ def compute_edge_dyads(
 ):
     edge_dyads = np.zeros((len(edges_unique), 3, 3))  # In order of unique edges
     for i in prange(len(edges_unique)):
-        vertex_0_idx = int(face_adjacency_edges[i][0])
-        vertex_1_idx = int(face_adjacency_edges[i][1])
-        vertex_0 = vertices[vertex_0_idx]
-        vertex_1 = vertices[vertex_1_idx]
+        
+        P1 = vertices[edges_unique[i][0]]
+        P2 = vertices[edges_unique[i][1]]
 
         facet_A_idx = int(face_adjacency[i][0])
         facet_B_idx = int(face_adjacency[i][1])
@@ -67,12 +66,13 @@ def compute_edge_dyads(
         B_2_A = face_A_c - face_B_c
         A_2_B = face_B_c - face_A_c
 
-        edge_direction = np.cross(normal_A, normal_B)
+        edge_direction = P1 - P2
         edge_direction /= np.linalg.norm(edge_direction)
-        
-        # if adjacent facets share the same normal. 
-        if np.any(np.isnan(edge_direction)):#== np.nan):
-            edge_direction = np.array([0.0, 0.0, 0.0])
+
+        # edge_direction = np.cross(normal_A, normal_B)
+        # if np.any(np.isnan(edge_direction)):
+        #     print("same direction")
+        #     edge_direction = np.array([0.0, 0.0, 0.0])
 
         edge_normal_A_to_B = np.cross(normal_A, edge_direction)
         edge_normal_B_to_A = np.cross(normal_B, edge_direction)
@@ -145,13 +145,19 @@ def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
     pot = 0.0
     for i in prange(len(faces)):
         r0 = vertices[faces[i][0]]
-        r0m = r0 - point_scaled
+        r1 = vertices[faces[i][1]]
+        r2 = vertices[faces[i][2]]
+        r_middle = (r0 + r1 + r2)/3.0
+        r0m = r_middle - point_scaled
+
+        r_e = r0 - point_scaled
+        r_f = r_e # Page 11
 
         wf = GetPerformanceFactor(point_scaled, vertices, faces, i)
         F = facet_dyads[i]
 
-        acc += wf * np.dot(F, r0m)
-        pot -= wf * np.dot(r0m, np.dot(F, r0m))
+        acc += wf * np.dot(F, r_f)
+        pot -= wf * np.dot(r_f, np.dot(F, r_f))
     return acc, pot
 
 
@@ -161,13 +167,18 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
     pot = 0.0
     for i in prange(len(edges_unique)):
         r0 = vertices[edges_unique[i][0]]
-        r0m = r0 - point_scaled
+        r1 = vertices[edges_unique[i][1]]
+
+        # Page 12 implies that r_e can be any point on edge e or its infinite extension
+        r_middle = (r0 + r1) / 2
+        
+        r_e = r_middle - point_scaled
 
         Le = GetLe(point_scaled, vertices, edges_unique, i)
         E = edge_dyads[i]
 
-        acc -= Le * np.dot(E, r0m)
-        pot += Le * np.dot(r0m, np.dot(E, r0m))
+        acc -= Le * np.dot(E, r_e)
+        pot += Le * np.dot(r_e, np.dot(E, r_e))
 
     return acc, pot
 
@@ -270,12 +281,12 @@ class Polyhedral(GravityModelBase):
         plt.show()
 
     # Bulk function
-    def compute_acceleration(self, positions=None):
+    def compute_acceleration(self, positions=None, pbar=True):
         "Compute the acceleration for an existing trajectory or provided set of positions"
         if positions is None:
             positions = self.trajectory.positions
 
-        bar = ProgressBar(positions.shape[0], enable=True)
+        bar = ProgressBar(positions.shape[0], enable=pbar)
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
@@ -380,5 +391,49 @@ def main():
     print(timeList)
 
 
+def test_energy_conservation():
+    from scipy.integrate import solve_ivp
+    from GravNN.Support.transformations import cart2sph, invert_projection
+    asteroid = Eros()
+    poly_model = Polyhedral(asteroid, asteroid.model_potatok)
+    def fun(x,y,IC=None):
+        "Return the first-order system"
+        # print(x)
+        R, V = y[0:3], y[3:6]
+        r = np.linalg.norm(R)
+        a = poly_model.compute_acceleration(R.reshape((1,3)), pbar=False)
+        dxdt = np.hstack((V, a.reshape((3,))))
+        return dxdt.reshape((6,))
+    
+    T = 1000
+    state = np.array([-6.36256532e+02, -4.58656092e+04,  1.31640352e+04,  3.17126984e-01, -1.12030801e+00, -3.38751010e+00])
+
+    sol = solve_ivp(fun, [0, T], state.reshape((-1,)), t_eval=None, events=None, atol=1e-12, rtol=1e-12)
+
+    from OrbitalElements.orbitalPlotting import plot_orbit_3d
+    plot_orbit_3d(sol.y,save=False)
+    # sol = solve_ivp(fun, [0, T], state.reshape((-1,)), t_eval=None, events=None, atol=1e-14, rtol=1e-14)
+    rVec = sol.y[0:3, :]
+    vVec = sol.y[3:6, :]
+    hVec = np.cross(rVec.T, vVec.T)
+    h_norm = np.linalg.norm(hVec, axis=1)
+
+    KE = 1./2.*1*np.linalg.norm(vVec, axis=0)**2
+    U = poly_model.compute_potential(rVec.T)
+
+    energy = KE + U
+
+
+    plt.figure()
+    plt.subplot(2,1,1)
+    plt.plot(np.linspace(0, T, len(h_norm)), h_norm, label='orbit')
+    plt.subplot(2,1,2)
+    plt.plot(np.linspace(0, T, len(h_norm)), energy, label='orbit')
+    plt.show()
+
+
+    
+
 if __name__ == "__main__":
     main()
+    # test_energy_conservation()

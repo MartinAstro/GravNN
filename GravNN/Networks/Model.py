@@ -9,7 +9,7 @@ import tensorflow as tf
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
-
+import GravNN
 
 np.random.seed(1234)
 
@@ -513,7 +513,7 @@ def load_config_and_model(model_id, df_file):
 
     config = backwards_compatibility(config)
     network = tf.keras.models.load_model(
-        os.path.abspath(".") + "/Data/Networks/" + str(model_id) + "/network"
+        os.path.dirname(GravNN.__file__) + "/../Data/Networks/" + str(model_id) + "/network"
     )
     model = CustomModel(config, network)
     optimizer = utils._get_optimizer(config["optimizer"][0])

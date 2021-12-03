@@ -8,7 +8,7 @@ import numpy as np
 
 class VisualizationBase(ABC):
 
-    def __init__(self, save_directory=None, halt_formatting=False):
+    def __init__(self, save_directory=None, halt_formatting=False, formatting_style=None):
         """Default visualization base class. Generates consistent style formatting for all 
         figures, offers information about proper figure sizes.
 
@@ -21,14 +21,7 @@ class VisualizationBase(ABC):
         else:
             self.file_directory = save_directory
 
-        if not halt_formatting:
-            plt.rc('text', usetex=True)
-            plt.rc('font', family='serif')
-            plt.rc('font', size= 11.0)
-            mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'gold',  'salmon',  'lime', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
 
-         # ~ 5:3 aspect ratio
-         # (tall, wide)
         golden_ratio = (5**.5 - 1) / 2
         self.tri_page = (2.1, 2.1*golden_ratio)
         self.half_page = (3, 3*golden_ratio) #
@@ -36,11 +29,28 @@ class VisualizationBase(ABC):
 
         # AAS textwidth is 6.5
         self.half_page = (3.25, 3.25*golden_ratio)
+        self.AIAA_full_page = (6.5, 6.5*golden_ratio)
 
         silver_ratio = 1/(1 + np.sqrt(2))
         self.tri_vert_page = (6.3, 6.3*silver_ratio)
 
-        self.fig_size = (5,3.5) #(3, 1.8) is half page. 
+        if not halt_formatting:
+            if formatting_style == "AIAA":
+                plt.rc('font', size= 10.0)
+                self.fig_size = self.AIAA_full_page
+            else:
+                plt.rc('font', size= 11.0)
+                self.fig_size = (5, 3.5)
+            plt.rc('text', usetex=True)
+            plt.rc('font', family='serif')
+            mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'gold',  'salmon',  'lime', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
+        else:
+            self.fig_size = (5,3.5) #(3, 1.8) is half page. 
+
+         # ~ 5:3 aspect ratio
+         # (tall, wide)
+
+
         return
 
     def new3DFig(self, unit='m'):
