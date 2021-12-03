@@ -4,9 +4,10 @@ from GravNN.Trajectories import RandomDist, ExponentialDist
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Support.transformations import cart2sph
 
-
-
 def main():
+    """Script responsible for taking a data distribution and determining the maximum distance
+    between points. Such measure dictates what spacial frequency of spherical harmonics can
+    be resolved uniquely"""
     planet = Earth()
     trajectory = RandomDist(planet, [planet.radius, planet.radius+420000.0], 1000000)
 

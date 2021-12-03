@@ -469,7 +469,7 @@ def backwards_compatibility(config):
             config["PINN_constraint_fcn"] = [pinn_A]
         elif config["PINN_flag"][0] == "laplacian":
             config["PINN_constraint_fcn"] = [pinn_APL]
-        elif config["PINN_flag"][0] == "convervative":
+        elif config["PINN_flag"][0] == "conservative":
             config["PINN_constraint_fcn"] = [pinn_APLC]
     
         if "class_weight" not in config:

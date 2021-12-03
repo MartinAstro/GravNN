@@ -6,10 +6,21 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def plot_model(vis, stat):
     vis = VisualizationBase()
-    sh_df = pd.read_pickle('Data/Dataframes/sh_regress_stats.data')
-    nn_df = pd.read_pickle('Data/Dataframes/nn_regress_stats.data')
-    pinn_df = pd.read_pickle('Data/Dataframes/pinn_regress_stats.data')
+    sh_df = pd.read_pickle('Data/Dataframes/sh_regress_2_stats.data')
+    nn_df = pd.read_pickle('Data/Dataframes/nn_regress_4_stats.data')
+    pinn_df = pd.read_pickle('Data/Dataframes/pinn_regress_4_stats.data')
 
+    # nn_df = pd.read_pickle('Data/Dataframes/nn_regress_stats.data')
+    # pinn_df = pd.read_pickle('Data/Dataframes/pinn_regress_stats.data')
+
+
+
+    # the new spherical harmonic models use noise as 0.0 and 0.2, whereas the networks use 0 and 2
+    nn_index = [(entry[0], entry[1],entry[2]) for entry in nn_df.index.values]
+    pinn_index = [(entry[0], entry[1],entry[2]) for entry in pinn_df.index.values]
+    nn_df.set_index([nn_index], inplace=True)
+    pinn_df.set_index([pinn_index], inplace=True)
+ 
     df_list = [sh_df, nn_df, pinn_df]
     marker = [None, None, 'o']
     linestyle = [None, '--', None]
@@ -28,8 +39,7 @@ def plot_model(vis, stat):
             rse = stats['rse_mean'].values
             sigma = stats['sigma_2_mean'].values
             compliment = stats['sigma_2_c_mean'].values
-
-            ax = sns.lineplot(x=x, y=rse, color=color[noise], linestyle=linestyle[i], marker=marker[i], ci=99)
+            ax = sns.lineplot(x=x, y=rse, color=color[int(noise*10)], linestyle=linestyle[i], marker=marker[i], ci=99)
             #ax = sns.lineplot(x=x, y=sigma, color=color[noise], linestyle=linestyle[i], marker=marker[i])
             #ax = sns.lineplot(x=x, y=compliment, color=color[noise], linestyle=linestyle[i], marker=marker[i])
             lines_styles.append(ax.lines[-1])
@@ -51,5 +61,7 @@ def main():
     vis.save(plt.gcf(), 'Regression.pdf')
     plot_model(vis, 'sigma_2_mean')
     vis.save(plt.gcf(), 'Regression_sigma.pdf')
+
+    plt.show()
 if __name__ == "__main__":
     main()
