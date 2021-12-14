@@ -44,6 +44,13 @@ class CustomModel(tf.keras.Model):
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
         self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
 
+        if ("L" not in self.eval.__name__) or( "C" not in self.eval.__name__):
+            self.train_step = self.train_step_jit
+            self.test_step = self.test_step_jit
+        else:
+            self.train_step = self.train_step_no_jit
+            self.test_step = self.test_step_no_jit
+
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
 
@@ -62,8 +69,61 @@ class CustomModel(tf.keras.Model):
         )
         return loss_components
 
-    @tf.function()#jit_compile=True)
-    def train_step(self, data):
+
+    @tf.function(jit_compile=True)
+    def train_step_jit(self, data):
+        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
+        or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
+        summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
+        occurs.
+
+        Args:
+            data (tf.Dataset): training data
+
+        Returns:
+            dict: dictionary of metrics passed to the callback.
+        """
+        with tf.xla.experimental.jit_scope(
+            compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
+
+            x, y = data
+            with tf.GradientTape(persistent=True) as tape:
+                y_hat = self(x, training=True)
+                loss_components = self.compute_loss_components(y_hat, y)
+                updated_loss_components = self.scale_loss(
+                    loss_components, self.adaptive_constant
+                )
+                loss = tf.reduce_sum(tf.stack(updated_loss_components))
+                loss = self.optimizer.get_scaled_loss(loss)
+
+            # calculate new adaptive constant
+            adaptive_constant = self.calc_adaptive_constant(
+                tape,
+                updated_loss_components,
+                self.adaptive_constant,
+                self.beta,
+                self.trainable_weights,
+            )
+
+            # # These lines are needed if using the gradient callback.
+            # grad_comp_list = []
+            # for loss_comp in updated_loss_components:
+            #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
+            #     grad_comp_list.append(gradient_components)
+
+            gradients = tape.gradient(loss, self.network.trainable_variables)
+            gradients = self.optimizer.get_unscaled_gradients(gradients)
+            del tape
+
+            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+
+        return {
+            "loss": loss,
+            "adaptive_constant": adaptive_constant,
+        }  # , 'grads' : grad_comp_list}
+    
+    @tf.function(jit_compile=False)
+    def train_step_no_jit(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
         or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
         summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
@@ -114,8 +174,19 @@ class CustomModel(tf.keras.Model):
             "adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
 
-    @tf.function()  # jit_compile=True)
-    def test_step(self, data):
+    @tf.function(jit_compile=True)
+    def test_step_jit(self, data):
+        x, y = data
+        y_hat = self(x, training=True)
+        loss_components = self.compute_loss_components(y_hat, y)
+        updated_loss_components = self.scale_loss(
+            loss_components, self.adaptive_constant
+        )
+        loss = tf.reduce_sum(updated_loss_components)
+        return {"loss": loss}
+
+    @tf.function(jit_compile=False)
+    def test_step_no_jit(self, data):
         x, y = data
         y_hat = self(x, training=True)
         loss_components = self.compute_loss_components(y_hat, y)
@@ -131,22 +202,8 @@ class CustomModel(tf.keras.Model):
         a = self.network(x) 
         return a
     
-    #@tf.function(jit_compile=True)
     @tf.function()
     def _pinn_acceleration_output(self, x):
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            u = self.network(x)  # shape = (k,) #! evaluate network
-        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        return tf.multiply(-1.0, u_x)
-
-    @tf.function(jit_compile=True)
-    def __acceleration_output(self, dataset):
-        x, y = dataset
-        if self.config["PINN_constraint_fcn"][0] == no_pinn:
-            a = self.network(x) 
-            return a
-
         with tf.GradientTape() as g2:
             g2.watch(x)
             u = self.network(x)  # shape = (k,) #! evaluate network
@@ -248,6 +305,15 @@ class CustomModel(tf.keras.Model):
         x = x_transformer.transform(x)
 
         x = tf.constant(x, dtype=tf.float32)
+
+        # def chunks(lst, n):
+        #     """Yield successive n-sized chunks from lst."""
+        #     for i in range(0, len(lst), n):
+        #         yield tf.data.Dataset.from_tensor_slices(lst[i:i + n])
+        
+        # batch_size = 131072//2
+        # data = chunks(x, batch_size)
+
         # x = tf.cast(x, tf.float32)
         if self.is_pinn:
             a_pred = self._pinn_acceleration_output(x)

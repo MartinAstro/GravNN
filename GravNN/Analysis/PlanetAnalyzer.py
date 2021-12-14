@@ -5,9 +5,10 @@ from GravNN.Networks import utils
 from GravNN.Support.StateObject import StateObject
 from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
-
+import GravNN
 import numpy as np
 import pickle
+import os
 import pandas as pd
 
 def nearest_analytic(map_stat_series, value):
@@ -136,7 +137,7 @@ class PlanetAnalyzer():
             stats.update(analytic_neighbors)
         return stats
 
-    def compute_alt_stats(self, planet, altitudes, points, sh_alt_df):
+    def compute_alt_stats(self, planet, altitudes, points, sh_alt_df, model_id):
         stats = {}
         df_all = pd.DataFrame()
 
@@ -172,6 +173,6 @@ class PlanetAnalyzer():
             df = pd.DataFrame().from_dict(stats).set_index('alt')
             df_all = df_all.append(df)
         print(df_all)
-        df_all.to_pickle( "/Data/Networks/"+str(model_id)+"/rse_alt.data")
+        df_all.to_pickle(os.path.dirname(GravNN.__file__) + "/../Data/Networks/"+str(model_id)+"/rse_alt.data")
         return df_all
         

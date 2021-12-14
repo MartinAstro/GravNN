@@ -8,7 +8,7 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.CelestialBodies.Asteroids import Bennu
 
-from GravNN.Trajectories import FibonacciDist, ReducedGridDist
+from GravNN.Trajectories import FibonacciDist
 from GravNN.Support.Statistics import sigma_mask, mean_std_median
 
 def get_altitude_list(planet):
@@ -18,7 +18,7 @@ def get_altitude_list(planet):
         alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])
         altitudes = np.sort(np.unique(alt_list))
     elif planet == Moon():
-        altitudes = np.linspace(0, 50000, 50, dtype=float) # Every 1 kilometers above surface
+        altitudes = np.linspace(0, 55000, 55, dtype=float) # Every 1 kilometers above surface
     elif planet == Bennu():
         exit("Not implemented yet")      
     else:
@@ -31,17 +31,22 @@ def main():
     planet = Earth()
     df_file = "Data/Dataframes/sh_stats_earth_altitude_v2.data"
     deg_list =  np.arange(2, 350, 25)#[2, 25, 50, 55, 75, 100, 110, 150, 200, 215]
+    alt_list = np.linspace(0, 500000, 50, dtype=float) # Every 10 kilometers above surface
+    window = np.array([5, 15, 45, 100, 300]) # Close to surface distribution
+    alt_list = np.concatenate([alt_list, window, 420000+window, 420000-window])
+    alt_list = np.sort(np.unique(alt_list))
 
     planet = Moon()
     df_file = "Data/Dataframes/sh_stats_moon_altitude.data"
     deg_list =  np.arange(2, 275, 25)#[2, 25, 50, 55, 75, 100, 110, 150, 200, 215]
+    alt_list = np.linspace(0, 50000, 50, dtype=float)#get_altitude_list(planet)
+    alt_list = np.concatenate([alt_list, np.linspace(50000, 55000, 2, dtype=float)[1:]])
 
     model_file = planet.sh_hf_file
     density_deg = 180
     max_deg = 1000
     points = 250000
 
-    alt_list = np.linspace(0, 50000, 50, dtype=float)#get_altitude_list(planet)
 
     df_all = pd.DataFrame()
     columns = pd.MultiIndex.from_product([['rse_mean', 'sigma_1_mean', 'sigma_1_c_mean', 'sigma_2_mean', 'sigma_2_c_mean', 'sigma_3_mean', 'sigma_3_c_mean'], deg_list])

@@ -15,20 +15,23 @@ def main():
     """
     df_file = "Data/Dataframes/earth_trajectory_v2.data"
     df_file = 'Data/Dataframes/earth_trajectory_deg2.data'
-    # df_file = 'Data/Dataframes/moon_pinn_df.data'
-    # df_file = "Data/Dataframes/traditional_nn_df_percent.data"
-    df_file = "Data/Dataframes/pinn_df_percent.data"
-
-    #planet = Moon()
     planet = Earth()
 
-    analyze_altitude = False
+    df_file = 'Data/Dataframes/moon_traditional_nn_df.data'
+    # df_file = 'Data/Dataframes/moon_pinn_df.data'
+    planet = Moon()
+    analyze_altitude = True
+    
+    # df_file = "Data/Dataframes/traditional_nn_df_percent.data"
+    # df_file = "Data/Dataframes/pinn_df_percent.data"
+
+
 
     points = 250000  # 64800
     #test_trajectories = {"Brillouin_deg0": FibonacciDist(planet, planet.radius, points)}
     #test_trajectories = {"Brillouin_deg_n1": FibonacciDist(planet, planet.radius, points)}
-    # test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
-    test_trajectories = {"Brillouin_percent": FibonacciDist(planet, planet.radius, points)}
+    test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
+    # test_trajectories = {"Brillouin_percent": FibonacciDist(planet, planet.radius, points)}
 
     args = []
     for idx in range(0,10):

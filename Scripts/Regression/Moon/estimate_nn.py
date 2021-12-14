@@ -127,7 +127,7 @@ def generate_mp_args(num_units_list, num_models, noise_list, config):
 def regression_9500_v1():
     """As close to original configuration as first draft"""
 
-    config = get_default_earth_config()
+    config = get_default_moon_config()
     config['N_train'] = [9500]
     config['N_val'] = [5000]
     config['scale_by'] = ["a"]
@@ -151,183 +151,9 @@ def regression_9500_v1():
     num_units_list = [10, 20, 30]
     noise_list =  [0.0, 0.2]
     
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_9500_v1.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_9500_v1.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_9500_v1.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-def regression_9500_v2():
-    """Changing to Pines architecture to see if performance can improve in best case. (No noise, 1 network)
-    
-    Got close with PINN, but still worse than SH. Possibly would improve without early stopping
-    """
-
-    config = get_default_earth_config()
-    
-    config['N_train'] = [9500]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-    config['early_stop'] = [True]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [25000]
-
-    config['batch_size'] = [40000]
-    config['lr'] = [0.005]
-    config['activation'] = ['gelu']
-    config["network_type"] = ["sph_pines_traditional"]
-    config["custom_input_layer"] = [None]
-    config["ref_radius"] = [Earth().radius]
-    config["skip_normalization"] = [False]
-
-    config.update({
-                "x_transformer": [UniformScaler(feature_range=(-1, 1))],
-                "u_transformer": [UniformScaler(feature_range=(-1, 1))],
-                "a_transformer": [UniformScaler(feature_range=(-1, 1))],
-                "scale_by": ["non_dim"],
-                "dummy_transformer": [DummyScaler()],
-                })
-    num_models = 1#10
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_9500_v2.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_9500_v2.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_9500_v2.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-
-
-def regression_18000_v1():
-    """Use less data"""
-
-    config = get_default_earth_config()
-    config['N_train'] = [18000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [25000]
-
-    config['batch_size'] = [40000]
-    config['lr'] = [0.005]
-    config['activation'] = ['gelu']
-
-    num_models = 1
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_18000_v1.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_18000_v1.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_18000_v1.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-def regression_18000_v2():
-    """Use More Data and change the decay epoch to be much later (75000 instead of 25000)"""
-
-    config = get_default_earth_config()
-    config['N_train'] = [18000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [75000]
-
-    config['batch_size'] = [40000]
-    config['learning_rate'] = [0.001]
-    config['activation'] = ['gelu']
-
-    num_models = 1
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_18000_v2.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_18000_v2.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_18000_v2.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-
-def regression_9500_v3():
-    """Use less data"""
-
-    config = get_default_earth_config()
-    config['N_train'] = [9500]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [25000]
-
-    config['batch_size'] = [40000]
-    config['learning_rate'] = [0.001]
-    config['activation'] = ['tanh']
-
-    num_models = 1
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_9500_v3.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_9500_v3.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_9500_v3.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-def regression_9500_v4():
-    """Use less data"""
-
-    config = get_default_earth_config()
-    config['N_train'] = [9500]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [25000]
-
-    config['batch_size'] = [40000]
-    config['learning_rate'] = [0.001]
-    config['activation'] = ['gelu']
-
-    num_models = 1
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_9500_v4.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_9500_v4.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_9500_v4.data"
+    df_regressed = "Data/Dataframes/Regression/Moon_ML_models_regression_9500_v1.data"
+    nn_file_name = "Data/Dataframes/Regression/Moon_NN_regression_9500_v1.data"
+    pinn_file_name = "Data/Dataframes/Regression/Moon_PINN_regression_9500_v1.data"
     pool = mp.Pool(6)
     args = generate_mp_args(num_units_list, num_models, noise_list, config)
     nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
@@ -338,39 +164,7 @@ def regression_9500_v4():
 def regression_5000_v1():
     """Use less data"""
 
-    config = get_default_earth_config()
-    config['N_train'] = [5000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["a"]
-   
-    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
-    config["decay_rate"] = [0.5]
-    config["decay_rate_epoch"] = [25000]
-    config["decay_epoch_0"] = [25000]
-
-    config['batch_size'] = [40000]
-    config['lr'] = [0.005]
-    config['activation'] = ['tanh']
-
-    num_models = 1
-    num_units_list = [20]
-    noise_list =  [0.0]
-    
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_5000_v1.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_5000_v1.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_5000_v1.data"
-    pool = mp.Pool(6)
-    args = generate_mp_args(num_units_list, num_models, noise_list, config)
-    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
-
-    nn_df.to_pickle(nn_file_name)
-    pinn_df.to_pickle(pinn_file_name)
-
-
-def regression_5000_v2():
-    """Use less data"""
-
-    config = get_default_earth_config()
+    config = get_default_moon_config()
     config['N_train'] = [5000]
     config['N_val'] = [500]
     config['scale_by'] = ["a"]
@@ -388,9 +182,40 @@ def regression_5000_v2():
     num_units_list = [10, 20]
     noise_list =  [0.0, 0.2]
     
-    df_regressed = "Data/Dataframes/Regression/Earth_ML_models_regression_5000_v2.data"
-    nn_file_name = "Data/Dataframes/Regression/Earth_NN_regression_5000_v2.data"
-    pinn_file_name = "Data/Dataframes/Regression/Earth_PINN_regression_5000_v2.data"
+    df_regressed = "Data/Dataframes/Regression/Moon_ML_models_regression_5000_v1.data"
+    nn_file_name = "Data/Dataframes/Regression/Moon_NN_regression_5000_v1.data"
+    pinn_file_name = "Data/Dataframes/Regression/Moon_PINN_regression_5000_v1.data"
+    pool = mp.Pool(6)
+    args = generate_mp_args(num_units_list, num_models, noise_list, config)
+    nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
+
+    nn_df.to_pickle(nn_file_name)
+    pinn_df.to_pickle(pinn_file_name)
+
+def regression_5000_v2():
+    """Use less data"""
+
+    config = get_default_moon_config()
+    config['N_train'] = [5000]
+    config['N_val'] = [500]
+    config['scale_by'] = ["a"]
+   
+    config['schedule_type'] = ['exp_decay'] # TODO: Try exponential
+    config["decay_rate"] = [0.5]
+    config["decay_rate_epoch"] = [25000]
+    config["decay_epoch_0"] = [25000]
+
+    config['batch_size'] = [40000]
+    config['learning_rate'] = [0.005]
+    config['activation'] = ['tanh']
+
+    num_models = 3
+    num_units_list = [10, 20]
+    noise_list =  [0.0, 0.2]
+    
+    df_regressed = "Data/Dataframes/Regression/Moon_ML_models_regression_5000_v2.data"
+    nn_file_name = "Data/Dataframes/Regression/Moon_NN_regression_5000_v2.data"
+    pinn_file_name = "Data/Dataframes/Regression/Moon_PINN_regression_5000_v2.data"
     pool = mp.Pool(6)
     args = generate_mp_args(num_units_list, num_models, noise_list, config)
     nn_df, pinn_df = regress_networks_models_mp(args, pool, df_regressed)    
@@ -399,17 +224,9 @@ def regression_5000_v2():
     pinn_df.to_pickle(pinn_file_name)
 
 
+
 if __name__ == "__main__":
     # regression_9500_v1()
-    # regression_9500_v2()
-    
-    # regression_5000_v1() #P Never run
-    # regression_18000_v1()
-    # regression_18000_v2()
-
-    # regression_9500_v3() # TanH -- Best yet
-    # regression_9500_v4() # Gelu
-    # regression_5000_v1()
     regression_5000_v2()
 
 

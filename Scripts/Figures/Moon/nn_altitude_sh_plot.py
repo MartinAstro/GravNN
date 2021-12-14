@@ -126,7 +126,7 @@ def main():
     
     # * Random Brillouin
     bounds=[0, 270]
-    traj = RandomDist.RandomDist(planet, radius_bounds, points)
+    traj = RandomDist(planet, radius_bounds, points)
     generate_plot(df, traj, vis, "Random", 'param_rse_mean',legend=True, bounds=bounds)
     generate_plot(df, traj, vis, "Random_sigma", 'param_sigma_2_mean',legend=True, bounds=bounds)
     #generate_plot(df, traj, vis, "Random_comp", 'param_sigma_2_c_mean',legend=True, bounds=bounds)

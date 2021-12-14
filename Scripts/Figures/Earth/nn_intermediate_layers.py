@@ -86,6 +86,18 @@ def plot_intermediate_layer(config, model, columns, planet=None):
             col_i += 1
         row_i += 1
    
+    def make_colorbar():
+        delta = im.get_clim()[1] - im.get_clim()[0]
+        cb_ax = plt.gcf().add_axes([0.165, 0.05, 0.70, 0.035])
+        cbar = plt.gcf().colorbar(im, cax=cb_ax, shrink=0.95, pad=0.05, orientation='horizontal', extend='both')
+        cbar.ax.get_xaxis().set_ticks([])
+        x_coords = [im.get_clim()[0] + delta*0.15, im.get_clim()[1] - delta*0.15]
+        print(x_coords)
+        print(im.get_clim())
+        for j, lab in enumerate(['Low Activation', 'High Activation']):
+            cbar.ax.text(x_coords[j], np.mean(np.array(im.get_clim())), lab, ha='center', va='center', color='white',fontsize=8)
+        #cbar.ax.get_xaxis().labelpad = 15
+    make_colorbar()
     map_vis.save(plt.gcf(), "Intermediate_Layers.pdf")
     
     # Zoomed in final layer
@@ -115,6 +127,21 @@ def plot_intermediate_layer(config, model, columns, planet=None):
         plt.xticks([])
         plt.yticks([])
         col_i += 1
+    
+
+    def make_colorbar():
+        delta = im.get_clim()[1] - im.get_clim()[0]
+        cb_ax = plt.gcf().add_axes([0.165, 0.35, 0.7, 0.035])
+        cbar = plt.gcf().colorbar(im, cax=cb_ax, shrink=0.95, pad=0.05, orientation='horizontal', extend='both')
+        cbar.ax.get_xaxis().set_ticks([])
+        x_coords = [im.get_clim()[0] + delta*0.15, im.get_clim()[1] - delta*0.15]
+        print(x_coords)
+        print(im.get_clim())
+        for j, lab in enumerate(['Low Activation', 'High Activation']):
+            cbar.ax.text(x_coords[j], np.mean(np.array(im.get_clim())), lab, ha='center', va='center', color='white',fontsize=8)
+        #cbar.ax.get_xaxis().labelpad = 15
+    make_colorbar()
+    make_colorbar()
     map_vis.save(plt.gcf(), "Final_Layers.pdf")
 
 def load_config_and_model(model_id, df_file):
@@ -140,6 +167,8 @@ def load_config_and_model(model_id, df_file):
         config['dtype'] = [tf.float32]
     if 'class_weight' not in config:
         config['class_weight'] = [1.0]
+    if 'lr_anneal' not in config:
+        config['lr_anneal'] = [False]
     # Reinitialize the model
     network = tf.keras.models.load_model('C:\\Users\\John\\Documents\\Research\\ML_Gravity' + "/Data/Networks/"+str(model_id)+"/network")
     model = CustomModel(config, network)

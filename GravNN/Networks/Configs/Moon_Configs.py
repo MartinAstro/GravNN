@@ -31,6 +31,7 @@ def get_default_moon_config():
         "initializer": ["glorot_normal"],
         "optimizer": ["adam"],
         "batch_size": [40000],
+        "lr_anneal": [False],
         "dropout": [0.0],
         "x_transformer": [MinMaxScaler(feature_range=(-1, 1))],
         "a_transformer": [MinMaxScaler(feature_range=(-1, 1))],
@@ -38,7 +39,9 @@ def get_default_moon_config():
         "dtype": ["float32"],
         "dummy_transformer": [DummyScaler()],
         "class_weight": [[1.0, 1.0, 1.0]],  # no_pinn and PINN_A
+        "learning_rate": [0.001],
         "skip_normalization": [False],
+        "seed" : [0],
     }
     config = {}
     config.update(data_config)
@@ -74,6 +77,7 @@ def get_default_moon_pinn_config():
         "optimizer": ["adam"],  # (learning_rate=config['lr_scheduler'][0])
         "batch_size": [40000],
         "dropout": [0.0],
+        "lr_anneal": [False],
         "x_transformer": [MinMaxScaler(feature_range=(-1, 1))],
         "u_transformer": [UniformScaler(feature_range=(-1, 1))],
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],

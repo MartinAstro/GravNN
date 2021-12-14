@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Planets import Moon
 from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                      get_sh_data)
 from GravNN.Networks.Model import count_nonzero_params, load_config_and_model
@@ -41,7 +41,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
     return x, a, u
 
 def compute_sh_regression_statistics(sh_df, sh_df_stats_file, trajectory, grid_true):
-    directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', "Earth")
+    directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', "Moon")
     df_all = pd.DataFrame()
     for i in range(len(sh_df)):
         row = sh_df.iloc[i]
@@ -69,17 +69,13 @@ def main():
     (estimate_sh_BLLS.py), compute the associated error of these
     regressed representations and store in new regress_stats dataframe. 
     """
-    planet = Earth()
+    planet = Moon()
     model_file = planet.sh_hf_file
     max_deg = 1000
 
     # * Generate the true acceleration    
     trajectory = FibonacciDist(planet, planet.radius, 250000)
-    file_name = "Data/Dataframes/Regression/Earth_SH_regression_9500_v1"
-    file_name = "Data/Dataframes/Regression/Earth_SH_regression_5000_v1"
-    file_name = "Data/Dataframes/Regression/Earth_SH_regression_2500_v1"
-    file_name = "Data/Dataframes/Regression/Earth_SH_regression_18000_v1"
-    file_name = "Data/Dataframes/Regression/Earth_SH_regression_5000_v2"
+    file_name = "Data/Dataframes/Regression/Moon_SH_regression_5000_v1"
 
     sh_df = pd.read_pickle(file_name + ".data")
     sh_df_stats_file = file_name + "_stats.data"

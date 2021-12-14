@@ -14,6 +14,7 @@ def get_altitude_list(planet):
     elif planet.__class__ == Moon().__class__:
         sh_stats_df = pd.read_pickle("Data/Dataframes/sh_stats_moon_altitude.data")
         altitudes = np.linspace(0, 50000, 50, dtype=float) # Every 1 kilometers above surface
+        altitudes = np.concatenate([altitudes, np.linspace(50000, 55000, 2, dtype=float)[1:]])
     elif planet.__class__ == Bennu().__class__:
         exit("Not implemented yet")   
     else:
