@@ -4,16 +4,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
-def plot_model(vis, stat):
+def plot_model(sh_df, nn_df, pinn_df, metric, plot_name):
     vis = VisualizationBase()
-    sh_df = pd.read_pickle('Data/Dataframes/sh_regress_2_stats.data')
-    nn_df = pd.read_pickle('Data/Dataframes/nn_regress_4_stats.data')
-    pinn_df = pd.read_pickle('Data/Dataframes/pinn_regress_4_stats.data')
-
-    # nn_df = pd.read_pickle('Data/Dataframes/nn_regress_stats.data')
-    # pinn_df = pd.read_pickle('Data/Dataframes/pinn_regress_stats.data')
-
-
 
     # the new spherical harmonic models use noise as 0.0 and 0.2, whereas the networks use 0 and 2
     nn_index = [(entry[0], entry[1],entry[2]) for entry in nn_df.index.values]
@@ -30,18 +22,17 @@ def plot_model(vis, stat):
     for noise in np.unique(sh_df.index.get_level_values(0)):
         lines_styles = []
         for i in range(len(df_list)):
+            # if noise == 0.2:
+            #     continue
+
             df = df_list[i]
             try:
                 stats = df.loc[(noise)].drop(40)
             except:
                 stats = df.loc[(noise)]
             x = stats['params']
-            rse = stats['rse_mean'].values
-            sigma = stats['sigma_2_mean'].values
-            compliment = stats['sigma_2_c_mean'].values
-            ax = sns.lineplot(x=x, y=rse, color=color[int(noise*10)], linestyle=linestyle[i], marker=marker[i], ci=99)
-            #ax = sns.lineplot(x=x, y=sigma, color=color[noise], linestyle=linestyle[i], marker=marker[i])
-            #ax = sns.lineplot(x=x, y=compliment, color=color[noise], linestyle=linestyle[i], marker=marker[i])
+            metric_values = stats[metric].values
+            ax = sns.lineplot(x=x, y=metric_values, color=color[int(noise*10)], linestyle=linestyle[i], marker=marker[i], ci=95)
             lines_styles.append(ax.lines[-1])
         lines.append(lines_styles)
 
@@ -50,17 +41,21 @@ def plot_model(vis, stat):
     plt.ylabel('MRSE [m/s$^2$]')
     plt.xlabel('Parameters')
     legend1 = plt.legend(lines[0], ['SH', 'NN', 'PINN'], loc=1)
-    plt.legend([l[0] for l in lines], ['$0\sigma$', '$2\sigma$'], loc=3)
+    plt.legend([l[0] for l in lines], ['$0\sigma$', '$2\sigma$'], loc=2)
     plt.gca().add_artist(legend1)
+    vis.save(plt.gcf(), plot_name)
 
 
 def main():
 
     vis = VisualizationBase()
-    plot_model(vis, 'rse_mean')
-    vis.save(plt.gcf(), 'Regression.pdf')
-    plot_model(vis, 'sigma_2_mean')
-    vis.save(plt.gcf(), 'Regression_sigma.pdf')
+
+    sh_df = pd.read_pickle('Data/Dataframes/Regression/Earth_SH_regression_5000_v2_stats.data') #gelu w/ exp decay
+    nn_df = pd.read_pickle('Data/Dataframes/Regression/Earth_NN_regression_5000_v2_stats.data')
+    pinn_df = pd.read_pickle('Data/Dataframes/Regression/Earth_PINN_regression_5000_v2_stats.data')
+
+    plot_model(sh_df, nn_df, pinn_df, 'rse_mean', 'Regression.pdf')
+    plot_model(sh_df, nn_df, pinn_df, 'sigma_2_mean', 'Regression_sigma.pdf')
 
     plt.show()
 if __name__ == "__main__":
