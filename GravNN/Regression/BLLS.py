@@ -130,15 +130,15 @@ def main():
     #remove_deg = 0 # C20 is very close, C22 isn't that close
 
     planet = Earth()
-    sh_EGM2008 = SphericalHarmonics(planet.sh_hf_file, regress_deg)
+    sh_EGM2008 = SphericalHarmonics(planet.sh_file, regress_deg)
 
     trajectory = DHGridDist(planet, sh_EGM2008.radEquator, 5)
     #trajectory = RandomDist(planet, [planet.radius, planet.radius+420], 1000)
 
     if remove_deg != -1:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_deg=max_true_deg, deg_removed=remove_deg)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_deg=max_true_deg, deg_removed=remove_deg)
     else:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_deg=max_true_deg, deg_removed=-1)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_deg=max_true_deg, deg_removed=-1)
 
 
     regressor = BLLS(regress_deg, planet, remove_deg)

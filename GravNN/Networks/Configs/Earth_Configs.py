@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 def get_default_earth_config():
     data_config = {
         "planet": [Earth()],
-        "grav_file": [Earth().sh_hf_file],
+        "grav_file": [Earth().sh_file],
         "distribution": [RandomDist],
         "N_dist": [1000000],
         "N_train": [950000],
@@ -52,7 +52,7 @@ def get_default_earth_config():
 def get_default_earth_pinn_config():
     data_config = {
         "planet": [Earth()],
-        "grav_file": [Earth().sh_hf_file],
+        "grav_file": [Earth().sh_file],
         "distribution": [RandomDist],
         "N_dist": [1000000],
         "N_train": [95000],

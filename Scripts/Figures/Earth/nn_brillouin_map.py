@@ -28,7 +28,7 @@ def main():
     vlim = None
 
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
 
     df_file ='C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\pinn_df.data'
@@ -38,11 +38,11 @@ def main():
     df = pd.read_pickle(df_file)
 
     trajectory = DHGridDist(planet, planet.radius, degree=density_deg)
-    grav_model = SphericalHarmonics(planet.sh_hf_file,1000,trajectory).load()
+    grav_model = SphericalHarmonics(planet.sh_file,1000,trajectory).load()
     a_true = grav_model.accelerations
     grid_true = Grid(trajectory=trajectory, accelerations=a_true)
 
-    grav_model = SphericalHarmonics(planet.sh_hf_file,0,trajectory).load()
+    grav_model = SphericalHarmonics(planet.sh_file,0,trajectory).load()
     a_true = grav_model.accelerations
     grid_true = grid_true - Grid(trajectory=trajectory, accelerations=a_true)
 

@@ -42,7 +42,7 @@ def main():
     alt_list = np.linspace(0, 50000, 50, dtype=float)#get_altitude_list(planet)
     alt_list = np.concatenate([alt_list, np.linspace(50000, 55000, 2, dtype=float)[1:]])
 
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
     points = 250000

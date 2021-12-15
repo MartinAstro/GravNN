@@ -135,7 +135,7 @@ def main():
     data_vis = DataVisualization(mapUnit, halt_formatting=True)
 
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
 

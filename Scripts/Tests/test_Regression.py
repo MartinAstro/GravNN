@@ -10,7 +10,7 @@ def main():
 
     planet = Earth()
     trajectory = DHGridDist(planet, planet.radius, 45)
-    x, a, u = get_sh_data(trajectory,planet.sh_hf_file, 180,-1)
+    x, a, u = get_sh_data(trajectory,planet.sh_file, 180,-1)
     
     regressor = Regression(5, planet, x, a)
     coefficients = regressor.perform_regression()

@@ -18,11 +18,11 @@ def main():
 
     # df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
     # planet = Moon()
-    # model_file = planet.sh_hf_file
+    # model_file = planet.sh_file
 
     df_file = "Data/Dataframes/sh_stats_Brillouin_percent.data"
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
 
     trajectory = FibonacciDist(planet, planet.radius, points)
 

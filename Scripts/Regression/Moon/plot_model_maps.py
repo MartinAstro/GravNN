@@ -80,7 +80,7 @@ def plot_nn_model_map(nn_df, trajectory, model_df, grid_true):
 
 def main():
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     max_deg = 1000
 
     # * Generate the true acceleration

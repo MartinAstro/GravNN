@@ -239,9 +239,9 @@ def main():
 
     remove_deg = True
     if remove_deg:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_true_deg,0)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_true_deg,0)
     else:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_true_deg,-1)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_true_deg,-1)
 
 
     regressor = Regression(regress_deg, planet, x, a)

@@ -111,7 +111,7 @@ class Bennu:
 
         # https://ssd.jpl.nasa.gov/tools/gravity.html#/bennu 
         #grav_20_particles.m - A MATLAB script that provides the coefficients and covariance of the estimated gravity field.
-        self.sh_10 = pooch.retrieve(
+        self.sh_file = pooch.retrieve(
             url='https://figshare.com/ndownloader/files/21927342',
             known_hash="d002eb615caab83665d991ecaa43480b85569e7f830f4aac9b2824d04d7b0dea",
             fname="Bennu_sh_10_raw.txt",
@@ -120,7 +120,7 @@ class Bennu:
         )
 
         # grav_shape_16x16.m - A MATLAB script that provides the coefficients of the shape-based uniform density gravity field.
-        self.sh_shape_16 = pooch.retrieve(
+        self.sh_shape_file = pooch.retrieve(
             url='https://figshare.com/ndownloader/files/21927351',
             known_hash="857cd603f9a9b42f60562ec19b60ac095a16005c3f1b5bd85b16436c65e5e35b",
             fname="Bennu_sh_shape_16_raw.txt",

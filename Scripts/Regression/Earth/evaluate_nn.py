@@ -44,7 +44,7 @@ def main():
 
     
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     max_deg = 1000
 
     trajectory = FibonacciDist(planet, planet.radius, 250000)

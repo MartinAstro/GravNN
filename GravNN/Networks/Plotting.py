@@ -31,7 +31,7 @@ class Plotting:
 
     def plot_maps(self, map_trajectories):
         for name, map_traj in map_trajectories.items():
-            model_file = map_traj.celestial_body.sh_hf_file
+            model_file = map_traj.celestial_body.sh_file
             x, a, u = get_sh_data(map_traj, model_file, **self.config)
 
             if self.config["basis"][0] == "spherical":

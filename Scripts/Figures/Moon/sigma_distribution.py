@@ -29,7 +29,7 @@ def std_masks(grid, sigma):
 
 def get_grid(degree):
     planet = Moon()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
 
     radius_min = planet.radius

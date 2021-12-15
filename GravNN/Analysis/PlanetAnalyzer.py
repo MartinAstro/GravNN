@@ -144,7 +144,7 @@ class PlanetAnalyzer():
         
         for alt in altitudes: 
             trajectory = FibonacciDist(planet, planet.radius + alt, points)
-            model_file = trajectory.celestial_body.sh_hf_file
+            model_file = trajectory.celestial_body.sh_file
             x, a, u = get_sh_data(trajectory, model_file, **self.config)
             acc_pred = self.model.generate_acceleration(x)
 

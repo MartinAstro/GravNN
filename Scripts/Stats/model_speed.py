@@ -91,7 +91,7 @@ def time_spherical_harmonics(planet, batch):
     sh_params = []
     sh_time = []
     for deg in [9, 10, 13, 15, 20, 25, 35, 45, 55, 65, 75, 125, 200, 400]:
-        model = SphericalHarmonics(planet.sh_hf_file, deg)
+        model = SphericalHarmonics(planet.sh_file, deg)
         params, delta = time_model(positions, model, batch=batch)
         if deg == 9:
             continue

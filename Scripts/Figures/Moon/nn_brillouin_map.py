@@ -24,7 +24,7 @@ def main():
     vlim= [0, 60]
 
     planet = Moon()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
 
     df_file ='C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\moon_pinn_df.data'

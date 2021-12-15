@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler, QuantileTransfor
 def main():
     planet = Moon()
     trajectory = RandomDist(planet, [planet.radius, planet.radius+50000.0], 1000000)
-    x_unscaled, a_unscaled, u_unscaled = get_sh_data(trajectory, planet.sh_hf_file, deg_removed=2, max_deg=1000)
+    x_unscaled, a_unscaled, u_unscaled = get_sh_data(trajectory, planet.sh_file, deg_removed=2, max_deg=1000)
 
     vis = VisualizationBase()
     vis.newFig()

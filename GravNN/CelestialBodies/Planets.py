@@ -56,7 +56,7 @@ class Earth:
                 f.writelines([ line.decode("utf-8").replace("D", "E") for line in data])
             return new_name
 
-        self.sh_file = pooch.retrieve(
+        self.EGM96 = pooch.retrieve(
             url='https://earth-info.nga.mil/php/download.php?file=egm-96spherical',
             known_hash="1f21ab8151c1b9fe25f483a4f6b78acdbf5306daf923725017b83d87a5f33472",
             fname="EGM96_raw.zip",
@@ -64,13 +64,18 @@ class Earth:
             processor=format_EGM96_sh
         )
 
-        self.sh_hf_file = pooch.retrieve(
+        self.EGM2008 = pooch.retrieve(
             url='https://earth-info.nga.mil/php/download.php?file=egm-08spherical',
             known_hash='65a9072f337f156e8cbd76ffd773f536e6fb0de18697ea6726ecdb790fac0fbd',
             fname="EGM2008_raw.zip",
             path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Earth/",
             processor=format_EGM2008_sh
         )
+
+        # Backwards compatability
+        # self.sh_file = self.EGM96
+        self.sh_file = self.EGM2008
+        self.sh_file = self.EGM2008
 
 class Moon:
     def __init__(self):
@@ -93,10 +98,12 @@ class Moon:
                 f.writelines(data[1:])
             return new_name
 
-        self.sh_hf_file = pooch.retrieve(
+        self.GRGM1200 = pooch.retrieve(
             url='https://pds-geosciences.wustl.edu/grail/grail-l-lgrs-5-rdr-v1/grail_1001/shadr/gggrx_1200a_sha.tab',
             known_hash="fa04c3dce9376948ad243f3df74144e2602f12d183ea4d179604ed0a79da7ded",
             fname="GRGM_1200_raw.txt",
             path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Moon/",
             processor=format_sh
         )
+        
+        self.sh_file = self.GRGM1200

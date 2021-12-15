@@ -22,7 +22,7 @@ def main():
     vlim= [0, 30]
 
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
 
     df_file = "Data/Dataframes/sh_stats_Brillouin.data"

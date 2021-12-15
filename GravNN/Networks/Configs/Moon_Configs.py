@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 def get_default_moon_config():
     data_config = {
         "planet": [Moon()],
-        "grav_file": [Moon().sh_hf_file],
+        "grav_file": [Moon().sh_file],
         "distribution": [RandomDist],
         "N_dist": [1000000],
         "N_train": [950000],
@@ -52,7 +52,7 @@ def get_default_moon_config():
 def get_default_moon_pinn_config():
     data_config = {
         "planet": [Moon()],
-        "grav_file": [Moon().sh_hf_file],
+        "grav_file": [Moon().sh_file],
         "distribution": [RandomDist],
         "N_dist": [1000000],
         "N_train": [95000],

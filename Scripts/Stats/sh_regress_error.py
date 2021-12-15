@@ -20,7 +20,7 @@ def get_regress_data(model_file):
     # Generate the data
     planet = Earth()
     trajectory = RandomDist(planet, [planet.radius, planet.radius+420000.0], 1000000)
-    x, a, u = get_sh_data(trajectory,planet.sh_hf_file, 1000, 2)
+    x, a, u = get_sh_data(trajectory,planet.sh_file, 1000, 2)
     x, a, u, x_val, a_val, u_val = training_validation_split(x, a, u, 9500, 500)
     return x, a
 
@@ -36,7 +36,7 @@ def regress_model(x, a, max_deg):
 def main():
     
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
     model_deg = 33

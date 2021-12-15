@@ -34,7 +34,7 @@ def plot_maps(config, model, map_trajectories):
     x_transformer = config['x_transformer'][0]
     a_transformer = config['a_transformer'][0]
     for name, map_traj in map_trajectories.items():
-        model_file = map_traj.celestial_body.sh_hf_file
+        model_file = map_traj.celestial_body.sh_file
         x, a, u = get_sh_data(map_traj, model_file, config['max_deg'][0], config['deg_removed'][0])
 
         if config['basis'][0] == 'spherical':

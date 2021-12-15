@@ -23,12 +23,12 @@ The object `trajectory` will store the positions of all samples generated. Now w
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
     max_deg = 10
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     grav_model = SphericalHarmonics(model_file, degree=max_deg, trajectory=trajectory)
 
 
 
-Note how the `SphericalHarmonics` model requires information about where the Stokes coefficients are located (`Earth().sh_hf_file` includes the coefficients to degree and order 1000), the maximum degree of the expansion, and (optionally) the trajectory for which the accelerations / potentials must be computed. 
+Note how the `SphericalHarmonics` model requires information about where the Stokes coefficients are located (`Earth().sh_file` includes the coefficients to degree and order 1000), the maximum degree of the expansion, and (optionally) the trajectory for which the accelerations / potentials must be computed. 
 
 Now that the model has been configured, we will want to load in the accelerations and potentials. If these measurements have already been computed from a former experiment, they will simply be read in from a saved pickle file stored locally on your device. If not, they will be computed on-the-fly and saved accordingly. 
 

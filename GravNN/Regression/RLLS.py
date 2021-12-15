@@ -69,16 +69,16 @@ def main():
     regress_deg = 2   
     remove_deg = -1
     batch_initialization = True
-    sh_EGM2008 = SphericalHarmonics(planet.sh_hf_file, regress_deg)
+    sh_EGM2008 = SphericalHarmonics(planet.sh_file, regress_deg)
 
     trajectory = DHGridDist(planet, sh_EGM2008.radEquator, 360)
     trajectory = RandomDist(planet, [planet.radius, planet.radius+420000], 100000)
 
     if remove_deg != -1:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_deg=max_true_deg, deg_removed=remove_deg)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_deg=max_true_deg, deg_removed=remove_deg)
         C_lm_start = 0.0
     else:
-        x, a, u = get_sh_data(trajectory,planet.sh_hf_file, max_deg=max_true_deg, deg_removed=-1)
+        x, a, u = get_sh_data(trajectory,planet.sh_file, max_deg=max_true_deg, deg_removed=-1)
         C_lm_start = 1.0
 
     N = regress_deg 

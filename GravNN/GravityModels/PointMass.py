@@ -87,7 +87,7 @@ def main():
 
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
-    model = SphericalHarmonics(planet.sh_hf_file, 1000)
+    model = SphericalHarmonics(planet.sh_file, 1000)
     sh_results = model.compute_acceleration(position)
 
     print(sh_results)

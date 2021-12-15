@@ -20,7 +20,7 @@ def format_potential_as_Nx3(model):
 def main():
     
     planet = Earth()
-    model_file = planet.sh_hf_file
+    model_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
 
