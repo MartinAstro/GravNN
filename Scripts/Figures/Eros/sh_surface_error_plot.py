@@ -10,9 +10,9 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
     planet = Eros()
-    trajectory = SurfaceDist(planet, planet.model_potatok)
+    trajectory = SurfaceDist(planet, planet.obj_8k)
     x_sh, a_sh, u_sh = get_sh_data(trajectory, planet.sh_file, max_deg=4, deg_removed=-1)
-    x_poly, a_poly, u_poly = get_poly_data(trajectory, planet.model_potatok, remove_point_mass=[False])
+    x_poly, a_poly, u_poly = get_poly_data(trajectory, planet.obj_8k, remove_point_mass=[False])
 
     a_error = np.linalg.norm(a_sh - a_poly,axis=1)/np.linalg.norm(a_poly,axis=1)
     vis = PolyVisualization()

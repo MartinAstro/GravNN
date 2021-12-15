@@ -104,7 +104,7 @@ def initialize_state_est(batch_initialization, N, planet, M, x, batch_size, a, C
 def main():
     # This has the true SH coef of Bennu -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Bennu()
-    model_file = planet.model_potatok
+    model_file = planet.obj_8k
     regress_deg = 4
     remove_deg = -1
 

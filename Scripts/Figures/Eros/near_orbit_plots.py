@@ -40,8 +40,8 @@ def main():
     # get et values one and two, we could vectorize str2et
     vis = VisualizationBase()
     poly_vis = PolyVisualization()
-    surf_trajectory = SurfaceDist(Eros(), Eros().model_potatok)
-    x, a, u = get_poly_data(surf_trajectory, Eros().model_potatok)
+    surf_trajectory = SurfaceDist(Eros(), Eros().obj_8k)
+    x, a, u = get_poly_data(surf_trajectory, Eros().obj_8k)
     tri = Poly3DCollection(surf_trajectory.mesh.triangles)
 
 

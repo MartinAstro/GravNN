@@ -347,9 +347,7 @@ def main():
 
     start = time.time()
     asteroid = Eros()
-    # poly_model = Polyhedral(asteroid, asteroid.obj_hf_file)
-    # poly_model = Polyhedral(asteroid, asteroid.obj_vhf_file)
-    poly_model = Polyhedral(asteroid, asteroid.model_50k)
+    poly_model = Polyhedral(asteroid, asteroid.obj_8k)
     print(time.time() - start)
 
     timeList = []
@@ -395,7 +393,7 @@ def test_energy_conservation():
     from scipy.integrate import solve_ivp
     from GravNN.Support.transformations import cart2sph, invert_projection
     asteroid = Eros()
-    poly_model = Polyhedral(asteroid, asteroid.model_potatok)
+    poly_model = Polyhedral(asteroid, asteroid.obj_8k)
     def fun(x,y,IC=None):
         "Return the first-order system"
         # print(x)

@@ -41,8 +41,8 @@ def main():
     # get et values one and two, we could vectorize str2et
     vis = VisualizationBase()
     # poly_vis = PolyVisualization()
-    # surf_trajectory = SurfaceDist(Bennu(), Bennu().model_potatok)
-    # x, a, u = get_poly_data(surf_trajectory, Bennu().model_potatok)
+    # surf_trajectory = SurfaceDist(Bennu(), Bennu().obj_8k)
+    # x, a, u = get_poly_data(surf_trajectory, Bennu().obj_8k)
     # tri = Poly3DCollection(surf_trajectory.mesh.triangles)
 
     # https://www.jhuapl.edu/Content/techdigest/pdf/V23-N01/23-01-Holdridge.pdf -- NEAR Orbits

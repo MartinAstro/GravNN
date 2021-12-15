@@ -76,10 +76,10 @@ def main():
     df = pd.read_pickle("Data/Dataframes/transformers_wo_constraints.data")
 
     test_trajectory = RandomAsteroidDist(
-        planet, [0, planet.radius + 5000], 50000, grav_file=[planet.model_potatok]
+        planet, [0, planet.radius + 5000], 50000, grav_file=[planet.obj_8k]
     )
     test_poly_gm = Polyhedral(
-        planet, planet.model_potatok, trajectory=test_trajectory
+        planet, planet.obj_8k, trajectory=test_trajectory
     ).load(override=False)
 
 

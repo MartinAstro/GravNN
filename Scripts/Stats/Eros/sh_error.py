@@ -5,7 +5,7 @@ from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
 import numpy as np
 
 def generate_acceleration(trajectory):
-    x, a, u = get_sh_data(trajectory, Eros().truth, max_deg=4, deg_removed=-1,override=[True])
+    x, a, u = get_sh_data(trajectory, Eros().sh_file, max_deg=4, deg_removed=-1,override=[True])
     return a
 
 def compute_stats(trajectory, prefix, model_file):

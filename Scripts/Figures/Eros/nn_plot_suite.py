@@ -65,11 +65,11 @@ def main():
 
     radius_min = planet.radius
     DH_trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-    train_trajectory = RandomAsteroidDist(planet, [0.0, planet.radius + 5000], points=50000, grav_file=[planet.model_potatok])
-    surface_trajectory = SurfaceDist(planet, planet.model_potatok)
+    train_trajectory = RandomAsteroidDist(planet, [0.0, planet.radius + 5000], points=50000, grav_file=[planet.obj_8k])
+    surface_trajectory = SurfaceDist(planet, planet.obj_8k)
 
-    poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=DH_trajectory).load(override=False)
-    surface_poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=surface_trajectory).load(override=False)
+    poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=DH_trajectory).load(override=False)
+    surface_poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=surface_trajectory).load(override=False)
 
     u_3vec = np.zeros(np.shape(poly_gm.accelerations))
     u_3vec[:,0] = poly_gm.potentials
@@ -92,7 +92,7 @@ def main():
         os.makedirs(directory, exist_ok=True)
 
         train_trajectory = config['distribution'][0](config['planet'][0], [config['radius_min'][0], config['radius_max'][0]], config['N_dist'][0], **config)
-        training_poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=train_trajectory).load(override=False)
+        training_poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=train_trajectory).load(override=False)
 
         # x_train, x_val = single_training_validation_split(train_trajectory.positions, N_train=2500, N_val=0) 
         # poly_vis.plot_polyhedron(poly_gm.mesh, np.linalg.norm(surface_poly_gm.accelerations, axis=1))
@@ -102,7 +102,7 @@ def main():
         # poly_vis.save(plt.gcf(), directory+"Asteroid_Training.pdf")
 
         test_trajectory = config['distribution'][0](config['planet'][0], [0, planet.radius + 10000], config['N_dist'][0], **config)        
-        test_poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=test_trajectory).load(override=False)
+        test_poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=test_trajectory).load(override=False)
 
         x = test_poly_gm.positions
         a = test_poly_gm.accelerations

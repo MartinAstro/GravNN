@@ -24,7 +24,7 @@ def main():
 
     radius_min = planet.radius
     DH_trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-    poly_gm = Polyhedral(planet, planet.model_potatok, trajectory=DH_trajectory).load(
+    poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=DH_trajectory).load(
         override=False
     )
 
