@@ -13,8 +13,6 @@ tqdm
 colorama
 tensorflow_model_optimization
 kaleido
-# spiceypy
-#tensorflow_probability==0.8
 rtree
 pooch
 sphinx-rtd-theme
