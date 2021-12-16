@@ -61,7 +61,7 @@ def get_default_earth_pinn_config():
         "radius_max": [Earth().radius + 420000.0],
         "initializer": ["glorot_normal"],
         "acc_noise": [0.00],
-        "basis": [None],  # ['spherical'],
+        "basis": [None], 
         "deg_removed": [2],
         "mixed_precision": [False],
         "max_deg": [1000],
@@ -74,7 +74,7 @@ def get_default_earth_pinn_config():
         "activation": ["tanh"],
         "init_file": [None],  #'2459192.4530671295'],
         "epochs": [100000],
-        "optimizer": ["adam"],  # (learning_rate=config['lr_scheduler'][0])
+        "optimizer": ["adam"], 
         "batch_size": [40000],
         "dropout": [0.0],
         "x_transformer": [MinMaxScaler(feature_range=(-1, 1))],
@@ -82,7 +82,7 @@ def get_default_earth_pinn_config():
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
         "dtype": ["float32"],
         "dummy_transformer": [DummyScaler()],
-        "class_weight": [[1.0, 1.0, 1.0]],  # no_pinn and PINN_A
+        "class_weight": [[1.0, 1.0, 1.0]], 
         "learning_rate": [0.001],
         "skip_normalization": [False],
         "seed" : [0]

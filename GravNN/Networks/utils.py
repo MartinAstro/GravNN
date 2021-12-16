@@ -2,7 +2,10 @@ import os
 import zipfile
 import tempfile
 import itertools
+from colorama.ansi import Back
 import pandas as pd
+from colorama import Fore, init, deinit
+from copy import deepcopy
 from GravNN.Trajectories import ExponentialDist, GaussianDist
 
 
@@ -465,3 +468,74 @@ def update_df_row(model_id, df_file, entries, save=True):
     if save:
         original_df.to_pickle(df_file)
     return original_df
+
+
+def format_config(config):
+    new_config = deepcopy(config)
+    new_config['planet'] = [new_config['planet'][0].__class__.__name__]
+    new_config['distribution'] = [new_config['distribution'][0].__name__]
+    new_config['network_type'] = [new_config['network_type'][0].__name__]
+    new_config['PINN_constraint_fcn'] = [new_config['PINN_constraint_fcn'][0].__name__]
+    new_config['x_transformer'] = [new_config['x_transformer'][0].__class__.__name__]
+    new_config['a_transformer'] = [new_config['a_transformer'][0].__class__.__name__]
+    new_config['u_transformer'] = [new_config['u_transformer'][0].__class__.__name__]
+    new_config['a_bar_transformer'] = [new_config['a_bar_transformer'][0].__class__.__name__]
+    new_config['dummy_transformer'] = [new_config['dummy_transformer'][0].__class__.__name__]
+    new_config['grav_file'] = [new_config['grav_file'][0].split("/")[-1]]
+    new_config['deg_removed'] = [new_config.get('deg_removed', ['None'])[0]]
+    new_config['remove_point_mass'] = [new_config.get('remove_point_mass', ['None'])[0]]
+    return new_config
+
+def print_config(original_config):
+    config = format_config(original_config)
+    data_keys = ['planet', 'distribution', 'grav_file',  'deg_removed', 'remove_point_mass',
+        'N_dist', 'N_train', 'N_val', 
+        'radius_min', 'radius_max', 'scale_by', 
+        'acc_noise', 'override', 'seed' ,
+        'x_transformer', 'a_transformer', 'u_transformer', 
+        'a_bar_transformer',
+        ]
+    init(autoreset=True)
+
+    print(Back.BLUE + Fore.BLACK + "Data Hyperparams")
+    for key in data_keys:
+        print(Fore.BLUE +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config.get(key, ['None'])[0])))
+        del config[key]
+    print("\n")
+    network_keys = ['PINN_constraint_fcn', 'network_type', 'layers', 
+        'activation', 'epochs',  'learning_rate', 
+        'batch_size', 'transformer_units', 'initializer',
+        'optimizer', 'dropout', 'normalization_strategy', 
+        'mixed_precision', 'init_file', 'id'
+        ]
+    print(Back.RED + Fore.BLACK + "Network Hyperparams")
+    for key in network_keys:
+        print(Fore.RED + "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        del config[key]
+    print("\n")
+
+    scheduler_keys = ['schedule_type', 'lr_anneal', 'min_delta', 
+        'min_lr', 'patience', 'decay_rate', 'beta'
+        ]
+    print(Back.YELLOW + Fore.BLACK + "Learning Rate Scheduler Hyperparams")
+    for key in scheduler_keys:
+        print(Fore.YELLOW +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        del config[key]
+    print("\n")
+
+    stats_keys = ['size', 'params', 'time_delta']
+    print(Back.GREEN + Fore.BLACK + "Statistics")
+    for key in stats_keys:
+        print(Fore.GREEN +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        del config[key]
+    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(config['history'][0]['loss'][-1]))
+    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(config['history'][0]['val_loss'][-1]))
+    print("\n")
+
+    print(Back.MAGENTA + Fore.BLACK + "Miscellaneous Hyperparams")
+    for key,value in config.items():
+        if key == 'history':
+            continue
+        print(Fore.MAGENTA +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+
+    deinit()

@@ -1,6 +1,6 @@
 import multiprocessing as mp
 import pandas as pd
-from script_utils import save_training
+from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 

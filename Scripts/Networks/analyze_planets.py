@@ -6,7 +6,7 @@ import pandas as pd
 from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.Trajectories import DHGridDist, FibonacciDist, RandomDist, SurfaceDist
-from script_utils import save_analysis
+from GravNN.Networks.script_utils import save_analysis
 
 
 def main():
@@ -45,7 +45,7 @@ def main():
 
 
 def analyze(idx, df_file, planet, analyze_altitude, test_trajectories, points):
-    from script_utils import get_altitude_list
+    from GravNN.Networks.script_utils import get_altitude_list
     from GravNN.Networks.utils import configure_tensorflow
 
     tf = configure_tensorflow()

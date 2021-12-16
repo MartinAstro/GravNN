@@ -12,7 +12,7 @@ from GravNN.Regression.NN import NN
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories import RandomAsteroidDist, EphemerisDist
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories, generate_near_hopper_trajectories
-from script_utils import save_training
+from GravNN.Networks.script_utils import save_training
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 from GravNN.Networks.utils import (

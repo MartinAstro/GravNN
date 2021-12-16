@@ -1,5 +1,5 @@
 import multiprocessing as mp
-from script_utils import save_training
+from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
 from Hyperparam_inits import hyperparams_eros

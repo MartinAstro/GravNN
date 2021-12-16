@@ -4,7 +4,7 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 import multiprocessing as mp
 import pandas as pd
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
-from script_utils import save_analysis
+from GravNN.Networks.script_utils import save_analysis
 from GravNN.Analysis.AsteroidAnalyzer import AsteroidAnalyzer
 
 def main():
