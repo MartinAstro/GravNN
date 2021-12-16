@@ -111,7 +111,7 @@ class Bennu:
 
         # https://ssd.jpl.nasa.gov/tools/gravity.html#/bennu 
         #grav_20_particles.m - A MATLAB script that provides the coefficients and covariance of the estimated gravity field.
-        self.sh_file = pooch.retrieve(
+        self.sh_10 = pooch.retrieve(
             url='https://figshare.com/ndownloader/files/21927342',
             known_hash="d002eb615caab83665d991ecaa43480b85569e7f830f4aac9b2824d04d7b0dea",
             fname="Bennu_sh_10_raw.txt",
@@ -128,6 +128,7 @@ class Bennu:
             processor=format_sh
         )
 
+        self.sh_file = self.sh_10
 
 class Eros:
     def __init__(self):
@@ -142,28 +143,45 @@ class Eros:
         G = 6.67430 * 10 ** -11
         self.mu = G * 6.687 * 10 ** 15
 
+        def reindex_faces(fname, action, pooch_inst):
+            "add 1 to the face indices in the obj file to work with trimesh"
+            with open(fname, 'r') as f:
+                lines = f.readlines()
+            
+            for i in range(len(lines)):
+                line = lines[i]
+                if line[0] == 'f':
+                    lines[i] = 'f ' + ' '.join([str(int(entry) + 1) for entry in line.split('f')[1].split()]) + " \n"
+            
+            new_name = fname.split("_raw")[0] + ".obj"
+            with open(new_name, 'w') as f:
+                f.writelines(lines)
+                
+            return new_name
+
+
         self.obj_8k = pooch.retrieve(
             url='http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros007790.tab',
             known_hash="183df4df96ea6c66dee7a4b2368dc706d81c4942fbfb043198260f5406233ff0",
-            fname="eros_shape_7790.obj",
+            fname="eros_shape_7790_raw.obj",
             path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
-            processor=None
+            processor=reindex_faces
         )
 
         self.obj_90k = pooch.retrieve(
             url='http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros089398.tab',
             known_hash="15184730d0a79db5d4de600fed7c758b3beb148f50d4d0e0acbebe7a1f73d82f",
-            fname="eros_shape_89398.obj",
+            fname="eros_shape_89398_raw.obj",
             path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
-            processor=None
+            processor=reindex_faces
         )
 
         self.obj_200k = pooch.retrieve(
             url='http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros200700.tab',
             known_hash="54c7bc73376022876a7522e002355a4046777d346fe99270c230fee92cea881f",
-            fname="eros_shape_200700.obj",
+            fname="eros_shape_200700_raw.obj",
             path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
-            processor=None
+            processor=reindex_faces
         )
 
         # Spherical Harmonics
@@ -217,5 +235,3 @@ class Toutatis:
         # from wiki
         # self.density = 2.1/1000.0*100**3 # kg/m^3 -- 2.1 g/cm^3 (Wiki)
         # self.radius = 5.4*1E3/2 # mean diameter from https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=4179
-
-
