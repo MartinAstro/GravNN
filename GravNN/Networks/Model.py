@@ -44,12 +44,13 @@ class CustomModel(tf.keras.Model):
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
         self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
 
-        if ("L" not in self.eval.__name__) or( "C" not in self.eval.__name__):
-            self.train_step = self.train_step_jit
-            self.test_step = self.test_step_jit
-        else:
+        # jacobian ops incompatible with XLA
+        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__):
             self.train_step = self.train_step_no_jit
             self.test_step = self.test_step_no_jit
+        else:
+            self.train_step = self.train_step_jit
+            self.test_step = self.test_step_jit
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
