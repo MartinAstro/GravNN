@@ -18,3 +18,4 @@ pooch
 sphinx-rtd-theme
 sphinx
 seaborn
+spicepy

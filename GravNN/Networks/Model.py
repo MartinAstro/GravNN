@@ -210,6 +210,25 @@ class CustomModel(tf.keras.Model):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
         return tf.multiply(-1.0, u_x)
 
+    def _pinn_acceleration_jacobian(self, x):
+        with tf.GradientTape() as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+            a = tf.multiply(-1.0, u_x)
+        jacobian = g1.batch_jacobian(a,x)
+        return jacobian
+
+    def _nn_acceleration_jacobian(self,x):
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            a = self.network(x)  # shape = (k,) #! evaluate network
+        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
+        return jacobian
+
+
     def __nn_output(self, dataset):
         x, y = dataset
         x = tf.Variable(x, dtype=tf.float32)
@@ -321,6 +340,44 @@ class CustomModel(tf.keras.Model):
             a_pred = self._nn_acceleration_output(x)
         a_pred = a_transformer.inverse_transform(a_pred)
         return a_pred
+
+    def generate_dU_dxdx(self, x, batch_size=131072):
+        """Method responsible for returning the acceleration from the
+        PINN gravity model. Use this if a lightweight TF execution is
+        desired and other outputs are not required.
+
+        Args:
+            x (np.array): Input non-normalized position data (cartesian)
+
+        Returns:
+            np.array: PINN generated acceleration
+        """
+        x_transformer = self.config["x_transformer"][0]
+        a_transformer = self.config["a_transformer"][0]
+        u_transformer = self.config["u_transformer"][0]
+        x = x_transformer.transform(x)
+
+        x = tf.constant(x, dtype=tf.float32)
+
+        # def chunks(lst, n):
+        #     """Yield successive n-sized chunks from lst."""
+        #     for i in range(0, len(lst), n):
+        #         yield tf.data.Dataset.from_tensor_slices(lst[i:i + n])
+        
+        # batch_size = 131072//2
+        # data = chunks(x, batch_size)
+
+        # x = tf.cast(x, tf.float32)
+        if self.is_pinn:
+            jacobian = self._pinn_acceleration_jacobian(x)
+        else:
+            jacobian = self._nn_acceleration_jacobian(x)
+        x_scale = x_transformer.scale_
+        u_scale = u_transformer.scale_
+        scale = x_scale**2/u_scale
+        jacobian = jacobian*scale
+        return jacobian
+
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
     def optimize(self, dataset):
@@ -551,6 +608,10 @@ def backwards_compatibility(config):
 
         if "dtype" not in config:
             config["dtype"] = [tf.float32]
+
+    if "eros200700.obj" in config["grav_file"][0]:
+        from GravNN.CelestialBodies.Asteroids import Eros
+        config['grav_file'] = [Eros().obj_200k]
     
 
     

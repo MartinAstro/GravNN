@@ -1,4 +1,4 @@
-from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
 
@@ -77,3 +77,30 @@ class AsteroidAnalyzer:
         )
         stats = self.compute_stats(trajectory, "exterior")
         return stats
+
+    def quick_stats(self, max_radius, min_radius=0, points=500):
+
+        # Generate sample testing data randomly distributed around the asteroid
+        obj_file = self.config['grav_file'][0]
+        trajectory = RandomAsteroidDist(self.planet, 
+                                    radius_bounds=[min_radius, max_radius],
+                                    points=points,
+                                    model_file=obj_file)
+        
+        # Define the analytic gravity model used to define ground truth
+        gravity_model = Polyhedral(self.planet, obj_file)
+
+        # Time how long it takes to compute the acceleration using the analytic model
+        true_accelerations = gravity_model.compute_acceleration(trajectory.positions)
+
+        # Time PINN gravity model
+        pred_accelerations = self.model.generate_acceleration(trajectory.positions)
+
+        # Compute the error of the PINN model
+        diff = true_accelerations - pred_accelerations
+        percent_error = np.linalg.norm(diff, axis=1)/np.linalg.norm(true_accelerations,axis=1)*100
+        avg_percent_error = np.average(percent_error)
+        std_percent_error = np.std(percent_error)
+        print("Average Percent Error: %.2f ± %.2f" % (avg_percent_error, std_percent_error))
+
+

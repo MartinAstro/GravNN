@@ -78,10 +78,11 @@ class RandomAsteroidDist(TrajectoryBase):
         Y.extend(np.zeros((self.points,)).tolist())
         Z.extend(np.zeros((self.points,)).tolist())
         pbar = ProgressBar(self.points, enable=True)
+        min_radius = np.max([self.radius_bounds[0], np.min(np.linalg.norm(self.shape_model.vertices,axis=1))*1000])
         while idx < self.points:
             phi = np.random.uniform(0, np.pi)
             theta = np.random.uniform(0, 2 * np.pi)
-            r = np.random.uniform(self.radius_bounds[0], self.radius_bounds[1])
+            r = np.random.uniform(min_radius, self.radius_bounds[1])
             X_inst = r * np.sin(phi) * np.cos(theta)
             Y_inst = r * np.sin(phi) * np.sin(theta)
             Z_inst = r * np.cos(phi)
@@ -95,7 +96,7 @@ class RandomAsteroidDist(TrajectoryBase):
                 # Note that this loop my get stuck if the radius bounds do not extend beyond the body
                 # (i.e. the RA and Dec are fixed so if the upper bound does not extend beyond the shape
                 # this criteria is never satisfied)
-                r = np.random.uniform(self.radius_bounds[0], self.radius_bounds[1])
+                r = np.random.uniform(min_radius, self.radius_bounds[1])
                 X_inst = r * np.sin(phi) * np.cos(theta)
                 Y_inst = r * np.sin(phi) * np.sin(theta)
                 Z_inst = r * np.cos(phi)
