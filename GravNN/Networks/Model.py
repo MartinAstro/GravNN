@@ -211,6 +211,7 @@ class CustomModel(tf.keras.Model):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
         return tf.multiply(-1.0, u_x)
 
+    @tf.function(experimental_relax_shapes=True)
     def _pinn_acceleration_jacobian(self, x):
         with tf.GradientTape() as g1:
             g1.watch(x)
@@ -221,7 +222,8 @@ class CustomModel(tf.keras.Model):
             a = tf.multiply(-1.0, u_x)
         jacobian = g1.batch_jacobian(a,x)
         return jacobian
-
+        
+    @tf.function(experimental_relax_shapes=True)
     def _nn_acceleration_jacobian(self,x):
         with tf.GradientTape() as g2:
             g2.watch(x)
@@ -535,6 +537,7 @@ class CustomModel(tf.keras.Model):
             + "/"
         )
         os.makedirs(self.directory, exist_ok=True)
+        os.makedirs(os.path.abspath(".") + "/Data/Dataframes/")
         self.config["timetag"] = timestamp
         self.config["history"] = [self.history.history]
         self.config["id"] = [pd.Timestamp(timestamp).to_julian_date()]
