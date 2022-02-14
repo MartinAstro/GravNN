@@ -2,7 +2,7 @@ import os
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
-import spiceypy as spice
+import spicepy as spice
 
 
 class EphemerisDist(TrajectoryBase):
