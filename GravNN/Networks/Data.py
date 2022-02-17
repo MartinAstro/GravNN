@@ -61,11 +61,8 @@ def compute_input_layer_normalization_constants(config):
         config["N_dist"][0],
         **config
     )
-    if "Planet" in config["planet"][0].__module__:
-        get_analytic_data_fcn = get_sh_data
-    else:
-        get_analytic_data_fcn = get_poly_data
-
+    get_analytic_data_fcn = config['gravity_data_fcn'][0]
+    
     x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
         trajectory, config["grav_file"][0], **config
     )
