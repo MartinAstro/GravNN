@@ -20,7 +20,7 @@ def get_default_eros_config():
         "mixed_precision": [False],
         "dtype": ["float32"],
         "analytic_truth": ["poly_stats_"],
-        "gravity_data_fcn" : [get_poly_data]
+        "gravity_data_fcn" : [get_poly_data],
         "remove_point_mass": [False],  # remove point mass from polyhedral model
         "x_transformer": [UniformScaler(feature_range=(-1, 1))],
         "u_transformer": [UniformScaler(feature_range=(-1, 1))],
