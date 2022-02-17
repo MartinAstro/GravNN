@@ -1,4 +1,5 @@
 from GravNN.CelestialBodies.Planets import Moon
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Trajectories import RandomDist
 from GravNN.Preprocessors import DummyScaler, UniformScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -20,6 +21,7 @@ def get_default_moon_config():
         "mixed_precision": [False],
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_moon_"],
+        "gravity_data_fcn" : [get_sh_data]
     }
     network_config = {
         "network_type": ["traditional"],

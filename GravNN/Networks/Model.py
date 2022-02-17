@@ -526,8 +526,7 @@ class CustomModel(tf.keras.Model):
         self.config.update(size_stats)
 
     def prep_save(self):
-        """Method responsible for timestamping the network, adding the training history to the configuration dictionary,
-        and formatting other variables into the configuration dictionary.
+        """Method responsible for timestamping the network, adding the training history to the configuration dictionary, and formatting other variables into the configuration dictionary.
         """
         timestamp = pd.Timestamp(time.time(), unit="s").round("ms").ctime()
         self.directory = (
@@ -552,7 +551,7 @@ class CustomModel(tf.keras.Model):
         self.model_size_stats()
 
     def save(self, df_file=None):
-        """Add remaining training / model variables into the confiruation dictionary, then
+        """Add remaining training / model variables into the configuration dictionary, then
         save the config variables into its own pickled file, and potentially add it to an existing
         dataframe defined by `df_file`.
 
@@ -617,6 +616,11 @@ def backwards_compatibility(config):
         from GravNN.CelestialBodies.Asteroids import Eros
         config['grav_file'] = [Eros().obj_200k]
     
+    if float(config["id"][0]) < 2459628.436423611:
+        if config["Planet"][0] in planet.__module__:
+            config["gravity_data_fcn"] = [GravNN.GravityModels.SphericalHarmonics.get_sh_data]
+        else:
+            config["gravity_data_fcn"] = [GravNN.GravityModels.Polyhedral.get_poly_data]
 
     
     if "lr_anneal" not in config:

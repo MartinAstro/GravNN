@@ -1,4 +1,5 @@
 from GravNN.CelestialBodies.Asteroids import Eros
+from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Preprocessors import DummyScaler, UniformScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -19,6 +20,7 @@ def get_default_eros_config():
         "mixed_precision": [False],
         "dtype": ["float32"],
         "analytic_truth": ["poly_stats_"],
+        "gravity_data_fcn" : [get_poly_data]
         "remove_point_mass": [False],  # remove point mass from polyhedral model
         "x_transformer": [UniformScaler(feature_range=(-1, 1))],
         "u_transformer": [UniformScaler(feature_range=(-1, 1))],

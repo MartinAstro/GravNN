@@ -1,4 +1,5 @@
 from GravNN.CelestialBodies.Asteroids import Toutatis
+from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Preprocessors import DummyScaler, UniformScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -19,6 +20,7 @@ def get_prototype_toutatis_config():
         "mixed_precision": [False],
         "dtype": ["float32"],
         "analytic_truth": ["poly_stats_"],
+        "gravity_data_fcn" : [get_poly_data],
     }
     network_config = {
         "network_type": ["traditional"],

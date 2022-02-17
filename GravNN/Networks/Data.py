@@ -119,19 +119,11 @@ def get_raw_data(config):
     grav_file = config["grav_file"][0]
 
     trajectory = config["distribution"][0](planet, radius_bounds, N_dist, **config)
-
-    # If there is a custom data 
-    if 'custom_data_fcn' in config:
-        generating_fcn = config['custom_data_fcn'][0]
-        trajectory = generating_fcn()
-    else: 
-        if "Planet" in planet.__module__:
-            get_analytic_data_fcn = get_sh_data
-        else:
-            get_analytic_data_fcn = get_poly_data
-        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-            trajectory, grav_file, **config
-        )
+    get_analytic_data_fcn = config['gravity_data_fcn'][0]
+    
+    x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
+        trajectory, grav_file, **config
+    )
 
     if "extra_distribution" in config:
         extra_radius_bounds = [
@@ -152,20 +144,11 @@ def get_raw_data(config):
     deg_removed = config.get("deg_removed", -1)
     # if part of the model is removed (i.e. point mass) it is reasonable for some of the potential to be > 0.0, so only rerun if there is no degree removed.
     if np.max(u_unscaled) > 0.0 and deg_removed == -1:
-        print(
-            "WARNING:\t This pickled acceleration/potential pair was generated when the potential had a wrong sign. \n \t Regenerating the data"
-        )
-        print("WARNING: The max potential was: " + str(np.max(u_unscaled)))
-        config["override"] = [True]
-        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-            trajectory, grav_file, **config
-        )
-        config["override"] = [False]
-        print("WARNING: The max potential is now: " + str(np.max(u_unscaled)))
+        exit("ERROR: This pickled acceleration/potential pair was generated \
+              when the potential had a wrong sign. \n You must overwrite the data!")
 
-    seed = config.get('seed', [42])[0]
     x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
-        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0], random_state=seed
+        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0], random_state=config.get('seed', [42])[0]
     )
 
     if "extra_distribution" in config:
