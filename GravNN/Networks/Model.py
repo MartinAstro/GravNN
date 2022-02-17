@@ -615,7 +615,9 @@ def backwards_compatibility(config):
     if "eros200700.obj" in config["grav_file"][0]:
         from GravNN.CelestialBodies.Asteroids import Eros
         config['grav_file'] = [Eros().obj_200k]
-    
+
+    # Before this date, it was assumed that data would be drawn with SH if planet, and 
+    # Polyhedral if asteroid. This is no longer true. 
     if float(config["id"][0]) < 2459628.436423611:
         if config["Planet"][0] in planet.__module__:
             config["gravity_data_fcn"] = [GravNN.GravityModels.SphericalHarmonics.get_sh_data]

@@ -6,6 +6,21 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Support.transformations import cart2sph, invert_projection
 
 
+def get_pm_data(trajectory, gravity_file, **kwargs):
+
+    # Handle cases where the keyword wasn't properly wrapped as a list []
+    override = bool(kwargs.get("override", [False])[0])
+
+    point_mass_r0_gm = PointMass(gravity_file, degree=max_deg, trajectory=trajectory)
+    accelerations = point_mass_r0_gm.load(override=override).accelerations
+    potentials = point_mass_r0_gm.potentials
+
+    x = point_mass_r0_gm.positions  # position (N x 3)
+    a = accelerations
+    u = np.array(potentials).reshape((-1, 1))  # potential (N x 1)
+
+    return x, a, u
+
 class PointMass(GravityModelBase):
     def __init__(self, celestial_body, trajectory=None):
         """Gravity model that only produces accelerations and potentials
