@@ -536,7 +536,7 @@ class CustomModel(tf.keras.Model):
             + "/"
         )
         os.makedirs(self.directory, exist_ok=True)
-        os.makedirs(os.path.abspath(".") + "/Data/Dataframes/")
+        os.makedirs(os.path.abspath(".") + "/Data/Dataframes/", exist_ok=True)
         self.config["timetag"] = timestamp
         self.config["history"] = [self.history.history]
         self.config["id"] = [pd.Timestamp(timestamp).to_julian_date()]

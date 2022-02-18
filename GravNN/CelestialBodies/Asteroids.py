@@ -222,6 +222,19 @@ class Toutatis:
             os.path.dirname(os.path.realpath(__file__))
             + "/../Files/ShapeModels/Toutatis/Toutatis_Radar_based_Blender_hi_res.obj"
         )
+        self.obj_2k = pooch.retrieve(
+            url='https://3d-asteroids.space/data/asteroids/models/t/4179_Toutatis.obj',
+            known_hash="e79c13b4b7b427e3c4f90f656a257316cc1a75bc8edee36db0236129984a7f5a",
+            fname="Toutatis-radar-lowres.obj",
+            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Toutatis/",
+        )
+
+        self.obj_20k = pooch.retrieve(
+            url='https://3d-asteroids.space/data/asteroids/models/t/4179_Toutatis_hires.obj',
+            known_hash="95a8dfc6aa1a75f5b96ea334d132785ec20130ce746903430e2d605bee8ed479",
+            fname="Toutatis-radar-highres.obj",
+            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Toutatis/",
+        )
 
         # Scheeres Paper
         # volume of 7.670 km^3
