@@ -45,7 +45,7 @@ class CustomModel(tf.keras.Model):
         self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
 
         # jacobian ops incompatible with XLA
-        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__):
+        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None):
             self.train_step = self.train_step_no_jit
             self.test_step = self.test_step_no_jit
         else:
@@ -71,6 +71,11 @@ class CustomModel(tf.keras.Model):
         return loss_components
 
 
+    def compute_percent_error(self, y_hat, y):
+        loss_components = tf.norm(tf.subtract(y_hat, y), axis=1)/tf.norm(tf.abs(y),axis=1)*100
+        # tf.print(loss_components)
+        return loss_components
+
     @tf.function(jit_compile=True)
     def train_step_jit(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
@@ -84,46 +89,58 @@ class CustomModel(tf.keras.Model):
         Returns:
             dict: dictionary of metrics passed to the callback.
         """
-        with tf.xla.experimental.jit_scope(
-            compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
+        # with tf.xla.experimental.jit_scope(
+        #     compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
 
-            x, y = data
-            with tf.GradientTape(persistent=True) as tape:
-                y_hat = self(x, training=True)
-                loss_components = self.compute_loss_components(y_hat, y)
-                updated_loss_components = self.scale_loss(
-                    loss_components, self.adaptive_constant
-                )
-                loss = tf.reduce_sum(tf.stack(updated_loss_components))
-                loss = self.optimizer.get_scaled_loss(loss)
-
-            # calculate new adaptive constant
-            adaptive_constant = self.calc_adaptive_constant(
-                tape,
-                updated_loss_components,
-                self.adaptive_constant,
-                self.beta,
-                self.trainable_weights,
+        x, y = data
+        with tf.GradientTape(persistent=True) as tape:
+            y_hat = self(x, training=True)
+            loss_components = self.compute_loss_components(y_hat, y)
+            updated_loss_components = self.scale_loss(
+                loss_components, self.adaptive_constant
             )
+            loss = tf.reduce_sum(tf.stack(updated_loss_components))
 
-            # # These lines are needed if using the gradient callback.
-            # grad_comp_list = []
-            # for loss_comp in updated_loss_components:
-            #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-            #     grad_comp_list.append(gradient_components)
+            loss += tf.reduce_sum(self.network.losses)
 
-            gradients = tape.gradient(loss, self.network.trainable_variables)
-            gradients = self.optimizer.get_unscaled_gradients(gradients)
-            del tape
+            loss = self.optimizer.get_scaled_loss(loss)
 
-            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+        # calculate new adaptive constant
+        adaptive_constant = self.calc_adaptive_constant(
+            tape,
+            updated_loss_components,
+            self.adaptive_constant,
+            self.beta,
+            self.trainable_weights,
+        )
+
+        # # These lines are needed if using the gradient callback.
+        # grad_comp_list = []
+        # for loss_comp in updated_loss_components:
+        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
+        #     grad_comp_list.append(gradient_components)
+
+        gradients = tape.gradient(loss, self.network.trainable_variables)
+        gradients = self.optimizer.get_unscaled_gradients(gradients)
+        del tape
+
+        # The PINN loss doesn't depend on the network's final layer bias, so the gradient is None and throws a warning
+        # a = df/dx = d/dx stuff * (W_final x + b_final) = d stuff/dx * w
+        # loss = a - a_hat
+        # d loss/ d weights = no b_final
+        self.optimizer.apply_gradients([
+                (grad, var) 
+                for (grad, var) in zip(gradients, self.network.trainable_variables) 
+                if grad is not None
+                ])
+        # self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
         return {
             "loss": loss,
-            "adaptive_constant": adaptive_constant,
+            #"adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
     
-    @tf.function(jit_compile=False)
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def train_step_no_jit(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
         or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
@@ -136,43 +153,43 @@ class CustomModel(tf.keras.Model):
         Returns:
             dict: dictionary of metrics passed to the callback.
         """
-        with tf.xla.experimental.jit_scope(
-            compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
-
-            x, y = data
-            with tf.GradientTape(persistent=True) as tape:
-                y_hat = self(x, training=True)
-                loss_components = self.compute_loss_components(y_hat, y)
-                updated_loss_components = self.scale_loss(
-                    loss_components, self.adaptive_constant
-                )
-                loss = tf.reduce_sum(tf.stack(updated_loss_components))
-                loss = self.optimizer.get_scaled_loss(loss)
-
-            # calculate new adaptive constant
-            adaptive_constant = self.calc_adaptive_constant(
-                tape,
-                updated_loss_components,
-                self.adaptive_constant,
-                self.beta,
-                self.trainable_weights,
+        x, y = data
+        with tf.GradientTape(persistent=True) as tape:
+            y_hat = self(x, training=True)
+            loss_components = self.compute_loss_components(y_hat, y)
+            updated_loss_components = self.scale_loss(
+                loss_components, self.adaptive_constant
             )
+            loss = tf.reduce_sum(tf.stack(updated_loss_components))
 
-            # # These lines are needed if using the gradient callback.
-            # grad_comp_list = []
-            # for loss_comp in updated_loss_components:
-            #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-            #     grad_comp_list.append(gradient_components)
+            loss += tf.reduce_sum(self.network.losses)
 
-            gradients = tape.gradient(loss, self.network.trainable_variables)
-            gradients = self.optimizer.get_unscaled_gradients(gradients)
-            del tape
+            loss = self.optimizer.get_scaled_loss(loss)
 
-            self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+        # calculate new adaptive constant
+        adaptive_constant = self.calc_adaptive_constant(
+            tape,
+            updated_loss_components,
+            self.adaptive_constant,
+            self.beta,
+            self.trainable_weights,
+        )
+
+        # # These lines are needed if using the gradient callback.
+        # grad_comp_list = []
+        # for loss_comp in updated_loss_components:
+        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
+        #     grad_comp_list.append(gradient_components)
+
+        gradients = tape.gradient(loss, self.network.trainable_variables)
+        gradients = self.optimizer.get_unscaled_gradients(gradients)
+        del tape
+
+        self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
 
         return {
             "loss": loss,
-            "adaptive_constant": adaptive_constant,
+            #"adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
 
     @tf.function(jit_compile=True)
@@ -184,9 +201,21 @@ class CustomModel(tf.keras.Model):
             loss_components, self.adaptive_constant
         )
         loss = tf.reduce_sum(updated_loss_components)
-        return {"loss": loss}
 
-    @tf.function(jit_compile=False)
+        percent_errors = self.compute_percent_error(y_hat, y)
+        percent_mean = tf.reduce_mean(percent_errors)
+        percent_max = tf.reduce_max(percent_errors)
+
+
+        # return {"loss": loss, 
+
+        #         }
+        return {"loss": loss, 
+                "percent_mean": percent_mean,
+                "percent_max": percent_max
+                }
+
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def test_step_no_jit(self, data):
         x, y = data
         y_hat = self(x, training=True)
@@ -195,8 +224,17 @@ class CustomModel(tf.keras.Model):
             loss_components, self.adaptive_constant
         )
         loss = tf.reduce_sum(updated_loss_components)
-        return {"loss": loss}
+        percent_errors = self.compute_percent_error(y_hat, y)
+        percent_mean = tf.reduce_mean(percent_errors)
+        percent_max = tf.reduce_max(percent_errors)
 
+        # return {"loss": loss, 
+
+        #         }
+        return {"loss": loss, 
+                "percent_mean": percent_mean,
+                "percent_max": percent_max
+                }
 
     @tf.function(jit_compile=True)
     def _nn_acceleration_output(self, x):
@@ -550,7 +588,7 @@ class CustomModel(tf.keras.Model):
             pass
         self.model_size_stats()
 
-    def save(self, df_file=None):
+    def save(self, df_file=None, checkpoint_callback=None):
         """Add remaining training / model variables into the configuration dictionary, then
         save the config variables into its own pickled file, and potentially add it to an existing
         dataframe defined by `df_file`.
@@ -572,7 +610,8 @@ class CustomModel(tf.keras.Model):
         df = pd.DataFrame().from_dict(config).set_index("timetag")
 
         # save network and config to directory
-        self.network.save(self.directory + "network")
+        if checkpoint_callback == None:
+            self.network.save(self.directory + "network")
         df.to_pickle(self.directory + "config.data")
 
         # save config to preexisting dataframe if requested

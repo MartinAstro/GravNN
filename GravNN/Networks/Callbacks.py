@@ -12,14 +12,19 @@ class SimpleCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % 10 == 0:
+            # print(
+            #     "Epoch: {} \t Loss: {:.9f} \t Val Loss {:.9f} \t Time: {:.3f}".format(
+            #         epoch, logs["loss"], logs["val_loss"], time.time() - self.start_time
+            #     )
+            # )
             print(
-                "Epoch: {} \t Loss: {:.9f} \t Val Loss {:.9f} \t Time: {:.3f}".format(
-                    epoch, logs["loss"], logs["val_loss"], time.time() - self.start_time
+                "Epoch: {} \t Loss: {:.9f} \t Val Loss: {:.9f} \t Time: {:.3f} \t Avg Error: {:.9f}% \t Max Error: {:.9f}%".format(
+                    epoch, logs["loss"], logs["val_loss"], time.time() - self.start_time, logs['val_percent_mean'], logs['val_percent_max'])
                 )
-            )
+            
             self.start_time = time.time()
-        if epoch % 1000 == 0:
-            print("Epoch: {} \t adaptive: {}".format(epoch, logs["adaptive_constant"]))
+        # if epoch % 1000 == 0:
+        #     print("Epoch: {} \t adaptive: {}".format(epoch, logs["adaptive_constant"]))
 
     def on_train_begin(self, logs=None):
         self.train_start = time.time()
