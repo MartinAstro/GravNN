@@ -105,7 +105,6 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         """
         super(Cart2PinesSphLayer, self).__init__()
 
-    # @tf.function
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
         X = inputs_transpose[0]
@@ -114,21 +113,14 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
 
         XX = tf.square(X)
         YY = tf.square(Y)
-        r = tf.sqrt(XX + YY + tf.square(Z))  # r
+        ZZ = tf.square(Z)
+        r = tf.sqrt(XX + YY + ZZ)  # r
 
         s = X / r  # sin(beta)
         t = Y / r  # sin(gamma)
         u = Z / r  # sin(alpha)
 
-        # beta = tf.math.asin(s)
-        # gamma = tf.math.asin(t)
-        # alpha = tf.math.asin(u)
-
-        beta = s
-        gamma = t
-        alpha = u
-
-        spheres = tf.stack([r, beta, gamma, alpha], axis=1)
+        spheres = tf.stack([r, s, t, u], axis=1)
         return spheres
 
     def get_config(self):
@@ -220,5 +212,37 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
                 "ref_radius":self.ref_radius
             }
         )
+        config = super().get_config().copy()
+        return config
+
+
+
+class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
+    def __init__(self, input_dim):
+        """Layer used to normalize the r value of the Cart2PinesSphLayer
+        between the values of [-1,1]
+
+        Args:
+                input_dim (None): Invalid input (ignore) TODO: remove
+                scalers (np.array): values used to scale each input quantity. These are computed before initialization
+                mins (np.array): values used to bias each input before scaling. These are computed before initialization
+        """
+        super(PinesSph2NetLayer_v2, self).__init__()
+
+    # @tf.function
+    def call(self, inputs):
+        pi = tf.constant(np.pi, dtype=tf.float32)
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        s = inputs_transpose[1]
+        t = inputs_transpose[2]
+        u = inputs_transpose[3]
+
+        r_inv = tf.divide(1,r)
+
+        spheres = tf.stack([r_inv, s, t, u], axis=1)
+        return spheres
+
+    def get_config(self):
         config = super().get_config().copy()
         return config

@@ -4,6 +4,7 @@ from GravNN.Networks.Layers import (
     Sph2NetLayer,
     PinesSph2NetLayer,
     Cart2PinesSphLayer,
+    PinesSph2NetLayer_v2
 )
 import tensorflow as tf
 import os
@@ -113,7 +114,7 @@ def SphericalTraditionalNet(**kwargs):
             if kwargs["batch_norm"][0]:
                 x = tf.keras.layers.BatchNormalization()(x)
         if "dropout" in kwargs:
-            if kwargs["dropout"][0] != 0.0:
+            if kwargs["dropout"][0] != 0.0 or (i == (len(layers) - 2)):
                 x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
@@ -415,3 +416,67 @@ def DenseNet(layers, activation, **kwargs):
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
+
+
+def SphericalPinesTraditionalNet_v2(**kwargs):
+    """Densely connected neural network that will convert inputs into 4D spherical coordinates
+    before proceeding into the network.
+
+    .. Note:: This network superseeds the SphericalTraditionalNet as its spherical derivatives are non-singular.
+
+    TODO: fix keyword acquisition such that some parameters can be optional.
+
+    Args:
+        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
+        layer with 10 nodes, followed by a second layer with 10, ...)
+        activation (str): non-linear activation function to be used
+        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
+        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
+        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
+        custom_input_layer (str): selects any custom configuration option for the layer that enters the network. (e.g. concatenate the cartesian inputs
+        with the spherical coordinates using "cart_and_sph").
+        skip_normalization (bool): flag determining if the spherical values entering the network should be normalized
+        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
+        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
+        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
+    Returns:
+        tf.keras.Model: densely connected network
+    """
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    custom_input_layer = kwargs["custom_input_layer"][0]
+    dtype = kwargs["dtype"][0]
+    skip_normalization = kwargs["skip_normalization"][0]
+    ref_radius = kwargs["ref_radius"][0]
+
+    inputs = tf.keras.Input(shape=(layers[0],))
+    x = Cart2PinesSphLayer(inputs.shape)(inputs)
+    x = PinesSph2NetLayer_v2(x.shape)(x)
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            # kernel_regularizer=tf.keras.regularizers.L2(1E-6),
+            # bias_regularizer=tf.keras.regularizers.L2(1E-6),
+            dtype=dtype,
+        )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0 and (i != (len(layers) - 2)):
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        # kernel_regularizer=tf.keras.regularizers.L2(1E-6),
+        # bias_regularizer=tf.keras.regularizers.L2(1E-6),
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+#@tf.

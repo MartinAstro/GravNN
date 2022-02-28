@@ -10,6 +10,7 @@ from GravNN.GravityModels.PointMass import PointMass
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Preprocessors.DummyScaler import DummyScaler
+from GravNN.Preprocessors.UniformScaler import UniformScaler
 from GravNN.Networks.Constraints import *
 from GravNN.Support.transformations import project_acceleration, cart2sph, sphere2cart
 from sklearn.preprocessing import MinMaxScaler
@@ -267,6 +268,45 @@ def get_preprocessed_data(config):
         ref_r_vec = x_transformer.transform(ref_r_vec)
         config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
 
+    elif config["scale_by"][0] == "non_dim_radius":
+        """
+        x_bar = (x-x0)/xs
+        u_bar = (u-u0)/us
+
+        The acceleration is a byproduct of the potential so
+
+        a_bar = du_bar/dx_bar
+
+        but this equates to
+
+        a_bar = d((u-u0)/us)/dx_bar = d(u/us)/dx_bar = 1/us*du/dx_bar = 1/us *du/(d((x-x0)/xs)) = 1/us * du/d(x/xs) = xs/us * du/dx = xs/us * a
+
+        such that a_bar exists in [-1E2, 1E2] rather than [-1,1]
+        """
+
+        # Scale positions by the radius of the planet
+        x_train = x_transformer.fit_transform(x_train, scaler=1/config['planet'][0].radius)
+        u_train = u_transformer.fit_transform(np.repeat(u_train, 3, axis=1))[
+            :, 0
+        ].reshape((-1, 1))
+
+        # Scale the acceleration by the potential
+        scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
+        a_bar = a_transformer.fit_transform(a_train, scaler=scaler)  # this is a_bar
+        a_bar_transformer.fit(a_bar)
+        a_train = a_bar  # this should be on the order of [-100, 100]
+        config["a_bar_transformer"] = [a_bar_transformer]
+
+        u3vec = np.repeat(u_val, 3, axis=1)
+
+        x_val = x_transformer.transform(x_val)
+        a_val = a_transformer.transform(a_val)
+        u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+        # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+        # ref_r_vec = x_transformer.transform(ref_r_vec)
+        # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+
     elif config["scale_by"][0] == "none":
         x_transformer = config["dummy_transformer"][0]
         a_transformer = config["dummy_transformer"][0]
@@ -288,6 +328,8 @@ def get_preprocessed_data(config):
         "u": u_transformer,
         "a_bar": a_bar_transformer,
     }
+
+    compute_input_layer_normalization_constants(config)
 
     return (
         (x_train, u_train, a_train, laplace_train, curl_train),

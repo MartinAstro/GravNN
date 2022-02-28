@@ -271,6 +271,7 @@ def _get_network_fcn(name):
         SphericalTraditionalNet,
         SphericalPinesTraditionalNet,
         SphericalPinesTransformerNet,
+        SphericalPinesTraditionalNet_v2
     )
 
     return {
@@ -278,6 +279,7 @@ def _get_network_fcn(name):
         "resnet": ResNet,
         "sph_traditional": SphericalTraditionalNet,
         "sph_pines_traditional": SphericalPinesTraditionalNet,
+        "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
         "sph_pines_transformer": SphericalPinesTransformerNet,
     }[name.lower()]
 
