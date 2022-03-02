@@ -35,6 +35,7 @@ def PINN_I():
         "network_type": ["traditional"],
         "custom_input_layer": [None],
         'seed' : [0],
+        'init_file' : [None],
         'normalization_strategy' : ['uniform'], #'radial, uniform
     }
     return network_config
@@ -60,7 +61,7 @@ def PINN_III():
     network_config = {
         "network_type": ["sph_pines_traditional_v2"],
         "scale_by": ["non_dim_radius"],
-        "loss_fcn" : ['rms_percent'],
+        "loss_fcn" : ['percent_rms'],
     }
     config.update(network_config)
     return config
