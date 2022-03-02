@@ -8,12 +8,34 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
 
-    threads = 2
-    df_file = "Data/Dataframes/eros_residual_r_v2.data" 
+    threads = 1
+    df_file = "Data/Dataframes/eros_pinn_III.data" 
+
 
     config = get_default_eros_config()
-    hparams = hyperparams_eros.get_r_experiment()
-    hparams.update(ReduceLrOnPlateauConfig())
+
+    from GravNN.GravityModels.PointMass import get_pm_data
+    from GravNN.GravityModels.Polyhedral import get_poly_data
+    from GravNN.CelestialBodies.Asteroids import Eros
+
+    config.update(PINN_III())
+    config.update(ReduceLrOnPlateauConfig())
+
+    hparams = {
+        # "gravity_data_fcn" : [get_pm_data],
+        "gravity_data_fcn" : [get_poly_data],
+        "grav_file": [Eros().obj_8k],
+        "N_dist": [25000],
+        "N_train": [20000],
+        "N_val": [5000],
+        "num_units": [40],
+        "radius_max" : [Eros().radius*10],
+        "network_type" : ["sph_pines_traditional_v2"],
+        "scale_by" : ['non_dim_radius'],
+        "PINN_constraint_fcn" : ['pinn_a'],
+        "patience" : [500],
+        "init_file" : [2459641.262199074] #PM
+    }
 
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
@@ -31,7 +53,7 @@ def run(config_original, hparams):
         check_config_combos,
     )
     from GravNN.Networks.Callbacks import SimpleCallback
-    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
+    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
@@ -57,7 +79,6 @@ def run(config_original, hparams):
 
     # Get data, network, optimizer, and generate model
     train_data, val_data, transformers = get_preprocessed_data(config)
-    compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
     network = load_network(config)
@@ -67,13 +88,26 @@ def run(config_original, hparams):
     # Train network
     callback = SimpleCallback()
     schedule = get_schedule(config)
+    # checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    #     filepath=model.directory+"/network",
+    #     monitor='val_loss',
+    #     # save_freq='epochs',#int(np.ceil(config['N_train'][0]/config['batch_size'][0]))*500,
+    #     mode='auto',
+    #     period=500,
+    #     initial_value_threshold=0.00000005,
+    #     save_best_only=True)
 
+    import datetime
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=500)
+
+    checkpoint_callback = None
     history = model.fit(
         dataset,
         epochs=config["epochs"][0],
         verbose=0,
         validation_data=val_dataset,
-        callbacks=[callback, schedule],
+        callbacks=[callback, schedule, tensorboard_callback],
     )
     history.history["time_delta"] = callback.time_delta
     model.history = history
@@ -85,7 +119,7 @@ def run(config_original, hparams):
     model.config["a_transformer"][0] = transformers["a"]
     model.config["a_bar_transformer"][0] = transformers["a_bar"]
 
-    model.save(df_file=None)
+    model.save(df_file=None, checkpoint_callback=checkpoint_callback)
 
     # import matplotlib.pyplot as plt
     # plt.plot(history.history['val_loss'][1000:])
