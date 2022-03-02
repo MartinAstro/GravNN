@@ -37,12 +37,14 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config.get("dtype", [tf.float32])[0]
 
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
+        self.loss_fcn = utils._get_loss_fcn(config['loss_fcn'][0])
         PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
         self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
         self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
         self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
+
 
         # jacobian ops incompatible with XLA
         if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None):
@@ -55,7 +57,7 @@ class CustomModel(tf.keras.Model):
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
 
-    def compute_loss_components(self, y_hat, y):
+    def compute_rms_components(self, y_hat, y):
         """Separate the different loss component terms.
 
         Args:
@@ -70,10 +72,8 @@ class CustomModel(tf.keras.Model):
         )
         return loss_components
 
-
     def compute_percent_error(self, y_hat, y):
         loss_components = tf.norm(tf.subtract(y_hat, y), axis=1)/tf.norm(tf.abs(y),axis=1)*100
-        # tf.print(loss_components)
         return loss_components
 
     @tf.function(jit_compile=True)
@@ -95,12 +95,14 @@ class CustomModel(tf.keras.Model):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=True)
-            loss_components = self.compute_loss_components(y_hat, y)
-            updated_loss_components = self.scale_loss(
-                loss_components, self.adaptive_constant
-            )
-            loss = tf.reduce_sum(tf.stack(updated_loss_components))
+            rms_components = self.compute_rms_components(y_hat, y)
+            percent_components = self.compute_percent_error(y_hat, y)
 
+            updated_rms_components = self.scale_loss(
+                rms_components, self.adaptive_constant
+            )
+
+            loss = self.loss_fcn(rms_components, percent_components)
             loss += tf.reduce_sum(self.network.losses)
 
             loss = self.optimizer.get_scaled_loss(loss)
@@ -108,7 +110,7 @@ class CustomModel(tf.keras.Model):
         # calculate new adaptive constant
         adaptive_constant = self.calc_adaptive_constant(
             tape,
-            updated_loss_components,
+            updated_rms_components,
             self.adaptive_constant,
             self.beta,
             self.trainable_weights,
@@ -156,12 +158,13 @@ class CustomModel(tf.keras.Model):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=True)
-            loss_components = self.compute_loss_components(y_hat, y)
-            updated_loss_components = self.scale_loss(
-                loss_components, self.adaptive_constant
-            )
-            loss = tf.reduce_sum(tf.stack(updated_loss_components))
+            rms_components = self.compute_rms_components(y_hat, y)
+            percent_components = self.compute_percent_error(y_hat, y)
 
+            updated_loss_components = self.scale_loss(
+                rms_components, self.adaptive_constant
+            )
+            loss = self.loss_fcn(rms_components, percent_components)
             loss += tf.reduce_sum(self.network.losses)
 
             loss = self.optimizer.get_scaled_loss(loss)
@@ -196,44 +199,32 @@ class CustomModel(tf.keras.Model):
     def test_step_jit(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss_components = self.compute_loss_components(y_hat, y)
-        updated_loss_components = self.scale_loss(
-            loss_components, self.adaptive_constant
+        rms_components = self.compute_rms_components(y_hat, y)
+        percent_components = self.compute_percent_error(y_hat, y)
+        updated_rms_components = self.scale_loss(
+            rms_components, self.adaptive_constant
         )
-        loss = tf.reduce_sum(updated_loss_components)
-
-        percent_errors = self.compute_percent_error(y_hat, y)
-        percent_mean = tf.reduce_mean(percent_errors)
-        percent_max = tf.reduce_max(percent_errors)
-
-
-        # return {"loss": loss, 
-
-        #         }
+        loss = self.loss_fcn(rms_components, percent_components)
         return {"loss": loss, 
-                "percent_mean": percent_mean,
-                "percent_max": percent_max
+                "percent_mean": tf.reduce_mean(percent_components),
+                "percent_max": tf.reduce_max(percent_components)
                 }
 
     @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def test_step_no_jit(self, data):
         x, y = data
         y_hat = self(x, training=True)
-        loss_components = self.compute_loss_components(y_hat, y)
+        rms_components = self.compute_rms_components(y_hat, y)
+        percent_components = self.compute_percent_error(y_hat, y)
+
         updated_loss_components = self.scale_loss(
-            loss_components, self.adaptive_constant
+            rms_components, self.adaptive_constant
         )
-        loss = tf.reduce_sum(updated_loss_components)
-        percent_errors = self.compute_percent_error(y_hat, y)
-        percent_mean = tf.reduce_mean(percent_errors)
-        percent_max = tf.reduce_max(percent_errors)
+        loss = self.loss_fcn(rms_components, percent_components)
 
-        # return {"loss": loss, 
-
-        #         }
         return {"loss": loss, 
-                "percent_mean": percent_mean,
-                "percent_max": percent_max
+                "percent_mean": tf.reduce_mean(percent_components),
+                "percent_max": tf.reduce_max(percent_components)
                 }
 
     @tf.function(jit_compile=True)
@@ -345,7 +336,12 @@ class CustomModel(tf.keras.Model):
         u_transformer = self.config["u_transformer"][0]
         x = x_transformer.transform(x)
         u_pred = self.network(x)
-        u_pred = u_transformer.inverse_transform(u_pred)
+        try:
+            u_pred = u_transformer.inverse_transform(u_pred)
+        except:
+            u3_vec = np.zeros(x.shape)
+            u3_vec[:] = u_pred
+            u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
     #@tf.function(jit_compile=True)
@@ -650,6 +646,9 @@ def backwards_compatibility(config):
 
         if "dtype" not in config:
             config["dtype"] = [tf.float32]
+
+    if float(config['id'][0]) < 2459640.439074074:
+        config['loss_fcn'] = ['rms']
 
     if "eros200700.obj" in config["grav_file"][0]:
         from GravNN.CelestialBodies.Asteroids import Eros

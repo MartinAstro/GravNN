@@ -22,27 +22,5 @@ def get_prototype_toutatis_config():
         "analytic_truth": ["poly_stats_"],
         "gravity_data_fcn" : [get_poly_data],
     }
-    network_config = {
-        "network_type": ["traditional"],
-        "PINN_constraint_fcn": ["no_pinn"],
-        "layers": [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
-        "activation": ["gelu"],
-        "init_file": [None],
-        "epochs": [100000],
-        "initializer": ["glorot_normal"],
-        "optimizer": ["adam"],
-        "batch_size": [131072 // 2],
-        "dropout": [0.0],
-        "x_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "u_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "a_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "dtype": ["float32"],
-        "dummy_transformer": [DummyScaler()],
-        "class_weight": [[1.0, 1.0, 1.0]],  # no_pinn and PINN_A
-        "skip_normalization": [False],
-    }
 
-    config = {}
-    config.update(data_config)
-    config.update(network_config)
-    return config
+    return data_config

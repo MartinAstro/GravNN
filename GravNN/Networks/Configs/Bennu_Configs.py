@@ -25,36 +25,10 @@ def get_default_bennu_config():
         "x_transformer": [UniformScaler(feature_range=(-1, 1))],
         "u_transformer": [UniformScaler(feature_range=(-1, 1))],
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
-        "scale_by": ["non_dim"],
         "dummy_transformer": [DummyScaler()],
     }
-    network_config = {
-        "PINN_constraint_fcn": ["pinn_A"],
-        "layers": [[3, 20, 20, 20, 20, 20, 20, 20, 20, 3]],
-        "activation": ["gelu"],
-        "init_file": [None],
-        "epochs": [7500],
-        "initializer": ["glorot_normal"],
-        "optimizer": ["adam"],
-        "batch_size": [131072 // 2],
-        "dropout": [0.0],
-        "dtype": ["float32"],
-        "skip_normalization": [False],
-        "lr_anneal": [False],
-        "input_layer": [False],
-        "network_type": ["sph_pines_traditional"],
-        "custom_input_layer": [None],
-        "ref_radius" : [Bennu().radius],
-        'seed' : [0],
-        'transformer_units' : [20],
-        'normalization_strategy' : ['uniform'],
 
-    }
-
-    config = {}
-    config.update(data_config)
-    config.update(network_config)
-    return config
+    return data_config
 
 
 def get_bennu_r_star_config(multiplier=1):

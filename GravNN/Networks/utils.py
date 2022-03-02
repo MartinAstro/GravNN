@@ -284,6 +284,30 @@ def _get_network_fcn(name):
     }[name.lower()]
 
 
+def _get_loss_fcn(name):
+    """Helper function to initialize the network loss function
+
+    Args:
+        name (str): loss type (e.g. percent, rms, percent_rms)
+
+    Returns:
+        function: network function
+    """
+    from GravNN.Networks.Losses import (
+        percent_loss,
+        rms_loss,
+        percent_rms_loss
+    )
+
+    return {
+        "percent": percent_loss,
+        "rms": rms_loss,
+        "percent_rms": percent_rms_loss,
+
+    }[name.lower()]
+
+
+
 def _get_tf_dtype(name):
     import tensorflow as tf
 
