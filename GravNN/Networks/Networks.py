@@ -445,10 +445,7 @@ def SphericalPinesTraditionalNet_v2(**kwargs):
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
-    custom_input_layer = kwargs["custom_input_layer"][0]
     dtype = kwargs["dtype"][0]
-    skip_normalization = kwargs["skip_normalization"][0]
-    ref_radius = kwargs["ref_radius"][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
     x = Cart2PinesSphLayer(inputs.shape)(inputs)
