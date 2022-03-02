@@ -657,7 +657,7 @@ def backwards_compatibility(config):
     # Before this date, it was assumed that data would be drawn with SH if planet, and 
     # Polyhedral if asteroid. This is no longer true. 
     if float(config["id"][0]) < 2459628.436423611:
-        if config["Planet"][0] in planet.__module__:
+        if "Planets" in config["planet"][0].__module__:
             config["gravity_data_fcn"] = [GravNN.GravityModels.SphericalHarmonics.get_sh_data]
         else:
             config["gravity_data_fcn"] = [GravNN.GravityModels.Polyhedral.get_poly_data]
