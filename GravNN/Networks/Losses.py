@@ -1,55 +1,55 @@
 import tensorflow as tf
 
-def percent_loss(rms_components, percent_components):
-    loss = tf.reduce_sum(percent_components)
+# Summed Losses
+def percent_summed_loss(rms_components, percent_error):
+    loss = tf.reduce_sum(percent_error)
     return loss
 
-def rms_loss(rms_components, percent_components):
-    loss = tf.reduce_sum(rms_components)
+def rms_summed_loss(rms_components, percent_error): 
+    loss = tf.reduce_sum(tf.sqrt(tf.reduce_sum(rms_components, 1)))
     return loss
 
-def percent_rms_loss(rms_components, percent_components):
-    loss = tf.reduce_sum(rms_components)
-    loss += tf.reduce_sum(percent_components)
-    return loss
-
-def percent_rms_loss_v2(rms_components, percent_components):
-    rms_loss = tf.reduce_sum(rms_components,1) 
-    loss = tf.reduce_sum(rms_loss + percent_components)
-    return loss
-
-def weighted_percent_rms_loss(rms_components, percent_components):
-    loss = tf.reduce_sum(tf.reduce_sum(rms_components,1)*percent_components)#*tf.reduce_sum(percent_components)
-    return loss
-
-def mean_percent_rms_loss(rms_components, percent_components):
-    rms_loss = tf.reduce_sum(rms_components,1) 
-    loss = tf.reduce_mean(rms_loss + percent_components)
+def percent_rms_summed_loss(rms_components, percent_error):
+    rms_loss = rms_summed_loss(rms_components, percent_error)
+    percent_loss = percent_summed_loss(rms_components, percent_error)
+    loss = rms_loss + percent_loss
     return loss
 
 
-def mean_percent_rms_max_loss(rms_components, percent_components):
-    rms_loss = tf.math.sqrt(tf.reduce_sum(rms_components,1))
-    avg_rms = tf.reduce_mean(rms_loss)
-    avg_percent = tf.reduce_mean(percent_components)
-    max_percent = tf.reduce_max(percent_components)
-    loss = avg_rms + avg_percent + max_percent
+# Average Losses -- Effectively the same as ''Summed Losses'' except 1/N
+def percent_avg_loss(rms_components, percent_error):
+    loss = tf.reduce_mean(percent_error)
     return loss
 
-def mean_percent_rms_max_loss_v2(rms_components, percent_components):
-    rms_loss = tf.math.sqrt(tf.reduce_sum(rms_components,1))
-    avg_rms = tf.reduce_sum(rms_loss) # sum all the rms
-    # print(avg_rms)
-    avg_percent = tf.reduce_mean(percent_components) # take the average percent error
-    max_percent = tf.reduce_max(percent_components) # penalize very large percent error
-    loss = avg_rms + avg_percent + max_percent
+def rms_avg_loss(rms_components, percent_error):
+    loss = tf.reduce_mean(tf.sqrt(tf.reduce_sum(rms_components, 1)))
     return loss
 
-def mean_percent_rms_loss(rms_components, percent_components):
-    rms_loss = tf.math.sqrt(tf.reduce_sum(rms_components,1))
-    avg_rms = tf.reduce_sum(rms_loss) # sum all the rms
-    # print(avg_rms)
-    avg_percent = tf.reduce_mean(percent_components) # take the average percent error
-    max_percent = tf.reduce_max(percent_components) # penalize very large percent error
-    loss = avg_rms + avg_percent
+def percent_rms_avg_loss(rms_components, percent_error):
+    rms_loss = rms_avg_loss(rms_components, percent_error)
+    percent_loss = percent_avg_loss(rms_components, percent_error)
+    loss = rms_loss + percent_loss
     return loss
+
+
+# Hybrid Losses (mix of summed, averaged, and maximum losses)
+def avg_percent_summed_rms_loss(rms_components, percent_error):
+    rms_loss = rms_summed_loss(rms_components, percent_error)
+    percent_loss = percent_avg_loss(rms_components, percent_error)
+    loss = rms_loss + percent_loss
+    return loss
+
+def avg_percent_summed_rms_max_error_loss(rms_components, percent_error):
+    sum_rms = rms_summed_loss(rms_components, percent_error)
+    avg_percent = percent_avg_loss(rms_components, percent_error)
+    max_percent = tf.reduce_max(percent_error) 
+    loss = sum_rms + avg_percent + max_percent
+    return loss
+
+
+
+
+def weighted_percent_rms_loss(rms_components, percent_error):
+    loss = tf.reduce_sum(tf.reduce_sum(rms_components,1)*percent_error)#*tf.reduce_sum(percent_error)
+    return loss
+

@@ -296,27 +296,25 @@ def _get_loss_fcn(name):
         function: network function
     """
     from GravNN.Networks.Losses import (
-        percent_loss,
-        rms_loss,
-        percent_rms_loss,
-        percent_rms_loss_v2,
-        mean_percent_rms_loss,
-        weighted_percent_rms_loss,
-        mean_percent_rms_max_loss,
-        mean_percent_rms_max_loss_v2,
-        mean_percent_rms_loss
+        percent_summed_loss,
+        rms_summed_loss,
+        percent_rms_summed_loss,
+        percent_avg_loss,
+        rms_avg_loss,
+        percent_rms_avg_loss,
+        avg_percent_summed_rms_loss,
+        avg_percent_summed_rms_max_error_loss
     )
 
     return {
-        "percent": percent_loss,
-        "rms": rms_loss,
-        "percent_rms": percent_rms_loss,
-        "percent_rms_v2": percent_rms_loss_v2,
-        "weighted_percent_rms" : weighted_percent_rms_loss,
-        "mean_percent_rms": mean_percent_rms_loss,
-        'mean_percent_rms_max' : mean_percent_rms_max_loss,
-        'mean_percent_rms_max_v2' : mean_percent_rms_max_loss_v2,
-        "mean_percent_rms" : mean_percent_rms_loss,
+        "percent_summed": percent_summed_loss,
+        "rms_summed": rms_summed_loss,
+        "percent_rms_summed": percent_rms_summed_loss,
+        "percent_avg" : percent_avg_loss,
+        "rms_avg": rms_avg_loss,
+        'percent_rms_avg' : percent_rms_avg_loss,
+        'avg_percent_summed_rms' : avg_percent_summed_rms_loss,
+        "avg_percent_summed_rms_max_error" : avg_percent_summed_rms_max_error_loss,
 
     }[name.lower()]
 
