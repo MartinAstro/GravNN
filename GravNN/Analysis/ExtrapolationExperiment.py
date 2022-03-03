@@ -2,7 +2,7 @@
 from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
-
+from GravNN.Networks.utils import _get_loss_fcn
 import numpy as np
 import pandas as pd
 
@@ -88,37 +88,30 @@ class ExtrapolationExperiment:
 
     def compute_loss(self):
 
-        def rms_percent_loss(x_hat, x_true):
-            """ RMS + Percent Error """
-            diff_mag = np.linalg.norm(x_true - x_hat, axis=1)
-            true_mag = np.linalg.norm(x_true, axis=1)
-            percent_error = diff_mag/true_mag
-            loss_error = np.sum(np.square(x_true - x_hat),axis=1)
-            loss_error += percent_error
-            return loss_error
+        def compute_errors(y, y_hat):
+            rms_error = np.square(y_hat - y)
+            percent_error = np.linalg.norm(y - y_hat, axis=1) / np.linalg.norm(y, axis=1)*100
+            return rms_error.astype(np.float32), percent_error.astype(np.float32)
 
-        def percent_loss(x_hat, x_true):
-            """ RMS + Percent Error """
-            diff_mag = np.linalg.norm(x_true - x_hat, axis=1)
-            true_mag = np.linalg.norm(x_true, axis=1)
-            percent_error = diff_mag/true_mag
-            return percent_error
+        loss_fcn = _get_loss_fcn(self.config['loss_fcn'][0])
 
-        def rms_loss(x_hat, x_true):
-            """ RMS """
-            return np.sqrt(np.sum(np.square(x_true - x_hat), axis=1))
-        
-        if self.loss_type == "rms_percent":
-            loss = rms_percent_loss
-        elif self.loss_type == 'rms':
-            loss = rms_loss
-        elif self.loss_type == 'percent':
-            loss = percent_loss
-        else: 
-            raise NotImplementedError()
+        rms_accelerations, percent_accelerations = compute_errors(self.truth_accelerations, self.predicted_accelerations) 
+        self.loss_acc = np.array([
+            loss_fcn(
+                np.array([rms_accelerations[i]]), 
+                np.array([percent_accelerations[i]])
+                ) 
+            for i in range(len(rms_accelerations)) 
+            ])
 
-        self.loss_acc = loss(self.predicted_accelerations, self.truth_accelerations)
-        self.loss_pot = loss(self.predicted_potentials, self.truth_potentials)
+        rms_potentials, percent_potentials = compute_errors(self.truth_potentials, self.predicted_potentials) 
+        self.loss_pot = np.array([
+            loss_fcn(
+                np.array([rms_potentials[i]]), 
+                np.array([percent_potentials[i]])
+                ) 
+            for i in range(len(rms_potentials)) 
+            ])
 
 
     def compute_trend_lines(self):
@@ -171,3 +164,24 @@ class ExtrapolationExperiment:
         self.compute_RMS()
         self.compute_loss()
         self.compute_trend_lines()
+
+
+def main():
+    import pandas as pd
+    import numpy as np
+    import importlib
+    from GravNN.Networks.Model import load_config_and_model
+    from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
+    from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
+    df = pd.read_pickle("Data/Dataframes/eros_pinn_III.data")
+    model_id = df["id"].values[4] 
+    config, model = load_config_and_model(model_id, df)
+    extrapolation_exp = ExtrapolationExperiment(model, config, 500, loss_type='rms_percent')
+    extrapolation_exp.run()
+    vis = ExtrapolationVisualizer(extrapolation_exp)
+    vis.plot_interpolation_percent_error()
+    vis.plot_extrapolation_percent_error()
+    vis.plot_interpolation_loss()
+
+if __name__ == "__main__":
+    main()

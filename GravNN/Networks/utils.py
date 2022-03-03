@@ -271,7 +271,8 @@ def _get_network_fcn(name):
         SphericalTraditionalNet,
         SphericalPinesTraditionalNet,
         SphericalPinesTransformerNet,
-        SphericalPinesTraditionalNet_v2
+        SphericalPinesTraditionalNet_v2,
+        SphericalPinesTransformerNet_v2
     )
 
     return {
@@ -279,8 +280,9 @@ def _get_network_fcn(name):
         "resnet": ResNet,
         "sph_traditional": SphericalTraditionalNet,
         "sph_pines_traditional": SphericalPinesTraditionalNet,
-        "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
         "sph_pines_transformer": SphericalPinesTransformerNet,
+        "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
+        "sph_pines_transformer_v2": SphericalPinesTransformerNet_v2,
     }[name.lower()]
 
 
@@ -296,13 +298,25 @@ def _get_loss_fcn(name):
     from GravNN.Networks.Losses import (
         percent_loss,
         rms_loss,
-        percent_rms_loss
+        percent_rms_loss,
+        percent_rms_loss_v2,
+        mean_percent_rms_loss,
+        weighted_percent_rms_loss,
+        mean_percent_rms_max_loss,
+        mean_percent_rms_max_loss_v2,
+        mean_percent_rms_loss
     )
 
     return {
         "percent": percent_loss,
         "rms": rms_loss,
         "percent_rms": percent_rms_loss,
+        "percent_rms_v2": percent_rms_loss_v2,
+        "weighted_percent_rms" : weighted_percent_rms_loss,
+        "mean_percent_rms": mean_percent_rms_loss,
+        'mean_percent_rms_max' : mean_percent_rms_max_loss,
+        'mean_percent_rms_max_v2' : mean_percent_rms_max_loss_v2,
+        "mean_percent_rms" : mean_percent_rms_loss,
 
     }[name.lower()]
 
