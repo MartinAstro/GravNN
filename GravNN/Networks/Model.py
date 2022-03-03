@@ -67,9 +67,7 @@ class CustomModel(tf.keras.Model):
         Returns:
             tf.Tensor: loss components for each contribution (i.e. dU, da, dL, dC)
         """
-        loss_components = tf.reduce_mean(
-            tf.square(tf.subtract(y_hat, y)), 0
-        )
+        loss_components = tf.square(tf.subtract(y_hat, y))
         return loss_components
 
     def compute_percent_error(self, y_hat, y):
@@ -99,7 +97,7 @@ class CustomModel(tf.keras.Model):
             percent_components = self.compute_percent_error(y_hat, y)
 
             updated_rms_components = self.scale_loss(
-                rms_components, self.adaptive_constant
+                tf.reduce_mean(rms_components,0), self.adaptive_constant
             )
 
             loss = self.loss_fcn(rms_components, percent_components)
@@ -162,7 +160,7 @@ class CustomModel(tf.keras.Model):
             percent_components = self.compute_percent_error(y_hat, y)
 
             updated_loss_components = self.scale_loss(
-                rms_components, self.adaptive_constant
+                tf.reduce_mean(rms_components,0), self.adaptive_constant
             )
             loss = self.loss_fcn(rms_components, percent_components)
             loss += tf.reduce_sum(self.network.losses)
@@ -202,7 +200,7 @@ class CustomModel(tf.keras.Model):
         rms_components = self.compute_rms_components(y_hat, y)
         percent_components = self.compute_percent_error(y_hat, y)
         updated_rms_components = self.scale_loss(
-            rms_components, self.adaptive_constant
+            tf.reduce_mean(rms_components,0), self.adaptive_constant
         )
         loss = self.loss_fcn(rms_components, percent_components)
         return {"loss": loss, 
@@ -218,7 +216,7 @@ class CustomModel(tf.keras.Model):
         percent_components = self.compute_percent_error(y_hat, y)
 
         updated_loss_components = self.scale_loss(
-            rms_components, self.adaptive_constant
+            tf.reduce_mean(rms_components,0), self.adaptive_constant
         )
         loss = self.loss_fcn(rms_components, percent_components)
 
