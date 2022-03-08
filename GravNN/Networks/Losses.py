@@ -1,5 +1,12 @@
 import tensorflow as tf
 
+# Max Losses
+def max_loss(rms_components, percent_error): 
+    percent_loss = percent_summed_loss(rms_components, percent_error)
+    max_loss = tf.reduce_max(percent_error) 
+    return max_loss
+
+
 # Summed Losses
 def percent_summed_loss(rms_components, percent_error):
     loss = tf.reduce_sum(percent_error)

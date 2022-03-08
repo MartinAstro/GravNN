@@ -244,6 +244,13 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         # r_inv = tf.divide(1,r)
         # r_tanh = tf.keras.activations.tanh(r)
         # spheres = tf.stack([r_inv, r_tanh, s, t, u], axis=1)
+
+        # r_inv = tf.divide(1,r)
+        # numerator = tf.math.log(r)
+        # denominator = tf.math.log(tf.constant(10, dtype=numerator.dtype))
+        # log_r = tf.keras.activations.tanh(numerator / denominator)
+        # # r_tanh = tf.keras.activations.tanh(r)
+        # spheres = tf.stack([r_inv, log_r, s, t, u], axis=1)
         return spheres
 
     def get_config(self):

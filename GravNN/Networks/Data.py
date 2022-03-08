@@ -285,7 +285,7 @@ def get_preprocessed_data(config):
         """
 
         # Scale positions by the radius of the planet
-        x_train = x_transformer.fit_transform(x_train, scaler=1/config['planet'][0].radius)
+        x_train = x_transformer.fit_transform(x_train, scaler=1/(config['planet'][0].radius))
         u_train = u_transformer.fit_transform(np.repeat(u_train, 3, axis=1))[
             :, 0
         ].reshape((-1, 1))

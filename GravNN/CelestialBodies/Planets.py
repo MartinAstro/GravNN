@@ -1,4 +1,5 @@
 import os
+import re
 import pooch
 import GravNN
 import numpy as np
@@ -26,34 +27,38 @@ class Earth:
 
         def format_EGM96_sh(fname, action, pooch_inst):
             unzipped = unpack(fname, action, "EGM96")
-            
+            new_name = fname.split("_raw")[0] + ".txt"
+            if os.path.exists(new_name):
+                return new_name
+
             with open(unzipped, 'rb') as f:
                 data = f.readlines()
             os.remove(unzipped)
 
-            new_name = fname.split("_raw")[0] + ".txt"
             with open(new_name, 'w') as f:
-                f.write("    %f    %f    %f    %d\n" % (self.radius, self.mu, 0.0, 360))
-                f.write("    0    0  1.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.write("    1    0  0.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.write("    1    1  0.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.writelines([ line.decode("utf-8") for line in data])
+                f.write("%f,%f,%f,%d\n" % (self.radius, self.mu, 0.0, 360))
+                f.write("0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.write("1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.write("1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.writelines([ re.sub("\s+", ",", line.decode("utf-8").lstrip()) + "\n" for line in data])
             return new_name
 
         def format_EGM2008_sh(fname, action, pooch_inst):
             unzipped = unpack(fname, action, "EGM2008_to2190_TideFree")
-            
+            new_name = fname.split("_raw")[0] + ".txt"
+            if os.path.exists(new_name):
+                return new_name
+
             with open(unzipped, 'rb') as f:
                 data = f.readlines()
             os.remove(unzipped)
 
-            new_name = fname.split("_raw")[0] + ".txt"
             with open(new_name, 'w') as f:
-                f.write("    %f    %f    %f    %d\n" % (self.radius, self.mu, 0.0, 2190))
-                f.write("    0    0  1.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.write("    1    0  0.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.write("    1    1  0.00000000000E+00  0.00000000000E+00 0.00000000000E+00  0.00000000000E+00\n")
-                f.writelines([ line.decode("utf-8").replace("D", "E") for line in data])
+                f.write("%f,%f,%f,%d\n" % (self.radius, self.mu, 0.0, 2190))
+                f.write("0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.write("1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.write("1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
+                f.writelines([ re.sub("\s+", ",", line.decode("utf-8").replace("D", "E").lstrip()) + "\n" for line in data])
             return new_name
 
         self.EGM96 = pooch.retrieve(
@@ -72,9 +77,10 @@ class Earth:
             processor=format_EGM2008_sh
         )
 
+        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Misc/unit_sphere.obj"
+
         # Backwards compatability
         # self.sh_file = self.EGM96
-        self.sh_file = self.EGM2008
         self.sh_file = self.EGM2008
 
 class Moon:
@@ -84,14 +90,16 @@ class Moon:
         self.mu = 4.902799e12  # meters^3/s^2
 
         def format_sh(fname, action, pooch_inst):
+            new_name = fname.split("_raw.txt")[0] + ".txt"
+            if os.path.exists(new_name):
+                return new_name
+
             with open(fname, 'r') as f:
                 data = f.readlines()
             meta_data = np.array([float(x) for x in data[0].split(", ")])
             meta_data[0] *= 1000.0 # change radius units to meters
             meta_data[1] *= 1000.0**3 # change mu units to meters^3
             
-            new_name = fname.split("_raw.txt")[0]
-            new_name += ".txt"
             with open(new_name, 'w') as f:
                 f.write(np.array2string(meta_data, separator=', ', max_line_width=2000)[1:-1] + "\n")
                 f.write("    0,    0,  1.00000000000E+00,  0.00000000000E+00, 0.00000000000E+00,  0.00000000000E+00\n")
@@ -107,3 +115,4 @@ class Moon:
         )
         
         self.sh_file = self.GRGM1200
+        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Misc/unit_sphere.obj"

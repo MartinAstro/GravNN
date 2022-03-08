@@ -22,5 +22,6 @@ def get_default_earth_config():
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_"],
         "gravity_data_fcn" : [get_sh_data],
+        "shape_model" : [Earth().shape_model]
     }
     return data_config

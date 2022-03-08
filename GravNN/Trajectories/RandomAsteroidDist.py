@@ -1,4 +1,5 @@
 import os
+import GravNN
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 import pathlib
 import numpy as np
@@ -23,7 +24,13 @@ class RandomAsteroidDist(TrajectoryBase):
             model_file (str, optional): The path to the shape model. Defaults to None.
         """
         self.radius_bounds = radius_bounds
-        self.model_file = kwargs.get("grav_file", [model_file])[0]
+
+        if model_file is None:
+            grav_file =  kwargs.get("grav_file", [None])[0] # asteroids grav_file is the shape model
+            self.model_file = kwargs.get("shape_model", [grav_file])[0] # planets have shape model (sphere currently)
+        else:
+            self.model_file = model_file # if desire to overwrite default shape model
+            
         filename, file_extension = os.path.splitext(self.model_file)
 
         self.shape_model = trimesh.load_mesh(self.model_file, file_type=file_extension[1:])

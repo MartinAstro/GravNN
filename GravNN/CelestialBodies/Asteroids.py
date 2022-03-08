@@ -30,6 +30,9 @@ class Bennu:
 
         # Spherical Harmonics
         def format_sh(fname, action, pooch_inst):
+            new_name = fname.split("_raw.txt")[0] + ".txt"
+            if os.path.exists(new_name):
+                return new_name
             # Pull data from the .m file
             with open(fname, 'r') as f:
                 data = f.readlines()
@@ -99,15 +102,14 @@ class Bennu:
             data_matrix=data_matrix[~np.all(data_matrix == np.array([0,0,0,0,0,0]),axis=1)]
 
             # Write data to processed file
-            processed_name = fname.split("_raw.txt")[0] + ".txt"
-            with open(processed_name, 'w') as f:
+            with open(new_name, 'w') as f:
                 f.write("    %f    %f    %f    %d\n" % (self.radius, self.mu, 0.0, 16))
                 f.write("    0\t0\t1.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\n")
                 f.write("    1\t0\t0.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\n")
                 f.write("    1\t1\t0.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\t0.00000000000E+00\n")
                 for row in data_matrix:
                     f.write("\t%d\t%d\t%e\t%e\t%e\t%e \n" % (row[0], row[1], row[2], row[3],row[4],row[5]))
-            return processed_name
+            return new_name
 
         # https://ssd.jpl.nasa.gov/tools/gravity.html#/bennu 
         #grav_20_particles.m - A MATLAB script that provides the coefficients and covariance of the estimated gravity field.
@@ -139,12 +141,16 @@ class Eros:
             np.linalg.norm(np.array([34.4, 11.2, 11.2]) * 1e3) / 2
         )  # 34400.0/2.0# 16840.0 is *mean* diameter # meters (diameter / 2)
         self.radius = 16000.0  # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
-
+        self.radius_min=3120.0
         G = 6.67430 * 10 ** -11
         self.mu = G * 6.687 * 10 ** 15
 
         def reindex_faces(fname, action, pooch_inst):
             "add 1 to the face indices in the obj file to work with trimesh"
+            new_name = fname.split("_raw")[0] + ".obj"
+            if os.path.exists(new_name):
+                return new_name
+
             with open(fname, 'r') as f:
                 lines = f.readlines()
             
@@ -153,7 +159,6 @@ class Eros:
                 if line[0] == 'f':
                     lines[i] = 'f ' + ' '.join([str(int(entry) + 1) for entry in line.split('f')[1].split()]) + " \n"
             
-            new_name = fname.split("_raw")[0] + ".obj"
             with open(new_name, 'w') as f:
                 f.writelines(lines)
                 

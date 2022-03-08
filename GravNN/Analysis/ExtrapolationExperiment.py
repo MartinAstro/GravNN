@@ -3,24 +3,27 @@ from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
 from GravNN.Networks.utils import _get_loss_fcn
+from GravNN.Networks.Data import get_raw_data
+
 import numpy as np
 import pandas as pd
-
+import trimesh
+import os
+import GravNN
 
 class ExtrapolationExperiment:
-    def __init__(self, model, config, points, loss_type='rms', random_seed=1234):
+    def __init__(self, model, config, points, random_seed=1234):
         self.config = config
         self.model = model
         self.points = points
-        self.loss_type = loss_type
 
         self.brillouin_radius = config['planet'][0].radius
         self.training_bounds = [config['radius_min'][0], config['radius_max'][0]]
 
         # attributes to be populated in run()
         self.positions = None
-        self.truth_accelerations = None
-        self.truth_potentials = None
+        self.test_accelerations = None
+        self.test_potentials = None
 
         self.predicted_accelerations = None
         self.predicted_potentials = None
@@ -28,41 +31,66 @@ class ExtrapolationExperiment:
         self.percent_error_acc = None
         self.percent_error_pot = None
 
-        self.acc_avg_line = None
-        self.acc_std_line = None
-
-        self.pot_avg_line = None
-        self.pot_std_line = None
-
         np.random.seed(random_seed)
 
 
-    def get_truth_data(self):
+    def get_train_data(self):
+        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(self.config)
+        train_r_COM = cart2sph(x_train)[:,0] 
+
+        # sort
+        self.train_dist_2_COM_idx = np.argsort(train_r_COM)
+        self.train_r_COM = train_r_COM[self.train_dist_2_COM_idx]
+
+        grav_file =  self.config.get("grav_file", [None])[0] # asteroids grav_file is the shape model
+        obj_file = self.config.get("shape_model", [grav_file])[0] # planets have shape model (sphere currently) 
+         
+        # Compute distance to surface
+        filename, file_extension = os.path.splitext(obj_file)
+        mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
+        closest, train_r, triangle_id = trimesh.proximity.closest_point(mesh, x_train/ 1000)
+
+        # Sort
+        self.train_dist_2_surf_idx = np.argsort(train_r)
+        self.train_r_surf = train_r[self.train_dist_2_surf_idx]*1000
+
+    def get_test_data(self):
         planet = self.config['planet'][0]
         max_radius = self.config['radius_max'][0]
-        obj_file = self.config['grav_file'][0]
+        min_radius = self.config['radius_min'][0]
+        obj_file = self.config.get('grav_file',[None])[0]
+
         gravity_data_fcn = self.config['gravity_data_fcn'][0]
 
         interpolation_dist = RandomAsteroidDist(planet, 
-                            radius_bounds=[0, max_radius],
+                            radius_bounds=[min_radius, max_radius],
                             points=self.points,
-                            model_file=obj_file)
+                            **self.config)
         extrapolation_dist = RandomAsteroidDist(planet, 
                             radius_bounds=[max_radius, max_radius*10],
                             points=self.points,
-                            model_file=obj_file)
+                            **self.config)
 
         full_dist = interpolation_dist
         full_dist.positions = np.append(full_dist.positions, extrapolation_dist.positions, axis=0)
-
+        
         x, a, u = gravity_data_fcn(full_dist, obj_file, **self.config)
 
+        # Compute distance to COM
         x_sph = cart2sph(x)
-        sorted_idx = np.argsort(x_sph[:,0])
+        self.test_dist_2_COM_idx = np.argsort(x_sph[:,0])
+        self.test_r_COM = x_sph[self.test_dist_2_COM_idx,0]
 
-        self.positions = x[sorted_idx]
-        self.truth_accelerations = a[sorted_idx]
-        self.truth_potentials = u[sorted_idx]
+        mesh = interpolation_dist.shape_model
+        closest, test_r, triangle_id = trimesh.proximity.closest_point(mesh, x / 1000)
+
+        # Sort
+        self.test_dist_2_surf_idx = np.argsort(test_r)
+        self.test_r_surf = test_r[self.test_dist_2_surf_idx]*1000
+
+        self.positions = x
+        self.test_accelerations = a
+        self.test_potentials = u
 
     def get_PINN_data(self):
         positions = self.positions.astype(np.float32)
@@ -76,15 +104,15 @@ class ExtrapolationExperiment:
             percent_error = diff_mag/true_mag*100
             return percent_error
         
-        self.percent_error_acc = percent_error(self.predicted_accelerations, self.truth_accelerations)
-        self.percent_error_pot = percent_error(self.predicted_potentials, self.truth_potentials)
+        self.percent_error_acc = percent_error(self.predicted_accelerations, self.test_accelerations)
+        self.percent_error_pot = percent_error(self.predicted_potentials, self.test_potentials)
 
     def compute_RMS(self):
         def RMS(x_hat, x_true):
             return np.sqrt(np.sum(np.square(x_true - x_hat), axis=1))
         
-        self.RMS_acc = RMS(self.predicted_accelerations, self.truth_accelerations)
-        self.RMS_pot = RMS(self.predicted_potentials, self.truth_potentials)
+        self.RMS_acc = RMS(self.predicted_accelerations, self.test_accelerations)
+        self.RMS_pot = RMS(self.predicted_potentials, self.test_potentials)
 
     def compute_loss(self):
 
@@ -95,7 +123,7 @@ class ExtrapolationExperiment:
 
         loss_fcn = _get_loss_fcn(self.config['loss_fcn'][0])
 
-        rms_accelerations, percent_accelerations = compute_errors(self.truth_accelerations, self.predicted_accelerations) 
+        rms_accelerations, percent_accelerations = compute_errors(self.test_accelerations, self.predicted_accelerations) 
         self.loss_acc = np.array([
             loss_fcn(
                 np.array([rms_accelerations[i]]), 
@@ -104,7 +132,7 @@ class ExtrapolationExperiment:
             for i in range(len(rms_accelerations)) 
             ])
 
-        rms_potentials, percent_potentials = compute_errors(self.truth_potentials, self.predicted_potentials) 
+        rms_potentials, percent_potentials = compute_errors(self.test_potentials, self.predicted_potentials) 
         self.loss_pot = np.array([
             loss_fcn(
                 np.array([rms_potentials[i]]), 
@@ -113,57 +141,13 @@ class ExtrapolationExperiment:
             for i in range(len(rms_potentials)) 
             ])
 
-
-    def compute_trend_lines(self):
-
-        def get_rolling_lines(data):
-            df = pd.DataFrame(data=data, index=None)
-            avg = df.rolling(50, 25).mean()
-            std = df.rolling(50, 25).std()
-            max = df.rolling(10, 10).max()
-            return avg, std, max
-        
-        acc_avg, acc_std, acc_max = get_rolling_lines(self.percent_error_acc)
-        pot_avg, pot_std, pot_max = get_rolling_lines(self.percent_error_pot)
-
-        self.acc_avg_percent_error_line = acc_avg
-        self.acc_std_percent_error_line = acc_std
-        self.acc_max_percent_error_line = acc_max
-
-        self.pot_avg_percent_error_line = pot_avg
-        self.pot_std_percent_error_line = pot_std
-        self.pot_max_percent_error_line = pot_max
-
-        acc_avg, acc_std, acc_max = get_rolling_lines(self.loss_acc)
-        pot_avg, pot_std, pot_max = get_rolling_lines(self.loss_pot)
-
-        self.acc_avg_loss_line = acc_avg
-        self.acc_std_loss_line = acc_std
-        self.acc_max_loss_line = acc_max
-
-        self.pot_avg_loss_line = pot_avg
-        self.pot_std_loss_line = pot_std
-        self.pot_max_loss_line = pot_max
-
-        acc_avg, acc_std, acc_max = get_rolling_lines(self.RMS_acc)
-        pot_avg, pot_std, pot_max = get_rolling_lines(self.RMS_pot)
-
-        self.acc_avg_RMS_line = acc_avg
-        self.acc_std_RMS_line = acc_std
-        self.acc_max_RMS_line = acc_max
-
-        self.pot_avg_RMS_line = pot_avg
-        self.pot_std_RMS_line = pot_std
-        self.pot_max_RMS_line = pot_max
-
-
     def run(self):
-        self.get_truth_data()
+        self.get_train_data()
+        self.get_test_data()
         self.get_PINN_data()
         self.compute_percent_error()
         self.compute_RMS()
         self.compute_loss()
-        self.compute_trend_lines()
 
 
 def main():
@@ -173,8 +157,9 @@ def main():
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
     from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
-    df = pd.read_pickle("Data/Dataframes/eros_pinn_III.data")
-    model_id = df["id"].values[4] 
+    import matplotlib.pyplot as plt
+    df = pd.read_pickle("Data/Dataframes/useless.data")
+    model_id = df["id"].values[-1] 
     config, model = load_config_and_model(model_id, df)
     extrapolation_exp = ExtrapolationExperiment(model, config, 500, loss_type='rms_percent')
     extrapolation_exp.run()
@@ -182,6 +167,6 @@ def main():
     vis.plot_interpolation_percent_error()
     vis.plot_extrapolation_percent_error()
     vis.plot_interpolation_loss()
-
+    plt.show()
 if __name__ == "__main__":
     main()

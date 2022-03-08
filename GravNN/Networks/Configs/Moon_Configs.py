@@ -21,7 +21,8 @@ def get_default_moon_config():
         "mixed_precision": [False],
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_moon_"],
-        "gravity_data_fcn" : [get_sh_data]
+        "gravity_data_fcn" : [get_sh_data],
+        "shape_model" : [Moon().shape_model]
     }
     return data_config
 

@@ -296,6 +296,7 @@ def _get_loss_fcn(name):
         function: network function
     """
     from GravNN.Networks.Losses import (
+        max_loss,
         percent_summed_loss,
         rms_summed_loss,
         percent_rms_summed_loss,
@@ -307,6 +308,7 @@ def _get_loss_fcn(name):
     )
 
     return {
+        'max' : max_loss,
         "percent_summed": percent_summed_loss,
         "rms_summed": rms_summed_loss,
         "percent_rms_summed": percent_rms_summed_loss,
