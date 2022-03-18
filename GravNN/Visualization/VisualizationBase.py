@@ -8,7 +8,7 @@ import numpy as np
 
 class VisualizationBase(ABC):
 
-    def __init__(self, save_directory=None, halt_formatting=False, formatting_style=None):
+    def __init__(self, save_directory=None, halt_formatting=False, formatting_style=None, **kwargs):
         """Default visualization base class. Generates consistent style formatting for all 
         figures, offers information about proper figure sizes.
 
