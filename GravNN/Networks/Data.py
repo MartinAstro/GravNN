@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 import copy
+import sys
 from scipy.spatial.transform import Rotation
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
@@ -140,9 +141,10 @@ def get_raw_data(config):
     # This condition is for meant to correct for when gravity models didn't always have the proper sign of the potential.
     # TODO: This should be removed prior to production.
     deg_removed = config.get("deg_removed", -1)
+    remove_point_mass = config.get("remove_point_mass", False)
     # if part of the model is removed (i.e. point mass) it is reasonable for some of the potential to be > 0.0, so only rerun if there is no degree removed.
-    if np.max(u_unscaled) > 0.0 and deg_removed == -1:
-        exit("ERROR: This pickled acceleration/potential pair was generated \
+    if np.max(u_unscaled) > 0.0 and deg_removed == -1 and not remove_point_mass:
+        sys.exit("ERROR: This pickled acceleration/potential pair was generated \
               when the potential had a wrong sign. \n You must overwrite the data!")
 
     x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
@@ -354,7 +356,7 @@ def configure_dataset(train_data, val_data, config):
         y_val = np.hstack([a_val])
 
     # Just use acceleration
-    elif pinn_constraint_fcn == pinn_A:
+    elif pinn_constraint_fcn == pinn_A or pinn_constraint_fcn == pinn_A_Ur or pinn_constraint_fcn == pinn_A_64:
         y_train = np.hstack([a_train])
         y_val = np.hstack([a_val])
 

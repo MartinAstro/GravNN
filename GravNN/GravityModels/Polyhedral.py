@@ -199,7 +199,8 @@ class Polyhedral(GravityModelBase):
 
         self.configure(trajectory)
 
-        self.density = celestial_body.density
+        self.planet = celestial_body
+        self.density = self.planet.density
         filename, file_extension = os.path.splitext(obj_file)
         self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
         self.scaleFactor = 1e3  # Assume that the mesh is given in km
