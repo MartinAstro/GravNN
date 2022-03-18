@@ -12,9 +12,20 @@ def pinn_A(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
         u = f(x, training)
-    u_x = tape.gradient(u, x)
-    return tf.multiply(-1.0, u_x)
+    a_x = -tape.gradient(u, x)
+    return a_x
 
+def pinn_A_Ur(f, x, training):
+    with tf.GradientTape() as tape:
+        tape.watch(x)
+        ur = f(x, training)
+    ur_x = tape.gradient(ur, x)
+    r = tf.norm(x, axis=1)
+    a_x = x[:,0]/r**3*ur[:,0]/r - ur_x[:,0]/r
+    a_y = x[:,1]/r**3*ur[:,0]/r - ur_x[:,1]/r
+    a_z = x[:,2]/r**3*ur[:,0]/r - ur_x[:,2]/r
+    a = tf.stack((a_x,a_y, a_z),axis=1)
+    return a
 
 def pinn_P(f, x, training):
     u = f(x, training)

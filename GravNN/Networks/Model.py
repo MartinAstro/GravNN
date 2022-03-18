@@ -28,23 +28,24 @@ class CustomModel(tf.keras.Model):
             implemented.
             network (keras.Model): the actual network that will be trained.
         """
-        super(CustomModel, self).__init__()
+        self.variable_cast = config.get("dtype", [tf.float32])[0]
+        super(CustomModel, self).__init__(dtype=self.variable_cast)
         self.config = config
         self.network = network
         self.mixed_precision = tf.constant(
             self.config["mixed_precision"][0], dtype=tf.bool
         )
-        self.variable_cast = config.get("dtype", [tf.float32])[0]
-
+        
         self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
         self.loss_fcn = utils._get_loss_fcn(config['loss_fcn'][0])
         PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
-        self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.eval = PINN_variables[0]
         self.scale_loss = PINN_variables[1]
-        self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=tf.float32)
-        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=tf.float32)
+        self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=self.variable_cast)
+        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
 
+        self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
+        self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
 
         # jacobian ops incompatible with XLA
         if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None):
@@ -268,11 +269,11 @@ class CustomModel(tf.keras.Model):
     
     @tf.function()
     def _pinn_acceleration_output(self, x):
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            u = self.network(x)  # shape = (k,) #! evaluate network
-        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        return tf.multiply(-1.0, u_x)
+        if self.is_modified_potential:
+            a = pinn_A_Ur(self.network, x, training=False)
+        else:
+            a = pinn_A(self.network, x, training=False)
+        return a
 
     @tf.function(experimental_relax_shapes=True)
     def _pinn_acceleration_jacobian(self, x):
@@ -281,8 +282,7 @@ class CustomModel(tf.keras.Model):
             with tf.GradientTape() as g2:
                 g2.watch(x)
                 u = self.network(x)  # shape = (k,) #! evaluate network
-            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-            a = tf.multiply(-1.0, u_x)
+            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
         jacobian = g1.batch_jacobian(a,x)
         return jacobian
         
@@ -297,7 +297,7 @@ class CustomModel(tf.keras.Model):
 
     def __nn_output(self, dataset):
         x, y = dataset
-        x = tf.Variable(x, dtype=tf.float32)
+        x = tf.Variable(x, dtype=self.variable_cast)
         assert self.config["PINN_constraint_fcn"][0] != no_pinn
         with tf.GradientTape(persistent=True) as g1:
             g1.watch(x)
@@ -314,7 +314,7 @@ class CustomModel(tf.keras.Model):
         curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
         curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-        return u, tf.multiply(-1.0, u_x), laplacian, curl
+        return u, -u_x, laplacian, curl
 
     def generate_nn_data(
         self,
@@ -394,7 +394,7 @@ class CustomModel(tf.keras.Model):
         a_transformer = self.config["a_transformer"][0]
         x = x_transformer.transform(x)
 
-        x = tf.constant(x, dtype=tf.float32)
+        x = tf.constant(x, dtype=self.variable_cast)
 
         # def chunks(lst, n):
         #     """Yield successive n-sized chunks from lst."""
@@ -404,7 +404,6 @@ class CustomModel(tf.keras.Model):
         # batch_size = 131072//2
         # data = chunks(x, batch_size)
 
-        # x = tf.cast(x, tf.float32)
         if self.is_pinn:
             a_pred = self._pinn_acceleration_output(x)
         else:
@@ -428,7 +427,7 @@ class CustomModel(tf.keras.Model):
         u_transformer = self.config["u_transformer"][0]
         x = x_transformer.transform(x)
 
-        x = tf.constant(x, dtype=tf.float32)
+        x = tf.constant(x, dtype=self.variable_cast)
 
         # def chunks(lst, n):
         #     """Yield successive n-sized chunks from lst."""
@@ -438,7 +437,6 @@ class CustomModel(tf.keras.Model):
         # batch_size = 131072//2
         # data = chunks(x, batch_size)
 
-        # x = tf.cast(x, tf.float32)
         if self.is_pinn:
             jacobian = self._pinn_acceleration_jacobian(x)
         else:

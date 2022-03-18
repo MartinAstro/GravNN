@@ -215,6 +215,7 @@ def _get_PI_constraint(value):
     from GravNN.Networks.Constraints import (
         no_pinn,
         pinn_A,
+        pinn_A_Ur,
         pinn_P,
         pinn_PLC,
         pinn_AP,
@@ -245,6 +246,7 @@ def _get_PI_constraint(value):
     return {
         "no_pinn": [no_pinn, no_pinn_anneal, [-1.0]],  # scaling ignored
         "pinn_a": [pinn_A, pinn_A_anneal, [-1.0]],  # scaling ignored
+        "pinn_a_ur": [pinn_A_Ur, pinn_A_anneal, [-1.0]],  # scaling ignored
         "pinn_p": [pinn_P, pinn_P_anneal, [-1.0]],
         "pinn_pl": [pinn_P, pinn_P_anneal, [-1.0, 1.0]],
         "pinn_plc": [pinn_PLC, pinn_PLC_anneal, [-1.0, 1.0, 1.0]],
