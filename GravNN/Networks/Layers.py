@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Cart2SphLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim):
+    def __init__(self, dtype):
         """Layer responsible for taking cartesian inputs and converting
         them into spherical coordinates such that r in [0, inf),
         theta in [0,360], and phi in [0, 180].
@@ -13,8 +13,8 @@ class Cart2SphLayer(tf.keras.layers.Layer):
 
         Its successor is the Cart2PinesSph which bypasses the discontinuity entirely.
         """
-        super(Cart2SphLayer, self).__init__()
-        self.pi = tf.constant(np.pi, dtype=tf.float32).numpy()
+        super(Cart2SphLayer, self).__init__(dtype=dtype)
+        self.pi = tf.constant(np.pi, dtype=dtype).numpy()
 
     # @tf.function
     def call(self, inputs):
@@ -45,7 +45,7 @@ class Cart2SphLayer(tf.keras.layers.Layer):
 
 
 class Sph2NetLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim, scalers, mins):
+    def __init__(self, dtype, scalers, mins):
         """Layer responsible for taking the spherical
         coordinates and normalizing them to a [-1,1]
         distribution.
@@ -55,13 +55,12 @@ class Sph2NetLayer(tf.keras.layers.Layer):
             scalers (np.array): values used to scale each input quantity. These are computed before initialization
             mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
-        super(Sph2NetLayer, self).__init__()
-        self.scalers = tf.constant(scalers, dtype=tf.float32).numpy()
-        self.mins = tf.constant(mins, dtype=tf.float32).numpy()
+        super(Sph2NetLayer, self).__init__(dtype=dtype)
+        self.scalers = tf.constant(scalers, dtype=dtype).numpy()
+        self.mins = tf.constant(mins, dtype=dtype).numpy()
 
     # @tf.function
     def call(self, inputs):
-        pi = tf.constant(np.pi, dtype=tf.float32)
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
         theta = inputs_transpose[1]
@@ -92,7 +91,7 @@ class Sph2NetLayer(tf.keras.layers.Layer):
 
 
 class Cart2PinesSphLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim):
+    def __init__(self, dtype):
         """Successor to the Cart2SphLayer. The layer takes a
         cartesian input and transforms it into a non-singular spherical
         representation (see Pines formulation). This bypasses the singularity introduced at the pole
@@ -103,7 +102,7 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         Args:
             input_dim (None): Invalid argument (ignore) TODO: remove
         """
-        super(Cart2PinesSphLayer, self).__init__()
+        super(Cart2PinesSphLayer, self).__init__(dtype=dtype)
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
@@ -129,7 +128,7 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
 
 
 class PinesSph2NetLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim, scalers, mins, ref_radius):
+    def __init__(self, dtype, scalers, mins, ref_radius):
         """Layer used to normalize the r value of the Cart2PinesSphLayer
         between the values of [-1,1]
 
@@ -138,14 +137,13 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
                 scalers (np.array): values used to scale each input quantity. These are computed before initialization
                 mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
-        super(PinesSph2NetLayer, self).__init__()
-        self.scalers = tf.constant(scalers, dtype=tf.float32).numpy()
-        self.mins = tf.constant(mins, dtype=tf.float32).numpy()
-        self.ref_radius = tf.constant(ref_radius, dtype=tf.float32).numpy()
+        super(PinesSph2NetLayer, self).__init__(dtype=dtype)
+        self.scalers = tf.constant(scalers, dtype=dtype).numpy()
+        self.mins = tf.constant(mins, dtype=dtype).numpy()
+        self.ref_radius = tf.constant(ref_radius, dtype=dtype).numpy()
 
     # @tf.function
     def call(self, inputs):
-        pi = tf.constant(np.pi, dtype=tf.float32)
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
         beta = inputs_transpose[1]
@@ -215,10 +213,8 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
-
-
 class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
-    def __init__(self, input_dim):
+    def __init__(self, dtype):
         """Layer used to normalize the r value of the Cart2PinesSphLayer
         between the values of [-1,1]
 
@@ -227,18 +223,18 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
                 scalers (np.array): values used to scale each input quantity. These are computed before initialization
                 mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
-        super(PinesSph2NetLayer_v2, self).__init__()
-
+        super(PinesSph2NetLayer_v2, self).__init__(dtype=dtype)
     # @tf.function
     def call(self, inputs):
-        pi = tf.constant(np.pi, dtype=tf.float32)
+        # self.one = tf.constant(1.0)
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
         s = inputs_transpose[1]
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
-        r_inv = tf.divide(1,r)
+        one = tf.constant(1.0, dtype=r.dtype)
+        r_inv = tf.divide(one, r)
         spheres = tf.stack([r_inv, s, t, u], axis=1)
 
         # r_inv = tf.divide(1,r)
@@ -255,4 +251,9 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
 
     def get_config(self):
         config = super().get_config().copy()
+        config.update(
+            {
+                "dtype":self.dtype
+            }
+        )
         return config

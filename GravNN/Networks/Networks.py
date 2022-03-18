@@ -43,7 +43,7 @@ def TraditionalNet(**kwargs):
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
     dtype = kwargs["dtype"][0]
-    inputs = tf.keras.Input(shape=(layers[0],))
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
     x = inputs
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
@@ -62,6 +62,7 @@ def TraditionalNet(**kwargs):
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
     return model
 
 
@@ -97,9 +98,9 @@ def SphericalTraditionalNet(**kwargs):
     mins = kwargs["norm_mins"][0]
     dtype = kwargs["dtype"][0]
 
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2SphLayer(inputs.shape)(inputs)
-    x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
+    x = Cart2SphLayer(dtype)(inputs)
+    x = Sph2NetLayer(dtype, scalers, mins)(x)
     if custom_input_layer == "cart_and_sph":
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
 
@@ -123,6 +124,7 @@ def SphericalTraditionalNet(**kwargs):
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
     return model
 
 
@@ -158,13 +160,13 @@ def SphericalPinesTraditionalNet(**kwargs):
     skip_normalization = kwargs["skip_normalization"][0]
     ref_radius = kwargs["ref_radius"][0]
 
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2PinesSphLayer(inputs.shape)(inputs)
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
+    x = Cart2PinesSphLayer(dtype)(inputs)
 
     if not skip_normalization:
         scalers = kwargs["norm_scalers"][0]
         mins = kwargs["norm_mins"][0]
-        x = PinesSph2NetLayer(inputs.shape, scalers, mins, ref_radius)(x)
+        x = PinesSph2NetLayer(dtype, scalers, mins, ref_radius)(x)
 
     if custom_input_layer == "cart_and_sph":
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
@@ -189,6 +191,8 @@ def SphericalPinesTraditionalNet(**kwargs):
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 #@tf.function(jit_compile=True)
@@ -223,14 +227,14 @@ def SphericalPinesTransformerNet(**kwargs):
     transformer_units = kwargs["transformer_units"][0]
     normalization_strategy = kwargs["normalization_strategy"][0]
     ref_radius = kwargs["ref_radius"][0]
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2PinesSphLayer(inputs.shape)(inputs)
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
+    x = Cart2PinesSphLayer(dtype)(inputs)
 
 
     if normalization_strategy == 'radial':
-        x = PinesSph2NetRefLayer(inputs.shape, scalers, mins, ref_radius)(x)
+        x = PinesSph2NetRefLayer(dtype, scalers, mins, ref_radius)(x)
     if normalization_strategy == 'uniform':
-        x = PinesSph2NetLayer(inputs.shape, scalers, mins, ref_radius)(x)
+        x = PinesSph2NetLayer(dtype, scalers, mins, ref_radius)(x)
 
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
@@ -247,6 +251,7 @@ def SphericalPinesTransformerNet(**kwargs):
         dtype=dtype,
     )(x)
 
+    one = tf.constant(1.0, dtype=dtype, shape=(1,transformer_units))
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
             units=layers[i],
@@ -254,10 +259,10 @@ def SphericalPinesTransformerNet(**kwargs):
             kernel_initializer=initializer,
             dtype=dtype,
         )(x)
-        UX = tf.keras.layers.Multiply()([x, encoder_1])
-        VX = tf.keras.layers.Multiply()([1.0 - x, encoder_2])
+        UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
+        VX = tf.keras.layers.Multiply(dtype=dtype)([one- x, encoder_2])
 
-        x = tf.keras.layers.add([UX, VX])
+        x = tf.keras.layers.add([UX, VX],dtype=dtype)
 
         if "batch_norm" in kwargs:
             if kwargs["batch_norm"][0]:
@@ -272,6 +277,8 @@ def SphericalPinesTransformerNet(**kwargs):
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 
@@ -306,10 +313,10 @@ def ResNet(**kwargs):
     dtype = kwargs["dtype"][0]
 
     skip_offset = 3
-    inputs = tf.keras.Input(shape=(layers[0],))
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
 
-    x = Cart2SphLayer(inputs.shape)(inputs)
-    x = Sph2NetLayer(inputs.shape, scalers, mins)(x)
+    x = Cart2SphLayer(dtype)(inputs)
+    x = Sph2NetLayer(dtype, scalers, mins)(x)
     if custom_input_layer == "cart_and_sph":
         x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
 
@@ -320,7 +327,7 @@ def ResNet(**kwargs):
         if (i - 1) % skip_offset == 0 and (i - 1) == 0:
             skip = x
         if (i - 1) % skip_offset == 0 and (i - 1) != 0:
-            x = tf.keras.layers.Add()([x, skip])
+            x = tf.keras.layers.Add(dtype=dtype)([x, skip])
             x = tf.keras.layers.Activation(activation)(x)
             skip = x
     outputs = tf.keras.layers.Dense(
@@ -330,6 +337,8 @@ def ResNet(**kwargs):
         kernel_initializer=initializer,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 
@@ -349,8 +358,9 @@ def InceptionNet(layers, activation, **kwargs):
     warnings.warn(
         "InceptionNet is outdated and needs refactoring.", warnings.DepreciationWarning
     )
+    dtype = kwargs["dtype"][0]
 
-    inputs = tf.keras.Input(shape=(layers[0],))
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
     initializer = kwargs["initializer"][0]
 
     x = inputs
@@ -370,6 +380,8 @@ def InceptionNet(layers, activation, **kwargs):
         units=layers[-1], activation="linear", kernel_initializer=initializer
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 
@@ -387,6 +399,7 @@ def DenseNet(layers, activation, **kwargs):
     warnings.warn(
         "DenseNet is outdated and needs refactoring.", warnings.DepreciationWarning
     )
+    dtype = kwargs["dtype"][0]
 
     inputs = tf.keras.Input(shape=(layers[0],))
     initializer = kwargs["initializer"][0]
@@ -415,6 +428,8 @@ def DenseNet(layers, activation, **kwargs):
         units=layers[-1], activation="linear", kernel_initializer=initializer
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 
@@ -447,9 +462,9 @@ def SphericalPinesTraditionalNet_v2(**kwargs):
     initializer = kwargs["initializer"][0]
     dtype = kwargs["dtype"][0]
 
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2PinesSphLayer(inputs.shape)(inputs)
-    x = PinesSph2NetLayer_v2(x.shape)(x)
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
+    x = Cart2PinesSphLayer(dtype)(inputs)
+    x = PinesSph2NetLayer_v2(dtype)(x)
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
             units=layers[i],
@@ -474,6 +489,8 @@ def SphericalPinesTraditionalNet_v2(**kwargs):
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
     return model
 
 #@tf.function(jit_compile=True)
@@ -502,13 +519,13 @@ def SphericalPinesTransformerNet_v2(**kwargs):
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
-    dtype = kwargs["dtype"][0]
+    dtype = kwargs.get("dtype", [tf.float32])[0]
     transformer_units = kwargs["transformer_units"][0]
 
 
-    inputs = tf.keras.Input(shape=(layers[0],))
-    x = Cart2PinesSphLayer(inputs.shape)(inputs)
-    x = PinesSph2NetLayer_v2(x.shape)(x)
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
+    x = Cart2PinesSphLayer(dtype)(inputs)
+    x = PinesSph2NetLayer_v2(dtype)(x)
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(
@@ -524,6 +541,7 @@ def SphericalPinesTransformerNet_v2(**kwargs):
         dtype=dtype,
     )(x)
 
+    one = tf.constant(1.0, dtype=dtype, shape=(1,transformer_units))
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
             units=layers[i],
@@ -531,23 +549,25 @@ def SphericalPinesTransformerNet_v2(**kwargs):
             kernel_initializer=initializer,
             dtype=dtype,
         )(x)
-        UX = tf.keras.layers.Multiply()([x, encoder_1])
-        VX = tf.keras.layers.Multiply()([1.0 - x, encoder_2])
+        UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
+        V = tf.keras.layers.Subtract(dtype=dtype)([one, x])
+        VX = tf.keras.layers.Multiply(dtype=dtype)([V, encoder_2])
 
-        x = tf.keras.layers.add([UX, VX])
+        x = tf.keras.layers.add([UX, VX], dtype=dtype)
 
         if "batch_norm" in kwargs:
             if kwargs["batch_norm"][0]:
-                x = tf.keras.layers.BatchNormalization()(x)
+                x = tf.keras.layers.BatchNormalization(dtype=dtype)(x)
         if "dropout" in kwargs:
             if kwargs["dropout"][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0], dtype=dtype)(x)
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer=initializer,
+        kernel_initializer='glorot_uniform',
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
     return model
 
