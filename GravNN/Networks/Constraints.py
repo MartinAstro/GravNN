@@ -2,6 +2,11 @@
 
 import tensorflow as tf
 
+# signature needed to load a prior ALC network
+@tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3))])
+def laplacian(u_xx):
+    return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+
 
 def no_pinn(f, x, training):
     u_x = f(x, training)
@@ -44,8 +49,8 @@ def pinn_PL(f, x, training):
     # It does in 2.5, but there is a known issue for the implimentation: https://www.tensorflow.org/xla/known_issues?hl=nb
     # The while_loop needs to be bounded
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
-    return tf.concat((u, laplacian), 1)
+    laplace = laplacian(u_xx)
+    return tf.concat((u, laplace), 1)
 
 
 def pinn_PLC(f, x, training):
@@ -60,14 +65,14 @@ def pinn_PLC(f, x, training):
     # It does in 2.5, but there is a known issue for the implimentation: https://www.tensorflow.org/xla/known_issues?hl=nb
     # The while_loop needs to be bounded
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+    laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
     curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return tf.concat((u, laplacian, curl), 1)
+    return tf.concat((u, laplace, curl), 1)
 
 
 def pinn_AP(f, x, training):
@@ -90,8 +95,8 @@ def pinn_AL(f, x, training):
     # It does in 2.5, but there is a known issue for the implimentation: https://www.tensorflow.org/xla/known_issues?hl=nb
     # The while_loop needs to be bounded
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
-    return tf.concat((tf.multiply(-1.0, u_x), laplacian), 1)
+    laplace = laplacian(u_xx)
+    return tf.concat((tf.multiply(-1.0, u_x), laplace), 1)
 
 
 def pinn_ALC(f, x, training):
@@ -103,14 +108,14 @@ def pinn_ALC(f, x, training):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+    laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
     curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return tf.concat((tf.multiply(-1.0, u_x), laplacian, curl), 1)
+    return tf.concat((tf.multiply(-1.0, u_x), laplace, curl), 1)
 
 
 def pinn_APL(f, x, training):
@@ -123,8 +128,8 @@ def pinn_APL(f, x, training):
 
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
-    return tf.concat((u, tf.multiply(-1.0, u_x), laplacian), 1)
+    laplace = laplacian(u_xx)
+    return tf.concat((u, tf.multiply(-1.0, u_x), laplace), 1)
 
 
 def pinn_APLC(f, x, training):
@@ -136,7 +141,7 @@ def pinn_APLC(f, x, training):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
-    laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+    laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
     curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
@@ -144,4 +149,4 @@ def pinn_APLC(f, x, training):
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
-    return tf.concat((u, tf.multiply(-1.0, u_x), laplacian, curl), 1)
+    return tf.concat((u, tf.multiply(-1.0, u_x), laplace, curl), 1)

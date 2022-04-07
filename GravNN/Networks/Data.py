@@ -356,7 +356,7 @@ def configure_dataset(train_data, val_data, config):
         y_val = np.hstack([a_val])
 
     # Just use acceleration
-    elif pinn_constraint_fcn == pinn_A or pinn_constraint_fcn == pinn_A_Ur or pinn_constraint_fcn == pinn_A_64:
+    elif pinn_constraint_fcn == pinn_A or pinn_constraint_fcn == pinn_A_Ur:
         y_train = np.hstack([a_train])
         y_val = np.hstack([a_val])
 
