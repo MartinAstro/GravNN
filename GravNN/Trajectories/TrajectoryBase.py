@@ -11,7 +11,7 @@ class TrajectoryBase(ABC):
             os.path.splitext(__file__)[0] + "/../../Files/Trajectories/"
         )
         self.generate_full_file_directory()
-        self.load(override=kwargs.get("override", False))
+        self.load(override=kwargs.get("override", [False])[0])
         return
 
     def save(self):
