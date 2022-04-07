@@ -44,7 +44,7 @@ class RandomAsteroidDist(TrajectoryBase):
             except:
                 pass
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         pass
 
@@ -87,12 +87,13 @@ class RandomAsteroidDist(TrajectoryBase):
         pbar = ProgressBar(self.points, enable=True)
         min_radius = np.max([self.radius_bounds[0], np.min(np.linalg.norm(self.shape_model.vertices,axis=1))*1000])
         while idx < self.points:
-            phi = np.random.uniform(0, np.pi)
-            theta = np.random.uniform(0, 2 * np.pi)
+            angles = np.random.uniform(-1,1, size=(3,))
+            angles /= np.linalg.norm(angles)
+            s,t,u = angles
             r = np.random.uniform(min_radius, self.radius_bounds[1])
-            X_inst = r * np.sin(phi) * np.cos(theta)
-            Y_inst = r * np.sin(phi) * np.sin(theta)
-            Z_inst = r * np.cos(phi)
+            X_inst = r * s
+            Y_inst = r * t
+            Z_inst = r * u
 
             distance = self.shape_model.nearest.signed_distance(
                 np.array([[X_inst, Y_inst, Z_inst]]) / 1e3
@@ -104,17 +105,18 @@ class RandomAsteroidDist(TrajectoryBase):
                 # (i.e. the RA and Dec are fixed so if the upper bound does not extend beyond the shape
                 # this criteria is never satisfied)
                 r = np.random.uniform(min_radius, self.radius_bounds[1])
-                X_inst = r * np.sin(phi) * np.cos(theta)
-                Y_inst = r * np.sin(phi) * np.sin(theta)
-                Z_inst = r * np.cos(phi)
+                X_inst = r * s
+                Y_inst = r * t
+                Z_inst = r * u
                 distance = self.shape_model.nearest.signed_distance(
                     np.array([[X_inst, Y_inst, Z_inst]]) / 1e3
                 )
                 i += 1
                 # Try to keep value at same RA and Dec, but if it can't find any then just select a new position entirely. 
                 if i > 10:
-                    phi = np.random.uniform(0, np.pi)
-                    theta = np.random.uniform(0, 2 * np.pi)
+                    angles = np.random.uniform(-1,1, size=(3,))
+                    angles /= np.linalg.norm(angles)
+                    s,t,u = angles
                     i = 0
             X[idx] = X_inst
             Y[idx] = Y_inst
