@@ -68,7 +68,6 @@ class Sph2NetLayer(tf.keras.layers.Layer):
 
         # Normalize r -> [-1,1]
         r = tf.add(tf.multiply(r, self.scalers[0]), self.mins[0])
-        # r = tf.divide(1.0,r)
 
         # Convert deg -> rad -> periodic [-1,1]
         theta = tf.sin(theta)
@@ -152,12 +151,6 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
 
         # Normalize r -> [-1,1]
         r = tf.add(tf.multiply(r, self.scalers[0]), self.mins[0])
-        
-        # Convert deg -> rad -> periodic [-1,1]
-        # beta = tf.sin(beta)
-        # gamma = tf.sin(gamma)
-        # alpha = tf.sin(alpha)
-
         spheres = tf.stack([r, beta, gamma, alpha], axis=1)
         return spheres
 
@@ -176,7 +169,7 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
 
 
 class PinesSph2NetRefLayer(tf.keras.layers.Layer):
-    def __init__(self, input_dim, scalers, mins, ref_radius):
+    def __init__(self, dtype, scalers, mins, ref_radius):
         """Layer used to normalize the r value of the Cart2PinesSphLayer
         between the values of [-1,1]
 
@@ -185,8 +178,7 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
                 scalers (np.array): values used to scale each input quantity. These are computed before initialization
                 mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
-        super(PinesSph2NetRefLayer, self).__init__()
-        # self.ref_radius = tf.constant(ref_radius, dtype=tf.float32)#.numpy()
+        super(PinesSph2NetRefLayer, self).__init__(dtype=dtype)
         self.ref_radius = ref_radius
 
     # @tf.function
@@ -198,8 +190,8 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
         alpha = inputs_transpose[3]
 
         # Normalize r -> [0,inf]
-        r = tf.divide(self.ref_radius,r)
-        spheres = tf.stack([r, beta, gamma, alpha], axis=1)
+        r_inv_prime = tf.divide(self.ref_radius,r)
+        spheres = tf.stack([r_inv_prime, beta, gamma, alpha], axis=1)
         return spheres
 
     def get_config(self):
@@ -235,7 +227,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
 
         one = tf.constant(1.0, dtype=r.dtype)
         r_inv = tf.divide(one, r)
-        spheres = tf.stack([r_inv, s, t, u], axis=1)
+        # spheres = tf.stack([r_inv, s, t, u], axis=1)
+        spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
 
         # r_inv = tf.divide(1,r)
         # r_tanh = tf.keras.activations.tanh(r)
