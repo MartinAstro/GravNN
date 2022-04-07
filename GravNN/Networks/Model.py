@@ -170,6 +170,8 @@ class CustomModel(tf.keras.Model):
 
         return {
             "loss": loss,
+            "percent_mean": tf.reduce_mean(percent_components),
+            "percent_max": tf.reduce_max(percent_components)
             #"adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
     
@@ -223,6 +225,8 @@ class CustomModel(tf.keras.Model):
 
         return {
             "loss": loss,
+            "percent_mean": tf.reduce_mean(percent_components),
+            "percent_max": tf.reduce_max(percent_components)
             #"adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
 
