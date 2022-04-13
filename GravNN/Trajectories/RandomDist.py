@@ -23,7 +23,7 @@ class RandomDist(TrajectoryBase):
         self.points = points
         self.celestial_body = celestial_body
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         pass
 
