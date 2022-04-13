@@ -6,6 +6,7 @@ from .EphemerisDist import EphemerisDist
 from .ExponentialDist import ExponentialDist
 from .FibonacciDist import FibonacciDist
 from .GaussianDist import GaussianDist
+from .PlanesDist import PlanesDist
 from .RandomAsteroidDist import RandomAsteroidDist
 from .RandomDist import RandomDist
 from .SurfaceDist import SurfaceDist
