@@ -82,7 +82,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         self.plot(
             self.x_test[:self.max_idx],
             self.experiment.loss_acc[self.idx_test][:self.max_idx]
-                    )
+        )
         plt.gca().set_yscale('log')
         plt.xlim(self.training_bounds / self.radius)
         plt.ylabel("Loss")
