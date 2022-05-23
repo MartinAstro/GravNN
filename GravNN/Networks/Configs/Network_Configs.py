@@ -23,7 +23,7 @@ def PINN_I():
         "epochs": [7500],
         "initializer": ["glorot_normal"],
         "optimizer": ["adam"],
-        "loss_fcn" : ['rms'],
+        "loss_fcn" : ['rms_avg'],
         "batch_size": [131072 // 2],
         "learning_rate": [0.001*2],
         "dropout": [0.0],
@@ -37,6 +37,7 @@ def PINN_I():
         'seed' : [0],
         'init_file' : [None],
         'normalization_strategy' : ['uniform'], #'radial, uniform
+
     }
     return network_config
 
@@ -49,7 +50,7 @@ def PINN_II():
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
 
         "activation": ["gelu"],
-        "network_type": ["sph_pines_traditional"],
+        "network_type": ["sph_pines_transformer"],
         "scale_by": ["non_dim"],
     }
     config.update(network_config)
@@ -59,9 +60,9 @@ def PINN_II():
 def PINN_III():
     config = PINN_II()
     network_config = {
-        "network_type": ["sph_pines_traditional_v2"],
+        "network_type": ["sph_pines_transformer_v2"],
         "scale_by": ["non_dim_radius"],
-        "loss_fcn" : ['percent_rms'],
+        "loss_fcn" : ['avg_percent_summed_rms'],
     }
     config.update(network_config)
     return config
