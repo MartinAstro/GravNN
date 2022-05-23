@@ -20,6 +20,8 @@ class ExtrapolationVisualizer(VisualizationBase):
         self.training_bounds = np.array(self.experiment.training_bounds)
         self.max_idx = np.where(self.experiment.test_r_COM > self.training_bounds[1])[0][0]
         self.set_x_axis('dist_2_surf')
+        self.annotate = kwargs.get('annotate', True)
+
     def set_x_axis(self, x_type):
         if x_type == "dist_2_COM":
             self.x_test = self.experiment.test_r_COM / self.radius
@@ -75,7 +77,8 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.vlines(training_bounds[0], ymin=0, ymax=np.max(value), color='green')
         plt.vlines(training_bounds[1], ymin=0, ymax=np.max(value), color='green')
         plt.vlines(1, ymin=0, ymax=np.max(value), color='grey')
-        self.annotate_metrics(value)
+        if self.annotate:
+            self.annotate_metrics(value)
 
 
     def plot_interpolation_loss(self):
