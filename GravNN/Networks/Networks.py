@@ -224,7 +224,7 @@ def SphericalPinesTransformerNet(**kwargs):
     scalers = kwargs["norm_scalers"][0]
     mins = kwargs["norm_mins"][0]
     dtype = kwargs["dtype"][0]
-    transformer_units = kwargs["transformer_units"][0]
+    transformer_units = kwargs["num_units"][0]
     normalization_strategy = kwargs["normalization_strategy"][0]
     ref_radius = kwargs["ref_radius"][0]
     inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
@@ -273,7 +273,7 @@ def SphericalPinesTransformerNet(**kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer=initializer,
+        kernel_initializer='glorot_uniform',
         dtype=dtype,
     )(x)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
@@ -520,7 +520,7 @@ def SphericalPinesTransformerNet_v2(**kwargs):
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
     dtype = kwargs.get("dtype", [tf.float32])[0]
-    transformer_units = kwargs["transformer_units"][0]
+    transformer_units = kwargs["num_units"][0]
 
 
     inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
