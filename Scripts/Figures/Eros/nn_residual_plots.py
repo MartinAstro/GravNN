@@ -25,7 +25,7 @@ def overlay_hist(x_sph_train,twinx=True):
     if twinx:
         plt.gca().twinx()
     plt.hist(x_sph_train[:,0], bins=30,alpha=0.7,  range=[np.min(x_sph_train[:,0]), np.max(x_sph_train[:,0])], color='gray')#edgecolor='black', linewidth=0.5, fill=True)
-    plt.ylabel("Frequency")
+    plt.ylabel("\# of Samples")
 
 def plot_moving_average(x, y, y_pred, percent=True, color='black', linestyle='-', label=None):
     if not percent:
@@ -39,8 +39,6 @@ def plot_moving_average(x, y, y_pred, percent=True, color='black', linestyle='-'
     return line
 
 def plot_residual_figure(df, sh_regress_files, show):
-    data_vis = DataVisSuite(halt_formatting=False)
-    data_vis.fig_size = data_vis.tri_vert_page
 
     planet = Eros()
     model_file = planet.obj_200k
@@ -56,15 +54,19 @@ def plot_residual_figure(df, sh_regress_files, show):
     x_train, a_train, _, _, _, _ = get_raw_data(config)
     x_sph_train, _ = get_spherical_data(x_train, a_train)
 
-
+    data_vis = DataVisSuite(halt_formatting=False)
+    data_vis.fig_size = data_vis.tri_vert_page
     data_vis.newFig()
 
     # Plot training distribution
     overlay_hist(x_sph_train,twinx=False)
     plt.grid(False)
     plt.gca().twinx()
+    plt.gcf().axes[0].yaxis.tick_right()
+    plt.gcf().axes[0].yaxis.set_label_position("right")
     plt.grid(True, which='both')
     plt.gca().set_axisbelow(True)
+    
     # Plot PINN Error
     color_list = ['black', 'gray']
     PINN_legend = []
@@ -81,9 +83,13 @@ def plot_residual_figure(df, sh_regress_files, show):
                                 #label=label, 
                                 ylabel='Acceleration')
         line = plot_moving_average(x_sph[:,0], a_sph, a_sph_pred, color=color_list[i], linestyle='-', label=label)
+        plt.gca().yaxis.tick_left()
+        plt.gca().yaxis.set_label_position("left")
+
         PINN_legend.append(line)
     first_legend = plt.legend(handles=PINN_legend, loc='lower right', fontsize=9)
     plt.gca().add_artist(first_legend)
+
     # Plot SH Error
     color_list = ['magenta', 'yellow', 'cyan', 'pink']
     SH_legend = []
@@ -106,11 +112,10 @@ def plot_residual_figure(df, sh_regress_files, show):
     plt.gca().set_ylim([1E-2, 5E2])
     plt.gca().set_xlim([-1000, 51000])
     plt.legend(handles=SH_legend, loc='lower left', fontsize=9)
-    plt.xlabel("Radius from COM [m]")
     data_vis.plot_radii(x_sph[:,0], 
                         vlines=[planet.radius, config['radius_min'][0], config['radius_max'][0]], 
                         vline_labels=[r'$r_{Brill}$', r'$r_{min}$', r'$r_{max}$'])
-
+    plt.gcf().axes[0].set_xlabel("Radius from COM [m]")
 
     directory = os.path.abspath(".") + "/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
@@ -176,6 +181,7 @@ def main():
                         '2R_3R_Plus/N_8_Noise_0.20.csv']
     plot_residual_figure(df, sh_regress_files, show)
 
+    plt.show()
 
 
 
