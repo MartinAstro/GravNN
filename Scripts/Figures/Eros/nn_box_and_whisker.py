@@ -38,8 +38,16 @@ def get_file_info(model_path):
 def compute_stats(model, trajectory, config):
     # Compute the true error of the 20,000 point distributions (or 200k if surface)
     x, a, u = get_poly_data(trajectory, model_file, **config)
-    a_pred = model.generate_acceleration(x.astype(np.float32))
-    percent = np.linalg.norm(a - a_pred, axis=1)/np.linalg.norm(a, axis=1)*100
+
+    # if the distribution is the surface, sample only 20000 points
+    indices = np.linspace(0, len(x)-1, len(x))
+    sample_idx = np.random.choice(indices,20000).astype(int)
+    x_sample = x[sample_idx]
+    a_sample = a[sample_idx]
+
+    # compute error
+    a_pred = model.generate_acceleration(x_sample.astype(np.float32))
+    percent = np.linalg.norm(a_sample - a_pred, axis=1)/np.linalg.norm(a_sample, axis=1)*100
 
     return percent
 
@@ -134,20 +142,20 @@ def get_legend_group(model):
     }[model]
 
 def add_lines(fig):
-    fig.add_hline(1, line=go.layout.shape.Line(color='green'), opacity=0.3)
-    fig.add_hline(10, line=go.layout.shape.Line(color='yellow'), opacity=0.3)
-    fig.add_hline(100, line=go.layout.shape.Line(color='red'), opacity=0.3)
+    fig.add_hline(1, line=go.layout.shape.Line(color='green'), opacity=1, line_width=0.7)
+    fig.add_hline(10, line=go.layout.shape.Line(color='yellow'), opacity=1, line_width=0.7)
+    fig.add_hline(100, line=go.layout.shape.Line(color='red'), opacity=1, line_width=0.7)
     return fig 
 
 def main():
     df = pd.read_pickle("Data/Dataframes/box_and_whisker.data")
 
-    distribution = "exterior" # "interior", "surface"
+    # distribution = "exterior" # "interior", "surface"
     # fig = go.Figure()
     # model_types = np.unique(sub_df.index.get_level_values(2).to_numpy())
     # x = sub_df.index.get_level_values(1).to_numpy() # Groups the box-plots into natural clusters
-    # for distribution in ['exterior', 'interior']:
-    for distribution in ['surface']:
+    for distribution in ['exterior', 'interior', 'surface']:
+    # for distribution in ['exterior']:
         fig = make_subplots(rows=3,cols=1, shared_xaxes=False, subplot_titles=("Noise: 0%", "Noise: 10%", "Noise: 20%"))
         sub_df = df.loc[0.0]
         num_models = len(sub_df)
@@ -164,7 +172,12 @@ def main():
                                 name=model_name, 
                                 offsetgroup=str(model_name),
                                 marker_color=get_color(model_name), 
-                                marker_size=2,
+                                marker_size=1,
+                                # marker_line_width=1,
+                                line_width=0.5,
+                                opacity=1,
+                                width=0,
+                                notchwidth=0,
                                 showlegend=showlegend)
                         , row=1, col=1
                         )
@@ -184,7 +197,12 @@ def main():
                                 name=model_name, 
                                 offsetgroup=str(model_name),
                                 marker_color=get_color(model_name), 
-                                marker_size=2,
+                                marker_size=1,
+                                # marker_line_width=1,
+                                line_width=0.5,
+                                opacity=1,
+                                width=0,
+                                notchwidth=0,
                                 showlegend=False)
                         , row=2, col=1
                         )
@@ -204,7 +222,12 @@ def main():
                                 name=model_name, 
                                 offsetgroup=str(model_name),
                                 marker_color=get_color(model_name),
-                                marker_size=2, 
+                                marker_size=1,
+                                # marker_line_width=1,
+                                line_width=0.5,
+                                opacity=1,
+                                width=0,
+                                notchwidth=0, 
                                 showlegend=False)
                         , row=3, col=1
                         )
@@ -215,7 +238,7 @@ def main():
                         'linecolor' : 'black',
                         'ticks' : 'outside',
                         'gridcolor':'LightGray',
-                        'title' :'Percent Error', 
+                        'title' :r'Acceleration Error [\%]', 
                         'type' : 'log',
                         'range' :[-1,2],
                         'dtick' : 'D1',
@@ -238,7 +261,7 @@ def main():
         )
 
         fig.update_layout(
-            autosize=False,
+            autosize=True,
             width=600,
             height=900,
             template='none',
@@ -255,7 +278,8 @@ def main():
         # else:
             # fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + "_v2.pdf")
         fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + "_v2.jpeg")
-    #fig.show()
+        fig.write_image("Plots/Asteroid/box_and_whisker_"+ distribution + "_v2.pdf")
+    fig.show()
 
 if __name__ == '__main__':
     main()
