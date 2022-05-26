@@ -13,6 +13,24 @@ class Bennu:
         G = 6.67430 * 10 ** -11
         self.mu = G * 7.329 * 10 ** 10  # self.density*(4./3.)*np.pi*self.radius**3*G
 
+        def remove_whitespace(fname, action, pooch_inst):
+            "add 1 to the face indices in the obj file to work with trimesh"
+            new_name = fname.split("_raw")[0] + ".obj"
+            if os.path.exists(new_name):
+                return new_name
+
+            with open(fname, 'r') as f:
+                lines = f.readlines()
+            
+            for i in range(len(lines)):
+                line = lines[i]
+                lines[i] = line.strip() + "\n"
+  
+            with open(new_name, 'w') as f:
+                f.writelines(lines)
+                
+            return new_name
+
         self.obj_file = pooch.retrieve(
             url='http://www.asteroidmission.org/wp-content/uploads/2019/01/Bennu-Radar.obj',
             known_hash='0aa41b9ce4c366bb72120e872f5a604ce5766063e6744e76bd4a68ed0f1d4f75',
@@ -23,8 +41,9 @@ class Bennu:
         self.obj_200k = pooch.retrieve(
             url='http://www.asteroidmission.org/wp-content/uploads/2019/03/Bennu_v20_200k.obj',
             known_hash="afbf196bf570d84804e9dd5935425d60eee2884ea58b02cd4d1ef45d215f67de",
-            fname="Bennu_shape_200700k.obj",
-            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Bennu/"
+            fname="Bennu_shape_200700k_raw.obj",
+            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Bennu/",
+            processor=remove_whitespace
         )
 
 
