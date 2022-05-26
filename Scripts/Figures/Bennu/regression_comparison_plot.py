@@ -116,14 +116,14 @@ def main():
     vis.fig_size = vis.full_page
     vis.newFig()
 
-    hoppers=False
+    hoppers=True
 
     plot_error("r_outer", hoppers, '-')
     plot_error("r_inner", hoppers, '--')
     plot_error("r_surface", hoppers, ':')
     
     plt.xlabel("Days Since Insertion")
-    plt.ylabel("Average Acceleration Error")
+    plt.ylabel(r"Average Acceleration Error [\%]")
     plt.ylim(1E-1, 1E3)
 
     lines = plt.gca().get_lines()
@@ -145,7 +145,8 @@ def main():
     plot_orbits_as_violins(orex_trajectories, orex_trajectories, color='black')
 
     # Add rectangle patch which shows the min and max radii of the asteroid
-    poly_gm = Polyhedral(Bennu(), Bennu().stl_200k)
+    planet = Bennu()
+    poly_gm = Polyhedral(planet, planet.obj_200k)
     min_radius = np.min(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
     max_radius = np.max(np.linalg.norm(poly_gm.mesh.vertices, axis=1))
     rect = Rectangle(xy=(0,min_radius), height=max_radius - min_radius, width=650, alpha=0.3, color='skyblue')
