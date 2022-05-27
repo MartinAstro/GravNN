@@ -37,7 +37,7 @@ class DataVisualization(VisualizationBase):
             ylabel2 = "Residual"
         else:
             diff = np.abs((y - y_pred)/y)*100.0
-            ylabel2 = "Percent Diff"
+            ylabel2 = "Percent Error"
 
         plt.subplot(2,1,2)
         plt.scatter(x, diff, s=1, alpha=alpha, label=label)
@@ -69,7 +69,7 @@ class DataVisualization(VisualizationBase):
         else:
             diff = np.linalg.norm(y-y_pred, axis=1)/np.linalg.norm(y, axis=1)*100.0
             # diff = np.abs((y - y_pred)/y)*100.0
-            ylabel2 =  ylabel + "\n" + "Percent Diff"
+            ylabel2 =  ylabel + "\n" + "Percent Error"
 
         plt.scatter(x, diff, s=1, alpha=alpha, label=label)            
         plt.legend(loc='upper left')

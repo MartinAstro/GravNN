@@ -257,7 +257,7 @@ def generate_orex_hopper_trajectories(sampling_inteval):
         samples /= 2 # only half are visible in an image (assuming distribution is somewhat equally distributed around the asteroid)
         samples /= 50 # takes 50 images to produce a robust estimate of the arc (should be 1 percent of the original data)
         samples /= 10 # can only image the targets 10% of the time (otherwise using spacecraft for science, charging, or maintenance)
-        trajectory = RandomAsteroidDist(planet, [0, 1.05*planet.radius],int(samples), model_file=planet.stl_200k)
+        trajectory = RandomAsteroidDist(planet, [0, 1.05*planet.radius],int(samples), model_file=planet.obj_200k)
         hopper_trajectories.append(trajectory)
     return hopper_trajectories
 
