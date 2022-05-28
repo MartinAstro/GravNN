@@ -129,7 +129,6 @@ def populate_removed_degrees(C_lm_hat, S_lm_hat, C_lm, S_lm, remove_deg):
     
     return C_lm_hat, S_lm_hat
 
-
 def save(file_name, planet, C_lm, S_lm):
 
     header_data = "%.12E, %.12E \n" % (planet.radius, planet.mu)
@@ -142,3 +141,10 @@ def save(file_name, planet, C_lm, S_lm):
     with open(file_name, 'w', newline='') as f:
         f.write(header_data)
         f.write(data)
+
+class RegressSolution:
+    def __init__(self, results, regress_deg, remove_deg, planet):
+        C_lm, S_lm = format_coefficients(results, regress_deg, remove_deg)
+        self.C_lm = C_lm
+        self.S_lm = S_lm
+        self.planet = planet

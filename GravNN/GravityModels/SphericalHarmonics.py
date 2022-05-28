@@ -92,7 +92,8 @@ class SphericalHarmonics(GravityModelBase):
         if type(sh_info) == str:
             self.loadSH()
         else:
-            self.load_regression(sh_info, planet=None)
+            # If the harmonics should be loaded from a RegressSolution
+            self.load_regression(sh_info)
 
         pass
 
@@ -187,10 +188,10 @@ class SphericalHarmonics(GravityModelBase):
         else:
             self.loadSH_csv()
 
-    def load_regression(self, reg_solution, planet):
+    def load_regression(self, reg_solution):
         self.file_directory += "_Regress"
-        self.mu = planet.mu
-        self.radEquator = planet.radius
+        self.mu = reg_solution.planet.mu
+        self.radEquator = reg_solution.planet.radius
         self.C_lm = reg_solution.C_lm
         self.S_lm = reg_solution.S_lm
 
