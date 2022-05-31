@@ -113,7 +113,6 @@ class XuLS:
         for i in range(2,len(K)): # all coefficients (C and S) excluding C_00, S_00
             K[i,i] = (factor/l**2)**1
             K_inv[i,i] = (factor/l**2)**-1
-            # K[i,i] = (l**2/10**-5) # this matrix should be the inverse of the degree variations
             if (i + 1) % 2 == 0: # every odd number, increment the m index (because we've iterated over a C and S pair)
                 if l == m: # 
                     l +=1
@@ -123,75 +122,98 @@ class XuLS:
         self.K = K
         self.K_inv = K_inv
     
-    def compute_coefficients(self,M, aVec, iterations):
-        if self.algorithm == 'kaula':
-            coef = self.kaula_solution(M, aVec, iterations)
-        if self.algorithm == 'kaula_inv':
-            coef = self.kaula_inv_solution(M, aVec, iterations)
-        if self.algorithm == 'single_parameter':
-            coef = self.single_parameter_regression(M, aVec, iterations)
+    def compute_coefficients(self, A, Y, R):
         if self.algorithm == 'least_squares':
-            coef = self.least_squares_solution(M, aVec)
+            q = len(A[0])
+            K = np.zeros((q,q)) 
+            coef = self.ridge_regression(A, Y, R, K)
+        if self.algorithm == 'kaula':
+            q = len(A[0])
+            K = self.K[-q:, -q:]     
+            coef = self.ridge_regression(A, Y, R, K)
+        if self.algorithm == 'kaula_inv':
+            q = len(A[0])
+            K = self.K_inv[-q:, -q:]     
+            coef = self.ridge_regression(A, Y, R, K)
+
+        if self.algorithm == 'single_parameter':
+            coef = self.single_parameter_regression(A, Y, R)
+        if self.algorithm == 'xu_rummel_94':
+            coef = self.generalized_ridge_regression(A, Y, R)
+
         return coef 
 
-    def kaula_solution(self,M, aVec, iterations):
-        q = len(M[0])
-        K_used = self.K[-q:, -q:]        
-        coef = np.linalg.inv(M.T@M + K_used)@M.T@aVec
-        return coef
 
-    def kaula_inv_solution(self,M, aVec, iterations):
-        q = len(M[0])
-        K_used = self.K_inv[-q:, -q:]        
-        coef = np.linalg.inv(M.T@M + K_used)@M.T@aVec
-        return coef
+    def ridge_regression(self, A, Y, R, K):
+        # K matrix can be interpreted as prior information about the state (Bayesian)
+        # or simply a means through which the matrix is better conditioned and biased (frequentist)
 
-    def least_squares_solution(self,M, aVec):
-        coef = np.linalg.pinv(M.T@M)@M.T@aVec
-        return coef
+        # if K = 0 -> weighted least squares
+        # if R = 0 -> unweighted least squares
+        X = np.linalg.pinv(A.T@R@A + K)@A.T@R@Y
+        return X
 
-    def single_parameter_regression(self, M, aVec, iterations=5):
-        # with pseudoinverse 
-        y = aVec #+ np.random.normal(0, 1E-8, size=np.shape(aVec))
-        sigma = 1
+    def generalized_ridge_regression(self, A, Y, R):
+        sigma = np.sqrt(R[0,0])
+        eig_val, eig_vec = np.linalg.eig(A.T@R@A)
+        Lambda = np.diag(eig_val)
+        G = eig_vec
+        A1 = A@G
+
+        # without ridge regression
+        alpha_hat = np.linalg.pinv(Lambda)@A1.T@R@Y
+        alpha_g_hat = np.zeros_like(alpha_hat)
+
+        # Iterate over k 
+        # while np.linalg.norm(alpha_g_hat - alpha_hat) > 1E-12 and iterations < 5:
+        #     if iterations != 0:
+        #         alpha_hat = alpha_g_hat
+        #     # with ridge regression
+        K = np.array([sigma**2/alpha_hat[i]**2 for i in range(len(alpha_hat))])
+        K[K == np.inf] = 0
+        alpha_g_hat = np.linalg.pinv(Lambda + K)@A1.T@R@Y
+            # iterations += 1
+
+        X_g = G@alpha_g_hat
+        return X_g
+
+    def single_parameter_regression(self, A, Y, R):
+        sigma = np.sqrt(R[0,0])
         k = 1E-5
-        A = M
-        P = np.eye(len(A))
         I0 = np.eye(len(A[0]))
         l_max = 4
         I0[:l_max*(l_max+1), :l_max*(l_max+1)] = 0.0
 
         # Remove the zero rows from the invertible matrix
-        APA = A.T@P@A
-        empty_rows = np.array([np.all(row == 0.0) for row in APA])
+        ARA = A.T@R@A
+        empty_rows = np.array([np.all(row == 0.0) for row in ARA])
         for i in range(len(empty_rows)):
-            APA[i,i] = 1.0 if empty_rows[i] else APA[i,i]
+            ARA[i,i] = 1.0 if empty_rows[i] else ARA[i,i]
 
         # compute solution, and iterate until optimal k 
-        for q in range(iterations):
-            beta = np.linalg.inv(APA + k*I0)@A.T@P@y
-            def objective(k):
-                N_s = APA + k*I0
-                N_s_inv = np.linalg.inv(N_s)
-                D_beta = sigma**2*N_s_inv@APA@N_s_inv
-                f_s = np.trace(D_beta) + \
-                    k**2*beta.T@I0@N_s_inv@N_s_inv@I0@beta
-                return f_s
+        beta = np.linalg.inv(ARA + k*I0)@A.T@R@Y
+        def objective(k):
+            N_s = ARA + k*I0
+            N_s_inv = np.linalg.inv(N_s)
+            D_beta = sigma**2*N_s_inv@ARA@N_s_inv
+            f_s = np.trace(D_beta) + \
+                k**2*beta.T@I0@N_s_inv@N_s_inv@I0@beta
+            return f_s
 
+        res = minimize(objective, [k], tol=1E-10)
+        print(f"Total iterations: {res.nit}")
+        k = res.x[0]
+        return np.linalg.inv(ARA + k*I0)@A.T@R@Y
 
-            bounds = Bounds([0.0],[1.0])
-            res = minimize(objective, [k], tol=1E-10, bounds=bounds)
-            print(f"Total iterations: {res.nit}")
-            k = res.x[0]
-        return np.linalg.inv(APA + k*I0)@A.T@P@y
-
-    def update(self, rVec, aVec, iterations=5):
+    def update(self, rVec, aVec, R=None):
         self.rVec1D = rVec.reshape((-1,))
         self.aVec1D = aVec.reshape((-1,))
         self.P = len(self.rVec1D)
 
         M = populate_M(self.rVec1D, self.A, self.n1, self.n2, self.N, self.a, self.mu, self.remove_deg)
-        results = self.compute_coefficients(M, self.aVec1D, iterations)
+        if R is None:
+            R = np.eye(len(M))
+        results = self.compute_coefficients(M, self.aVec1D, R)
         return results
 
 
@@ -239,6 +261,8 @@ def simple_experiment():
     solver_algorithm='single_parameter'
     # solver_algorithm='least_squares'
 
+    sigma = 1E-8 # assume no measurement noise -- this might need to be smaller 
+    
     planet = Earth()
     sh_EGM2008 = SphericalHarmonics(planet.sh_file, regress_deg)
 
@@ -246,10 +270,10 @@ def simple_experiment():
     trajectory = RandomDist(planet, [planet.radius, planet.radius+420], 1000)
     x, a, u = get_sh_data(trajectory,planet.sh_file, max_deg=max_true_deg, deg_removed=remove_deg)
 
-
     regressor = XuLS(regress_deg, planet, remove_deg, solver_algorithm)
     start = time.time()
-    results = regressor.update(x, a)
+    R = sigma**2*np.eye(len(x))
+    results = regressor.update(x, a, R)
     C_lm, S_lm = format_coefficients(results, regress_deg, remove_deg)
     print(time.time() - start)
 
