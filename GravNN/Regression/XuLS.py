@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import sigfig
 from scipy.sparse.linalg import spsolve
 from scipy.optimize import minimize, Bounds
@@ -70,11 +71,6 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
     return M
 
 
-
-
-
-
-
 class XuLS:
     def __init__(self, max_deg, planet, remove_deg=-1, algorithm='kaula'):
         self.algorithm = algorithm
@@ -105,12 +101,15 @@ class XuLS:
                     self.n2[i,m] = np.sqrt(((i+m-1.)*(2.*i+1.)*(i-m-1.))/((i+m)*(i-m)*(2.*i-3.)))
 
     def compute_kaula_matrix(self):
-        l = 1
+        l = self.remove_deg + 1
         m = 0
-        factor = 10E-5
-        K = np.diag(np.zeros((int((self.N+1)*(self.N+2)))))
-        K_inv = np.diag(np.zeros((int((self.N+1)*(self.N+2)))))
-        for i in range(2,len(K)): # all coefficients (C and S) excluding C_00, S_00
+        factor = 1
+        q = self.remove_deg
+        terms = int((self.N+1)*(self.N+2))
+        terms_removed = int((q+1)*(q+2))
+        K = np.diag(np.zeros((terms - terms_removed)))
+        K_inv = np.diag(np.zeros((terms - terms_removed)))
+        for i in range(0,len(K)): # all coefficients (C and S) excluding C_00, S_00
             K[i,i] = (factor/l**2)**1
             K_inv[i,i] = (factor/l**2)**-1
             if (i + 1) % 2 == 0: # every odd number, increment the m index (because we've iterated over a C and S pair)
@@ -129,33 +128,80 @@ class XuLS:
             coef = self.ridge_regression(A, Y, R, K)
         if self.algorithm == 'kaula':
             q = len(A[0])
-            K = self.K[-q:, -q:]     
-            coef = self.ridge_regression(A, Y, R, K)
-        if self.algorithm == 'kaula_inv':
-            q = len(A[0])
-            K = self.K_inv[-q:, -q:]     
+            K = self.K_inv / 1E7
             coef = self.ridge_regression(A, Y, R, K)
 
         if self.algorithm == 'single_parameter':
-            coef = self.single_parameter_regression(A, Y, R)
+            # coef = self.single_parameter_regression(A, Y, R)
+            coef = self.modified_single_parameter_regression(A, Y, R)
+        if self.algorithm == 'single_parameter_kaula':
+            # coef = self.single_parameter_kaula_regression(A, Y, R)
+            coef = self.modified_single_parameter_kaula_regression(A, Y, R)
         if self.algorithm == 'xu_rummel_94':
             coef = self.generalized_ridge_regression(A, Y, R)
-
+            # coef = generalized_ridge_regression(A, Y, R)
+        if self.algorithm == 'custom':
+            coef = self.custom_single_parameter_regression(A, Y, R)
         return coef 
-
 
     def ridge_regression(self, A, Y, R, K):
         # K matrix can be interpreted as prior information about the state (Bayesian)
         # or simply a means through which the matrix is better conditioned and biased (frequentist)
-
         # if K = 0 -> weighted least squares
-        # if R = 0 -> unweighted least squares
-        X = np.linalg.pinv(A.T@R@A + K)@A.T@R@Y
+        # if R = identity -> unweighted least squares
+
+        R_diag = R.diagonal()
+        P = sp.sparse.diags(1.0/R_diag)
+        X = np.linalg.pinv(A.T@P@A + K)@A.T@P@Y
         return X
 
     def generalized_ridge_regression(self, A, Y, R):
-        sigma = np.sqrt(R[0,0])
-        eig_val, eig_vec = np.linalg.eig(A.T@R@A)
+        def check_symmetric(a, rtol=1e-05, atol=1e-08):
+            return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+        R_diag = R.diagonal()
+        sigma = np.sqrt(np.min(R_diag)) # highest weights are those with smallest error
+        # P_inv = sp.sparse.diags(R_diag/sigma**2)
+        P = sp.sparse.diags(sigma**2/R_diag)
+
+        # because A.T@A is a positive-semidefinite matrix, SVD and eigendecomp are
+        # synonymous, but SVD is faster to  compute. 
+        u, svd_eig_val, v = np.linalg.svd(A.T@P@A, hermitian=True)
+
+        eig_vec = u
+        eig_val = svd_eig_val
+
+        # u and svd eig_val are just the flipped entries of np_eig_val
+        Lambda = np.diag(eig_val)
+        G = eig_vec
+        A1 = A@G
+
+        # without ridge regression
+        alpha_hat = np.linalg.pinv(Lambda)@A1.T@P@Y
+        alpha_g_hat = np.zeros_like(alpha_hat)
+
+        K = np.array([sigma**2/alpha_hat[i]**2 for i in range(len(alpha_hat))])
+        K[K == np.inf] = 0
+        alpha_g_hat = np.linalg.pinv(Lambda + K)@A1.T@P@Y
+
+        X_g = G@alpha_g_hat
+        return X_g
+
+    def modified_generalized_ridge_regression(self, A, Y, R):
+        """an attempt to include sigma_i instead of constant sigma"""
+        def check_symmetric(a, rtol=1e-05, atol=1e-08):
+            return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+        sigma = np.sqrt(R.diagonal())
+
+        # because A.T@A is a positive-semidefinite matrix, SVD and eigendecomp are
+        # synonymous, but SVD is faster to  compute. 
+        u, svd_eig_val, v = np.linalg.svd(A.T@R@A, hermitian=True)
+
+        eig_vec = u
+        eig_val = svd_eig_val
+
+        # u and svd eig_val are just the flipped entries of np_eig_val
         Lambda = np.diag(eig_val)
         G = eig_vec
         A1 = A@G
@@ -165,37 +211,99 @@ class XuLS:
         alpha_g_hat = np.zeros_like(alpha_hat)
 
         # Iterate over k 
-        # while np.linalg.norm(alpha_g_hat - alpha_hat) > 1E-12 and iterations < 5:
-        #     if iterations != 0:
-        #         alpha_hat = alpha_g_hat
-        #     # with ridge regression
-        K = np.array([sigma**2/alpha_hat[i]**2 for i in range(len(alpha_hat))])
-        K[K == np.inf] = 0
-        alpha_g_hat = np.linalg.pinv(Lambda + K)@A1.T@R@Y
-            # iterations += 1
+        iterations = 0
+        while np.linalg.norm(alpha_g_hat - alpha_hat) > 1E-12 and iterations < 5:
+            if iterations != 0:
+                alpha_hat = alpha_g_hat
+            # with ridge regression
+            K = np.array([sigma[i]**2/alpha_hat[i]**2 for i in range(len(alpha_hat))])
+            K[K == np.inf] = 0
+            alpha_g_hat = np.linalg.pinv(Lambda + K)@A1.T@R@Y
+            iterations += 1
+            print(f"Iteration {iterations} \t dk={np.linalg.norm(alpha_g_hat - alpha_hat)}")
 
         X_g = G@alpha_g_hat
         return X_g
 
-    def single_parameter_regression(self, A, Y, R):
-        sigma = np.sqrt(R[0,0])
-        k = 1E-5
-        I0 = np.eye(len(A[0]))
-        l_max = 4
-        I0[:l_max*(l_max+1), :l_max*(l_max+1)] = 0.0
+    def single_parameter_kaula_regression(self, A, Y, R):
+        sigma = np.sqrt(R.diagonal())
+        k = 1E-5 # to be optimized for
+        Q = len(A[0])
+        K0 = self.K_inv[:Q,:Q]
+        # l_max = 2
+        # l_max_idx = (l_max+1)*(l_max+2) - 1 # 
+        # K0[:l_max_idx, :l_max_idx] = 0.0 # don't impose kaula's rule for l < 4
 
         # Remove the zero rows from the invertible matrix
         ARA = A.T@R@A
-        empty_rows = np.array([np.all(row == 0.0) for row in ARA])
-        for i in range(len(empty_rows)):
-            ARA[i,i] = 1.0 if empty_rows[i] else ARA[i,i]
+        # empty_rows = np.array([np.all(row == 0.0) for row in ARA])
+        # for i in range(len(empty_rows)):
+        #     ARA[i,i] = 1.0 if empty_rows[i] else ARA[i,i]
 
         # compute solution, and iterate until optimal k 
-        beta = np.linalg.inv(ARA + k*I0)@A.T@R@Y
+        beta = np.linalg.pinv(ARA + k*K0)@A.T@R@Y
         def objective(k):
-            N_s = ARA + k*I0
+            N_s = ARA + k*K0
+            N_s_inv = np.linalg.pinv(N_s)
+            D_beta = N_s_inv@ARA@N_s_inv # R contains sigma**2
+            f_s = np.trace(D_beta) + \
+                k**2*beta.T@K0@N_s_inv@N_s_inv@K0@beta
+            return f_s
+
+        res = minimize(objective, [k], tol=1E-16)
+        print(f"Total iterations: {res.nit} \t k={res.x[0]}")
+        k = res.x[0]
+        return np.linalg.pinv(ARA + k*K0)@A.T@R@Y
+
+    def modified_single_parameter_kaula_regression(self, A, Y, R):
+        R_diag = R.diagonal()
+        P = sp.sparse.diags(1.0/R_diag)
+        # k = 1E8
+        k = 1
+        I0 = self.K_inv # Multiple Parameter near Eq. (2)
+
+        # Remove the zero rows from the invertible matrix
+        APA = A.T@P@A
+
+        # compute solution, and iterate until optimal k 
+        def objective(k):
+            N_s = APA + k*I0
+            N_s_inv = np.linalg.pinv(N_s)
+            beta = N_s_inv@A.T@P@Y
+            D_beta = N_s_inv@APA@N_s_inv # R contains sigma**2
+            f_s = np.trace(D_beta) + \
+                k**2*beta.T@I0@N_s_inv@N_s_inv@I0@beta
+            return f_s
+
+        res = minimize(objective, [k], tol=1E-16)
+        print(f"Total iterations: {res.nit} \t k = {res.x[0]}")
+        k = res.x[0]
+        return np.linalg.pinv(APA + k*I0)@A.T@P@Y
+
+    def single_parameter_regression(self, A, Y, R):
+        R_diag = R.diagonal()
+        sigma = np.sqrt(np.min(R_diag)) # highest weights are those with smallest error
+        # P_inv = sp.sparse.diags(R_diag/sigma**2)
+        P = sp.sparse.diags(sigma**2/R_diag)
+        
+        k = 1E-5
+        I0 = np.eye(len(A[0]))
+        l_max = 4
+        l_max_idx = (l_max+1)*(l_max+2)
+        I0[:l_max_idx, :l_max_idx] = 0.0
+
+        # Remove the zero rows from the invertible matrix
+        APA = A.T@P@A
+        empty_rows = np.array([np.all(row == 0.0) for row in APA])
+        for i in range(len(empty_rows)):
+            APA[i,i] = 1.0 if empty_rows[i] else APA[i,i]
+
+        # compute solution, and iterate until optimal k 
+        beta = np.linalg.inv(APA + k*I0)@A.T@P@Y
+        def objective(k):
+            N_s = APA + k*I0
             N_s_inv = np.linalg.inv(N_s)
-            D_beta = sigma**2*N_s_inv@ARA@N_s_inv
+            D_beta = sigma**2*N_s_inv@APA@N_s_inv
             f_s = np.trace(D_beta) + \
                 k**2*beta.T@I0@N_s_inv@N_s_inv@I0@beta
             return f_s
@@ -203,8 +311,58 @@ class XuLS:
         res = minimize(objective, [k], tol=1E-10)
         print(f"Total iterations: {res.nit}")
         k = res.x[0]
-        return np.linalg.inv(ARA + k*I0)@A.T@R@Y
+        return np.linalg.inv(APA + k*I0)@A.T@P@Y
+    
+    def modified_single_parameter_regression(self, A, Y, R):
+        R_diag = R.diagonal()
+        P = sp.sparse.diags(1.0/R_diag)
+        k = 1
+        I0 = np.eye(len(A[0]))
 
+        # Remove the zero rows from the invertible matrix
+        APA = A.T@P@A
+
+        # compute solution, and iterate until optimal k 
+        def objective(k):
+            N_s = APA + k*I0
+            N_s_inv = np.linalg.pinv(N_s)
+            beta = N_s_inv@A.T@P@Y
+            D_beta = N_s_inv@APA@N_s_inv # R contains sigma**2
+            f_s = np.trace(D_beta) + \
+                k**2*beta.T@I0@N_s_inv@N_s_inv@I0@beta
+            return f_s
+
+        res = minimize(objective, [k], tol=1E-16)
+        print(f"Total iterations: {res.nit} \t k = {res.x[0]}")
+        k = res.x[0]
+        return np.linalg.pinv(APA + k*I0)@A.T@P@Y
+
+    def custom_single_parameter_regression(self,A,Y,R):
+        k = 1E-5 # to be optimized for
+        R_diag = R.diagonal()
+        P = sp.sparse.diags(1.0/R_diag)
+        I0 = np.eye(len(A[0]))
+
+        # Remove the zero rows from the invertible matrix
+        APA = A.T@P@A
+
+        Q = len(A[0])
+        K0 = self.K_inv[:Q,:Q]
+
+        # compute solution, and iterate until optimal k 
+        def objective(k):
+            beta = np.linalg.pinv(APA + k*K0)@A.T@P@Y
+            residual = np.linalg.norm(Y - A@beta)
+            parameter_size = np.linalg.norm(k*K0*beta)
+            # parameter_size = np.linalg.norm(beta)
+            score = residual + parameter_size
+            return score
+
+        res = minimize(objective, [k], tol=1E-16, bounds=Bounds(0, np.inf))
+        # res = minimize(objective, [k], tol=1E-8)
+        print(f"Total iterations: {res.nit} \t k={res.x[0]}")
+        k = res.x[0]
+        return np.linalg.pinv(APA + k*K0)@A.T@P@Y
     def update(self, rVec, aVec, R=None):
         self.rVec1D = rVec.reshape((-1,))
         self.aVec1D = aVec.reshape((-1,))
