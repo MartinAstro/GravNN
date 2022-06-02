@@ -238,7 +238,7 @@ def main():
                         'linecolor' : 'black',
                         'ticks' : 'outside',
                         'gridcolor':'LightGray',
-                        'title' :r'Acceleration Error [\%]', 
+                        'title' :r'Acceleration Error [%]', 
                         'type' : 'log',
                         'range' :[-1,2],
                         'dtick' : 'D1',
