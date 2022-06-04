@@ -49,7 +49,7 @@ def preprocess_data(x_dumb, a_dumb, acc_noise):
 def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
     # This has the true SH coef of Bennu -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Bennu()
-    model_file = planet.stl_200k
+    model_file = planet.obj_200k
 
     N = regress_deg  
     M = remove_deg 
@@ -133,14 +133,16 @@ def main():
     BLLS_SH(8, 0, 10*60, include_hoppers=True)
     BLLS_SH(16, 0, 10*60, include_hoppers=True)
 
-    # BLLS_SH(4, 0, 10*60, include_hoppers=False)
-    # BLLS_SH(8, 0, 10*60, include_hoppers=False)
-    # BLLS_SH(16, 0, 10*60, include_hoppers=False)
+    BLLS_SH(4, 0, 10*60, include_hoppers=False)
+    BLLS_SH(8, 0, 10*60, include_hoppers=False)
+    BLLS_SH(16, 0, 10*60, include_hoppers=False)
 
     # 1 minute sample interval
     # BLLS_SH(4, 0, 1*60)
     # BLLS_SH(8, 0, 1*60)
     # BLLS_SH(16, 0, 1*60)
+
+    plt.show()
 
 if __name__ == "__main__":
     main()

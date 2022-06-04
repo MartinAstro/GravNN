@@ -1,6 +1,9 @@
 import numpy as np
+import scipy as sp
+
 import os 
 from GravNN.Regression.BLLS import BLLS
+from GravNN.Regression.XuLS import XuLS
 from GravNN.Regression.utils import format_coefficients, populate_removed_degrees, save
 from GravNN.Trajectories import RandomAsteroidDist, DHGridDist, EphemerisDist
 from GravNN.CelestialBodies.Asteroids import Eros
@@ -60,7 +63,7 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
     regressor = BLLS(N, planet, M)
 
     # Record time history of regressor
-    x_hat_hist = []
+    x_hat_hist = [] 
     t_hist = []
 
     x_train = []
@@ -104,7 +107,14 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
 
         x_train_sample, y_train_sample = preprocess_data(x_train, y_train, acc_noise=0.1)
 
-        x_hat = regressor.update(x_train_sample, y_train_sample)
+
+        a_error_mag = 0.1*np.linalg.norm(y_train, axis=1).reshape(len(y_train), 1)**2
+        # if regressor.algorithm == 'least_squares':
+        a_error_mag = np.zeros_like(a_error_mag) + 1.0 # make identity
+
+        diags = [ item for item in a_error_mag.squeeze() for _ in range(3) ] 
+        R = sp.sparse.diags(diags, format='lil')
+        x_hat = regressor.update(x_train_sample, y_train_sample, R=R)
         x_hat_hist.append(x_hat)
         t_hist.append(trajectory.times)
         time = trajectory.times[0]
@@ -123,22 +133,24 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval,include_hoppers=False):
     plot_coef_history(t_hist, x_hat_hist, M, start_idx=0)
     
     #plt.show()
-
+    return C_lm, S_lm
 
 def main():
+    from evaluate_near_sh import main as near_sh_main
     # # 10 minute sample interval
     # BLLS_SH(4, 0, 10*60, include_hoppers=True)
     # BLLS_SH(8, 0, 10*60, include_hoppers=True)
     # BLLS_SH(16, 0, 10*60, include_hoppers=True)
 
-    BLLS_SH(4, 0, 10*60, include_hoppers=False)
-    BLLS_SH(8, 0, 10*60, include_hoppers=False)
-    BLLS_SH(16, 0, 10*60, include_hoppers=False)
+    C_lm_4, S_lm_4 = BLLS_SH(4, 0, 10*60, include_hoppers=False)
+    C_lm_8, S_lm_8 = BLLS_SH(8, 0, 10*60, include_hoppers=False)
+    C_lm_16, S_lm_16 = BLLS_SH(16, 0, 10*60, include_hoppers=False)
 
     # 1 minute sample interval
     # BLLS_SH(4, 0, 1*60)
     # BLLS_SH(8, 0, 1*60)
     # BLLS_SH(16, 0, 1*60)
+    # plt.show() 
 
 if __name__ == "__main__":
     main()
