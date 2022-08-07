@@ -2,7 +2,7 @@
   <img src="docs/source/_static/logo.png">
 </div>
 
-# Welcome to the ML Gravity repo!
+# Welcome to the GravNN repo!
 
 This repo contains the `GravNN` python package whose purpose is to train Physics-Informed Neural Networks to represent high-fidelity gravity fields. The package itself contains the tensorflow models, physics constraints, hyperparameter configurations, data generators, and visualization tools used in training such models. 
 
