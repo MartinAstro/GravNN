@@ -68,6 +68,8 @@ def plot_sh_error(data_directory, dist_name, sampling_interval, linestyle):
     files.sort()
     for file in files:
         sampling_interval, max_deg = get_sh_file_info(file)
+        # if max_deg == 16:
+            # continue
         with open(file, 'rb') as f:
             sh_samples = pickle.load(f)
             sh_errors = pickle.load(f)
@@ -116,11 +118,11 @@ def main():
     vis.fig_size = vis.full_page
     vis.newFig()
 
-    hoppers=True
+    hoppers=False
 
     plot_error("r_outer", hoppers, '-')
     plot_error("r_inner", hoppers, '--')
-    plot_error("r_surface", hoppers, ':')
+    # plot_error("r_surface", hoppers, ':')
     
     plt.xlabel("Days Since Insertion")
     plt.ylabel(r"Average Acceleration Error [\%]")
@@ -161,7 +163,7 @@ def main():
 
 
 
-    vis.save(plt.gcf(), directory + "transformer_regression_error_near_shoemaker_%s.pdf" % str(hoppers))
+    # vis.save(plt.gcf(), directory + "transformer_regression_error_near_shoemaker_%s.pdf" % str(hoppers))
     # vis.save(plt.gcf(), directory + "regression_error_near_shoemaker.pdf")
     
     plt.show()

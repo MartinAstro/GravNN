@@ -20,7 +20,9 @@ def get_file_info(file_path):
 
 def evaluate_sh(planet, N, trajectory, dist_name, sampling_interval, hoppers=False):
     
-    models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/**/%s/*.csv" % (N, str(hoppers)))
+    # models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/**/%s/*.csv" % (N, str(hoppers)))
+    models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/M_0/%s/*.csv" % (N, str(hoppers)))
+    # models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/M_1/%s/*.csv" % (N, str(hoppers)))
     x, a_true, u = get_poly_data(trajectory, planet.obj_200k, point_mass_removed=[False])
 
     sample_list = np.array([])
@@ -86,13 +88,12 @@ def main():
     sampling_interval = 10*60
     evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
 
+    # trajectory = SurfaceDist(planet, planet.obj_200k)
+    # dist_name = "r_surface"
+    # sampling_interval = 10*60
+    # evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
 
-    trajectory = SurfaceDist(planet, planet.obj_200k)
-    dist_name = "r_surface"
-    sampling_interval = 10*60
-    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
-
-    plt.show()
+    # plt.show()
 
 if __name__ == "__main__":
     main()
