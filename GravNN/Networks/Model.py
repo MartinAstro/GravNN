@@ -359,6 +359,15 @@ class CustomModel(tf.keras.Model):
             "curl": curl_pred,
         }
 
+    @tf.function()
+    def generate_potential_tf(self, x):
+        x_preprocessor = getattr(self, 'x_preprocessor')
+        u_postprocessor = getattr(self, 'u_postprocessor')
+        x_network_input = x_preprocessor(x) 
+        u_network_output = self.network(x_network_input)
+        u_output = u_postprocessor(u_network_output)
+        return u_output
+
     def generate_potential(self, x):
         """Method responsible for returning just the PINN potential.
         Use this method if a lightweight TF execution is desired
@@ -599,28 +608,22 @@ class CustomModel(tf.keras.Model):
         """Method responsible for timestamping the network, adding the training history to the configuration dictionary, and formatting other variables into the configuration dictionary.
         """
         timestamp = pd.Timestamp(time.time(), unit="s").round("ms").ctime()
-        self.directory = (
-            os.path.abspath(".")
-            + "/Data/Networks/"
-            + str(pd.Timestamp(timestamp).to_julian_date())
-            + "/"
-        )
-        os.makedirs(self.directory, exist_ok=True)
-        os.makedirs(os.path.abspath(".") + "/Data/Dataframes/", exist_ok=True)
+        time_JD = pd.Timestamp(timestamp).to_julian_date()
+
+        os.makedirs(self.save_dir, exist_ok=True)
+        os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
+        os.makedirs(f"{self.save_dir}/Networks/", exist_ok=True)
         self.config["timetag"] = timestamp
         self.config["history"] = [self.history.history]
-        self.config["id"] = [pd.Timestamp(timestamp).to_julian_date()]
-        try:
-            self.config["activation"] = [self.config["activation"][0].__name__]
-        except:
-            pass
-        try:
-            self.config["optimizer"] = [self.config["optimizer"][0].__module__]
-        except:
-            pass
+        self.config["id"] = [time_JD]
+
+        # dataframe cannot take fcn objects so settle on the names and convert to fcn on load 
+        self.config["activation"] = [self.config["activation"][0].__name__]
+        self.config["optimizer"] = [self.config["optimizer"][0].__module__]
+        self.config["PINN_constraint_fcn"] = [self.config["PINN_constraint_fcn"][0]]  # Can't have multiple args in each list
         self.model_size_stats()
 
-    def save(self, df_file=None, checkpoint_callback=None):
+    def save(self, df_file=None, custom_data_dir=None):
         """Add remaining training / model variables into the configuration dictionary, then
         save the config variables into its own pickled file, and potentially add it to an existing
         dataframe defined by `df_file`.
@@ -631,20 +634,25 @@ class CustomModel(tf.keras.Model):
         """
         # add final entries to config dictionary
         #time.sleep(np.random.randint(0,5)) # Make the process sleep with hopes that it decreases the likelihood that two networks save at the same time TODO: make this a lock instead.
+
+        # the default save / load directory is within the GravNN package. 
+        self.save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
+
+        # can specify an alternative save / load directory
+        if custom_data_dir is not None:
+            self.save_dir = custom_data_dir 
+
         self.prep_save()
 
-        # convert to dataframe
+        # convert configuration info to dataframe
         config = dict(sorted(self.config.items(), key=lambda kv: kv[0]))
-        config["PINN_constraint_fcn"] = [
-            config["PINN_constraint_fcn"][0]
-        ]  # Can't have multiple args in each list
-
         df = pd.DataFrame().from_dict(config).set_index("timetag")
 
-        # save network and config to directory
-        if checkpoint_callback == None:
-            self.network.save(self.directory + "network")
-        df.to_pickle(self.directory + "config.data")
+        # save network and config to unique network directory
+        network_id = self.config['id'][0]
+        network_dir = f"{self.save_dir}/Networks/{network_id}/"
+        self.network.save(network_dir + "network")
+        df.to_pickle(network_dir + "config.data")
 
         # save config to preexisting dataframe if requested
         if df_file is not None:
@@ -682,29 +690,30 @@ def backwards_compatibility(config):
 
         if "dtype" not in config:
             config["dtype"] = [tf.float32]
-
     if float(config['id'][0]) < 2459640.439074074:
         config['loss_fcn'] = ['rms_summed']
-
-    if "eros200700.obj" in config["grav_file"][0]:
-        from GravNN.CelestialBodies.Asteroids import Eros
-        config['grav_file'] = [Eros().obj_200k]
-
-    # Before this date, it was assumed that data would be drawn with SH if planet, and 
-    # Polyhedral if asteroid. This is no longer true. 
     if float(config["id"][0]) < 2459628.436423611:
+        # Before this date, it was assumed that data would be drawn with SH if planet, and 
+        # Polyhedral if asteroid. This is no longer true. 
         if "Planets" in config["planet"][0].__module__:
             config["gravity_data_fcn"] = [GravNN.GravityModels.SphericalHarmonics.get_sh_data]
         else:
             config["gravity_data_fcn"] = [GravNN.GravityModels.Polyhedral.get_poly_data]
 
-    
+    if "eros200700.obj" in config["grav_file"][0]:
+        from GravNN.CelestialBodies.Asteroids import Eros
+        config['grav_file'] = [Eros().obj_200k]
+
     if "lr_anneal" not in config:
         config["lr_anneal"] = [False]
+
+    if "mixed_precision" not in config:
+        config["use_precision"] = [False]
+
     return config
 
 
-def load_config_and_model(model_id, df_file):
+def load_config_and_model(model_id, df_file, custom_data_dir=None):
     """Primary loading function for the networks and their
     configuration information.
 
@@ -714,31 +723,31 @@ def load_config_and_model(model_id, df_file):
         configuration parameters of interest.
 
     Returns:
-        tuple: configuration/hyperparater dictionary, compiled CustomModel
+        tuple: configuration/hyperparameter dictionary, compiled CustomModel
     """
-    # Get the parameters and stats for a given run
-    # If the dataframe hasn't been loaded
+    data_dir = f"{os.path.dirname(GravNN.__file__)}/../Data/"
+    if custom_data_dir is not None:
+        data_dir = custom_data_dir
+
+    # Get the configuration data specified model_id
     if type(df_file) == str:
-        config = utils.get_df_row(model_id, df_file)
+        # If the config dataframe hasn't been loaded  
+        df_file_path = f"{data_dir}/Dataframes/{df_file}"
+        config = utils.get_df_row(model_id, df_file_path)
     else:
-        # If the dataframe has already been loaded
+        # If the config dataframe has already been loaded
         config = df_file[model_id == df_file["id"]].to_dict()
         for key, value in config.items():
             config[key] = list(value.values())
 
     # Reinitialize the model
-    if "mixed_precision" not in config:
-        config["use_precision"] = [False]
-
     config = backwards_compatibility(config)
     network = tf.keras.models.load_model(
-        os.path.dirname(GravNN.__file__) + "/../Data/Networks/" + str(model_id) + "/network"
+        f"{data_dir}/Networks/{model_id}/network"
     )
     model = CustomModel(config, network)
     optimizer = utils._get_optimizer(config["optimizer"][0])
-    model.compile(
-        optimizer=optimizer, loss="mse"
-    )  #! Check that this compile is even necessary
+    model.compile(optimizer=optimizer, loss="mse") 
 
     return config, model
 
