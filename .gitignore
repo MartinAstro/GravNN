@@ -26,3 +26,6 @@ Hyperparameter Analysis*
 
 docs/build/*
 docs/source/_build/
+.eggs
+.eggs/*
+*.egg-info
