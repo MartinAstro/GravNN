@@ -28,6 +28,7 @@ class VisualizationBase(ABC):
         self.full_page = (6.3, 6.3*golden_ratio) 
 
         # AAS textwidth is 6.5
+        # (width, height)
         self.half_page = (3.25, 3.25*golden_ratio)
         self.AIAA_full_page = (6.5, 6.5*golden_ratio)
 
@@ -53,16 +54,17 @@ class VisualizationBase(ABC):
 
         return
 
-    def new3DFig(self, unit='m'):
-        fig = plt.figure(num=None, figsize=(5,3.5), dpi=200)
+    def new3DFig(self, unit='m', **kwargs):
+        figsize = kwargs.get('fig_size', self.fig_size)
+        fig = plt.figure(num=None, figsize=figsize)#, dpi=200)
         ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel(r'$x$ ('+unit+r')', fontsize=10)
-        ax.set_ylabel(r'$y$ ('+unit+r')', fontsize=10)
-        ax.set_zlabel(r'$z$ ('+unit+r')', fontsize=10)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(6))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(6))
-        ax.zaxis.set_major_locator(plt.MaxNLocator(6))
-        ax.tick_params(labelsize=10)
+        ax.set_xlabel(r'$x$ ('+unit+r')')#, fontsize=10)
+        ax.set_ylabel(r'$y$ ('+unit+r')')#, fontsize=10)
+        ax.set_zlabel(r'$z$ ('+unit+r')')#, fontsize=10)
+        # ax.xaxis.set_major_locator(plt.MaxNLocator(6))
+        # ax.yaxis.set_major_locator(plt.MaxNLocator(6))
+        # ax.zaxis.set_major_locator(plt.MaxNLocator(6))
+        # ax.tick_params(labelsize=10)
         ax.legend(prop={'size': 10})
         ax.get_legend().remove()
         ax.grid(linestyle="--", linewidth=0.1, color='.25', zorder=-10)
@@ -71,14 +73,15 @@ class VisualizationBase(ABC):
     def newFig(self, fig_size=None):
         if fig_size is None:
             fig_size = self.fig_size
-        fig = plt.figure(num=None, figsize=fig_size, dpi=200)
+        fig = plt.figure(num=None, figsize=fig_size)#, dpi=200)
         ax = fig.add_subplot(111)
-        ax.tick_params(labelsize=10)
+        # ax.tick_params(labelsize=10)
         ax.grid(which='both',linestyle="--", linewidth=0.1, color='.25', zorder=-10)
         return fig, ax
 
     def save(self, fig, name):
         #If the name is an absolute path -- save to the path
+        plt.tight_layout()
         if os.path.isabs(name):
             try:
                 plt.figure(fig.number)
