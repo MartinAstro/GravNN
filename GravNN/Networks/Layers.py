@@ -2,6 +2,50 @@ import tensorflow as tf
 import numpy as np
 
 
+
+
+class PreprocessingLayer(tf.keras.layers.Layer):
+    def __init__(self, min, scale, dtype):
+        super(PreprocessingLayer, self).__init__(dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype)
+        self.scale = tf.constant(scale, dtype=dtype)
+
+    def call(self, inputs):
+        normalized_inputs = inputs * self.scale + self.min
+        return normalized_inputs
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "min": self.min,
+                "scale": self.scale,
+            }
+        )
+        return config
+
+class PostprocessingLayer(tf.keras.layers.Layer):
+    def __init__(self, min, scale, dtype):
+        super(PostprocessingLayer, self).__init__(dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype)
+        self.scale = tf.constant(scale, dtype=dtype)
+
+    def call(self, normalized_inputs):
+        inputs = (normalized_inputs - self.min)/self.scale
+        return inputs
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "min": self.min,
+                "scale": self.scale,
+            }
+        )
+        return config
+
+
+
 class Cart2SphLayer(tf.keras.layers.Layer):
     def __init__(self, dtype):
         """Layer responsible for taking cartesian inputs and converting
