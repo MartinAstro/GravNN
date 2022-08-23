@@ -618,8 +618,14 @@ class CustomModel(tf.keras.Model):
         self.config["id"] = [time_JD]
 
         # dataframe cannot take fcn objects so settle on the names and convert to fcn on load 
-        self.config["activation"] = [self.config["activation"][0].__name__]
-        self.config["optimizer"] = [self.config["optimizer"][0].__module__]
+        activation_type = type(self.config["activation"][0])
+        activation_string = self.config["activation"][0] if activation_type == str else self.config["activation"][0].__name__
+        self.config["activation"] = [activation_string]
+        try:
+            self.config["optimizer"] = [self.config["optimizer"][0].__module__]
+        except:
+            pass
+
         self.config["PINN_constraint_fcn"] = [self.config["PINN_constraint_fcn"][0]]  # Can't have multiple args in each list
         self.model_size_stats()
 
