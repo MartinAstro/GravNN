@@ -46,9 +46,9 @@ class CustomModel(tf.keras.Model):
 
         self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
-
+        
         # jacobian ops incompatible with XLA
-        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None):
+        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None) or (not self.config['jit_compile'][0]):
             self.train_step = self.train_step_no_jit
             self.test_step = self.test_step_no_jit
         else:
@@ -662,7 +662,7 @@ class CustomModel(tf.keras.Model):
 
         # save config to preexisting dataframe if requested
         if df_file is not None:
-            utils.save_df_row(self.config, df_file)
+            utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
 
 
 def backwards_compatibility(config):
