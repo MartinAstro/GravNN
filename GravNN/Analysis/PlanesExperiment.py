@@ -17,6 +17,7 @@ class PlanesExperiment:
         self.model = model
         self.bounds = np.array(bounds)
         self.samples_1d = samples_1d
+        self.interior_mask = None
 
         self.brillouin_radius = config['planet'][0].radius
         original_max_radius = self.config['radius_max'][0]
@@ -105,6 +106,20 @@ class PlanesExperiment:
                 ) 
             for i in range(len(rms_potentials)) 
             ])
+
+    def get_planet_mask(self):
+        # Don't recompute this
+        if self.interior_mask is None:
+            grav_file =  self.config.get("grav_file", [None])[0] # asteroids grav_file is the shape model
+            self.model_file = self.config.get("shape_model", [grav_file])[0] # planets have shape model (sphere currently)
+            filename, file_extension = os.path.splitext(self.model_file)
+            self.shape_model = trimesh.load_mesh(self.model_file, file_type=file_extension[1:])
+            distances = self.shape_model.nearest.signed_distance(
+                        self.x_test / 1e3
+                    )
+            self.interior_mask = distances > 0
+        return self.interior_mask
+
 
     def run(self):
         self.get_train_data()

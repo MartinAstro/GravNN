@@ -126,7 +126,7 @@ class PlanesVisualizer(VisualizationBase):
         plt.xlabel(plane[0])
         plt.ylabel(plane[1])        
 
-    def plot_plane(self, x_vec, z_vec, plane='xy', nan_interior=True, colorbar_label=None, srp_sphere=True):
+    def plot_plane(self, x_vec, z_vec, plane='xy', nan_interior=True, colorbar_label=None, srp_sphere=False):
         
         mask = self.plane_mask(plane)
         idx_start, idx_end = self.get_plane_idx(plane)
@@ -148,9 +148,15 @@ class PlanesVisualizer(VisualizationBase):
 
         N = np.sqrt(len(z)).astype(int)
     
-        plt.imshow(z.reshape((N,N)), extent=[min_x_0, max_x_0, min_x_1, max_x_1], origin='lower', cmap=cm.jet, vmin=0, vmax=self.max)
-        cbar = plt.colorbar(fraction=0.15,)
-        cbar.set_label(colorbar_label)
+        im = plt.imshow(z.reshape((N,N)), extent=[min_x_0, max_x_0, min_x_1, max_x_1], origin='lower', cmap=cm.jet, vmin=0, vmax=self.max)
+        ax = plt.gca()
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size="5%", pad=0.05)
+        cBar = plt.colorbar(im, cax=cax)
+
+        # cbar = plt.colorbar(fraction=0.15,)
+        cBar.set_label(colorbar_label)
+        plt.sca(plt.gcf().axes[0])
 
         plt.xlabel(plane[0])
         plt.ylabel(plane[1])

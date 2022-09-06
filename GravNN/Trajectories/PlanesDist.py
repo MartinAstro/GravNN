@@ -6,18 +6,6 @@ import numpy as np
 
 class PlanesDist(TrajectoryBase):
     def __init__(self, celestial_body, bounds, samples_1d, **kwargs):
-        """Driscoll and Heeley grid (Uniformally spaced at constant radius).
-        Used to ensure that there is a properly dense distribution to observe a
-        particular degree harmonic on a 2d image.
-
-        This distribution is generally used to produce 2D gravity maps / grids
-        using the MapVisualization module.
-
-        Args:
-            celestial_body (CelestialBody): planet about which the grid will be placed
-            radius (float): radius at which the grid should be placed (typically Brillouin)
-            degree (int): The maximum degree that should be observed
-        """
         self.celestial_body = celestial_body
         self.bounds = bounds
         self.samples_1d = samples_1d
