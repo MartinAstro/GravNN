@@ -224,7 +224,7 @@ def SphericalPinesTransformerNet(**kwargs):
     scalers = kwargs["norm_scalers"][0]
     mins = kwargs["norm_mins"][0]
     dtype = kwargs["dtype"][0]
-    transformer_units = kwargs["num_units"][0]
+    transformer_units = layers[1]
     normalization_strategy = kwargs["normalization_strategy"][0]
     ref_radius = kwargs["ref_radius"][0]
     inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)

@@ -25,6 +25,7 @@ def main():
         "PINN_constraint_fcn": ["pinn_alc"],
     }
     hparams.update(ReduceLrOnPlateauConfig())
+    hparams.update(PINN_III())
 
     threads = 1
     args = configure_run_args(config, hparams)

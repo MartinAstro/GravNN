@@ -17,7 +17,7 @@ Enjoy!
 ```
 git clone https://github.com/joma5012/GravNN.git
 cd GravNN/
-pip install -e setup.py
+pip install -e .
 ```
 
 # Motivation
