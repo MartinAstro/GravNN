@@ -546,7 +546,7 @@ def print_config(original_config):
     print("\n")
     network_keys = ['PINN_constraint_fcn', 'network_type', 'layers', 
         'activation', 'epochs',  'learning_rate', 
-        'batch_size', 'transformer_units', 'initializer',
+        'batch_size', 'initializer',
         'optimizer', 'dropout', 'normalization_strategy', 
         'mixed_precision', 'init_file', 'id'
         ]
