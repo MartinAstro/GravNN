@@ -14,7 +14,9 @@ def main():
     config = get_default_eros_config()
 
     # hyperparameters which overwrite defaults
-    hparams = {
+    hparams = PINN_III()
+    hparams.update(ReduceLrOnPlateauConfig())
+    hparams.update({
         "grav_file" : [Eros().obj_8k],
         "N_dist": [5000],
         "N_train": [4500],
@@ -23,9 +25,8 @@ def main():
         "batch_size" : [4096],
         "network_type" : ["sph_pines_traditional"],
         "PINN_constraint_fcn": ["pinn_alc"],
-    }
-    hparams.update(ReduceLrOnPlateauConfig())
-    hparams.update(PINN_III())
+    })
+
 
     threads = 1
     args = configure_run_args(config, hparams)
@@ -79,7 +80,7 @@ def run(config_original, hparams):
     model.compile(optimizer=optimizer, loss="mse")
     
     # Train network
-    callback = SimpleCallback()
+    callback = SimpleCallback(config['batch_size'][0])
     schedule = get_schedule(config)
 
     history = model.fit(
