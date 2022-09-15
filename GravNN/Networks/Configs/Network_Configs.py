@@ -9,7 +9,6 @@ def PINN_I():
     network_config = {
         "basis": [None],
         "mixed_precision": [False],
-        "dtype": ["float32"],
         "x_transformer": [MinMaxScaler(feature_range=(-1, 1))],
         "u_transformer": [MinMaxScaler(feature_range=(-1, 1))],
         "a_transformer": [MinMaxScaler(feature_range=(-1, 1))],
@@ -38,7 +37,8 @@ def PINN_I():
         'init_file' : [None],
         'normalization_strategy' : ['uniform'], #'radial, uniform
         'num_units' : [20],
-        'jit_compile' : [False]
+        'jit_compile' : [False],
+        'ref_radius' : [1.0]
     }
     return network_config
 
