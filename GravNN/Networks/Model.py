@@ -100,7 +100,8 @@ class CustomModel(tf.keras.Model):
         return loss_components
 
     def compute_percent_error(self, y_hat, y):
-        loss_components = tf.norm(tf.subtract(y_hat, y), axis=1)/tf.norm(tf.abs(y),axis=1)*100
+        # Only apply to the acceleration values 
+        loss_components = tf.norm(tf.subtract(y_hat[:,0:3], y[:,0:3]), axis=1)/tf.norm(tf.abs(y[:,0:3]),axis=1)*100
         return loss_components
 
     @tf.function(jit_compile=True)
@@ -134,7 +135,7 @@ class CustomModel(tf.keras.Model):
             )
 
             loss = self.loss_fcn(rms_components, percent_components)
-            loss += tf.reduce_sum(self.network.losses)
+            # loss += tf.reduce_sum(self.network.losses)
 
             loss = self.optimizer.get_scaled_loss(loss)
 
@@ -198,7 +199,7 @@ class CustomModel(tf.keras.Model):
                 tf.reduce_mean(rms_components,0), self.adaptive_constant
             )
             loss = self.loss_fcn(rms_components, percent_components)
-            loss += tf.reduce_sum(self.network.losses)
+            # loss += tf.reduce_sum(self.network.losses)
 
             loss = self.optimizer.get_scaled_loss(loss)
 
