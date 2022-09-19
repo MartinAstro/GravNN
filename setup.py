@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 setup(
     name='GravNN',
     packages=find_packages(),
-    version='0.1.0',
+    version='0.8.0',
     description='GravNN Package',
     author='John M',
     license='MIT',

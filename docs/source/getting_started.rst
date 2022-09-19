@@ -57,12 +57,10 @@ We'll keep it simple for now and use the `get_earth_default_config` dictionary w
     from GravNN.Networks.Configs import get_earth_default_config
 
     config = get_earth_default_config()
-    tf = configure_tensorflow()
-    mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
+    tf, mixed_precision = configure_tensorflow(config)
   
     # Standardize Configuration
-    config = load_hparams_to_config(hparams, config)
-    check_config_combos(config)
+    config = populate_config_objects(config)
     print(config)
 
     # Get data, network, optimizer, and generate model
@@ -70,8 +68,7 @@ We'll keep it simple for now and use the `get_earth_default_config` dictionary w
     compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    network = load_network(config)
-    model = CustomModel(config, network)
+    model = CustomModel(config)
     model.compile(optimizer=optimizer, loss="mse")
 
     # Train network

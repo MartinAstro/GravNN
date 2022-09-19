@@ -19,7 +19,7 @@ from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
 from GravNN.Networks.Model import CustomModel
 from GravNN.Networks.Networks import load_network
-from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
+from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Schedules import get_schedule
 
 tf = configure_tensorflow()

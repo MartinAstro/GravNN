@@ -36,38 +36,23 @@ def main():
     save_training(df_file, configs)
 
 
-def run(config_original, hparams):
+def run(config):
     # Tensorflow dependent functions must be defined inside of 
     # run function for thread-safe behavior.
-    import copy
     import numpy as np
-    from GravNN.Networks.utils import (
-        configure_tensorflow,
-        set_mixed_precision,
-        check_config_combos,
-    )
+    np.random.seed(config['seed'][0])
+    from GravNN.Networks.utils import configure_tensorflow
     from GravNN.Networks.Callbacks import SimpleCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Networks import load_network
-    from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
+    from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
 
-    tf = configure_tensorflow()
-    mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
-    try:
-        np.random.seed(hparams['seed'])
-        tf.random.set_seed(hparams['seed'])
-    except:
-        np.random.seed(config_original['seed'][0])
-        tf.random.set_seed(config_original['seed'][0])
-    tf.config.run_functions_eagerly(False)
-    tf.keras.backend.clear_session()
+    tf, mixed_precision = configure_tensorflow(config)
 
     # Standardize Configuration
-    config = copy.deepcopy(config_original)
-    config = load_hparams_to_config(hparams, config)
-    check_config_combos(config)
+    config = populate_config_objects(config)
     print(config)
 
     # Get data, network, optimizer, and generate model
@@ -75,8 +60,7 @@ def run(config_original, hparams):
     compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    network = load_network(config)
-    model = CustomModel(config, network)
+    model = CustomModel(config)
     model.compile(optimizer=optimizer, loss="mse")
     
     # Train network

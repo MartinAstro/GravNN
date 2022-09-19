@@ -46,7 +46,7 @@ def run(config_original, hparams):
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Networks import load_network
-    from GravNN.Networks.utils import load_hparams_to_config, configure_optimizer
+    from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
 
     tf = configure_tensorflow()
@@ -58,7 +58,7 @@ def run(config_original, hparams):
 
     # Standardize Configuration
     config = copy.deepcopy(config_original)
-    config = load_hparams_to_config(hparams, config)
+    config = populate_config_objects(config)
     check_config_combos(config)
     print(config)
 
@@ -66,8 +66,7 @@ def run(config_original, hparams):
     train_data, val_data, transformers = get_preprocessed_data(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    network = load_network(config)
-    model = CustomModel(config, network)
+    model = CustomModel(config)
     model.compile(optimizer=optimizer, loss="mse")  # , run_eagerly=True)
 
     # Train network

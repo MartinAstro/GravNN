@@ -38,7 +38,7 @@ def PINN_I():
         'normalization_strategy' : ['uniform'], #'radial, uniform
         'num_units' : [20],
         'jit_compile' : [False],
-        'ref_radius' : [1.0]
+        'ref_radius' : [1.0],
     }
     return network_config
 

@@ -9,6 +9,7 @@ import tensorflow as tf
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
+from GravNN.Networks.Networks import load_network
 import GravNN
 
 np.random.seed(1234)
@@ -16,7 +17,7 @@ np.random.seed(1234)
 
 class CustomModel(tf.keras.Model):
     # Initialize the class
-    def __init__(self, config, network):
+    def __init__(self, config):
         """Custom Keras model that encapsulates the actual PINN as well as other relevant
         configuration information, and helper functions. This includes all
         training loops, methods to get all (or specific) outputs from the network, and additional
@@ -31,7 +32,7 @@ class CustomModel(tf.keras.Model):
         self.variable_cast = config.get("dtype", [tf.float32])[0]
         super(CustomModel, self).__init__(dtype=self.variable_cast)
         self.config = config
-        self.network = network
+        self.network = load_network(config)
         self.mixed_precision = tf.constant(
             self.config["mixed_precision"][0], dtype=tf.bool
         )
@@ -47,8 +48,11 @@ class CustomModel(tf.keras.Model):
         self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
         
-        # jacobian ops incompatible with XLA
-        if ("L" in self.eval.__name__) or ( "C" in self.eval.__name__) or (config['init_file'][0] is not None) or (not self.config['jit_compile'][0]):
+        # jacobian ops (needed in LC loss terms) incompatible with XLA
+        if ("L" in self.eval.__name__) or \
+           ("C" in self.eval.__name__) or \
+           (config['init_file'][0] is not None) or \
+           (not self.config['jit_compile'][0]):
             self.train_step = self.train_step_no_jit
             self.test_step = self.test_step_no_jit
         else:
@@ -85,7 +89,6 @@ class CustomModel(tf.keras.Model):
 
         return acc_B
 
-
     def compute_rms_components(self, y_hat, y):
         """Separate the different loss component terms.
 
@@ -117,9 +120,7 @@ class CustomModel(tf.keras.Model):
         Returns:
             dict: dictionary of metrics passed to the callback.
         """
-        # with tf.xla.experimental.jit_scope(
-        #     compile_ops=lambda node_def: 'batch_jacobian' not in node_def.op.lower(), separate_compiled_gradients=True):
-
+ 
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=True)
@@ -135,8 +136,6 @@ class CustomModel(tf.keras.Model):
             )
 
             loss = self.loss_fcn(rms_components, percent_components)
-            # loss += tf.reduce_sum(self.network.losses)
-
             loss = self.optimizer.get_scaled_loss(loss)
 
         # calculate new adaptive constant
@@ -163,11 +162,8 @@ class CustomModel(tf.keras.Model):
         # loss = a - a_hat
         # d loss/ d weights = no b_final
         self.optimizer.apply_gradients([
-                (grad, var) 
-                for (grad, var) in zip(gradients, self.network.trainable_variables) 
-                if grad is not None
-                ])
-        # self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
+            (grad, var) for (grad, var) in zip(gradients, self.network.trainable_variables) if grad is not None
+            ])
 
         return {
             "loss": loss,
@@ -298,7 +294,6 @@ class CustomModel(tf.keras.Model):
             a = self.network(x)  # shape = (k,) #! evaluate network
         jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
         return jacobian
-
 
     def __nn_output(self, dataset):
         x, y = dataset

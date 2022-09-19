@@ -9,15 +9,21 @@ from copy import deepcopy
 from GravNN.Trajectories import ExponentialDist, GaussianDist
 
 
-def configure_tensorflow():
-    """Custom tensorflow import that configures proper flags and paths settings.
+def configure_tensorflow(hparams):
+    """Custom tensorflow import that configures proper flags, path settings, 
+    seeds, etc.
 
     Returns:
         module: Tensorflow as tf
     """
     set_tf_env_flags()
     tf = set_tf_expand_memory()
-    return tf
+    tf.keras.backend.clear_session()
+    tf.random.set_seed(hparams['seed'][0])
+    tf.config.run_functions_eagerly(False)
+    mixed_precision = set_mixed_precision() if hparams['mixed_precision'][0] else None
+
+    return tf, mixed_precision
 
 
 def set_tf_env_flags():
@@ -332,7 +338,7 @@ def _get_tf_dtype(name):
     ]
 
 
-def load_hparams_to_config(hparams, config):
+def populate_config_objects(config):
     """Primary helper function used to convert any strings within the hyperparameter config dictionary
     into the necessary tensorflow objects that will be used in the CustomModel
 
@@ -343,9 +349,6 @@ def load_hparams_to_config(hparams, config):
     Returns:
         dict: updated configuration dictionary with proper tensorflow objects
     """
-    for key, value in hparams.items():
-        config[key] = [value]
-
     config["PINN_constraint_fcn"] = _get_PI_constraint(config["PINN_constraint_fcn"][0])
     config["network_type"] = [_get_network_fcn(config["network_type"][0])]
     config["dtype"] = [_get_tf_dtype(config["dtype"][0])]
@@ -354,6 +357,7 @@ def load_hparams_to_config(hparams, config):
         for i in range(1, len(config["layers"][0]) - 1):
             config["layers"][0][i] = config["num_units"][0]
 
+    check_config_combos(config)
     return config
 
 
@@ -396,7 +400,12 @@ def configure_run_args(config, hparams):
     for hparam_inst in permutations_dicts:
         print("--- Starting trial: %d" % session_num)
         print({key: value for key, value in hparam_inst.items()})
-        args.append((config, hparam_inst))
+
+        # load the hparams into the config 
+        for key, value in hparam_inst.items():
+            config[key] = [value]
+
+        args.append((config.copy(),))
         session_num += 1
     return args
 
