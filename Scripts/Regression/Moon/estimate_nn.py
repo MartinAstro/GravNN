@@ -66,13 +66,7 @@ def regress_nn_model(config):
     model.history = history
 
     # Save network and config information
-    model.config["time_delta"] = [callback.time_delta]
-    model.config["x_transformer"][0] = transformers["x"]
-    model.config["u_transformer"][0] = transformers["u"]
-    model.config["a_transformer"][0] = transformers["a"]
-    #model.config["a_bar_transformer"][0] = transformers["a_bar"]
-
-    model.save(df_file=None)
+    model.save(df_file=None, history=history, transformers=transformers)
 
 
     model.config["PINN_constraint_fcn"] = [

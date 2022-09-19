@@ -44,7 +44,7 @@ def run(config_original, hparams):
     )
     from GravNN.Networks.Callbacks import TimingCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
-    from GravNN.Networks.Model import PINNGravityModel
+    from GravNN.Networks.Model import PinnGM
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
@@ -66,7 +66,7 @@ def run(config_original, hparams):
     train_data, val_data, transformers = get_preprocessed_data(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    model = PINNGravityModel(config)
+    model = PinnGM(config)
     model.compile(optimizer=optimizer, loss="mse")  # , run_eagerly=True)
 
     # Train network
@@ -90,7 +90,7 @@ def run(config_original, hparams):
     model.config["a_transformer"][0] = transformers["a"]
 
     # Appends the model config to a perscribed df
-    model.save(df_file=None)
+    model.save(df_file=None, history=history, transformers=transformers)
     return model.config
 
 

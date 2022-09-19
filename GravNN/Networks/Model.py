@@ -625,7 +625,7 @@ class PINNGravityModel(tf.keras.Model):
         self.config["PINN_constraint_fcn"] = [self.config["PINN_constraint_fcn"][0]]  # Can't have multiple args in each list
         self.model_size_stats()
 
-    def save(self, df_file=None, custom_data_dir=None):
+    def save(self, df_file=None, custom_data_dir=None, history=None, transformers=None):
         """Add remaining training / model variables into the configuration dictionary, then
         save the config variables into its own pickled file, and potentially add it to an existing
         dataframe defined by `df_file`.
@@ -637,6 +637,17 @@ class PINNGravityModel(tf.keras.Model):
         # add final entries to config dictionary
         #time.sleep(np.random.randint(0,5)) # Make the process sleep with hopes that it decreases the likelihood that two networks save at the same time TODO: make this a lock instead.
 
+        try:
+            self.history = history
+            self.config["x_transformer"][0] = transformers["x"]
+            self.config["u_transformer"][0] = transformers["u"]
+            self.config["a_transformer"][0] = transformers["a"]
+            self.config["a_bar_transformer"][0] = transformers["a_bar"]
+        except:
+            pass
+
+        # Save network and config information
+        
         # the default save / load directory is within the GravNN package. 
         self.save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
 
