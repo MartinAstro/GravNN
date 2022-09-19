@@ -282,7 +282,7 @@ def acceleration_masks():
     # grid_Call_m_C22.total[three_sigma_mask_compliment] = three_sigma_compliment_values
 
 
-map_vis = VisualizationBase(halt_formatting=False)
+map_vis = VisualizationBase()
 map_vis.fig_size = map_vis.half_page
 
 plt.rc('text', usetex=True)

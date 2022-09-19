@@ -15,7 +15,7 @@ def main():
     directory = os.path.abspath(".") + "/Plots/Asteroid/Eros/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization(halt_formatting=False)
+    map_vis = MapVisualization()
     map_vis.fig_size = map_vis.half_page
     map_vis.tick_interval = [60, 60]
 

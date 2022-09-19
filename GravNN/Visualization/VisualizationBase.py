@@ -1,3 +1,4 @@
+from lib2to3.pytree import convert
 import os
 from abc import ABC, abstractmethod
 
@@ -5,6 +6,14 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+
+def convert_string(string):
+    string = string.replace(".","_")
+    string = string.replace("[", "_")
+    string = string.replace("]", "_")
+    string = string.replace(" ", "")
+    string = string.replace(",", "_")
+    return string
 
 class VisualizationBase(ABC):
 
@@ -22,61 +31,65 @@ class VisualizationBase(ABC):
             self.file_directory = save_directory
 
 
+        # (width, height)
         golden_ratio = (5**.5 - 1) / 2
-        self.tri_page = (2.1, 2.1*golden_ratio)
-        self.half_page = (3, 3*golden_ratio) #
+        silver_ratio = 1/(1 + np.sqrt(2)) 
+
         self.full_page = (6.3, 6.3*golden_ratio) 
+        self.half_page = (3.15, 3.15*golden_ratio) #
+        self.tri_page = (2.1, 2.1*golden_ratio)
 
         # AAS textwidth is 6.5
-        # (width, height)
-        self.half_page = (3.25, 3.25*golden_ratio)
-        self.AIAA_full_page = (6.5, 6.5*golden_ratio)
+        if formatting_style == 'AIAA':
+            self.AIAA_full_page = (6.5, 6.5*golden_ratio)
 
-        silver_ratio = 1/(1 + np.sqrt(2))
-        self.tri_vert_page = (6.3, 6.3*silver_ratio)
+        # Set default figure size
+        self.fig_size = (5,3.5) #(3, 1.8) is half page. 
 
-        if not halt_formatting:
-            if formatting_style == "AIAA":
-                plt.rc('font', size= 10.0)
-                self.fig_size = self.AIAA_full_page
-            else:
-                plt.rc('font', size= 11.0)
-                self.fig_size = (5, 3.5)
-            plt.rc('text', usetex=True)
-            plt.rc('font', family='serif')
-            mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['blue', 'green', 'red', 'orange', 'gold',  'salmon',  'lime', 'magenta','lavender', 'yellow', 'black', 'lightblue','darkgreen', 'pink', 'brown',  'teal', 'coral',  'turquoise',  'tan', 'gold'])
-        else:
-            self.fig_size = (5,3.5) #(3, 1.8) is half page. 
+        # default figure styling
+        plt.rc('font', size= 10.0)
+        plt.rc('font', family='serif')
+        plt.rc('axes', prop_cycle=mpl.cycler(color=[
+            'blue', 'green', 'red', 
+            'orange', 'gold',  'salmon',  
+            'lime', 'magenta','lavender', 
+            'yellow', 'black', 'lightblue',
+            'darkgreen', 'pink', 'brown',  
+            'teal', 'coral',  'turquoise',  
+            'tan', 'gold']))
+        plt.rc('axes.grid', axis='both')
+        plt.rc('axes.grid', which='both')
+        plt.rc('axes', grid=True)
+        plt.rc('grid', linestyle='--')
+        plt.rc('grid', linewidth='0.1')
+        plt.rc('grid', color='.25')
+        plt.rc('text', usetex=True)
 
-         # ~ 5:3 aspect ratio
-         # (tall, wide)
-
-
+        if halt_formatting:
+            plt.rc('text', usetex=False)
+  
         return
 
     def new3DFig(self, unit='m', **kwargs):
         figsize = kwargs.get('fig_size', self.fig_size)
-        fig = plt.figure(num=None, figsize=figsize)#, dpi=200)
+        fig = plt.figure(num=None, figsize=figsize)
         ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel(r'$x$ ('+unit+r')')#, fontsize=10)
-        ax.set_ylabel(r'$y$ ('+unit+r')')#, fontsize=10)
-        ax.set_zlabel(r'$z$ ('+unit+r')')#, fontsize=10)
+        ax.set_xlabel(r'$x$ ('+unit+r')')
+        ax.set_ylabel(r'$y$ ('+unit+r')')
+        ax.set_zlabel(r'$z$ ('+unit+r')')
         # ax.xaxis.set_major_locator(plt.MaxNLocator(6))
         # ax.yaxis.set_major_locator(plt.MaxNLocator(6))
         # ax.zaxis.set_major_locator(plt.MaxNLocator(6))
         # ax.tick_params(labelsize=10)
         ax.legend(prop={'size': 10})
         ax.get_legend().remove()
-        ax.grid(linestyle="--", linewidth=0.1, color='.25', zorder=-10)
         return fig, ax
 
     def newFig(self, fig_size=None):
         if fig_size is None:
             fig_size = self.fig_size
-        fig = plt.figure(num=None, figsize=fig_size)#, dpi=200)
+        fig = plt.figure(num=None, figsize=fig_size)
         ax = fig.add_subplot(111)
-        # ax.tick_params(labelsize=10)
-        ax.grid(which='both',linestyle="--", linewidth=0.1, color='.25', zorder=-10)
         return fig, ax
 
     def save(self, fig, name):
@@ -86,21 +99,17 @@ class VisualizationBase(ABC):
             try:
                 plt.figure(fig.number)
                 plt.savefig(name, bbox_inches='tight')
-            except:
+            except Exception as e:
                 print("Couldn't save " + name)
+                print(e)
             return    
         
         # If not absolute, create a directory and save the plot
         directory = os.path.abspath(os.path.dirname(self.file_directory + name))
-        directory = directory.replace(".","_")
-        directory = directory.replace("[", "_")
-        directory = directory.replace("]", "_")
-        directory = directory.replace(" ", "")
-        directory = directory.replace(",", "_")
+        directory = convert_string(directory)
 
         filename =  os.path.basename(name)
-        if not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
+        os.makedirs(directory, exist_ok=True)
         try:
             plt.savefig(directory+"/" + filename, bbox_inches='tight')
         except:

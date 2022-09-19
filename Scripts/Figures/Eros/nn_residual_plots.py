@@ -54,7 +54,7 @@ def plot_residual_figure(df, sh_regress_files, show):
     x_train, a_train, _, _, _, _ = get_raw_data(config)
     x_sph_train, _ = get_spherical_data(x_train, a_train)
 
-    data_vis = DataVisSuite(halt_formatting=False)
+    data_vis = DataVisSuite()
     data_vis.fig_size = data_vis.tri_vert_page
     data_vis.newFig()
 

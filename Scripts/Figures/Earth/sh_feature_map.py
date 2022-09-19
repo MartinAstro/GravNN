@@ -68,7 +68,7 @@ def feature_mask(map_type):
 
 
 
-map_vis = VisualizationBase(halt_formatting=False)
+map_vis = VisualizationBase()
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

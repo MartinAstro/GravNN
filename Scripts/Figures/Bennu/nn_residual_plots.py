@@ -53,7 +53,7 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
 
-    data_vis = DataVisSuite(halt_formatting=False)
+    data_vis = DataVisSuite()
     data_vis.fig_size = data_vis.tri_vert_page
 
     planet = Bennu()

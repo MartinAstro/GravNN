@@ -16,14 +16,14 @@ from GravNN.Networks.Data import compute_input_layer_normalization_constants, co
 from GravNN.Networks.Configs import *
 
 def regress_nn_model(config):
-    from GravNN.Networks.utils import configure_tensorflow, configure_optimizer, set_mixed_precision, check_config_combos, load_hparams_to_config
+    from GravNN.Networks.utils import configure_tensorflow, configure_optimizer, set_mixed_precision, check_config_combos, populate_config_objects
     tf = configure_tensorflow()
     tf.keras.backend.clear_session()
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.Model import CustomModel
     from GravNN.Networks.Callbacks import SimpleCallback
     import time
-    load_hparams_to_config({}, config)
+    populate_config_objects({}, config)
     check_config_combos(config)
     np.random.seed(config['seed'][0])
     time.sleep(np.random.randint(0, 10))
@@ -40,8 +40,7 @@ def regress_nn_model(config):
         compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    network = load_network(config)
-    model = CustomModel(config, network)
+    model = CustomModel(config)
     model.compile(optimizer=optimizer, loss="mse")
     
     # Train network

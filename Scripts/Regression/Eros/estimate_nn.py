@@ -22,7 +22,7 @@ from GravNN.Networks.utils import (
     check_config_combos,
     configure_run_args,
     configure_tensorflow,
-    load_hparams_to_config,
+    populate_config_objects,
     set_mixed_precision,
 )
 
@@ -54,7 +54,7 @@ def get_hparams(params={}):
     hparams = args[0][1]
 
     config = copy.deepcopy(config)
-    config = load_hparams_to_config(hparams, config)
+    config = populate_config_objects(config)
 
     check_config_combos(config)
     print(config)

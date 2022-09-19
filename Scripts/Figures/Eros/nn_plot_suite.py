@@ -44,18 +44,18 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Asteroid/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization(halt_formatting=False)
+    map_vis = MapVisualization()
     map_vis.fig_size = map_vis.half_page
 
-    poly_vis = PolyVisualization(halt_formatting=False)
+    poly_vis = PolyVisualization()
 
-    data_vis = DataVisualization(halt_formatting=False)
+    data_vis = DataVisualization()
     data_vis.fig_size = data_vis.full_page
 
-    data_vis = DataVisSuite(halt_formatting=False)
+    data_vis = DataVisSuite()
     data_vis.fig_size = data_vis.full_page
 
-    map_suite = MapVisSuite(halt_formatting=False)
+    map_suite = MapVisSuite()
     map_suite.fig_size = map_suite.full_page
 
     planet = Eros()
