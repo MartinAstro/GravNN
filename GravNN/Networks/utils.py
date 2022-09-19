@@ -265,7 +265,7 @@ def _get_PI_constraint(value):
 
 
 def _get_network_fcn(name):
-    """Helper function to initialize the network used in the CustomModel
+    """Helper function to initialize the network used in the PINNGravityModel
 
     Args:
         name (str): network type (e.g. traditional, sph_traditional, sph_pines_transformer)
@@ -340,7 +340,7 @@ def _get_tf_dtype(name):
 
 def populate_config_objects(config):
     """Primary helper function used to convert any strings within the hyperparameter config dictionary
-    into the necessary tensorflow objects that will be used in the CustomModel
+    into the necessary tensorflow objects that will be used in the PINNGravityModel
 
     Args:
         hparams (dict): dictionary of hyperparameters to overload in the config
@@ -414,7 +414,7 @@ def get_gzipped_model_size(model):
     """Get size of gzipped model in bytes
 
     Args:
-        model (CustomModel): custom Tf model
+        model (PINNGravityModel): custom Tf model
 
     Returns:
         int: size in bytes

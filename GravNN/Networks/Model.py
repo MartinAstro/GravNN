@@ -15,7 +15,7 @@ import GravNN
 np.random.seed(1234)
 
 
-class CustomModel(tf.keras.Model):
+class PINNGravityModel(tf.keras.Model):
     # Initialize the class
     def __init__(self, config):
         """Custom Keras model that encapsulates the actual PINN as well as other relevant
@@ -30,7 +30,7 @@ class CustomModel(tf.keras.Model):
             network (keras.Model): the actual network that will be trained.
         """
         self.variable_cast = config.get("dtype", [tf.float32])[0]
-        super(CustomModel, self).__init__(dtype=self.variable_cast)
+        super(PINNGravityModel, self).__init__(dtype=self.variable_cast)
         self.config = config
         self.network = load_network(config)
         self.mixed_precision = tf.constant(
@@ -725,7 +725,7 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
         configuration parameters of interest.
 
     Returns:
-        tuple: configuration/hyperparameter dictionary, compiled CustomModel
+        tuple: configuration/hyperparameter dictionary, compiled PINNGravityModel
     """
     data_dir = f"{os.path.dirname(GravNN.__file__)}/../Data/"
     if custom_data_dir is not None:
@@ -747,7 +747,7 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     network = tf.keras.models.load_model(
         f"{data_dir}/Networks/{model_id}/network"
     )
-    model = CustomModel(config, network)
+    model = PINNGravityModel(config, network)
     optimizer = utils._get_optimizer(config["optimizer"][0])
     model.compile(optimizer=optimizer, loss="mse") 
 

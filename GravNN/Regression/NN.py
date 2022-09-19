@@ -17,7 +17,7 @@ from GravNN.Networks.utils import (
 )
 from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
-from GravNN.Networks.Model import CustomModel
+from GravNN.Networks.Model import PINNGravityModel
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Schedules import get_schedule
@@ -39,7 +39,7 @@ class NN:
         self.config = config
         optimizer = configure_optimizer(config, mixed_precision=None)
         network = load_network(config)
-        model = CustomModel(config, network)
+        model = PINNGravityModel(config, network)
         model.compile(optimizer=optimizer, loss="mse")
         self.model = model
 

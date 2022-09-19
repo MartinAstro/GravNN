@@ -68,7 +68,7 @@ We'll keep it simple for now and use the `get_earth_default_config` dictionary w
     compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    model = CustomModel(config)
+    model = PINNGravityModel(config)
     model.compile(optimizer=optimizer, loss="mse")
 
     # Train network

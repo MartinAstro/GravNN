@@ -8,7 +8,7 @@ from GravNN.Trajectories import DHGridDist, SurfaceDist, RandomAsteroidDist
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks.Model import CustomModel, load_config_and_model
+from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def evaluate_network_error(model, trajectory, a_true,):

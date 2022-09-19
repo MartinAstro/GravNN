@@ -80,7 +80,7 @@ class PlanetAnalyzer():
         given the networks mean RSE both at the Brillouin sphere and at a specified altitude. 
 
         Args:
-            model (CustomModel): compiled keras model containing network and associated functions
+            model (PINNGravityModel): compiled keras model containing network and associated functions
             config (dict): hyperparameter and configuration dictionary for model
         """
         self.config = config

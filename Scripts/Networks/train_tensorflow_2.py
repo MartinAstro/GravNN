@@ -76,7 +76,7 @@ def run(config_original, hparams):
     )
     from GravNN.Networks.Callbacks import SimpleCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
-    from GravNN.Networks.Model import CustomModel
+    from GravNN.Networks.Model import PINNGravityModel
     from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
@@ -103,7 +103,7 @@ def run(config_original, hparams):
     train_data, val_data, transformers = get_preprocessed_data(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    model = CustomModel(config)
+    model = PINNGravityModel(config)
     model.compile(optimizer=optimizer, loss="mse")
     
     # Train network

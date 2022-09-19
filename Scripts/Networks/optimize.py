@@ -17,7 +17,7 @@ import tensorflow as tf
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks import utils
-from GravNN.Networks.Model import CustomModel, load_config_and_model
+from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 from GravNN.Networks.Data import generate_dataset, training_validation_split
 from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration
@@ -108,7 +108,7 @@ def main():
         val_dataset = generate_dataset(x_val, y_val, config['batch_size'][0])
 
         #network = tf.keras.models.load_model(os.path.abspath('.') +"/Data/Networks/"+str(config['init_file'][0])+"/network")
-        #model = CustomModel(config, network)
+        #model = PINNGravityModel(config, network)
 
         #optimizer = config['optimizer'][0]
         #optimizer = mixed_precision.LossScaleOptimizer(optimizer, loss_scale='dynamic')

@@ -11,7 +11,7 @@ import scipy.io
 import tensorflow as tf
 #import tensorflow_model_optimization as tfmot
 from GravNN.CelestialBodies.Planets import Earth, Moon
-from GravNN.Networks.Model import CustomModel, load_config_and_model
+from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Trajectories import DHGridDist

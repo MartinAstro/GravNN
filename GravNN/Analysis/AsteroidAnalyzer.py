@@ -17,7 +17,7 @@ class AsteroidAnalyzer:
         1) at the surface, 2) within the Brillouin sphere, and 3) outside the brillouin sphere
 
         Args:
-            model (CustomModel): PINN gravity model to be evaluated
+            model (PINNGravityModel): PINN gravity model to be evaluated
             config (dict): hyperparameter and configuration settings for model
             interior_bound (float): interior radius limit (typically the brillouin radius)
             exterior_bound (float): exterior radius limit (ex. LEO altitude for Earth)

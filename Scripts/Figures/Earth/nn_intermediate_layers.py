@@ -12,7 +12,7 @@ from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                      get_sh_data)
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import no_pinn, pinn_A
-from GravNN.Networks.Model import CustomModel, load_config_and_model
+from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 from GravNN.Trajectories import DHGridDist
 from GravNN.Visualization.MapVisualization import MapVisualization
 
@@ -171,7 +171,7 @@ def load_config_and_model(model_id, df_file):
         config['lr_anneal'] = [False]
     # Reinitialize the model
     network = tf.keras.models.load_model('C:\\Users\\John\\Documents\\Research\\ML_Gravity' + "/Data/Networks/"+str(model_id)+"/network")
-    model = CustomModel(config, network)
+    model = PINNGravityModel(config, network)
     optimizer = utils._get_optimizer(config['optimizer'][0])
     model.compile(optimizer=optimizer, loss='mse') #! Check that this compile is even necessary
 

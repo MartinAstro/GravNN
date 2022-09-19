@@ -20,7 +20,7 @@ def regress_nn_model(config):
     tf = configure_tensorflow()
     tf.keras.backend.clear_session()
     from GravNN.Networks.Networks import load_network
-    from GravNN.Networks.Model import CustomModel
+    from GravNN.Networks.Model import PINNGravityModel
     from GravNN.Networks.Callbacks import SimpleCallback
     import time
     populate_config_objects({}, config)
@@ -40,7 +40,7 @@ def regress_nn_model(config):
         compute_input_layer_normalization_constants(config)
     dataset, val_dataset = configure_dataset(train_data, val_data, config)
     optimizer = configure_optimizer(config, mixed_precision)
-    model = CustomModel(config)
+    model = PINNGravityModel(config)
     model.compile(optimizer=optimizer, loss="mse")
     
     # Train network

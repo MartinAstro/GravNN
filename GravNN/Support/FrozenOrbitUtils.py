@@ -58,9 +58,9 @@ def main():
     mu = 1.1e14
     OE = tf.convert_to_tensor([[1.1E7, 0.1, np.pi/3, np.pi/3, 0.0, 0.0]])
 
-    r, v = trad2cart_tf(f, mu, OE)
-    print(r)
-    print(v)
+    cart_state = trad2cart_tf(f, mu, OE)
+    print(cart_state[:,0:3])
+    print(cart_state[:,3:6])
 
 if __name__ == "__main__":
     main()
