@@ -272,7 +272,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         one = tf.constant(1.0, dtype=r.dtype)
         r_inv = tf.divide(one, r)
         # spheres = tf.stack([r_inv, s, t, u], axis=1)
-        spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
+        spheres = tf.stack([r_inv, s, t, u], axis=1)
+        # spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
 
         # r_inv = tf.divide(1,r)
         # r_tanh = tf.keras.activations.tanh(r)

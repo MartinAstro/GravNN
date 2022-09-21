@@ -308,6 +308,34 @@ def get_preprocessed_data(config):
         # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
         # ref_r_vec = x_transformer.transform(ref_r_vec)
         # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+    elif config["scale_by"][0] == "non_dim_v2":
+        """
+        non-dimensionalize by units, not by values
+        x = x_tilde / x_star # length
+        m = m_tilde / m_star # mass
+        t = t_tilde / t_star # time
+        """
+
+        x_star = 10**np.mean(np.log10(np.linalg.norm(x_train,axis=1))) # average magnitude 
+
+        # scale time coordinate based on what makes the accelerations behave nicely
+        a_star = 10**np.mean(np.log10(np.linalg.norm(a_train,axis=1))) # average magnitude acceleration
+        a_star_tmp = a_star / x_star 
+        t_star = np.sqrt(1 / a_star_tmp)
+
+        x_train = x_transformer.fit_transform(x_train, scaler=1/x_star)
+        a_train = a_transformer.fit_transform(a_train, scaler=1/(x_star/t_star**2))
+        u_train = u_transformer.fit_transform(u_train, scaler=1/(x_star/t_star)**2)
+
+        u3vec = np.repeat(u_val, 3, axis=1)
+
+        x_val = x_transformer.transform(x_val)
+        a_val = a_transformer.transform(a_val)
+        u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+        # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+        # ref_r_vec = x_transformer.transform(ref_r_vec)
+        # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
 
     elif config["scale_by"][0] == "none":
         x_transformer = config["dummy_transformer"][0]
