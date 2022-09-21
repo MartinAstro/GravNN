@@ -17,7 +17,7 @@ np.random.seed(1234)
 
 class PINNGravityModel(tf.keras.Model):
     # Initialize the class
-    def __init__(self, config):
+    def __init__(self, config, network=None):
         """Custom Keras model that encapsulates the actual PINN as well as other relevant
         configuration information, and helper functions. This includes all
         training loops, methods to get all (or specific) outputs from the network, and additional
@@ -32,7 +32,10 @@ class PINNGravityModel(tf.keras.Model):
         self.variable_cast = config.get("dtype", [tf.float32])[0]
         super(PINNGravityModel, self).__init__(dtype=self.variable_cast)
         self.config = config
-        self.network = load_network(config)
+        if network is None:
+            self.network = load_network(config)
+        else:
+            self.network = network
         self.mixed_precision = tf.constant(
             self.config["mixed_precision"][0], dtype=tf.bool
         )
@@ -450,10 +453,20 @@ class PINNGravityModel(tf.keras.Model):
             jacobian = self._pinn_acceleration_jacobian(x)
         else:
             jacobian = self._nn_acceleration_jacobian(x)
-        x_scale = x_transformer.scale_
-        u_scale = u_transformer.scale_
-        scale = x_scale**2/u_scale
-        jacobian = jacobian*scale
+
+        l_star = 1/x_transformer.scale_
+
+        # a_transformer.scale_ = (1 / (l_star / t_star**2))
+        # l_star/t_star**2 = 1/a_transformer.scale_
+        # t_star**2/l_star = a_transformer.scale_
+        # t_star = np.sqrt(a_transformer.scale_*l_star)
+
+        t_star = np.sqrt(a_transformer.scale_*l_star)
+        jacobian /= t_star**2
+        # x_scale = x_transformer.scale_
+        # u_scale = u_transformer.scale_
+        # scale = x_scale**2/u_scale
+        # jacobian = jacobian*scale
         return jacobian
 
 

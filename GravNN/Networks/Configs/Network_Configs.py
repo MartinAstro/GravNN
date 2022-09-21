@@ -39,6 +39,7 @@ def PINN_I():
         'num_units' : [20],
         'jit_compile' : [False],
         'ref_radius' : [1.0],
+        'eager' : [False]
     }
     return network_config
 

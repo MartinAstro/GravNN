@@ -20,7 +20,7 @@ def configure_tensorflow(hparams):
     tf = set_tf_expand_memory()
     tf.keras.backend.clear_session()
     tf.random.set_seed(hparams['seed'][0])
-    tf.config.run_functions_eagerly(False)
+    tf.config.run_functions_eagerly(hparams['eager'][0])
     mixed_precision = set_mixed_precision() if hparams['mixed_precision'][0] else None
 
     return tf, mixed_precision

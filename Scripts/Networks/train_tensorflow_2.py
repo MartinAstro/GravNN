@@ -19,6 +19,7 @@ def main():
     df_file = "Data/Dataframes/eros_point_mass.data" 
     df_file = "Data/Dataframes/eros_point_mass_v2.data" 
     df_file = "Data/Dataframes/eros_point_mass_v3.data" 
+    df_file = "Data/Dataframes/eros_point_mass_v4.data" 
     # df_file = "Data/Dataframes/eros_point_mass_alc.data" 
     config = get_default_eros_config()
     # config = get_default_earth_config()
@@ -54,7 +55,9 @@ def main():
         # "init_file" : [2459811.101574074] #PM PINN-A
         # "init_file" : [2459816.249097222], #PM PINN-A
         "jit_compile" : [False],
-        "dtype" : ['float64']
+        "dtype" : ['float64'],
+        "scale_by" : ['non_dim_v2'],
+        "eager" : [False]
     }
 
 
@@ -66,7 +69,7 @@ def main():
     save_training(df_file, configs)
 
 
-def run(config_original, hparams):
+def run(config):
     import copy
     import numpy as np
     from GravNN.Networks.utils import (
@@ -81,22 +84,10 @@ def run(config_original, hparams):
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
 
-    tf = configure_tensorflow()
-    mixed_precision = set_mixed_precision() if config_original['mixed_precision'][0] else None
-    try:
-        np.random.seed(hparams['seed'])
-        tf.random.set_seed(hparams['seed'])
-    except:
-        np.random.seed(config_original['seed'][0])
-        tf.random.set_seed(config_original['seed'][0])
-    tf.config.run_functions_eagerly(False)
-    tf.keras.backend.clear_session()
+    tf, mixed_precision = configure_tensorflow(config)
 
     # Standardize Configuration
-    config = copy.deepcopy(config_original)
     config = populate_config_objects(config)
-
-    check_config_combos(config)
     print(config)
 
     # Get data, network, optimizer, and generate model
