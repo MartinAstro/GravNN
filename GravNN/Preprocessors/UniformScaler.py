@@ -35,6 +35,7 @@ class UniformScaler:
         if self.scaler is not None:
             X = data * self.scaler
             self.scale_ = self.scaler
+            self.min_ = 0.0
         else:
             X = data * self.scale_ + self.min_
         return X
