@@ -3,7 +3,11 @@
 import tensorflow as tf
 
 # signature needed to load a prior ALC network
-@tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3))])
+@tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3), dtype=tf.float32)])
+def laplacian(u_xx):
+    return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+
+@tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3), dtype=tf.float64)])
 def laplacian(u_xx):
     return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
 
@@ -80,7 +84,8 @@ def pinn_AP(f, x, training):
         tape.watch(x)
         u = f(x, training)
     u_x = tape.gradient(u, x)
-    return tf.concat((u, tf.multiply(-1.0, u_x)), 1)
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+    return tf.concat((u, accel), 1)
 
 
 def pinn_AL(f, x, training):
@@ -91,12 +96,14 @@ def pinn_AL(f, x, training):
             u = f(x, training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
     # It does in 2.5, but there is a known issue for the implimentation: https://www.tensorflow.org/xla/known_issues?hl=nb
     # The while_loop needs to be bounded
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     laplace = laplacian(u_xx)
-    return tf.concat((tf.multiply(-1.0, u_x), laplace), 1)
+    return tf.concat((accel, laplace), 1)
 
 
 def pinn_ALC(f, x, training):
@@ -108,6 +115,8 @@ def pinn_ALC(f, x, training):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
     laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
@@ -115,7 +124,7 @@ def pinn_ALC(f, x, training):
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return tf.concat((tf.multiply(-1.0, u_x), laplace, curl), 1)
+    return tf.concat((accel, laplace, curl), 1)
 
 
 def pinn_APL(f, x, training):
@@ -126,10 +135,12 @@ def pinn_APL(f, x, training):
             u = f(x, training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
     laplace = laplacian(u_xx)
-    return tf.concat((u, tf.multiply(-1.0, u_x), laplace), 1)
+    return tf.concat((u, accel, laplace), 1)
 
 
 def pinn_APLC(f, x, training):
@@ -141,6 +152,8 @@ def pinn_APLC(f, x, training):
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
     laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
@@ -149,4 +162,4 @@ def pinn_APLC(f, x, training):
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
-    return tf.concat((u, tf.multiply(-1.0, u_x), laplace, curl), 1)
+    return tf.concat((u, accel, laplace, curl), 1)
