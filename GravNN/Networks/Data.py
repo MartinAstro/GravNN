@@ -178,6 +178,261 @@ def get_raw_data(config):
     return x_train, a_train, u_train, x_val, a_val, u_val
 
 
+def add_error(data_dict, percent_noise):
+
+    a_train = data_dict['a_train']
+
+    a_mag = np.linalg.norm(a_train, axis=1).reshape(len(a_train),1)
+    a_unit = np.random.uniform(-1,1, size=np.shape(a_train))
+    a_unit = a_unit / np.linalg.norm(a_unit, axis=1).reshape(len(a_unit), 1)
+    a_error = percent_noise*a_mag*a_unit # 10% of the true magnitude 
+    a_train = a_train + a_error
+    data_dict['a_train'] = a_train
+
+    return data_dict
+
+def scale_by_acceleration(data_dict, config):
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    # Scale (a,u) with a_transformer
+    x_train = x_transformer.fit_transform(data_dict["x_train"])
+    a_train = a_transformer.fit_transform(data_dict["a_train"])
+    u_train = a_transformer.transform(np.repeat(data_dict["u_train"], 3, axis=1))[:, 0].reshape(
+        (-1, 1)
+    )
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = a_transformer.transform(data_dict["a_val"])
+    u_val = a_transformer.transform(np.repeat(data_dict["u_val"], 3, axis=1))[:, 0].reshape(
+        (-1, 1)
+    )
+    u_transformer = a_transformer
+
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def scale_by_potential(data_dict, config):
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    # Scale (a,u) with u_transformer
+    x_train = x_transformer.fit_transform(data_dict["x_train"])
+    u_train = u_transformer.fit_transform(np.repeat(data_dict["u_train"], 3, axis=1))[
+        :, 0
+    ].reshape((-1, 1))
+    a_train = u_transformer.transform(data_dict["a_train"])
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = u_transformer.transform(data_dict["a_val"])
+    u_val = u_transformer.transform(np.repeat(data_dict["u_val"], 3, axis=1))[:, 0].reshape(
+        (-1, 1)
+    )
+    a_transformer = u_transformer
+
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def scale_by_non_dimensional(data_dict, config):
+    """
+    x_bar = (x-x0)/xs
+    u_bar = (u-u0)/us
+
+    The acceleration is a byproduct of the potential so
+
+    a_bar = du_bar/dx_bar
+
+    but this equates to
+
+    a_bar = d((u-u0)/us)/dx_bar = d(u/us)/dx_bar = 1/us*du/dx_bar = 1/us *du/(d((x-x0)/xs)) = 1/us * du/d(x/xs) = xs/us * du/dx = xs/us * a
+
+    such that a_bar exists in [-1E2, 1E2] rather than [-1,1]
+    """
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    # Designed to make position, acceleration, and potential all exist between [-1,1]
+    x_train = x_transformer.fit_transform(data_dict["x_train"])
+    u_train = u_transformer.fit_transform(np.repeat(data_dict["u_train"], 3, axis=1))[
+        :, 0
+    ].reshape((-1, 1))
+
+    # Scale the acceleration by the potential
+    scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
+    a_bar = a_transformer.fit_transform(data_dict["a_train"], scaler=scaler)  # this is a_bar
+    a_bar_transformer.fit(a_bar)
+    a_train = a_bar  # this should be on the order of [-100, 100]
+    config["a_bar_transformer"] = [a_bar_transformer]
+
+    u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = a_transformer.transform(data_dict["a_val"])
+    u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+    ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+    ref_r_vec = x_transformer.transform(ref_r_vec)
+    config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def scale_by_non_dimensional_radius(data_dict, config):
+
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    # Scale positions by the radius of the planet
+    x_train = x_transformer.fit_transform(data_dict["x_train"], scaler=1/(config['planet'][0].radius))
+    u_train = u_transformer.fit_transform(np.repeat(data_dict["u_train"], 3, axis=1))[
+        :, 0
+    ].reshape((-1, 1))
+
+    # Scale the acceleration by the potential
+    scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
+    a_bar = a_transformer.fit_transform(data_dict["a_train"], scaler=scaler)  # this is a_bar
+    a_bar_transformer.fit(a_bar)
+    a_train = a_bar  # this should be on the order of [-100, 100]
+    config["a_bar_transformer"] = [a_bar_transformer]
+
+    u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = a_transformer.transform(data_dict["a_val"])
+    u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+    # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+    # ref_r_vec = x_transformer.transform(ref_r_vec)
+    # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def scale_by_constants(data_dict, config):
+
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    """
+    non-dimensionalize by units, not by values
+    x = x_tilde / x_star # length
+    m = m_tilde / m_star # mass
+    t = t_tilde / t_star # time
+    """
+
+    x_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["x_train"],axis=1))) # average magnitude 
+
+    # scale time coordinate based on what makes the accelerations behave nicely
+    a_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["a_train"],axis=1))) # average magnitude acceleration
+    a_star_tmp = a_star / x_star 
+    t_star = np.sqrt(1 / a_star_tmp)
+
+    x_train = x_transformer.fit_transform(data_dict["x_train"], scaler=1/x_star)
+    a_train = a_transformer.fit_transform(data_dict["a_train"], scaler=1/(x_star/t_star**2))
+    u_train = u_transformer.fit_transform(data_dict["u_train"], scaler=1/(x_star/t_star)**2)
+
+    u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = a_transformer.transform(data_dict["a_val"])
+    u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def no_scale(data_dict, config):
+    x_transformer = config["dummy_transformer"][0]
+    a_transformer = config["dummy_transformer"][0]
+    u_transformer = config["dummy_transformer"][0]
+    a_bar_transformer = config["dummy_transformer"][0]
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
 def get_preprocessed_data(config):
     """Function responsible for normalizing the training data. Possible options include
     normalizing by the bounds of the acceleration, the potential, neither, or in a manner that non-
@@ -190,157 +445,39 @@ def get_preprocessed_data(config):
     print_stats(a_train, "Acceleration")
     print_stats(u_train, "Potential")
 
-    a_mag = np.linalg.norm(a_train, axis=1).reshape(len(a_train),1)
-    a_unit = np.random.uniform(-1,1, size=np.shape(a_train))
-    a_unit = a_unit / np.linalg.norm(a_unit, axis=1).reshape(len(a_unit), 1)
-    a_error = config['acc_noise'][0]*a_mag*a_unit # 10% of the true magnitude 
-    a_train = a_train + a_error
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    data_dict = add_error(
+        data_dict, config['acc_noise'][0]
+    )
 
     # Preprocessing
-    x_transformer = config["x_transformer"][0]
-    a_transformer = config["a_transformer"][0]
-    u_transformer = config["u_transformer"][0]
-
-    a_bar_transformer = copy.deepcopy(config["a_transformer"][0])
-
-    if config["scale_by"][0] == "a":
-        # Scale (a,u) with a_transformer
-        x_train = x_transformer.fit_transform(x_train)
-        a_train = a_transformer.fit_transform(a_train)
-        u_train = a_transformer.transform(np.repeat(u_train, 3, axis=1))[:, 0].reshape(
-            (-1, 1)
-        )
-
-        x_val = x_transformer.transform(x_val)
-        a_val = a_transformer.transform(a_val)
-        u_val = a_transformer.transform(np.repeat(u_val, 3, axis=1))[:, 0].reshape(
-            (-1, 1)
-        )
-        u_transformer = a_transformer
+    if config["scale_by"][0] == "a":   
+        data_dict, transformers = scale_by_acceleration(data_dict, config)
     elif config["scale_by"][0] == "u":
-        # Scale (a,u) with u_transformer
-        x_train = x_transformer.fit_transform(x_train)
-        u_train = u_transformer.fit_transform(np.repeat(u_train, 3, axis=1))[
-            :, 0
-        ].reshape((-1, 1))
-        a_train = u_transformer.transform(a_train)
-
-        x_val = x_transformer.transform(x_val)
-        a_val = u_transformer.transform(a_val)
-        u_val = u_transformer.transform(np.repeat(u_val, 3, axis=1))[:, 0].reshape(
-            (-1, 1)
-        )
-        a_transformer = u_transformer
+        data_dict, transformers = scale_by_potential(data_dict, config)
     elif config["scale_by"][0] == "non_dim":
-        """
-        x_bar = (x-x0)/xs
-        u_bar = (u-u0)/us
-
-        The acceleration is a byproduct of the potential so
-
-        a_bar = du_bar/dx_bar
-
-        but this equates to
-
-        a_bar = d((u-u0)/us)/dx_bar = d(u/us)/dx_bar = 1/us*du/dx_bar = 1/us *du/(d((x-x0)/xs)) = 1/us * du/d(x/xs) = xs/us * du/dx = xs/us * a
-
-        such that a_bar exists in [-1E2, 1E2] rather than [-1,1]
-        """
-
-        # Designed to make position, acceleration, and potential all exist between [-1,1]
-        x_train = x_transformer.fit_transform(x_train)
-        u_train = u_transformer.fit_transform(np.repeat(u_train, 3, axis=1))[
-            :, 0
-        ].reshape((-1, 1))
-
-        # Scale the acceleration by the potential
-        scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
-        a_bar = a_transformer.fit_transform(a_train, scaler=scaler)  # this is a_bar
-        a_bar_transformer.fit(a_bar)
-        a_train = a_bar  # this should be on the order of [-100, 100]
-        config["a_bar_transformer"] = [a_bar_transformer]
-
-        u3vec = np.repeat(u_val, 3, axis=1)
-
-        x_val = x_transformer.transform(x_val)
-        a_val = a_transformer.transform(a_val)
-        u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
-
-        ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
-        ref_r_vec = x_transformer.transform(ref_r_vec)
-        config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
-
+        data_dict, transformers = scale_by_non_dimensional(data_dict, config)
     elif config["scale_by"][0] == "non_dim_radius":
-        """
-        x_bar = (x-x0)/xs
-        u_bar = (u-u0)/us
-
-        The acceleration is a byproduct of the potential so
-
-        a_bar = du_bar/dx_bar
-
-        but this equates to
-
-        a_bar = d((u-u0)/us)/dx_bar = d(u/us)/dx_bar = 1/us*du/dx_bar = 1/us *du/(d((x-x0)/xs)) = 1/us * du/d(x/xs) = xs/us * du/dx = xs/us * a
-
-        such that a_bar exists in [-1E2, 1E2] rather than [-1,1]
-        """
-
-        # Scale positions by the radius of the planet
-        x_train = x_transformer.fit_transform(x_train, scaler=1/(config['planet'][0].radius))
-        u_train = u_transformer.fit_transform(np.repeat(u_train, 3, axis=1))[
-            :, 0
-        ].reshape((-1, 1))
-
-        # Scale the acceleration by the potential
-        scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
-        a_bar = a_transformer.fit_transform(a_train, scaler=scaler)  # this is a_bar
-        a_bar_transformer.fit(a_bar)
-        a_train = a_bar  # this should be on the order of [-100, 100]
-        config["a_bar_transformer"] = [a_bar_transformer]
-
-        u3vec = np.repeat(u_val, 3, axis=1)
-
-        x_val = x_transformer.transform(x_val)
-        a_val = a_transformer.transform(a_val)
-        u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
-
-        # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
-        # ref_r_vec = x_transformer.transform(ref_r_vec)
-        # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+        data_dict, transformers = scale_by_non_dimensional_radius(data_dict, config)
     elif config["scale_by"][0] == "non_dim_v2":
-        """
-        non-dimensionalize by units, not by values
-        x = x_tilde / x_star # length
-        m = m_tilde / m_star # mass
-        t = t_tilde / t_star # time
-        """
-
-        x_star = 10**np.mean(np.log10(np.linalg.norm(x_train,axis=1))) # average magnitude 
-
-        # scale time coordinate based on what makes the accelerations behave nicely
-        a_star = 10**np.mean(np.log10(np.linalg.norm(a_train,axis=1))) # average magnitude acceleration
-        a_star_tmp = a_star / x_star 
-        t_star = np.sqrt(1 / a_star_tmp)
-
-        x_train = x_transformer.fit_transform(x_train, scaler=1/x_star)
-        a_train = a_transformer.fit_transform(a_train, scaler=1/(x_star/t_star**2))
-        u_train = u_transformer.fit_transform(u_train, scaler=1/(x_star/t_star)**2)
-
-        u3vec = np.repeat(u_val, 3, axis=1)
-
-        x_val = x_transformer.transform(x_val)
-        a_val = a_transformer.transform(a_val)
-        u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
-
-        # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
-        # ref_r_vec = x_transformer.transform(ref_r_vec)
-        # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
-
+        data_dict, transformers = scale_by_constants(data_dict, config)
     elif config["scale_by"][0] == "none":
-        x_transformer = config["dummy_transformer"][0]
-        a_transformer = config["dummy_transformer"][0]
-        u_transformer = config["dummy_transformer"][0]
+        data_dict, transformers = no_scale(data_dict, config)
+        
+    x_train = data_dict["x_train"]
+    a_train = data_dict["a_train"]
+    u_train = data_dict["u_train"]
+    x_val = data_dict["x_val"]
+    a_val = data_dict["a_val"]
+    u_val = data_dict["u_val"]
 
     print_stats(x_train, "Scaled Position")
     print_stats(a_train, "Scaled Acceleration")
@@ -351,13 +488,6 @@ def get_preprocessed_data(config):
 
     curl_train = np.zeros((np.shape(a_train)))
     curl_val = np.zeros((np.shape(a_val)))
-
-    transformers = {
-        "x": x_transformer,
-        "a": a_transformer,
-        "u": u_transformer,
-        "a_bar": a_bar_transformer,
-    }
 
     compute_input_layer_normalization_constants(config)
 
