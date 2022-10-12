@@ -59,8 +59,12 @@ class PlanesExperiment:
         self.a_test = a
         self.u_test = u
 
-    def get_PINN_data(self):
-        positions = self.x_test.astype(self.model.network.compute_dtype)
+    def get_model_data(self):
+        try:
+            dtype = self.model.network.compute_dtype
+        except:
+            dtype = float
+        positions = self.x_test.astype(dtype)
         self.a_pred =  self.model.generate_acceleration(positions)
         self.u_pred =  self.model.generate_potential(positions)
 
@@ -124,7 +128,7 @@ class PlanesExperiment:
     def run(self):
         self.get_train_data()
         self.get_test_data()
-        self.get_PINN_data()
+        self.get_model_data()
         self.compute_percent_error()
         self.compute_RMS()
         self.compute_loss()
