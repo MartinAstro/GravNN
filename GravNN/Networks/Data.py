@@ -402,6 +402,11 @@ def scale_by_constants(data_dict, config):
     a_val = a_transformer.transform(data_dict["a_val"])
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
+    ref_radius = config.get('ref_radius', [None])[0]
+    if ref_radius is not None:
+        ref_radius_normalized = x_transformer.transform(np.full((1,3), ref_radius))[0,0]
+        config['ref_radius'] = [ref_radius_normalized]
+
     data_dict = {
         "x_train" : x_train,
         "a_train" : a_train,

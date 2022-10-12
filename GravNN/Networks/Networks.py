@@ -10,7 +10,6 @@ import tensorflow as tf
 import os
 import warnings
 
-
 def load_network(config):
     if config["init_file"][0] is not None:
         network = tf.keras.models.load_model(
@@ -342,97 +341,6 @@ def ResNet(**kwargs):
     return model
 
 
-def InceptionNet(layers, activation, **kwargs):
-    """Inception network. Legacy
-
-    TODO: fix keyword acquisition such that some parameters can be optional.
-
-    Args:
-        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
-        layer with 10 nodes, followed by a second layer with 10, ...)
-        activation (str): non-linear activation function to be used
-        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
-    Returns:
-        tf.keras.Model: densely connected network with inception blocks
-    """
-    warnings.warn(
-        "InceptionNet is outdated and needs refactoring.", warnings.DepreciationWarning
-    )
-    dtype = kwargs["dtype"][0]
-
-    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
-    initializer = kwargs["initializer"][0]
-
-    x = inputs
-    for i in range(1, len(layers) - 1):
-        tensors = []
-        for j in range(0, len(layers[i])):
-            x_j = tf.keras.layers.Dense(
-                units=layers[i][j],
-                activation=activation,
-                kernel_initializer=initializer,
-            )(x)
-            tensors.append(x_j)
-        x = tf.keras.layers.Concatenate(axis=1)(tensors)
-        x = tf.keras.layers.Activation(activation)(x)
-
-    outputs = tf.keras.layers.Dense(
-        units=layers[-1], activation="linear", kernel_initializer=initializer
-    )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    super(tf.keras.Model, model).__init__(dtype=dtype)
-
-    return model
-
-
-def DenseNet(layers, activation, **kwargs):
-    """Dense network. Legacy
-
-    TODO: fix keyword acquisition such that some parameters can be optional.
-
-    Args:
-        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
-        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
-    Returns:
-        tf.keras.Model: densely connected network with inception blocks
-    """
-    warnings.warn(
-        "DenseNet is outdated and needs refactoring.", warnings.DepreciationWarning
-    )
-    dtype = kwargs["dtype"][0]
-
-    inputs = tf.keras.Input(shape=(layers[0],))
-    initializer = kwargs["initializer"][0]
-
-    x = inputs
-    for i in range(1, len(layers) - 1):
-        tensors = []
-        tensors.append(x)
-        if len(layers[i]) > 1:
-            for j in range(0, len(layers[i])):
-                y = tf.keras.layers.Dense(
-                    units=layers[i][j],
-                    activation=activation,
-                    kernel_initializer=initializer,
-                )(x)
-                tensors.append(y)
-                x = tf.keras.layers.Concatenate(axis=1)(tensors)
-        else:
-            x = tf.keras.layers.Dense(
-                units=layers[i][0],
-                activation=activation,
-                kernel_initializer=initializer,
-            )(x)
-
-    outputs = tf.keras.layers.Dense(
-        units=layers[-1], activation="linear", kernel_initializer=initializer
-    )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    super(tf.keras.Model, model).__init__(dtype=dtype)
-
-    return model
-
-
 def SphericalPinesTraditionalNet_v2(**kwargs):
     """Densely connected neural network that will convert inputs into 4D spherical coordinates
     before proceeding into the network.
@@ -521,11 +429,12 @@ def SphericalPinesTransformerNet_v2(**kwargs):
     initializer = kwargs["initializer"][0]
     dtype = kwargs.get("dtype", [tf.float32])[0]
     transformer_units = kwargs["num_units"][0]
+    ref_radius = kwargs.get('ref_radius', [None])[0]
 
 
     inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
     x = Cart2PinesSphLayer(dtype)(inputs)
-    x = PinesSph2NetLayer_v2(dtype)(x)
+    x = PinesSph2NetLayer_v2(dtype, ref_radius=ref_radius)(x)
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(

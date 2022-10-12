@@ -1,3 +1,4 @@
+from asyncio import constants
 import tensorflow as tf
 import numpy as np
 
@@ -44,8 +45,6 @@ class PostprocessingLayer(tf.keras.layers.Layer):
         )
         return config
 
-
-
 class Cart2SphLayer(tf.keras.layers.Layer):
     def __init__(self, dtype):
         """Layer responsible for taking cartesian inputs and converting
@@ -86,7 +85,6 @@ class Cart2SphLayer(tf.keras.layers.Layer):
             }
         )
         return config
-
 
 class Sph2NetLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, scalers, mins):
@@ -132,7 +130,6 @@ class Sph2NetLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
-
 class Cart2PinesSphLayer(tf.keras.layers.Layer):
     def __init__(self, dtype):
         """Successor to the Cart2SphLayer. The layer takes a
@@ -168,7 +165,6 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
     def get_config(self):
         config = super().get_config().copy()
         return config
-
 
 class PinesSph2NetLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, scalers, mins, ref_radius):
@@ -211,7 +207,6 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
-
 class PinesSph2NetRefLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, scalers, mins, ref_radius):
         """Layer used to normalize the r value of the Cart2PinesSphLayer
@@ -250,16 +245,14 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
         return config
 
 class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
-    def __init__(self, dtype):
-        """Layer used to normalize the r value of the Cart2PinesSphLayer
-        between the values of [-1,1]
-
-        Args:
-                input_dim (None): Invalid input (ignore) TODO: remove
-                scalers (np.array): values used to scale each input quantity. These are computed before initialization
-                mins (np.array): values used to bias each input before scaling. These are computed before initialization
-        """
+    def __init__(self, dtype, ref_radius=None):
         super(PinesSph2NetLayer_v2, self).__init__(dtype=dtype)
+
+        # normalize the radius by R_ref or not at all. 
+        self.constant = tf.cond(ref_radius != None, 
+                        lambda : tf.constant(ref_radius, dtype=dtype), 
+                        lambda : tf.constant(1.0, dtype=dtype)).numpy()
+        
     # @tf.function
     def call(self, inputs):
         # self.one = tf.constant(1.0)
@@ -269,8 +262,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
-        one = tf.constant(1.0, dtype=r.dtype)
-        r_inv = tf.divide(one, r)
+        # one = tf.constant(1.0, dtype=r.dtype)
+        r_inv = tf.divide(self.constant, r)
         # spheres = tf.stack([r_inv, s, t, u], axis=1)
         spheres = tf.stack([r_inv, s, t, u], axis=1)
         # spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
@@ -291,7 +284,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         config = super().get_config().copy()
         config.update(
             {
-                "dtype":self.dtype
+                "dtype" : self.dtype,
+                "constant" : self.constant
             }
         )
         return config
