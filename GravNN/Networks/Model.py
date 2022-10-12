@@ -10,6 +10,7 @@ from GravNN.Networks import utils
 from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
 from GravNN.Networks.Networks import load_network
+from GravNN.Networks.Losses import compute_rms_components, compute_percent_error
 import GravNN
 
 np.random.seed(1234)
@@ -56,11 +57,11 @@ class PINNGravityModel(tf.keras.Model):
            ("C" in self.eval.__name__) or \
            (config['init_file'][0] is not None) or \
            (not self.config['jit_compile'][0]):
-            self.train_step = self.train_step_no_jit
-            self.test_step = self.test_step_no_jit
+            self.train_step = self.wrap_train_step_njit
+            self.test_step = self.wrap_test_step_njit
         else:
-            self.train_step = self.train_step_jit
-            self.test_step = self.test_step_jit
+            self.train_step = self.wrap_train_step_jit
+            self.test_step = self.wrap_test_step_jit
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
@@ -92,28 +93,8 @@ class PINNGravityModel(tf.keras.Model):
 
         return acc_B
 
-    def compute_rms_components(self, y_hat, y):
-        """Separate the different loss component terms.
-
-        Args:
-            y_hat (tf.Tensor): predicted values
-            y (tf.Tensor): true values
-
-        Returns:
-            tf.Tensor: loss components for each contribution (i.e. dU, da, dL, dC)
-        """
-        loss_components = tf.square(tf.subtract(y_hat, y))
-        return loss_components
-
-    def compute_percent_error(self, y_hat, y):
-        # Only apply to the acceleration values 
-        loss_components = tf.norm(tf.subtract(y_hat[:,0:3], y[:,0:3]), axis=1)/tf.norm(tf.abs(y[:,0:3]),axis=1)*100
-        return loss_components
-
-    @tf.function(jit_compile=True)
-    def train_step_jit(self, data):
-        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
-        or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
+    def train_step_fcn(self, data):
+        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
         summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
         occurs.
 
@@ -131,8 +112,8 @@ class PINNGravityModel(tf.keras.Model):
             # y_hat = self.cart2sph(x, y_hat)
             # y = self.cart2sph(x, y)
 
-            rms_components = self.compute_rms_components(y_hat, y)
-            percent_components = self.compute_percent_error(y_hat, y)
+            rms_components = compute_rms_components(y_hat, y)
+            percent_components = compute_percent_error(y_hat, y)
 
             updated_rms_components = self.scale_loss(
                 tf.reduce_mean(rms_components,0), self.adaptive_constant
@@ -174,72 +155,16 @@ class PINNGravityModel(tf.keras.Model):
             "percent_max": tf.reduce_max(percent_components)
             #"adaptive_constant": adaptive_constant,
         }  # , 'grads' : grad_comp_list}
-    
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def train_step_no_jit(self, data):
-        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC
-        or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
-        summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
-        occurs.
 
-        Args:
-            data (tf.Dataset): training data
-
-        Returns:
-            dict: dictionary of metrics passed to the callback.
-        """
-        x, y = data
-        with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=True)
-            rms_components = self.compute_rms_components(y_hat, y)
-            percent_components = self.compute_percent_error(y_hat, y)
-
-            updated_loss_components = self.scale_loss(
-                tf.reduce_mean(rms_components,0), self.adaptive_constant
-            )
-            loss = self.loss_fcn(rms_components, percent_components)
-            # loss += tf.reduce_sum(self.network.losses)
-
-            loss = self.optimizer.get_scaled_loss(loss)
-
-        # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(
-            tape,
-            updated_loss_components,
-            self.adaptive_constant,
-            self.beta,
-            self.trainable_weights,
-        )
-
-        # # These lines are needed if using the gradient callback.
-        # grad_comp_list = []
-        # for loss_comp in updated_loss_components:
-        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-        #     grad_comp_list.append(gradient_components)
-
-        gradients = tape.gradient(loss, self.network.trainable_variables)
-        gradients = self.optimizer.get_unscaled_gradients(gradients)
-        del tape
-
-        self.optimizer.apply_gradients(zip(gradients, self.network.trainable_variables))
-
-        return {
-            "loss": loss,
-            "percent_mean": tf.reduce_mean(percent_components),
-            "percent_max": tf.reduce_max(percent_components)
-            #"adaptive_constant": adaptive_constant,
-        }  # , 'grads' : grad_comp_list}
-
-    @tf.function(jit_compile=True)
-    def test_step_jit(self, data):
+    def test_step_fcn(self, data):
         x, y = data
         y_hat = self(x, training=True)
 
         # y_hat = self.cart2sph(x, y_hat)
         # y = self.cart2sph(x, y)
 
-        rms_components = self.compute_rms_components(y_hat, y)
-        percent_components = self.compute_percent_error(y_hat, y)
+        rms_components = compute_rms_components(y_hat, y)
+        percent_components = compute_percent_error(y_hat, y)
         updated_rms_components = self.scale_loss(
             tf.reduce_mean(rms_components,0), self.adaptive_constant
         )
@@ -249,76 +174,25 @@ class PINNGravityModel(tf.keras.Model):
                 "percent_max": tf.reduce_max(percent_components)
                 }
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def test_step_no_jit(self, data):
-        x, y = data
-        y_hat = self(x, training=True)
-        rms_components = self.compute_rms_components(y_hat, y)
-        percent_components = self.compute_percent_error(y_hat, y)
-
-        updated_loss_components = self.scale_loss(
-            tf.reduce_mean(rms_components,0), self.adaptive_constant
-        )
-        loss = self.loss_fcn(rms_components, percent_components)
-
-        return {"loss": loss, 
-                "percent_mean": tf.reduce_mean(percent_components),
-                "percent_max": tf.reduce_max(percent_components)
-                }
-
+    # JIT wrappers
     @tf.function(jit_compile=True)
-    def _nn_acceleration_output(self, x):
-        a = self.network(x) 
-        return a
+    def wrap_train_step_jit(self, data):
+        return self.train_step_fcn(data)
     
-    @tf.function()
-    def _pinn_acceleration_output(self, x):
-        if self.is_modified_potential:
-            a = pinn_A_Ur(self.network, x, training=False)
-        else:
-            a = pinn_A(self.network, x, training=False)
-        return a
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_train_step_njit(self, data):
+        return self.train_step_fcn(data)
+    
+    @tf.function(jit_compile=True)
+    def wrap_test_step_jit(self, data):
+        return self.test_step_fcn(data)
 
-    @tf.function(experimental_relax_shapes=True)
-    def _pinn_acceleration_jacobian(self, x):
-        with tf.GradientTape() as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        jacobian = g1.batch_jacobian(a,x)
-        return jacobian
-        
-    @tf.function(experimental_relax_shapes=True)
-    def _nn_acceleration_jacobian(self,x):
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            a = self.network(x)  # shape = (k,) #! evaluate network
-        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
-        return jacobian
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_test_step_njit(self, data):
+        return self.test_step_fcn(data)
 
-    def __nn_output(self, dataset):
-        x, y = dataset
-        x = tf.Variable(x, dtype=self.variable_cast)
-        assert self.config["PINN_constraint_fcn"][0] != no_pinn
-        with tf.GradientTape(persistent=True) as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        u_xx = g1.batch_jacobian(u_x, x)
 
-        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
-
-        curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
-        curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
-        curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
-
-        curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-        return u, -u_x, laplacian, curl
-
+    # API calls 
     def generate_nn_data(
         self,
         x,
@@ -468,6 +342,62 @@ class PINNGravityModel(tf.keras.Model):
         # scale = x_scale**2/u_scale
         # jacobian = jacobian*scale
         return jacobian
+
+
+    # private functions
+    def __nn_output(self, dataset):
+        x, y = dataset
+        x = tf.Variable(x, dtype=self.variable_cast)
+        assert self.config["PINN_constraint_fcn"][0] != no_pinn
+        with tf.GradientTape(persistent=True) as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        u_xx = g1.batch_jacobian(u_x, x)
+
+        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+
+        curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
+        curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
+        curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
+
+        curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
+        return u, -u_x, laplacian, curl
+
+    @tf.function(jit_compile=True)
+    def _nn_acceleration_output(self, x):
+        a = self.network(x) 
+        return a
+    
+    @tf.function()
+    def _pinn_acceleration_output(self, x):
+        if self.is_modified_potential:
+            a = pinn_A_Ur(self.network, x, training=False)
+        else:
+            a = pinn_A(self.network, x, training=False)
+        return a
+
+    @tf.function(experimental_relax_shapes=True)
+    def _pinn_acceleration_jacobian(self, x):
+        with tf.GradientTape() as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        jacobian = g1.batch_jacobian(a,x)
+        return jacobian
+        
+    @tf.function(experimental_relax_shapes=True)
+    def _nn_acceleration_jacobian(self,x):
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            a = self.network(x)  # shape = (k,) #! evaluate network
+        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
+        return jacobian
+
 
 
     # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
@@ -623,7 +553,10 @@ class PINNGravityModel(tf.keras.Model):
         os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
         os.makedirs(f"{self.save_dir}/Networks/", exist_ok=True)
         self.config["timetag"] = timestamp
-        self.config["history"] = [self.history.history]
+        try:
+            self.config["history"] = [self.history.history]
+        except:
+            pass
         self.config["id"] = [time_JD]
 
         # dataframe cannot take fcn objects so settle on the names and convert to fcn on load 

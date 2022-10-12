@@ -1,5 +1,29 @@
 import tensorflow as tf
 
+
+def compute_rms_components(y_hat, y):
+    """Separate the different loss component terms.
+
+    Args:
+        y_hat (tf.Tensor): predicted values
+        y (tf.Tensor): true values
+
+    Returns:
+        tf.Tensor: loss components for each contribution (i.e. dU, da, dL, dC)
+    """
+    loss_components = tf.square(tf.subtract(y_hat, y))
+    return loss_components
+
+def compute_percent_error(y_hat, y):
+    # Only apply to the acceleration values 
+    da = tf.subtract(y_hat[:,0:3], y[:,0:3])
+    da_norm = tf.norm(da, axis=1)
+    a_true_norm = tf.norm(tf.abs(y[:,0:3]),axis=1)
+    loss_components = da_norm/a_true_norm*100
+    return loss_components
+
+
+
 # Max Losses
 def max_loss(rms_components, percent_error): 
     percent_loss = percent_summed_loss(rms_components, percent_error)
