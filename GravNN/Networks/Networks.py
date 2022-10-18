@@ -429,12 +429,13 @@ def SphericalPinesTransformerNet_v2(**kwargs):
     initializer = kwargs["initializer"][0]
     dtype = kwargs.get("dtype", [tf.float32])[0]
     transformer_units = kwargs["num_units"][0]
-    ref_radius = kwargs.get('ref_radius', [None])[0]
+    ref_radius_max = kwargs.get('ref_radius_max', [None])[0]
+    ref_radius_min = kwargs.get('ref_radius_min', [None])[0]
 
 
     inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
     x = Cart2PinesSphLayer(dtype)(inputs)
-    x = PinesSph2NetLayer_v2(dtype, ref_radius=ref_radius)(x)
+    x = PinesSph2NetLayer_v2(dtype, ref_radius_min=ref_radius_min, ref_radius_max=ref_radius_max)(x)
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(

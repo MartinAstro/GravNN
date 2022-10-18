@@ -245,12 +245,18 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
         return config
 
 class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
-    def __init__(self, dtype, ref_radius=None):
+    def __init__(self, dtype, ref_radius_min=None, ref_radius_max=None):
         super(PinesSph2NetLayer_v2, self).__init__(dtype=dtype)
 
         # normalize the radius by R_ref or not at all. 
-        self.constant = tf.cond(ref_radius != None, 
-                        lambda : tf.constant(ref_radius, dtype=dtype), 
+        # self.ref_radius = tf.cond(ref_radius != None, 
+        #                 lambda : tf.constant(ref_radius, dtype=dtype), 
+        #                 lambda : tf.constant(1.0, dtype=dtype)).numpy()
+        self.ref_radius_min = tf.cond(ref_radius_min != None, 
+                        lambda : tf.constant(ref_radius_min, dtype=dtype), 
+                        lambda : tf.constant(0.0, dtype=dtype)).numpy()
+        self.ref_radius_max = tf.cond(ref_radius_max != None, 
+                        lambda : tf.constant(ref_radius_max, dtype=dtype), 
                         lambda : tf.constant(1.0, dtype=dtype)).numpy()
         
     # @tf.function
@@ -262,8 +268,20 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
-        # one = tf.constant(1.0, dtype=r.dtype)
-        r_inv = tf.divide(self.constant, r)
+        s_min = tf.constant(1.0, dtype=r.dtype)
+        s_max = tf.constant(100.0, dtype=r.dtype)
+
+        scale = tf.divide(s_max - s_min, self.ref_radius_max - self.ref_radius_min)
+        min_arg = s_min - tf.multiply(self.ref_radius_min, scale)
+
+        r_star = tf.multiply(r, scale) + min_arg
+
+
+        one = tf.constant(1.0, dtype=r.dtype)
+        # half = tf.constant(0.5, dtype=r.dtype)
+        # r_star = tf.divide(r - self.ref_radius_min, self.ref_radius_max - self.ref_radius_min) + one
+
+        r_inv = tf.divide(one, r_star)
         # spheres = tf.stack([r_inv, s, t, u], axis=1)
         spheres = tf.stack([r_inv, s, t, u], axis=1)
         # spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
@@ -285,7 +303,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         config.update(
             {
                 "dtype" : self.dtype,
-                "constant" : self.constant
+                "ref_radius_min" : self.ref_radius_min,
+                "ref_radius_max" : self.ref_radius_max
             }
         )
         return config
