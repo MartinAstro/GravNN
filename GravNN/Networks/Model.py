@@ -125,8 +125,8 @@ class PINNGravityModel(tf.keras.Model):
             "loss": loss,
             "percent_mean": tf.reduce_mean(percent_components),
             "percent_max": tf.reduce_max(percent_components)
-            #"adaptive_constant": adaptive_constant,
-        }  # , 'grads' : grad_comp_list}
+           # "adaptive_constant": adaptive_constant,
+        }  # 'grads' : grad_comp_list}
 
     def test_step_fcn(self, data):
         x, y = data
@@ -250,14 +250,8 @@ class PINNGravityModel(tf.keras.Model):
         x = x_transformer.transform(x)
 
         x = tf.constant(x, dtype=self.variable_cast)
-
-        # def chunks(lst, n):
-        #     """Yield successive n-sized chunks from lst."""
-        #     for i in range(0, len(lst), n):
-        #         yield tf.data.Dataset.from_tensor_slices(lst[i:i + n])
         
-        # batch_size = 131072//2
-        # data = chunks(x, batch_size)
+        # data = utils.chunks(x, 131072//2)
 
         if self.is_pinn:
             a_pred = self._pinn_acceleration_output(x)
@@ -283,14 +277,8 @@ class PINNGravityModel(tf.keras.Model):
         x = x_transformer.transform(x)
 
         x = tf.constant(x, dtype=self.variable_cast)
-
-        # def chunks(lst, n):
-        #     """Yield successive n-sized chunks from lst."""
-        #     for i in range(0, len(lst), n):
-        #         yield tf.data.Dataset.from_tensor_slices(lst[i:i + n])
         
-        # batch_size = 131072//2
-        # data = chunks(x, batch_size)
+        # data = utils.chunks(x, 131072//2)
 
         if self.is_pinn:
             jacobian = self._pinn_acceleration_jacobian(x)
