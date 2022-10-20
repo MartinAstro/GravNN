@@ -1,7 +1,5 @@
 from GravNN.Networks.Layers import (
-    Cart2SphLayer,
     PinesSph2NetRefLayer,
-    Sph2NetLayer,
     PinesSph2NetLayer,
     Cart2PinesSphLayer,
     PinesSph2NetLayer_v2
@@ -9,7 +7,7 @@ from GravNN.Networks.Layers import (
 import tensorflow as tf
 import os
 import warnings
-import utils
+from GravNN.Networks import utils
 def load_network(config):
     if config["init_file"][0] is not None:
         network = tf.keras.models.load_model(
@@ -254,8 +252,6 @@ def SphericalPinesTraditionalNet_v2(**kwargs):
             units=layers[i],
             activation=activation,
             kernel_initializer=initializer,
-            # kernel_regularizer=tf.keras.regularizers.L2(1E-6),
-            # bias_regularizer=tf.keras.regularizers.L2(1E-6),
             dtype=dtype,
         )(x)
         if "batch_norm" in kwargs:
@@ -267,8 +263,6 @@ def SphericalPinesTraditionalNet_v2(**kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        # kernel_regularizer=tf.keras.regularizers.L2(1E-6),
-        # bias_regularizer=tf.keras.regularizers.L2(1E-6),
         kernel_initializer=initializer,
         dtype=dtype,
     )(x)

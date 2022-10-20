@@ -517,44 +517,44 @@ def configure_dataset(train_data, val_data, config):
 
     # Decide to train with potential or not
     # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint.
-    if pinn_constraint_fcn == no_pinn:
+    if pinn_constraint_fcn == "no_pinn":
         y_train = np.hstack([a_train])
         y_val = np.hstack([a_val])
 
     # Just use acceleration
-    elif pinn_constraint_fcn == pinn_A or pinn_constraint_fcn == pinn_A_Ur:
+    elif pinn_constraint_fcn == "pinn_a" or pinn_constraint_fcn == "pinn_a_ur":
         y_train = np.hstack([a_train])
         y_val = np.hstack([a_val])
 
     # Just use acceleration
-    elif pinn_constraint_fcn == pinn_P:
+    elif pinn_constraint_fcn == "pinn_p":
         y_train = np.hstack([u_train])
         y_val = np.hstack([u_val])
 
     # Potential + 2nd order constraints
-    elif pinn_constraint_fcn == pinn_PL:
+    elif pinn_constraint_fcn == "pinn_pl":
         y_train = np.hstack([u_train, laplace_train])
         y_val = np.hstack([u_val, laplace_val])
-    elif pinn_constraint_fcn == pinn_PLC:
+    elif pinn_constraint_fcn == "pinn_plc":
         y_train = np.hstack([u_train, laplace_train, curl_train])
         y_val = np.hstack([u_val, laplace_val, curl_val])
 
     # Accelerations + 2nd order constraints
-    elif pinn_constraint_fcn == pinn_AL:
+    elif pinn_constraint_fcn == "pinn_al":
         y_train = np.hstack([a_train, laplace_train])
         y_val = np.hstack([a_val, laplace_val])
-    elif pinn_constraint_fcn == pinn_ALC:
+    elif pinn_constraint_fcn == "pinn_alc":
         y_train = np.hstack([a_train, laplace_train, curl_train])
         y_val = np.hstack([a_val, laplace_val, curl_val])
 
     # Accelerations + Potential + 2nd order constraints
-    elif pinn_constraint_fcn == pinn_AP:
+    elif pinn_constraint_fcn == "pinn_ap":
         y_train = np.hstack([u_train, a_train])
         y_val = np.hstack([u_val, a_val])
-    elif pinn_constraint_fcn == pinn_APL:
+    elif pinn_constraint_fcn == "pinn_apl":
         y_train = np.hstack([u_train, a_train, laplace_train])
         y_val = np.hstack([u_val, a_val, laplace_val])
-    elif pinn_constraint_fcn == pinn_APLC:
+    elif pinn_constraint_fcn == "pinn_aplc":
         y_train = np.hstack([u_train, a_train, laplace_train, curl_train])
         y_val = np.hstack([u_val, a_val, laplace_val, curl_val])
 
@@ -623,7 +623,7 @@ def training_validation_split(X, Y, Z, N_train, N_val, random_state=42):
     return X_train, Y_train, Z_train, X_val, Y_val, Z_val
 
 
-def cart2sph(x, acc_N):
+def cart2sph_tf(x, acc_N):
     X = x[:,0]
     Y = x[:,1]
     Z = x[:,2]

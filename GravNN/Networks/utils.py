@@ -586,3 +586,10 @@ def print_config(original_config):
     deinit()
 
 
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    import tensorflow as tf
+    for i in range(0, len(lst), n):
+        yield tf.data.Dataset.from_tensor_slices(lst[i:i + n])

@@ -2,6 +2,7 @@ from asyncio import constants
 import tensorflow as tf
 import numpy as np
 
+
 class PreprocessingLayer(tf.keras.layers.Layer):
     def __init__(self, min, scale, dtype):
         super(PreprocessingLayer, self).__init__(dtype=dtype)
@@ -51,8 +52,6 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
 
         https://ntrs.nasa.gov/api/citations/19760011100/downloads/19760011100.pdf
         defines of alpha, beta, and gamma (i.e. three angle non-singular system)
-        Args:
-            input_dim (None): Invalid argument (ignore) TODO: remove
         """
         super(Cart2PinesSphLayer, self).__init__(dtype=dtype)
 
@@ -84,7 +83,6 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         between the values of [-1,1]
 
         Args:
-                input_dim (None): Invalid input (ignore) TODO: remove
                 scalers (np.array): values used to scale each input quantity. These are computed before initialization
                 mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
@@ -93,7 +91,6 @@ class PinesSph2NetLayer(tf.keras.layers.Layer):
         self.mins = tf.constant(mins, dtype=dtype).numpy()
         self.ref_radius = tf.constant(ref_radius, dtype=dtype).numpy()
 
-    # @tf.function
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
@@ -125,14 +122,12 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
         between the values of [-1,1]
 
         Args:
-                input_dim (None): Invalid input (ignore) TODO: remove
                 scalers (np.array): values used to scale each input quantity. These are computed before initialization
                 mins (np.array): values used to bias each input before scaling. These are computed before initialization
         """
         super(PinesSph2NetRefLayer, self).__init__(dtype=dtype)
         self.ref_radius = ref_radius
 
-    # @tf.function
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
@@ -166,27 +161,25 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
                         lambda : tf.constant(ref_radius_max, dtype=dtype), 
                         lambda : tf.constant(1.0, dtype=dtype)).numpy()
         
-    # @tf.function
+        # bounds of the feature -- shouldn't necessarily be a large difference.
+        # think about how much the output should change with respect to the inputs
+        self.s_min = tf.constant(1.0, dtype=dtype).numpy()
+        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min), dtype=dtype).numpy()           
+
     def call(self, inputs):
-        # self.one = tf.constant(1.0)
         inputs_transpose = tf.transpose(inputs)
         r = inputs_transpose[0]
         s = inputs_transpose[1]
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
-        # set the bounds of the feature
-        s_min = tf.constant(1.0, dtype=r.dtype)
-        s_max = tf.constant(100.0, dtype=r.dtype)
-
-        scale = tf.divide(s_max - s_min, self.ref_radius_max - self.ref_radius_min)
-        min_arg = s_min - tf.multiply(self.ref_radius_min, scale)
-
-        # scale r accordingly 
+        scale = tf.divide(self.s_max - self.s_min, self.ref_radius_max - self.ref_radius_min)
+        min_arg = self.s_min - tf.multiply(self.ref_radius_min, scale)
         r_star = tf.multiply(r, scale) + min_arg
 
         one = tf.constant(1.0, dtype=r.dtype)
         r_inv = tf.divide(one, r_star)
+        # r_inv = r_star
         spheres = tf.stack([r_inv, s, t, u], axis=1)
         return spheres
 
@@ -195,6 +188,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         config.update(
             {
                 "dtype" : self.dtype,
+                "s_min" : self.s_min,
+                "s_max" : self.s_max,
                 "ref_radius_min" : self.ref_radius_min,
                 "ref_radius_max" : self.ref_radius_max
             }
