@@ -55,9 +55,28 @@ class RandomDist(TrajectoryBase):
         Z.extend(np.zeros((self.points,)).tolist())
 
         for i in range(self.points):
-            phi = np.random.uniform(0, np.pi)
-            theta = np.random.uniform(0, 2 * np.pi)
-            r = np.random.uniform(self.radius_bounds[0], self.radius_bounds[1])
+            # phi = np.random.uniform(0, np.pi)
+            # theta = np.random.uniform(0, 2 * np.pi)
+            # r = np.random.uniform(self.radius_bounds[0], self.radius_bounds[1])
+            # X[idx] = r * np.sin(phi) * np.cos(theta)
+            # Y[idx] = r * np.sin(phi) * np.sin(theta)
+            # Z[idx] = r * np.cos(phi)
+
+            theta = np.random.uniform(0, 2*np.pi)
+            cosphi = np.random.uniform(-1,1)
+            R_min = self.radius_bounds[0]
+            R_max = self.radius_bounds[1]
+
+            #https://stackoverflow.com/questions/5408276/sampling-uniformly-distributed-random-points-inside-a-spherical-volume
+            u_min = R_min / R_max
+            u_max = 1.0
+
+            # want distribution to be uniform across volume the sphere
+            u = np.random.uniform(u_min,u_max)
+
+            # convert the uniform volume length into physical radius 
+            r = R_max * u**(1.0/3.0)
+            phi = np.arccos(cosphi)
             X[idx] = r * np.sin(phi) * np.cos(theta)
             Y[idx] = r * np.sin(phi) * np.sin(theta)
             Z[idx] = r * np.cos(phi)
