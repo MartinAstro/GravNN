@@ -100,7 +100,6 @@ def compute_input_layer_normalization_constants(config):
     config["norm_mins"] = [np.concatenate([r_transformer.min_, angles_transformer.min_])]
     return
 
-
 def get_raw_data(config):
     """Function responsible for getting the raw training data (without
     any preprocessing). This may include concatenating an "extra" training
@@ -176,7 +175,6 @@ def get_raw_data(config):
         u_val = np.concatenate([u_val, extra_u_val])
 
     return x_train, a_train, u_train, x_val, a_val, u_val
-
 
 def add_error(data_dict, percent_noise):
 
@@ -623,3 +621,31 @@ def training_validation_split(X, Y, Z, N_train, N_val, random_state=42):
     )
 
     return X_train, Y_train, Z_train, X_val, Y_val, Z_val
+
+
+def cart2sph(x, acc_N):
+    X = x[:,0]
+    Y = x[:,1]
+    Z = x[:,2]
+    r = tf.norm(x, axis=1)
+    theta = tf.atan2(Y,X)
+    phi = tf.atan2(tf.sqrt(tf.square(X) + tf.square(Y)),Z)
+    spheres = tf.stack((r,theta,phi), axis=1)
+
+    s_phi = tf.sin(phi)
+    c_phi = tf.cos(phi)
+    s_theta = tf.sin(theta)
+    c_theta = tf.cos(theta)
+
+    r_hat = tf.stack((s_phi*c_theta, s_phi*s_theta,c_phi),axis=1)
+    theta_hat = tf.stack((c_phi*c_theta, c_phi*s_theta, -s_phi),axis=1)
+    phi_hat = tf.stack((-s_theta, c_theta, tf.zeros_like(s_theta)),axis=1)
+
+    BN = tf.reshape(tf.stack((r_hat, theta_hat, phi_hat),1),(-1,3,3))
+    acc_N_3d = tf.reshape(acc_N, (-1, 3, 1))
+
+    # apply BN rotation to each acceleration
+    acc_B_3d = tf.einsum('bij,bjk->bik', BN, acc_N_3d)
+    acc_B = tf.reshape(acc_B_3d,(-1,3))
+
+    return acc_B
