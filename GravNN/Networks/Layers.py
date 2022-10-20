@@ -247,11 +247,6 @@ class PinesSph2NetRefLayer(tf.keras.layers.Layer):
 class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
     def __init__(self, dtype, ref_radius_min=None, ref_radius_max=None):
         super(PinesSph2NetLayer_v2, self).__init__(dtype=dtype)
-
-        # normalize the radius by R_ref or not at all. 
-        # self.ref_radius = tf.cond(ref_radius != None, 
-        #                 lambda : tf.constant(ref_radius, dtype=dtype), 
-        #                 lambda : tf.constant(1.0, dtype=dtype)).numpy()
         self.ref_radius_min = tf.cond(ref_radius_min != None, 
                         lambda : tf.constant(ref_radius_min, dtype=dtype), 
                         lambda : tf.constant(0.0, dtype=dtype)).numpy()
@@ -268,34 +263,19 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
+        # set the bounds of the feature
         s_min = tf.constant(1.0, dtype=r.dtype)
         s_max = tf.constant(100.0, dtype=r.dtype)
 
         scale = tf.divide(s_max - s_min, self.ref_radius_max - self.ref_radius_min)
         min_arg = s_min - tf.multiply(self.ref_radius_min, scale)
 
+        # scale r accordingly 
         r_star = tf.multiply(r, scale) + min_arg
 
-
         one = tf.constant(1.0, dtype=r.dtype)
-        # half = tf.constant(0.5, dtype=r.dtype)
-        # r_star = tf.divide(r - self.ref_radius_min, self.ref_radius_max - self.ref_radius_min) + one
-
         r_inv = tf.divide(one, r_star)
-        # spheres = tf.stack([r_inv, s, t, u], axis=1)
         spheres = tf.stack([r_inv, s, t, u], axis=1)
-        # spheres = tf.stack([r_inv, tf.square(r_inv), s, t, u], axis=1)
-
-        # r_inv = tf.divide(1,r)
-        # r_tanh = tf.keras.activations.tanh(r)
-        # spheres = tf.stack([r_inv, r_tanh, s, t, u], axis=1)
-
-        # r_inv = tf.divide(1,r)
-        # numerator = tf.math.log(r)
-        # denominator = tf.math.log(tf.constant(10, dtype=numerator.dtype))
-        # log_r = tf.keras.activations.tanh(numerator / denominator)
-        # # r_tanh = tf.keras.activations.tanh(r)
-        # spheres = tf.stack([r_inv, log_r, s, t, u], axis=1)
         return spheres
 
     def get_config(self):
