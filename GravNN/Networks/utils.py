@@ -275,8 +275,6 @@ def _get_network_fcn(name):
     """
     from GravNN.Networks.Networks import (
         TraditionalNet,
-        ResNet,
-        SphericalTraditionalNet,
         SphericalPinesTraditionalNet,
         SphericalPinesTransformerNet,
         SphericalPinesTraditionalNet_v2,
@@ -285,8 +283,6 @@ def _get_network_fcn(name):
 
     return {
         "traditional": TraditionalNet,
-        "resnet": ResNet,
-        "sph_traditional": SphericalTraditionalNet,
         "sph_pines_traditional": SphericalPinesTraditionalNet,
         "sph_pines_transformer": SphericalPinesTransformerNet,
         "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
@@ -328,8 +324,6 @@ def _get_loss_fcn(name):
 
     }[name.lower()]
 
-
-
 def _get_tf_dtype(name):
     import tensorflow as tf
 
@@ -349,8 +343,8 @@ def populate_config_objects(config):
     Returns:
         dict: updated configuration dictionary with proper tensorflow objects
     """
-    config["PINN_constraint_fcn"] = _get_PI_constraint(config["PINN_constraint_fcn"][0])
-    config["network_type"] = [_get_network_fcn(config["network_type"][0])]
+    # config["PINN_constraint_fcn"] = _get_PI_constraint(config["PINN_constraint_fcn"][0])
+    # config["network_type"] = [_get_network_fcn(config["network_type"][0])]
     config["dtype"] = [_get_tf_dtype(config["dtype"][0])]
 
     if "num_units" in config:
@@ -590,3 +584,5 @@ def print_config(original_config):
         print(Fore.MAGENTA +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
 
     deinit()
+
+
