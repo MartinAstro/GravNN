@@ -89,7 +89,7 @@ def compute_edge_dyads(
     return edge_dyads
 
 
-@njit(cache=True, parallel=True)
+# @njit(cache=True, parallel=True)
 def compute_facet_dyads(face_normals):
     facet_dyads = np.zeros((len(face_normals), 3, 3))
     for i in prange(len(face_normals)):
