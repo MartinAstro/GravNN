@@ -400,9 +400,10 @@ def scale_by_constants(data_dict, config):
     a_val = a_transformer.transform(data_dict["a_val"])
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
-    ref_radius = config.get('ref_radius', [data_dict["x_train"].max()])[0]
-    ref_radius_min = config.get('ref_radius_min', [ref_radius])[0]
-    ref_radius_max = config.get('ref_radius_max', [0.0])[0]
+    # can't just select max from non-dim x_train because config is dimensionalized 
+    ref_radius_min = config.get('ref_radius_min', [data_dict["x_train"].min()])[0]
+    ref_radius_max = config.get('ref_radius_max', [data_dict["x_train"].max()])[0]
+    ref_radius = config.get('ref_radius', [ref_radius_max])[0]
     if ref_radius is not None:
         x_vec = np.array([[ref_radius, ref_radius_min, ref_radius_max]])
         x_vec_normalized = x_transformer.transform(x_vec)

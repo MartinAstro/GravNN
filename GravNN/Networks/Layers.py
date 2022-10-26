@@ -156,7 +156,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         super(PinesSph2NetLayer_v2, self).__init__(dtype=dtype)
         self.ref_radius_min = tf.cond(ref_radius_min != None, 
                         lambda : tf.constant(ref_radius_min, dtype=dtype), 
-                        lambda : tf.constant(0.0, dtype=dtype)).numpy()
+                        lambda : tf.constant(1E-3, dtype=dtype)).numpy() 
+                        # Don't set min to zero otherwise nans
         self.ref_radius_max = tf.cond(ref_radius_max != None, 
                         lambda : tf.constant(ref_radius_max, dtype=dtype), 
                         lambda : tf.constant(1.0, dtype=dtype)).numpy()
