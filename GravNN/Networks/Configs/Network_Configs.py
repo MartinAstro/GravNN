@@ -37,7 +37,8 @@ def PINN_I():
         'init_file' : [None],
         'normalization_strategy' : ['uniform'], #'radial, uniform
         'jit_compile' : [False],
-        'eager' : [False]
+        'eager' : [False],
+        "dtype" : ['float64']
     }
     return network_config
 
