@@ -116,7 +116,6 @@ def pinn_ALC(f, x, training):
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
     accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
-
     laplace = laplacian(u_xx)
 
     curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
