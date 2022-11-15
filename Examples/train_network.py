@@ -25,6 +25,7 @@ def main():
         "batch_size" : [4096],
         "network_type" : ["sph_pines_traditional"],
         "PINN_constraint_fcn": ["pinn_alc"],
+        "dtype" : ['float64']
     })
 
 
@@ -45,7 +46,6 @@ def run(config):
     from GravNN.Networks.Callbacks import SimpleCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
     from GravNN.Networks.Model import PINNGravityModel
-    from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
 
