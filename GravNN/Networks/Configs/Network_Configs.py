@@ -37,7 +37,8 @@ def PINN_I():
         'init_file' : [None],
         'normalization_strategy' : ['uniform'], #'radial, uniform
         'jit_compile' : [False],
-        'eager' : [False]
+        'eager' : [False],
+        "dtype" : ['float64']
     }
     return network_config
 
@@ -61,7 +62,7 @@ def PINN_III():
     config = PINN_II()
     network_config = {
         "network_type": ["sph_pines_transformer_v2"],
-        "scale_by": ["non_dim_radius"],
+        "scale_by": ["non_dim_v2"],
         "loss_fcn" : ['avg_percent_summed_rms'],
     }
     config.update(network_config)

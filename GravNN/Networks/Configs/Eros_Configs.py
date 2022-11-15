@@ -17,8 +17,6 @@ def get_default_eros_config():
         "radius_max": [Eros().radius * 3],
         "acc_noise": [0.0],
         "basis": [None],
-        "mixed_precision": [False],
-        "dtype": ["float32"],
         "analytic_truth": ["poly_stats_"],
         "gravity_data_fcn" : [get_poly_data],
         "remove_point_mass": [False],  # remove point mass from polyhedral model
@@ -28,6 +26,7 @@ def get_default_eros_config():
         "dummy_transformer": [DummyScaler()],
         "override" : [False],
         'ref_radius' : [Eros().radius]
+        "ref_radius_min" : [Eros().radius_min],
     }
 
     return data_config
