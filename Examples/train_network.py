@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from GravNN.Networks.Callbacks import LossComponentsCallback
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
@@ -41,6 +42,7 @@ def run(config):
     # Tensorflow dependent functions must be defined inside of 
     # run function for thread-safe behavior.
     import numpy as np
+    import pandas as pd
     np.random.seed(config['seed'][0])
     from GravNN.Networks.utils import configure_tensorflow
     from GravNN.Networks.Callbacks import SimpleCallback
@@ -65,6 +67,7 @@ def run(config):
     
     # Train network
     callback = SimpleCallback(config['batch_size'][0])
+    loss_callback = LossComponentsCallback(config['batch_size'][0])
     schedule = get_schedule(config)
 
     history = model.fit(
@@ -72,9 +75,18 @@ def run(config):
         epochs=config["epochs"][0],
         verbose=0,
         validation_data=val_dataset,
-        callbacks=[callback, schedule],
+        callbacks=[callback, loss_callback, schedule],
     )
     history.history["time_delta"] = callback.time_delta
+    model.history = history
+
+    # Saving history object to a dataframe for use in plots
+    hist_df = pd.DataFrame(history.history) 
+
+    hist_csv_file = 'history_percent.csv'
+    with open(hist_csv_file, mode='w') as f:
+        hist_df.to_csv(f)
+
     model.save(df_file=None, history=history, transformers=transformers)
 
     # Appends the model config to a perscribed df
