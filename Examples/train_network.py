@@ -14,7 +14,7 @@ def main():
     config = get_default_eros_config()
 
     # hyperparameters which overwrite defaults
-    hparams = PINN_III()
+    hparams = PINN_IV()
     hparams.update(ReduceLrOnPlateauConfig())
     hparams.update({
         "grav_file" : [Eros().obj_8k],
