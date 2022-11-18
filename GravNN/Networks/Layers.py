@@ -165,7 +165,7 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         # bounds of the feature -- shouldn't necessarily be a large difference.
         # think about how much the output should change with respect to the inputs
         self.s_min = tf.constant(1.0, dtype=dtype).numpy()
-        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min), dtype=dtype).numpy()           
+        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min)/self.ref_radius_min, dtype=dtype).numpy()           
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
