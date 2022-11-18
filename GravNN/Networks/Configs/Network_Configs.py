@@ -26,7 +26,6 @@ def PINN_I():
         "batch_size": [131072 // 2],
         "learning_rate": [0.001*2],
         "dropout": [0.0],
-        "dtype": ["float32"],
         "skip_normalization": [False],
         "lr_anneal": [False],
         "beta" : [0.0],
