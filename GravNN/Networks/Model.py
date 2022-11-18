@@ -458,7 +458,6 @@ def backwards_compatibility(config):
 
     return config
 
-
 def load_config_and_model(model_id, df_file, custom_data_dir=None):
     """Primary loading function for the networks and their
     configuration information.
@@ -496,7 +495,6 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     model.compile(optimizer=optimizer, loss="mse") 
 
     return config, model
-
 
 def count_nonzero_params(model):
     params = 0
