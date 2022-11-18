@@ -66,8 +66,6 @@ class PINNGravityModel(tf.keras.Model):
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
 
-
-
     def train_step_fcn(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
         summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
@@ -143,64 +141,8 @@ class PINNGravityModel(tf.keras.Model):
                 "percent_max": tf.reduce_max(percent_components)
                 }
 
-    # JIT wrappers
-    @tf.function(jit_compile=True)
-    def wrap_train_step_jit(self, data):
-        return self.train_step_fcn(data)
-    
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_train_step_njit(self, data):
-        return self.train_step_fcn(data)
-    
-    @tf.function(jit_compile=True)
-    def wrap_test_step_jit(self, data):
-        return self.test_step_fcn(data)
-
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_test_step_njit(self, data):
-        return self.test_step_fcn(data)
-
 
     # API calls 
-    def generate_nn_data(
-        self,
-        x,
-    ):
-        """Method responsible for generating all possible outputs of the
-        PINN gravity model (U, a, L, C). Note that this is an expensive
-        calculation due to the second order derivatives.
-
-        TODO: Investigate if this method can be jit complied and be compatible
-        with tf.Datasets for increased speed.
-
-        Args:
-            x (np.array): Input data (position)
-
-        Returns:
-            dict: dictionary containing all input and outputs of the network
-        """
-        x = copy.deepcopy(x)
-        x_transformer = self.config["x_transformer"][0]
-        a_transformer = self.config["a_transformer"][0]
-        u_transformer = self.config["u_transformer"][0]
-        x = x_transformer.transform(x)
-
-        # This is a cumbersome operation as it computes the Hessian for each term
-        u_pred, a_pred, laplace_pred, curl_pred = self.__nn_output((x, x))
-
-        x_pred = x_transformer.inverse_transform(x)
-        u_pred = u_transformer.inverse_transform(u_pred)
-        a_pred = a_transformer.inverse_transform(a_pred)
-
-        # TODO: (07/02/21): It's likely that laplace and curl should also be inverse transformed as well
-        return {
-            "x": x_pred,
-            "u": u_pred,
-            "a": a_pred,
-            "laplace": laplace_pred,
-            "curl": curl_pred,
-        }
-
     @tf.function()
     def generate_potential_tf(self, x):
         x_preprocessor = getattr(self, 'x_preprocessor')
@@ -233,7 +175,6 @@ class PINNGravityModel(tf.keras.Model):
             u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
-    #@tf.function(jit_compile=True)
     def generate_acceleration(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -299,6 +240,24 @@ class PINNGravityModel(tf.keras.Model):
         # scale = x_scale**2/u_scale
         # jacobian = jacobian*scale
         return jacobian
+
+
+    # JIT wrappers
+    @tf.function(jit_compile=True)
+    def wrap_train_step_jit(self, data):
+        return self.train_step_fcn(data)
+    
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_train_step_njit(self, data):
+        return self.train_step_fcn(data)
+    
+    @tf.function(jit_compile=True)
+    def wrap_test_step_jit(self, data):
+        return self.test_step_fcn(data)
+
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_test_step_njit(self, data):
+        return self.test_step_fcn(data)
 
 
     # private functions

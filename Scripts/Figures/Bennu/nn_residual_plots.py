@@ -110,10 +110,6 @@ def main():
         x = test_poly_gm.positions
         a = test_poly_gm.accelerations
         u = test_poly_gm.potentials
-  
-        # data_pred = model.generate_nn_data(x)
-        # a_pred = data_pred['a']
-        # u_pred = data_pred['u']
         
         a_pred = model.generate_acceleration(x)
 

@@ -32,7 +32,6 @@ class AsteroidAnalyzer:
     def compute_stats(self, trajectory, prefix):
         x, a, u = get_poly_data(trajectory, self.model_file, **self.config)
 
-        # data_pred = self.model.generate_nn_data(x)
         a_pred = self.model.generate_acceleration(x.astype(np.float32))
 
         diff = a - a_pred
