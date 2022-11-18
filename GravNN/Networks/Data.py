@@ -305,11 +305,12 @@ def scale_by_constants(data_dict, config):
     m = m_tilde / m_star # mass
     t = t_tilde / t_star # time
     """
-
-    x_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["x_train"],axis=1))) # average magnitude 
+    x_norm = np.linalg.norm(data_dict["x_train"],axis=1)
+    x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
 
     # scale time coordinate based on what makes the accelerations behave nicely
-    a_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["a_train"],axis=1))) # average magnitude acceleration
+    a_norm = np.linalg.norm(data_dict["a_train"],axis=1)
+    a_star = 10**np.mean(np.log10(a_norm)) # average magnitude acceleration
     a_star_tmp = a_star / x_star 
     t_star = np.sqrt(1 / a_star_tmp)
 
@@ -324,8 +325,8 @@ def scale_by_constants(data_dict, config):
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
     # can't just select max from non-dim x_train because config is dimensionalized 
-    ref_radius_min = config.get('ref_radius_min', [data_dict["x_train"].min()])[0]
-    ref_radius_max = config.get('ref_radius_max', [data_dict["x_train"].max()])[0]
+    ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
+    ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
     ref_radius = config.get('ref_radius', [ref_radius_max])[0]
     if ref_radius is not None:
         x_vec = np.array([[ref_radius, ref_radius_min, ref_radius_max]])
