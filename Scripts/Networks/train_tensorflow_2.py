@@ -10,30 +10,17 @@ def main():
 
     threads = 1
 
-    # df_file = "Data/Dataframes/eros_pinn_III_040822.data" 
-
-    df_file = "Data/Dataframes/eros_pinn_II_III.data" 
-    df_file = "Data/Dataframes/eros_pinn_II_III_warm_start.data" 
-    df_file = "Data/Dataframes/eros_comp_planes.data" 
-    df_file = "Data/Dataframes/eros_BVP_PINN_III.data" 
-    df_file = "Data/Dataframes/eros_point_mass.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v2.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v3.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v4.data" 
-    # df_file = "Data/Dataframes/eros_point_mass_alc.data" 
+    df_file = "Data/Dataframes/eros_point_mass_v5_3.data" 
     config = get_default_eros_config()
-    # config = get_default_earth_config()
 
     from GravNN.GravityModels.PointMass import get_pm_data
     from GravNN.GravityModels.Polyhedral import get_poly_data
     from GravNN.CelestialBodies.Asteroids import Eros
 
     config.update(PINN_III())
-    # config.update(PINN_II())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        # "grav_file": [Eros().obj_200k],
         "grav_file": [Eros().obj_8k],
         "N_dist": [100000],
         "N_train": [9850],
@@ -42,25 +29,21 @@ def main():
     
         "learning_rate": [0.002],
         "num_units": [40],
-        # "PINN_constraint_fcn" : ['pinn_alc'],
-        "PINN_constraint_fcn" : ['pinn_a'],
+        "PINN_constraint_fcn" : ['pinn_alc'],
         "patience" : [50],
         'override': [False],
         'ref_radius': [Eros().radius],
         "batch_size" : [2**13],
-        "epochs" : [1000],
-        # "init_file" : [2459774.886435185] #  Best one yet, batch size of 2**14 for 15000 epochs, max error 3% average at 0.5%. Goal now is to reduce average error 
+        "epochs" : [1500],
         "remove_point_mass" : [False],
         "gravity_data_fcn" : [get_pm_data],
-        # "init_file" : [2459811.101574074] #PM PINN-A
-        # "init_file" : [2459816.249097222], #PM PINN-A
         "jit_compile" : [False],
         "dtype" : ['float64'],
         "scale_by" : ['non_dim_v2'],
-        "eager" : [False]
+        "eager" : [False],
+        "ref_radius" : [Eros().radius],
+        "ref_radius_min" : [Eros().radius_min],
     }
-
-
 
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
@@ -69,18 +52,13 @@ def main():
     save_training(df_file, configs)
 
 
-def run(config):
-    import copy
-    import numpy as np
+def run(config):    
     from GravNN.Networks.utils import (
         configure_tensorflow,
-        set_mixed_precision,
-        check_config_combos,
     )
     from GravNN.Networks.Callbacks import SimpleCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
     from GravNN.Networks.Model import PINNGravityModel
-    from GravNN.Networks.Networks import load_network
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
     from GravNN.Networks.Schedules import get_schedule
 
