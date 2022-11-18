@@ -77,10 +77,10 @@ def avg_percent_summed_rms_max_error_loss(rms_components, percent_error):
     loss = sum_rms + avg_percent + max_percent
     return loss
 
-
-
-
-def weighted_percent_rms_loss(rms_components, percent_error):
-    loss = tf.reduce_sum(tf.reduce_sum(rms_components,1)*percent_error)#*tf.reduce_sum(percent_error)
+def weighted_mean_percent_loss(rms_components, percent_error):
+    w_i = tf.reduce_sum(rms_components,1)
+    w_sum = tf.reduce_sum(w_i)
+    L_i = percent_error
+    loss = tf.reduce_sum(tf.multiply(w_i,L_i)) / w_sum
     return loss
 

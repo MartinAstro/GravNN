@@ -29,7 +29,7 @@ def main():
         "radius_max" : [Eros().radius*10],
     
         "learning_rate": [0.002],
-        "num_units": [20],
+        "num_units": [40],
         "PINN_constraint_fcn" : ['pinn_a'],
         "patience" : [50],
         'override': [False],
@@ -44,9 +44,12 @@ def main():
         "eager" : [False],
         "ref_radius" : [Eros().radius],
         "ref_radius_min" : [Eros().radius_min],
+        "loss_fcn" : ['weighted_mean_percent'],
+
     }
 
     args = configure_run_args(config, hparams)
+    configs = run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()

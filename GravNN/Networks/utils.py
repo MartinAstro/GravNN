@@ -309,7 +309,8 @@ def _get_loss_fcn(name):
         rms_avg_loss,
         percent_rms_avg_loss,
         avg_percent_summed_rms_loss,
-        avg_percent_summed_rms_max_error_loss
+        avg_percent_summed_rms_max_error_loss,
+        weighted_mean_percent_loss
     )
 
     return {
@@ -322,6 +323,7 @@ def _get_loss_fcn(name):
         'percent_rms_avg' : percent_rms_avg_loss,
         'avg_percent_summed_rms' : avg_percent_summed_rms_loss,
         "avg_percent_summed_rms_max_error" : avg_percent_summed_rms_max_error_loss,
+        'weighted_mean_percent' : weighted_mean_percent_loss
 
     }[name.lower()]
 
