@@ -98,20 +98,20 @@ class PlanesVisualizer(VisualizationBase):
         heatmap, xedges, yedges = np.histogram2d(x_0 / self.radius,
                                                  x_1 / self.radius,
                                                  nbins,
-                                            range=[
-                                                [min_x_0, max_x_0],
-                                                [min_x_1, max_x_1]
-                                                ]
                                             # range=[
-                                            #     [min_x_test_0, max_x_test_0],
-                                            #     [min_x_test_1, max_x_test_1]
+                                            #     [min_x_0, max_x_0],
+                                            #     [min_x_1, max_x_1]
                                             #     ]
+                                            range=[
+                                                [min_x_test_0, max_x_test_0],
+                                                [min_x_test_1, max_x_test_1]
+                                                ]
                                                 )
                                 
         heatmap = gaussian_filter(heatmap, sigma=1)
 
-        # extent = [min_x_test_0, max_x_test_0, min_x_test_1, max_x_test_1]
-        extent = [min_x_0, max_x_0, min_x_1, max_x_1]
+        extent = [min_x_test_0, max_x_test_0, min_x_test_1, max_x_test_1]
+        # extent = [min_x_0, max_x_0, min_x_1, max_x_1]
         plt.imshow(heatmap.T, extent=extent, origin='lower', cmap=cm.jet)
         cbar = plt.colorbar(fraction=0.15,)
         cbar.set_label('Samples')
