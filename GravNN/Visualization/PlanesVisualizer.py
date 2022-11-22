@@ -2,7 +2,6 @@ from multiprocessing.sharedctypes import Value
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Support.transformations import sphere2cart, cart2sph
-from GravNN.Networks.Data import get_raw_data
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt

@@ -3,7 +3,7 @@ from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
 from GravNN.Networks.utils import _get_loss_fcn
-from GravNN.Networks.Data import get_raw_data
+from GravNN.Networks.Data import DataSet
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,10 @@ class ExtrapolationExperiment:
 
 
     def get_train_data(self):
-        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(self.config)
+
+        data = DataSet(self.config)
+        x_train = data.raw_data['x_train']
+        a_train = data.raw_data['a_train']
         train_r_COM = cart2sph(x_train)[:,0] 
 
         # sort

@@ -11,7 +11,6 @@ def generate_acceleration(trajectory):
 def compute_stats(trajectory, prefix, model_file):
         x, a, u = get_poly_data(trajectory, model_file)
 
-        # data_pred = self.model.generate_nn_data(x)
         a_pred = generate_acceleration(trajectory)
 
         diff = a - a_pred

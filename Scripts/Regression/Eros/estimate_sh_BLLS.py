@@ -1,7 +1,7 @@
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.Networks.Configs import *
 from GravNN.Regression.BLLS import BLLS
-from GravNN.Networks.Data import get_raw_data, get_preprocessed_data
+from GravNN.Networks.Data import get_preprocessed_data
 from GravNN.Regression.utils import format_coefficients, save
 
 def main():  

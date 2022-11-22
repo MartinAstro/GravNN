@@ -9,7 +9,7 @@ from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Visualization.DataVisSuite import DataVisSuite
-from GravNN.Networks.Data import get_raw_data
+from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Constraints import *
 
 def make_fcn_name_latex_compatable(name):
@@ -74,7 +74,9 @@ def main():
     data_vis.newFig()
     
     config, model = load_config_and_model(df['id'].values[0], df)       
-    x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
+    data = DataSet(config)
+    x_train = data.raw_data['x_train']
+    a_train = data.raw_data['a_train']
     x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
     # plt.figure(1)
@@ -116,7 +118,9 @@ def main():
         x_sph, a_sph = get_spherical_data(x, a)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
-        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
+        data = DataSet(config)
+        x_train = data.raw_data['x_train']
+        a_train = data.raw_data['a_train']
         x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
         # plt.figure(1)

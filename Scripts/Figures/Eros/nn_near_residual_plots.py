@@ -9,7 +9,6 @@ from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Visualization.DataVisSuite import DataVisSuite
-from GravNN.Networks.Data import get_raw_data
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories
 
 def make_fcn_name_latex_compatable(name):

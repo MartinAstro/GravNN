@@ -3,7 +3,7 @@ from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import PlanesDist, SurfaceDist, RandomAsteroidDist
 from GravNN.Networks.utils import _get_loss_fcn
-from GravNN.Networks.Data import get_raw_data
+from GravNN.Networks.Data import DataSet
 
 import numpy as np
 import pandas as pd
@@ -37,10 +37,10 @@ class PlanesExperiment:
 
 
     def get_train_data(self):
-        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(self.config)
-        self.x_train = x_train
-        self.a_train = a_train
-
+        data = DataSet(self.config)
+        self.x_train = data.raw_data['x_train']
+        self.a_train = data.raw_data['a_train']
+        
     def get_test_data(self):
         planet = self.config['planet'][0]
         obj_file = self.config.get('grav_file',[None])[0]
@@ -143,7 +143,8 @@ def main():
     import matplotlib.pyplot as plt
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.CelestialBodies.Asteroids import Eros
-    df = pd.read_pickle("Data/Dataframes/eros_pinn_III_040622.data")
+    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_040622.data")
+    df = pd.read_pickle("Data/Dataframes/test.data")
     model_id = df["id"].values[-1] 
     config, model = load_config_and_model(model_id, df)
 
@@ -153,7 +154,14 @@ def main():
     planes_exp.run()
 
     vis = PlanesVisualizer(planes_exp)
-    vis.plot_percent_error()
+    vis.plot(percent_max=10)
+
+    planes_exp = PlanesExperiment(model, config, [-10*planet.radius, 10*planet.radius], 30)
+    planes_exp.run()
+
+    vis = PlanesVisualizer(planes_exp)
+    vis.plot(percent_max=10)
+
     # vis = ExtrapolationVisualizer(extrapolation_exp)
     # vis.plot_interpolation_percent_error()
     # vis.plot_extrapolation_percent_error()

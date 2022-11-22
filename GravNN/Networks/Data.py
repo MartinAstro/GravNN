@@ -668,6 +668,7 @@ class DataSet():
         train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
         dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
 
+        self.raw_data = data_dict
         self.train_data = dataset
         self.valid_data = val_dataset
         self.transformers = transformers
@@ -692,7 +693,8 @@ class DataSet():
 
         train_data, val_data, transformers = self.get_preprocessed_data(self.config, data_dict)
         dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
-
+        
+        self.raw_data = data_dict
         self.train_data = dataset
         self.valid_data = val_dataset
         self.transformers = transformers
