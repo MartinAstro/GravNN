@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 from GravNN.Networks.Data import DataSet
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import trimesh
 
 class TrainingDistributionVisualizer(VisualizationBase):
     def __init__(self, config, **kwargs):
@@ -16,7 +18,23 @@ class TrainingDistributionVisualizer(VisualizationBase):
         self.planet_radius = config['planet'][0].radius
         self.radius_min = config['radius_min'][0]
         self.radius_max = config['radius_max'][0]
+        self.populate_polyhedron(config)
 
+    def populate_polyhedron(self, config):
+        try: 
+            self.model_file = self.celestial_body.shape_model
+        except:
+            grav_file =  config.get("grav_file", [None])[0] # asteroids grav_file is the shape model
+            self.model_file = config.get("shape_model", [grav_file]) # planets have shape model (sphere currently)  
+            if isinstance(self.model_file, list):
+                self.model_file = self.model_file[0]
+        filename, file_extension = os.path.splitext(self.model_file)
+        self.shape_model = trimesh.load_mesh(self.model_file, file_type=file_extension[1:])
+
+    def plot_polyhedron(self):
+        cmap = plt.get_cmap('Greys')
+        tri = Poly3DCollection(self.shape_model.triangles*1000 / self.planet_radius, cmap=cmap, alpha=0.5)
+        p = plt.gca().add_collection3d(tri)
 
     def plot_3d_scatter(self):
         self.new3DFig()
@@ -28,6 +46,7 @@ class TrainingDistributionVisualizer(VisualizationBase):
         plt.gca().set_xlabel('x [R]')
         plt.gca().set_ylabel('y [R]')
         plt.gca().set_zlabel('z [R]')
+        self.plot_polyhedron()
 
     def plot_histogram(self):
         self.newFig()
