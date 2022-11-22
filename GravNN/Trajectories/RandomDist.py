@@ -5,7 +5,7 @@ import numpy as np
 import trimesh
 
 class RandomDist(TrajectoryBase):
-    def __init__(self, celestial_body, radius_bounds, points, **kwargs):
+    def __init__(self, celestial_body, radius_bounds, points, uniform_volume=False, **kwargs):
         """A distribution that samples uniformly in a spherical volume.
 
         Args:
@@ -16,6 +16,7 @@ class RandomDist(TrajectoryBase):
         self.radius_bounds = radius_bounds
         self.points = points
         self.celestial_body = celestial_body
+        self.uniform_volume = uniform_volume
 
         self.populate_shape_model(**kwargs)
         super().__init__(**kwargs)
@@ -41,7 +42,7 @@ class RandomDist(TrajectoryBase):
             model_name = os.path.basename(self.model_file).split('.')[0]
         except:
             model_name = str(self.model_file.split("Blender_")[1]).split(".")[0]
-        self.trajectory_name = f"{directory_name}/{body}_{model_name}_N_{self.points}_RadBounds{self.radius_bounds}"
+        self.trajectory_name = f"{directory_name}/{body}_{model_name}_N_{self.points}_RadBounds{self.radius_bounds}_UVol_{self.uniform_volume}"
         self.file_directory += self.trajectory_name + "/"
 
     def sample_volume(self, points):
@@ -57,15 +58,18 @@ class RandomDist(TrajectoryBase):
         R_min = self.radius_bounds[0]
         R_max = self.radius_bounds[1]
 
-        #https://stackoverflow.com/questions/5408276/sampling-uniformly-distributed-random-points-inside-a-spherical-volume
-        u_min = R_min / R_max
-        u_max = 1.0
+        if self.uniform_volume:
+            #https://stackoverflow.com/questions/5408276/sampling-uniformly-distributed-random-points-inside-a-spherical-volume
+            u_min = R_min / R_max
+            u_max = 1.0
 
-        # want distribution to be uniform across volume the sphere
-        u = np.random.uniform(u_min,u_max, size=(points,))
+            # want distribution to be uniform across volume the sphere
+            u = np.random.uniform(u_min,u_max, size=(points,))
 
-        # convert the uniform volume length into physical radius 
-        r = R_max * u**(1.0/3.0)
+            # convert the uniform volume length into physical radius 
+            r = R_max * u**(1.0/3.0)
+        else:
+            r = np.random.uniform(R_min,R_max, size=(points,))
         phi = np.arccos(cosphi)
 
         X = r * np.sin(phi) * np.cos(theta)
@@ -76,11 +80,8 @@ class RandomDist(TrajectoryBase):
 
     def identify_interior_points(self, positions):
         mask = np.full((len(positions),), False)
-        distance = self.shape_model.nearest.signed_distance(positions / 1E3) 
-        mask = distance > 0
-        # for i in range(len(positions)):
-        #     print(i)
-        #     mask[i] = self.shape_model.nearest.signed_distance(positions[i].reshape((1,3)) / 1E3) > 0  
+        rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+        mask = rayObject.contains_points(positions / 1E3) 
         return mask
 
     def recursively_remove_interior_points(self, positions):
