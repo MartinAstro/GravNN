@@ -55,6 +55,7 @@ class PINNGravityModel(tf.keras.Model):
 
         self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
+        self.training = tf.Variable(True, dtype=tf.bool, trainable=False)
         
         # jacobian ops (needed in LC loss terms) incompatible with XLA
         if ("L" in self.eval.__name__) or \
@@ -66,6 +67,9 @@ class PINNGravityModel(tf.keras.Model):
         else:
             self.train_step = self.wrap_train_step_jit
             self.test_step = self.wrap_test_step_jit
+
+    def set_training(self, training):
+        self.training.assign(training)
 
     def call(self, x, training=None):
         return self.eval(self.network, x, training)
@@ -85,7 +89,7 @@ class PINNGravityModel(tf.keras.Model):
  
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=True)
+            y_hat = self(x, training=self.training)
 
             rms_components = compute_rms_components(y_hat, y)
             percent_components = compute_percent_error(y_hat, y)
@@ -133,7 +137,7 @@ class PINNGravityModel(tf.keras.Model):
 
     def test_step_fcn(self, data):
         x, y = data
-        y_hat = self(x, training=True)
+        y_hat = self(x, training=False)
 
         rms_components = compute_rms_components(y_hat, y)
         percent_components = compute_percent_error(y_hat, y)
@@ -146,8 +150,12 @@ class PINNGravityModel(tf.keras.Model):
                 "percent_max": tf.reduce_max(percent_components)
                 }
 
-    def train(self, data):
-        optimizer = configure_optimizer(self.config, mixed_precision=False)
+    def train(self, data, initialize_optimizer=True):
+
+        if initialize_optimizer:
+            optimizer = configure_optimizer(self.config, mixed_precision=False)
+        else:
+            optimizer = self.optimizer
         self.compile(optimizer=optimizer, loss="mse")
         
         # Train network
