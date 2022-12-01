@@ -150,12 +150,9 @@ class PINNGravityModel(tf.keras.Model):
                 "percent_max": tf.reduce_max(percent_components)
                 }
 
-    def train(self, data, initialize_optimizer=True):
+    def train(self, data):
 
-        if initialize_optimizer:
-            optimizer = configure_optimizer(self.config, mixed_precision=False)
-        else:
-            optimizer = self.optimizer
+        optimizer = configure_optimizer(self.config, mixed_precision=False)
         self.compile(optimizer=optimizer, loss="mse")
         
         # Train network
@@ -171,6 +168,7 @@ class PINNGravityModel(tf.keras.Model):
             use_multiprocessing=True
         )
         history.history["time_delta"] = callback.time_delta
+
         return history
 
 
