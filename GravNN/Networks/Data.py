@@ -452,6 +452,20 @@ class DataSet():
             trajectory, grav_file, **self.config
         )
 
+        # TODO: this is hack b/c extra distribution gets populated with nan sometime
+        if "extra_distribution" in self.config:
+            if np.isnan(self.config['extra_distribution'][0]):
+                self.config.pop('extra_distribution')
+        # TODO: this is hack b/c gets populated with nan sometime -- this is when a dataframe which adds the column and populates rows w/o as nan
+        if "augment_data_config" in self.config:
+            try:
+                if np.isnan(self.config['augment_data_config'][0]):
+                    self.config.pop('augment_data_config')
+            except:
+                if self.config['augment_data_config'][0]: # if not an empty dictionary
+                    self.config.pop('augment_data_config')
+
+
         if "extra_distribution" in self.config:
             extra_radius_bounds = [
                 self.config["extra_radius_min"][0],
@@ -480,6 +494,8 @@ class DataSet():
         )
 
         if "extra_distribution" in self.config:
+            self.config["extra_N_train"][0] = int(self.config["extra_N_train"][0])
+            self.config["extra_N_val"][0] = int(self.config["extra_N_val"][0])
             (
                 extra_x_train,
                 extra_a_train,
@@ -503,6 +519,7 @@ class DataSet():
             a_val = np.concatenate([a_val, extra_a_val])
             u_val = np.concatenate([u_val, extra_u_val])
 
+
         data_dict = {
             "x_train" : x_train,
             "a_train" : a_train,
@@ -512,10 +529,20 @@ class DataSet():
             "u_val" : u_val,
         }
 
+        if "augment_data_config" in self.config:
+            # augment the original data (example: high altitude point mass data)
+            augment_config = copy.deepcopy(self.config)
+            augment_config.update(augment_config['augment_data_config'][0])
+            augment_config.pop('augment_data_config')
+            new_dataset = DataSet(augment_config)
+            for key in data_dict.keys():
+                current_data = data_dict[key]
+                new_data = new_dataset.raw_data[key]
+                data_dict[key] = np.concatenate([current_data, new_data])
+
         print_stats(data_dict['x_train'], "Position")
         print_stats(data_dict['a_train'], "Acceleration")
         print_stats(data_dict['u_train'], "Potential")
-
 
         return data_dict
 
@@ -588,7 +615,7 @@ class DataSet():
             else:
                 exit("No dtype specified")
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
-        # dataset = dataset.shuffle(1000, seed=1234)
+        dataset = dataset.shuffle(len(x), seed=1234)
         dataset = dataset.batch(batch_size)
         dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -694,6 +721,22 @@ class DataSet():
         train_data, val_data, transformers = self.get_preprocessed_data(self.config, data_dict)
         dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
         
+        self.raw_data = data_dict
+        self.train_data = dataset
+        self.valid_data = val_dataset
+        self.transformers = transformers
+    
+    def add_dataset(self, new_dataset):
+        # append new data 
+        data_dict = self.raw_data.copy()
+        for key in data_dict.keys():
+            current_data = data_dict[key]
+            new_data = new_dataset.raw_data[key]
+            data_dict[key] = np.concatenate([current_data, new_data])
+
+        train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
+        dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
+
         self.raw_data = data_dict
         self.train_data = dataset
         self.valid_data = val_dataset
