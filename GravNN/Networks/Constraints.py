@@ -13,21 +13,21 @@ def laplacian(u_xx):
 
 
 def no_pinn(f, x, training):
-    u_x = f(x, training)
+    u_x = f(x, training=training)
     return u_x
 
 
 def pinn_A(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
-        u = f(x, training)
+        u = f(x, training=training)
     a_x = -tape.gradient(u, x)
     return a_x
 
 def pinn_A_Ur(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
-        ur = f(x, training)
+        ur = f(x, training=training)
     ur_x = tape.gradient(ur, x)
     r = tf.norm(x, axis=1)
     a_x = x[:,0]/r**3*ur[:,0]/r - ur_x[:,0]/r
@@ -37,7 +37,7 @@ def pinn_A_Ur(f, x, training):
     return a
 
 def pinn_P(f, x, training):
-    u = f(x, training)
+    u = f(x, training=training)
     return u
 
 
@@ -46,7 +46,7 @@ def pinn_PL(f, x, training):
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
@@ -62,7 +62,7 @@ def pinn_PLC(f, x, training):
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
     # https://github.com/tensorflow/tensorflow/issues/40885 -- batch_jacobian doesn't work with experimental compile
@@ -82,7 +82,7 @@ def pinn_PLC(f, x, training):
 def pinn_AP(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
-        u = f(x, training)
+        u = f(x, training=training)
     u_x = tape.gradient(u, x)
     accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
     return tf.concat((u, accel), 1)
@@ -93,7 +93,7 @@ def pinn_AL(f, x, training):
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
     accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
@@ -105,13 +105,12 @@ def pinn_AL(f, x, training):
     laplace = laplacian(u_xx)
     return tf.concat((accel, laplace), 1)
 
-
 def pinn_ALC(f, x, training):
     with tf.GradientTape(persistent=False) as g1:
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
@@ -132,7 +131,7 @@ def pinn_APL(f, x, training):
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
 
     accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
@@ -148,7 +147,7 @@ def pinn_APLC(f, x, training):
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
-            u = f(x, training)  # shape = (k,) #! evaluate network
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
         u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
     u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
 
