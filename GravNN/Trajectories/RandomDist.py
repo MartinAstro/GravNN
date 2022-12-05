@@ -5,7 +5,7 @@ import numpy as np
 import trimesh
 
 class RandomDist(TrajectoryBase):
-    def __init__(self, celestial_body, radius_bounds, points, uniform_volume=False, **kwargs):
+    def __init__(self, celestial_body, radius_bounds, points, **kwargs):
         """A distribution that samples uniformly in a spherical volume.
 
         Args:
@@ -14,10 +14,12 @@ class RandomDist(TrajectoryBase):
             points (int): number of samples
         """
         self.radius_bounds = radius_bounds
-        self.points = points
+        self.points = int(points)
         self.celestial_body = celestial_body
-        self.uniform_volume = uniform_volume
 
+        uniform_volume = kwargs.get('uniform_volume', False)
+        self.uniform_volume = uniform_volume[0] if isinstance(uniform_volume, list) else uniform_volume
+        
         self.populate_shape_model(**kwargs)
         super().__init__(**kwargs)
 
@@ -42,7 +44,7 @@ class RandomDist(TrajectoryBase):
             model_name = os.path.basename(self.model_file).split('.')[0]
         except:
             model_name = str(self.model_file.split("Blender_")[1]).split(".")[0]
-        self.trajectory_name = f"{directory_name}/{body}_{model_name}_N_{self.points}_RadBounds{self.radius_bounds}_UVol_{self.uniform_volume}"
+        self.trajectory_name = f"{directory_name}/{body}_{model_name}_N_{int(self.points)}_RadBounds{self.radius_bounds}_UVol_{self.uniform_volume}"
         self.file_directory += self.trajectory_name + "/"
 
     def sample_volume(self, points):
