@@ -104,8 +104,8 @@ class ExtrapolationExperiment:
 
     def get_PINN_data(self):
         positions = self.positions.astype(self.model.network.compute_dtype)
-        self.predicted_accelerations =  self.model.generate_acceleration(positions)
-        self.predicted_potentials =  self.model.generate_potential(positions)
+        self.predicted_accelerations =  self.model.compute_acceleration(positions)
+        self.predicted_potentials =  self.model.compute_potential(positions)
 
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):

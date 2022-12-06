@@ -58,8 +58,8 @@ def main():
         # Brillouin Sphere
         x = poly_gm.positions
         data_pred = {
-            "u" : model.generate_potential(x),
-            "a" : model.generate_acceleration(x)
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
         }
         grid_pot_pred = Grid(
             trajectory=DH_trajectory,

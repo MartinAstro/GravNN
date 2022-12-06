@@ -65,8 +65,8 @@ class PlanesExperiment:
         except:
             dtype = float
         positions = self.x_test.astype(dtype)
-        self.a_pred =  self.model.generate_acceleration(positions)
-        self.u_pred =  self.model.generate_potential(positions)
+        self.a_pred =  self.model.compute_acceleration(positions)
+        self.u_pred =  self.model.compute_potential(positions)
 
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):

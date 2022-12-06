@@ -4,14 +4,14 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
 import numpy as np
 
-def generate_acceleration(trajectory):
+def compute_acceleration(trajectory):
     x, a, u = get_sh_data(trajectory, Eros().sh_file, max_deg=4, deg_removed=-1,override=[True])
     return a
 
 def compute_stats(trajectory, prefix, model_file):
         x, a, u = get_poly_data(trajectory, model_file)
 
-        a_pred = generate_acceleration(trajectory)
+        a_pred = compute_acceleration(trajectory)
 
         diff = a - a_pred
         rse = np.linalg.norm(diff, axis=1) ** 2

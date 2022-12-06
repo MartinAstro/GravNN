@@ -175,7 +175,7 @@ class PINNGravityModel(tf.keras.Model):
 
     # Post-training API calls 
     @tf.function()
-    def generate_potential_tf(self, x):
+    def compute_potential_tf(self, x):
         x_preprocessor = getattr(self, 'x_preprocessor')
         u_postprocessor = getattr(self, 'u_postprocessor')
         x_network_input = x_preprocessor(x) 
@@ -183,7 +183,7 @@ class PINNGravityModel(tf.keras.Model):
         u_output = u_postprocessor(u_network_output)
         return u_output
 
-    def generate_potential(self, x):
+    def compute_potential(self, x):
         """Method responsible for returning just the PINN potential.
         Use this method if a lightweight TF execution is desired
 
@@ -206,7 +206,7 @@ class PINNGravityModel(tf.keras.Model):
             u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
-    def generate_acceleration(self, x, batch_size=131072):
+    def compute_acceleration(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -232,7 +232,7 @@ class PINNGravityModel(tf.keras.Model):
         a_pred = a_transformer.inverse_transform(a_pred)
         return a_pred
 
-    def generate_dU_dxdx(self, x, batch_size=131072):
+    def compute_dU_dxdx(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.

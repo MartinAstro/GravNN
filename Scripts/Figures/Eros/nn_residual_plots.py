@@ -75,7 +75,7 @@ def plot_residual_figure(df, sh_regress_files, show):
         model_id = df['id'].values[i]
         config, model = load_config_and_model(model_id, df)
 
-        a_pred = model.generate_acceleration(x)
+        a_pred = model.compute_acceleration(x)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
         label = "PINN %s" % str(int(config['acc_noise'][0]*100)) + "\%"

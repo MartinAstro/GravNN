@@ -30,7 +30,7 @@ def main():
 
     # Time PINN gravity model
     PINN_start_time = time.time()
-    pred_accelerations = model.generate_acceleration(trajectory.positions)
+    pred_accelerations = model.compute_acceleration(trajectory.positions)
     PINN_delta = time.time() - PINN_start_time
     print("PINN Time: %.2f" % (PINN_delta))
 

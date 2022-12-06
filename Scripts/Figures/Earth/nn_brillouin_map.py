@@ -55,7 +55,7 @@ def main():
     model_id = row['id']
     config, model = load_config_and_model(model_id, df)
 
-    a_pred = model.generate_acceleration(trajectory.positions)
+    a_pred = model.compute_acceleration(trajectory.positions)
     grid_pred = Grid(trajectory=trajectory, accelerations=a_pred)
 
     # The learned PINN model 

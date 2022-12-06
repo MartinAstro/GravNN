@@ -113,7 +113,7 @@ def main():
         a = test_poly_gm.accelerations
         u = test_poly_gm.potentials
         
-        a_pred = model.generate_acceleration(x)
+        a_pred = model.compute_acceleration(x)
 
         x_sph, a_sph = get_spherical_data(x, a)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)

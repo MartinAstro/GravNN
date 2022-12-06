@@ -46,7 +46,7 @@ def compute_stats(model, trajectory, config):
     a_sample = a[sample_idx]
 
     # compute error
-    a_pred = model.generate_acceleration(x_sample.astype(np.float32))
+    a_pred = model.compute_acceleration(x_sample.astype(np.float32))
     percent = np.linalg.norm(a_sample - a_pred, axis=1)/np.linalg.norm(a_sample, axis=1)*100
 
     return percent

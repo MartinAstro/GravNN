@@ -109,8 +109,8 @@ def main():
         u = test_poly_gm.potentials
   
         data_pred = {
-            "u" : model.generate_potential(x),
-            "a" : model.generate_acceleration(x)
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
         }
         a_pred = data_pred['a']
         u_pred = data_pred['u']
@@ -133,8 +133,8 @@ def main():
         a = poly_gm.accelerations
         u = poly_gm.potentials
         data_pred = {
-            "u" : model.generate_potential(x),
-            "a" : model.generate_acceleration(x)
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
         }
         a_pred = data_pred['a']
         u_pred = data_pred['u']

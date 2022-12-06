@@ -71,7 +71,7 @@ def plot_nn_model_map(nn_df, trajectory, model_df, grid_true):
         #* Predict the value at the training data 
         model_id = row['model_identifier'] # TODO: Change this name
         config, model = load_config_and_model(model_id, model_df)
-        a_est = model.generate_acceleration(trajectory.positions)
+        a_est = model.compute_acceleration(trajectory.positions)
         grid_pred = Grid(trajectory=trajectory, accelerations=a_est)
         map_vis.plot_grid(grid_pred.total, label="Accelerations" + str(config['num_units'][0]))
     
