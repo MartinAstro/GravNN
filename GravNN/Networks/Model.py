@@ -55,7 +55,8 @@ class PINNGravityModel(tf.keras.Model):
 
         self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
         self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
-        self.training = tf.Variable(True, dtype=tf.bool, trainable=False)
+        self.training = tf.convert_to_tensor(True, dtype=tf.bool)
+        self.test_training = tf.convert_to_tensor(False, dtype=tf.bool)
         
         # jacobian ops (needed in LC loss terms) incompatible with XLA
         if ("L" in self.eval.__name__) or \
@@ -69,9 +70,9 @@ class PINNGravityModel(tf.keras.Model):
             self.test_step = self.wrap_test_step_jit
 
     def set_training(self, training):
-        self.training.assign(training)
+        self.training = tf.convert_to_tensor(training, dtype=tf.bool)
 
-    def call(self, x, training=None):
+    def call(self, x, training):
         return self.eval(self.network, x, training)
 
     # Training
@@ -137,7 +138,7 @@ class PINNGravityModel(tf.keras.Model):
 
     def test_step_fcn(self, data):
         x, y = data
-        y_hat = self(x, training=False)
+        y_hat = self(x, training=self.test_training)
 
         rms_components = compute_rms_components(y_hat, y)
         percent_components = compute_percent_error(y_hat, y)
