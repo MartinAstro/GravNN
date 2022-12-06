@@ -19,7 +19,7 @@ def compute_percent_error(y_hat, y):
     da = tf.subtract(y_hat[:,0:3], y[:,0:3])
     da_norm = tf.norm(da, axis=1)
     a_true_norm = tf.norm(tf.abs(y[:,0:3]),axis=1)
-    percent_multiplier = tf.constant(100, dtype=da.dtype)
+    percent_multiplier = tf.constant(1, dtype=da.dtype)
     loss_components = da_norm/a_true_norm*percent_multiplier
     return loss_components
 
