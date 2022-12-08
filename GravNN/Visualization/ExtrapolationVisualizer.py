@@ -18,8 +18,9 @@ class ExtrapolationVisualizer(VisualizationBase):
         self.radius = self.experiment.config['planet'][0].radius
         self.training_bounds = np.array(self.experiment.training_bounds)
         self.max_idx = np.where(self.experiment.test_r_COM > self.training_bounds[1])[0][0]
-        self.set_x_axis('dist_2_surf')
+        self.set_x_axis(kwargs.get('x_axis', 'dist_2_surf'))
         self.annotate = kwargs.get('annotate', True)
+        self.plot_fcn = kwargs.get('plot_fcn', plt.plot)
 
     def set_x_axis(self, x_type):
         if x_type == "dist_2_COM":
@@ -65,12 +66,12 @@ class ExtrapolationVisualizer(VisualizationBase):
         
         self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
-        plt.plot(x, avg_line)
+        self.plot_fcn(x, avg_line)
 
         y_std_upper = np.squeeze(avg_line + 1*std_line)
         y_std_lower = np.squeeze(avg_line - 1*std_line)
         plt.fill_between(x, y_std_lower, y_std_upper, color='C0', alpha=0.5)
-        plt.plot(x, max_line, color='red')
+        self.plot_fcn(x, max_line, color='red')
         
         training_bounds = self.training_bounds / self.radius
         plt.vlines(training_bounds[0], ymin=0, ymax=np.max(value), color='green')
