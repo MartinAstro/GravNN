@@ -53,7 +53,7 @@ def compute_input_layer_normalization_constants(config):
     Args:
         config (dict): hyperparameters and configuration variables for the TF model.
     """
-    if config["skip_normalization"][0]:
+    if config.get("skip_normalization", [True])[0]:
         return
 
     trajectory = config["distribution"][0](
@@ -558,7 +558,7 @@ class DataSet():
         )
 
         # Preprocessing
-        scale_by = self.config["scale_by"][0]
+        scale_by = self.config.get("scale_by", ['none'])[0]
         if scale_by == "a":   
             preprocess_fcn = scale_by_acceleration
         elif scale_by == "u":
@@ -631,7 +631,7 @@ class DataSet():
         onto the device (GPU) and slow calculations."""
         x_train, u_train, a_train, laplace_train, curl_train = train_data
         x_val, u_val, a_val, laplace_val, curl_val = val_data
-        pinn_constraint_fcn = config["PINN_constraint_fcn"][0]
+        pinn_constraint_fcn = config.get("PINN_constraint_fcn", ["no_pinn"])[0]
 
         # Decide to train with potential or not
         # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint.
@@ -679,11 +679,13 @@ class DataSet():
         else:
             exit("No PINN Constraint Selected!")
 
+        batch_size = config.get('batch_size', [len(y_train)])[0]
+        dtype = config.get('dtype', [tf.float64])[0]
         dataset = self.generate_tensorflow_dataset(
-            x_train, y_train, config["batch_size"][0], dtype=config["dtype"][0]
+            x_train, y_train, batch_size, dtype=dtype
         )
         val_dataset = self.generate_tensorflow_dataset(
-            x_val, y_val, config["batch_size"][0], dtype=config["dtype"][0]
+            x_val, y_val, batch_size, dtype=dtype
         )
 
         return dataset, val_dataset
