@@ -151,13 +151,16 @@ class PINNGravityModel(tf.keras.Model):
                 "percent_max": tf.reduce_max(percent_components)
                 }
 
-    def train(self, data):
+    def train(self, data, initialize_optimizer=True):
 
+        if initialize_optimizer:
         optimizer = configure_optimizer(self.config, mixed_precision=False)
+        else:
+            optimizer = self.optimizer
         self.compile(optimizer=optimizer, loss="mse")
         
         # Train network
-        callback = SimpleCallback(self.config['batch_size'][0], print_interval=1)
+        callback = SimpleCallback(self.config['batch_size'][0], print_interval=10)
         schedule = get_schedule(self.config)
 
         history = self.fit(
