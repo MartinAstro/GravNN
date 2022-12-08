@@ -32,7 +32,8 @@ def update_constant(tape, loss_components, constant_avg, beta, variables):
     adaptive_constants = tf.stack(adaptive_constants)
 
     # update adaptive constant (rolling average)
-    new_const_avg = constant_avg * tf.subtract(1.0, beta) + beta * adaptive_constants
+    one = tf.constant(1.0,dtype=beta.dtype)
+    new_const_avg = constant_avg * tf.subtract(one, beta) + beta * adaptive_constants
     return new_const_avg
 
 
