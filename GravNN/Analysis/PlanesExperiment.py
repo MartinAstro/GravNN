@@ -136,20 +136,15 @@ class PlanesExperiment:
 
 def main():
     import pandas as pd
-    import numpy as np
-    import importlib
-    from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
     import matplotlib.pyplot as plt
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.CelestialBodies.Asteroids import Eros
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_040622.data")
     df = pd.read_pickle("Data/Dataframes/test.data")
     model_id = df["id"].values[-1] 
     config, model = load_config_and_model(model_id, df)
 
-    planet = Eros()
-    # planes_exp = PlanesExperiment(model, config, [-planet.radius*10, planet.radius*10], 30)
+    planet = config['planet'][0]
     planes_exp = PlanesExperiment(model, config, [-planet.radius, planet.radius], 30)
     planes_exp.run()
 
@@ -162,10 +157,6 @@ def main():
     vis = PlanesVisualizer(planes_exp)
     vis.plot(percent_max=10)
 
-    # vis = ExtrapolationVisualizer(extrapolation_exp)
-    # vis.plot_interpolation_percent_error()
-    # vis.plot_extrapolation_percent_error()
-    # vis.plot_interpolation_loss()
     plt.show()
 if __name__ == "__main__":
     main()
