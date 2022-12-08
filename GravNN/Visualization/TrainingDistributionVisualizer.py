@@ -62,7 +62,6 @@ class TrainingDistributionVisualizer(VisualizationBase):
 
 
 if __name__ == "__main__":
-    df_file = "Data/Dataframes/test.data" 
     import pandas as pd
     import numpy as np
     from GravNN.Visualization.TrainingDistributionVisualizer import TrainingDistributionVisualizer
