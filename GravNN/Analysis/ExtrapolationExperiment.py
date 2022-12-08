@@ -81,10 +81,16 @@ class ExtrapolationExperiment:
                             points=self.points,
                             **self.config)
 
+        x, a, u = gravity_data_fcn(interpolation_dist, obj_file, **self.config)
+        x_extra, a_extra, u_extra = gravity_data_fcn(extrapolation_dist, obj_file, **self.config)
+        
+        x = np.append(x, x_extra, axis=0)
+        a = np.append(a, a_extra, axis=0)
+        u = np.append(u, u_extra, axis=0)
+
         full_dist = interpolation_dist
         full_dist.positions = np.append(full_dist.positions, extrapolation_dist.positions, axis=0)
         
-        x, a, u = gravity_data_fcn(full_dist, obj_file, **self.config)
 
         # Compute distance to COM
         x_sph = cart2sph(x)
@@ -103,7 +109,7 @@ class ExtrapolationExperiment:
         self.test_potentials = u
 
     def get_PINN_data(self):
-        positions = self.positions.astype(self.model.network.compute_dtype)
+        positions = self.positions#.astype(self.model.network.compute_dtype)
         self.predicted_accelerations =  self.model.compute_acceleration(positions)
         self.predicted_potentials =  self.model.compute_potential(positions)
 
@@ -131,7 +137,7 @@ class ExtrapolationExperiment:
             percent_error = np.linalg.norm(y - y_hat, axis=1) / np.linalg.norm(y, axis=1)*100
             return rms_error.astype(np.float32), percent_error.astype(np.float32)
 
-        loss_fcn = _get_loss_fcn(self.config['loss_fcn'][0])
+        loss_fcn = _get_loss_fcn(self.config.get('loss_fcn',["percent_rms_summed"])[0])
 
         rms_accelerations, percent_accelerations = compute_errors(self.test_accelerations, self.predicted_accelerations) 
         self.loss_acc = np.array([
