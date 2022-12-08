@@ -19,7 +19,7 @@ class ExtrapolationExperiment:
 
         self.brillouin_radius = config['planet'][0].radius
         original_max_radius = self.config['radius_max'][0]
-        extra_max_radius = self.config.get('extra_radius_max', [0])[0]
+        extra_max_radius = np.nan_to_num(self.config.get('extra_radius_max', [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config['radius_min'][0], max_radius]
 
