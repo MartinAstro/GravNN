@@ -62,7 +62,7 @@ class RandomDist(TrajectoryBase):
 
         if self.uniform_volume:
             #https://stackoverflow.com/questions/5408276/sampling-uniformly-distributed-random-points-inside-a-spherical-volume
-            u_min = R_min / R_max
+            u_min = (R_min / R_max)**3
             u_max = 1.0
 
             # want distribution to be uniform across volume the sphere
