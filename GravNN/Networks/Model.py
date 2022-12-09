@@ -14,7 +14,7 @@ from GravNN.Networks.Losses import compute_rms_components, compute_percent_error
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
-
+from GravNN.Networks.HIG import HIG_pinv
 import GravNN
 
 np.random.seed(1234)
@@ -37,31 +37,35 @@ class PINNGravityModel(tf.keras.Model):
         self.variable_cast = config.get("dtype", [tf.float32])[0]
         super(PINNGravityModel, self).__init__(dtype=self.variable_cast)
         self.config = config
-        if network is None:
-            self.network = load_network(config)
-        else:
-            self.network = network
-        self.mixed_precision = tf.constant(
-            self.config["mixed_precision"][0], dtype=tf.bool
-        )
-        
-        self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
-        self.loss_fcn = utils._get_loss_fcn(config['loss_fcn'][0])
-        PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
-        self.eval = PINN_variables[0]
-        self.scale_loss = PINN_variables[1]
-        self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=self.variable_cast)
-        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
 
-        self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
-        self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
+        self.mixed_precision = tf.constant(self.config["mixed_precision"][0], dtype=tf.bool)
+
+        self.init_network(network)
+        self.init_physics_information()
+        self.init_annealing()       
+        self.init_training_steps()
+
+    def init_physics_information(self):
+        constraint = self.config["PINN_constraint_fcn"][0]
+        self.eval = utils._get_PI_constraint(constraint)
+        self.is_pinn = tf.cast(constraint != no_pinn, tf.bool)
+
+
+    def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
         self.test_training = tf.convert_to_tensor(False, dtype=tf.bool)
-        
+        if network is None:
+            self.network = load_network(self.config)
+        else:
+            self.network = network
+        self.loss_fcn = utils._get_loss_fcn(self.config['loss_fcn'][0])
+
+
+    def init_training_steps(self):
         # jacobian ops (needed in LC loss terms) incompatible with XLA
         if ("L" in self.eval.__name__) or \
            ("C" in self.eval.__name__) or \
-           (config['init_file'][0] is not None) or \
+           (self.config['init_file'][0] is not None) or \
            (not self.config['jit_compile'][0]):
             self.train_step = self.wrap_train_step_njit
             self.test_step = self.wrap_test_step_njit
@@ -69,7 +73,14 @@ class PINNGravityModel(tf.keras.Model):
             self.train_step = self.wrap_train_step_jit
             self.test_step = self.wrap_test_step_jit
 
-    def set_training(self, training):
+    def init_annealing(self):
+        constants = utils._get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
+        self.scale_loss = utils._get_PI_annealing(self.config['PINN_constraint_fcn'][0]) # anneal function
+        self.calc_adaptive_constant = utils._get_annealing_fcn(self.config["lr_anneal"][0]) # hold, anneal, custom
+        self.adaptive_constant = tf.Variable(constants, dtype=self.variable_cast, trainable=False)
+        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
+
+    def set_training_kwarg(self, training):
         self.training = tf.convert_to_tensor(training, dtype=tf.bool)
 
     def call(self, x, training):
@@ -90,32 +101,26 @@ class PINNGravityModel(tf.keras.Model):
  
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=self.training)
+            y_hat = self(x, training=self.training) # [N x (3 or 7)]
 
-            rms_components = compute_rms_components(y_hat, y)
-            percent_components = compute_percent_error(y_hat, y)
+            rms_components = compute_rms_components(y_hat, y) # [N x (3 or 7)]
+            percent_components = compute_percent_error(y_hat, y) # [N x 1]
 
             updated_rms_components = self.scale_loss(
-                tf.reduce_mean(rms_components,0), self.adaptive_constant
+               rms_components, self.adaptive_constant
             )
 
-            loss = self.loss_fcn(rms_components, percent_components)
+            loss = self.loss_fcn(updated_rms_components, percent_components)
             loss = self.optimizer.get_scaled_loss(loss)
 
-        # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(
+        new_adaptive_constant = self.calc_adaptive_constant(
             tape,
             updated_rms_components,
             self.adaptive_constant,
             self.beta,
             self.trainable_weights,
         )
-
-        # # These lines are needed if using the gradient callback.
-        # grad_comp_list = []
-        # for loss_comp in updated_loss_components:
-        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-        #     grad_comp_list.append(gradient_components)
+        self.adaptive_constant.assign(new_adaptive_constant)
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -132,7 +137,8 @@ class PINNGravityModel(tf.keras.Model):
         return {
             "loss": loss,
             "percent_mean": tf.reduce_mean(percent_components),
-            "percent_max": tf.reduce_max(percent_components)
+            "percent_max": tf.reduce_max(percent_components),
+            # "weighted_percent": w_percent_error,
            # "adaptive_constant": adaptive_constant,
         }  # 'grads' : grad_comp_list}
 
@@ -143,18 +149,19 @@ class PINNGravityModel(tf.keras.Model):
         rms_components = compute_rms_components(y_hat, y)
         percent_components = compute_percent_error(y_hat, y)
         updated_rms_components = self.scale_loss(
-            tf.reduce_mean(rms_components,0), self.adaptive_constant
+            rms_components, self.adaptive_constant
         )
-        loss = self.loss_fcn(rms_components, percent_components)
+        loss = self.loss_fcn(updated_rms_components, percent_components)
         return {"loss": loss, 
                 "percent_mean": tf.reduce_mean(percent_components),
-                "percent_max": tf.reduce_max(percent_components)
+                "percent_max": tf.reduce_max(percent_components),
+                # "weighted_percent": w_percent_error,
                 }
 
     def train(self, data, initialize_optimizer=True):
 
         if initialize_optimizer:
-        optimizer = configure_optimizer(self.config, mixed_precision=False)
+            optimizer = configure_optimizer(self.config, mixed_precision=False)
         else:
             optimizer = self.optimizer
         self.compile(optimizer=optimizer, loss="mse")
@@ -233,7 +240,8 @@ class PINNGravityModel(tf.keras.Model):
             a_pred = self._pinn_acceleration_output(x)
         else:
             a_pred = self._nn_acceleration_output(x)
-        a_pred = a_transformer.inverse_transform(a_pred)
+        a_pred = a_transformer.inverse_transform(a_pred).numpy()
+
         return a_pred
 
     def compute_dU_dxdx(self, x, batch_size=131072):
@@ -303,10 +311,7 @@ class PINNGravityModel(tf.keras.Model):
     
     @tf.function()
     def _pinn_acceleration_output(self, x):
-        if self.is_modified_potential:
-            a = pinn_A_Ur(self.network, x, training=False)
-        else:
-            a = pinn_A(self.network, x, training=False)
+        a = pinn_A(self.network, x, training=False)
         return a
 
     @tf.function(experimental_relax_shapes=True)
