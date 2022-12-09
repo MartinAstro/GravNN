@@ -5,6 +5,10 @@ https://www.amcs.upenn.edu/sites/default/files/Understanding%20and%20mitigating%
 
 import tensorflow as tf
 
+def log10(x):
+    numerator = tf.math.log(x)
+    denominator = tf.math.log(tf.constant(10, dtype=numerator.dtype))
+    return numerator/denominator
 
 def update_constant(tape, loss_components, constant_avg, beta, variables):
     # Get max residual weight
@@ -30,16 +34,23 @@ def update_constant(tape, loss_components, constant_avg, beta, variables):
 
     # generate new adaptive constants
     adaptive_constants = tf.stack(adaptive_constants)
+    exponent = tf.constant([0, 1, 1], dtype=beta.dtype)
+    adaptive_constants = tf.pow(adaptive_constants, exponent) #forces first component to 1
 
     # update adaptive constant (rolling average)
     one = tf.constant(1.0,dtype=beta.dtype)
     new_const_avg = constant_avg * tf.subtract(one, beta) + beta * adaptive_constants
     return new_const_avg
 
-
 def hold_constant(tape, loss_components, constant_avg, beta, variables):
     return constant_avg
 
+def custom_constant(tape, loss_components, constant_avg, beta, variables):
+    # loss_log = log10(loss_components[0])
+    one = tf.constant(1.0, dtype=beta.dtype)
+    new_constants = tf.divide(loss_components[0], loss_components)
+    new_adaptive_const = constant_avg * tf.subtract(one, beta) + beta * new_constants
+    return new_adaptive_const
 
 def no_pinn_anneal(loss_components, adaptive_const):
     loss_res = loss_components
@@ -57,47 +68,47 @@ def pinn_P_anneal(loss_components, adaptive_const):
 
 
 def pinn_PL_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[0]
-    loss_L = loss_components[1] * adaptive_const[1]
+    loss_res = loss_components[:,0] * adaptive_const[0]
+    loss_L = loss_components[:,1] * adaptive_const[1]
     return (loss_res, loss_L)
 
 
 def pinn_PLC_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[0]
-    loss_L = loss_components[1] * adaptive_const[1]
-    loss_C = tf.reduce_sum(loss_components[2:5] * adaptive_const[2])
+    loss_res = loss_components[:,0] * adaptive_const[0]
+    loss_L = loss_components[:,1] * adaptive_const[1]
+    loss_C = tf.reduce_sum(loss_components[:,2:5], axis=1) * adaptive_const[2]
     return (loss_res, loss_L, loss_C)
 
 
 def pinn_AP_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[0]
-    loss_A = tf.reduce_sum(loss_components[1:4] * adaptive_const[1])
+    loss_res = loss_components[:,0] * adaptive_const[0]
+    loss_A = tf.reduce_sum(loss_components[:,1:4], axis=1) * adaptive_const[1]
     return (loss_res, loss_A)
 
 
 def pinn_AL_anneal(loss_components, adaptive_const):
-    loss_res = tf.reduce_sum(loss_components[0:3])
-    loss_bc = loss_components[3] * adaptive_const[1]
+    loss_res = tf.reduce_sum(loss_components[:,0:3], axis=1)*adaptive_const[0]
+    loss_bc = loss_components[:,3] * adaptive_const[1]
     return (loss_res, loss_bc)
 
 
 def pinn_APL_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[0]
-    loss_P = tf.reduce_sum(loss_components[1:4] * adaptive_const[1])
-    loss_L = loss_components[4] * adaptive_const[2]
+    loss_res = loss_components[:,0] * adaptive_const[0]
+    loss_P = tf.reduce_sum(loss_components[:,1:4], axis=1) * adaptive_const[1]
+    loss_L = loss_components[:,4] * adaptive_const[2]
     return (loss_res, loss_P, loss_L)
 
 
 def pinn_ALC_anneal(loss_components, adaptive_const):
-    loss_res = tf.reduce_sum(loss_components[0:3])
-    loss_L = loss_components[3] * adaptive_const[1]
-    loss_C = tf.reduce_sum(loss_components[4:7] * adaptive_const[2])
+    loss_res = tf.reduce_sum(loss_components[:,0:3], axis=1)*adaptive_const[0]
+    loss_L = loss_components[:,3] * adaptive_const[1]
+    loss_C = tf.reduce_sum(loss_components[:,4:7], axis=1) * adaptive_const[2]
     return (loss_res, loss_L, loss_C)
 
 
 def pinn_APLC_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[0]
-    loss_A = tf.reduce_sum(loss_components[1:4] * adaptive_const[1])
-    loss_L = loss_components[4] * adaptive_const[2]
-    loss_C = tf.reduce_sum(loss_components[5:8] * adaptive_const[3])
+    loss_res = loss_components[:,0] * adaptive_const[0]
+    loss_A = tf.reduce_sum(loss_components[:,1:4], axis=1) * adaptive_const[1]
+    loss_L = loss_components[:,4] * adaptive_const[2]
+    loss_C = tf.reduce_sum(loss_components[:,5:8], axis=1) * adaptive_const[3]
     return (loss_res, loss_A, loss_L, loss_C)
