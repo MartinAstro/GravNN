@@ -27,7 +27,7 @@ def PINN_I():
         "learning_rate": [0.001*2],
         "dropout": [0.0],
         "skip_normalization": [False],
-        "lr_anneal": [False],
+        "lr_anneal": ['hold'],
         "beta" : [0.0],
         "input_layer": [False],
         "network_type": ["traditional"],
