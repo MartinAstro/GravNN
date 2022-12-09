@@ -334,6 +334,9 @@ def scale_by_constants(data_dict, config):
         config['ref_radius'] = [x_vec_normalized[0,0]]
         config['ref_radius_min'] = [x_vec_normalized[0,1]]
         config['ref_radius_max'] = [x_vec_normalized[0,2]]
+    
+    if config.get('mu', [None])[0] is not None:
+        config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
 
     data_dict = {
         "x_train" : x_train,
