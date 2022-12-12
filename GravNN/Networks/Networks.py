@@ -1,9 +1,11 @@
 from GravNN.Networks.Layers import (
     AugmentedPotentialLayer,
+    AugmentedPotentialLayer_v2,
     PinesSph2NetRefLayer,
     PinesSph2NetLayer,
     Cart2PinesSphLayer,
     PinesSph2NetLayer_v2
+
 )
 import tensorflow as tf
 import os
@@ -422,7 +424,7 @@ def SphericalPinesTransformerNet_v3(**kwargs):
         dtype=dtype,
     )(x)
 
-    u = AugmentedPotentialLayer(dtype, mu, ref_radius_max)(u_nn, inputs)
+    u = AugmentedPotentialLayer_v2(dtype, mu, ref_radius_max)(u_nn, inputs)
 
     model = tf.keras.Model(inputs=inputs, outputs=u)
     super(tf.keras.Model, model).__init__(dtype=dtype)

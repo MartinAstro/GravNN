@@ -224,3 +224,45 @@ class AugmentedPotentialLayer(tf.keras.layers.Layer):
             }
         )
         return config
+
+class AugmentedPotentialLayer_v2(tf.keras.layers.Layer):
+    def __init__(self, dtype, mu, r_max):
+        super(AugmentedPotentialLayer_v2, self).__init__(dtype=dtype)
+        self.mu = tf.constant(mu, dtype=dtype).numpy()
+        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+
+    def build(self, input_shapes):
+        self.radius = self.add_weight("radius",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=self.r_max),
+                            )
+        self.k = self.add_weight("k",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=10),
+                            )
+        super(AugmentedPotentialLayer_v2, self).build(input_shapes)
+
+
+    def call(self, u_nn, inputs):
+        one = tf.constant(1.0, dtype=u_nn.dtype)
+        half = tf.constant(0.5, dtype=u_nn.dtype)
+        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        dr = tf.subtract(r,self.radius)
+        h = half+half*tf.tanh(self.k*dr)
+        u_pm = tf.negative(tf.divide(self.mu,r))
+        # u_model = (one - h)*(u_nn) + h*u_pm 
+        u_model = (one - h)*(u_nn + u_pm) + h*u_pm 
+        return u_model
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "r_max" : self.r_max,
+                "dtype": self.dtype
+            }
+        )
+        return config
