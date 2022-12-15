@@ -421,3 +421,41 @@ class PinesAlgorithmLayer(tf.keras.layers.Layer):
             }
         )
         return config
+
+class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
+    def __init__(self, dtype, mu, a, C20):
+        super(PlanetaryOblatenessLayer, self).__init__(dtype=dtype)
+        self.mu = tf.constant(mu, dtype=dtype).numpy()
+        self.a = tf.constant(a, dtype=dtype).numpy()
+        self.C20 = tf.constant(C20, dtype=dtype).numpy()
+   
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        u = inputs_transpose[3]
+
+        u_pm = self.mu/r
+
+        c1 = tf.sqrt(tf.constant(15.0/4.0, dtype=self.dtype)) * \
+             tf.sqrt(tf.constant(3.0, dtype=self.dtype))
+        c2 = tf.sqrt(tf.constant(5.0/4.0, dtype=self.dtype))
+
+        u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*c1 - c2)*self.C20
+        potential = tf.negative(u_pm + u_C20)
+
+        u = tf.reshape(potential, (-1,1))
+        return u
+
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "a" : self.a,
+                "C20" : self.C20,
+                # "dtype" : self.dtype,
+            }
+        )
+        return config
