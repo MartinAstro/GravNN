@@ -164,8 +164,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         
         # bounds of the feature -- shouldn't necessarily be a large difference.
         # think about how much the output should change with respect to the inputs
-        self.s_min = tf.constant(1.0, dtype=dtype).numpy()
-        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min)/self.ref_radius_min, dtype=dtype).numpy()           
+        self.r_star_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min)/self.ref_radius_min, dtype=dtype).numpy()           
+        self.r_star_min = tf.constant(1.0, dtype=dtype).numpy()
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
@@ -174,8 +174,10 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         t = inputs_transpose[2]
         u = inputs_transpose[3]
 
-        scale = tf.divide(self.s_max - self.s_min, self.ref_radius_max - self.ref_radius_min)
-        min_arg = self.s_min - tf.multiply(self.ref_radius_min, scale)
+        ds = self.r_star_max - self.r_star_min
+        dr = self.ref_radius_max - self.ref_radius_min
+        scale = tf.divide(ds, dr)
+        min_arg = self.r_star_min - tf.multiply(self.ref_radius_min, scale)
         r_star = tf.multiply(r, scale) + min_arg
 
         one = tf.constant(1.0, dtype=r.dtype)
@@ -189,8 +191,8 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         config.update(
             {
                 "dtype" : self.dtype,
-                "s_min" : self.s_min,
-                "s_max" : self.s_max,
+                "r_star_min" : self.r_star_min,
+                "r_star_max" : self.r_star_max,
                 "ref_radius_min" : self.ref_radius_min,
                 "ref_radius_max" : self.ref_radius_max
             }
@@ -215,7 +217,6 @@ class PointMassLayer(tf.keras.layers.Layer):
             }
         )
         return config
-
 
 class BlendPotentialLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, mu, r_max):
