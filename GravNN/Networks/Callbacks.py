@@ -91,8 +91,8 @@ class SimpleCallback(tf.keras.callbacks.Callback):
         self.time_delta = np.round(self.end_time - self.train_start, 2)
 
 
-class LossComponentsCallback(tf.keras.callbacks.Callback):
-    """Loss Components Callback that prints out loss component metrics every 100 epochs"""
+class RMSComponentsCallback(tf.keras.callbacks.Callback):
+    """Loss Components Callback that prints out RMS component metrics every 100 epochs"""
     def __init__(self, batch_size, print_interval=100):
         super().__init__()
         self.batch_size = batch_size
@@ -109,30 +109,33 @@ class LossComponentsCallback(tf.keras.callbacks.Callback):
         new_avg = [sum(col)/len(col) for col in zip(*val)]
         full_new_avg = [M * i for i in new_avg]
 
-        avg_list = [old_avg, full_new_avg]
         final_avg = []
         for i in range(len(full_new_avg)):
             final_avg.append(full_new_avg[i] + old_avg[i])
         final_final_avg = [(i / (N+M)) for i in final_avg]
         return final_final_avg
 
+    def incremental_average(self, avg, val, N, M):
+        np.mean(val)
+        return ((N*avg + M*val)/(M+N))
+
     def on_train_batch_end(self, batch, logs=None):
-        self.N_train_samples += self.batch_size
         self.loss_components = self.incremental_average_loss(
             self.loss_components,
             logs['loss_components'],
             self.N_train_samples,
             self.batch_size
         )
+        self.N_train_samples += self.batch_size
 
     def on_test_batch_end(self, batch, logs=None):
-        self.N_val_samples += self.batch_size
         self.val_loss_components = self.incremental_average_loss(
             self.val_loss_components,
             logs['loss_components'],
-            self.N_train_samples,
+            self.N_val_samples,
             self.batch_size
         )
+        self.N_val_samples += self.batch_size
 
     def on_epoch_begin(self,epoch,logs=None):
         self.N_train_samples = 0
@@ -146,7 +149,7 @@ class LossComponentsCallback(tf.keras.callbacks.Callback):
             print("Loss Components: ")
             print(self.loss_components)
             print("Validation Loss Components: ")
-            print(self.val_loss_components)            
+            print(self.val_loss_components)        
         
         # Overwrite batch logs for epoch logs (to be saved in history obj)
         logs['loss_components'] = self.loss_components

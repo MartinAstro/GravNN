@@ -45,7 +45,7 @@ def run(config):
     import pandas as pd
     np.random.seed(config['seed'][0])
     from GravNN.Networks.utils import configure_tensorflow
-    from GravNN.Networks.Callbacks import SimpleCallback
+    from GravNN.Networks.Callbacks import SimpleCallback, RMSComponentsCallback
     from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
     from GravNN.Networks.Model import PINNGravityModel
     from GravNN.Networks.utils import populate_config_objects, configure_optimizer
@@ -67,7 +67,7 @@ def run(config):
     
     # Train network
     callback = SimpleCallback(config['batch_size'][0])
-    loss_callback = LossComponentsCallback(config['batch_size'][0])
+    loss_callback = RMSComponentsCallback(config['batch_size'][0])
     schedule = get_schedule(config)
 
     history = model.fit(
