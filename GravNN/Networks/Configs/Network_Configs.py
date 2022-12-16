@@ -67,14 +67,3 @@ def PINN_III():
     }
     config.update(network_config)
     return config
-
-def PINN_IV():
-    config = PINN_III()
-    network_config = {
-        "layers" : [3, 100, 100, 100, 3],
-        "batch_size" : [1024],
-        "learning_rate" : [0.001*5]
-    }
-    config.update(network_config)
-    return config
-
