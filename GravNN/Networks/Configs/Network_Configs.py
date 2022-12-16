@@ -66,4 +66,3 @@ def PINN_III():
     }
     config.update(network_config)
     return config
-

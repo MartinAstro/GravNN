@@ -13,7 +13,7 @@ from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Losses import compute_rms_components, compute_percent_error
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
-from GravNN.Networks.Callbacks import SimpleCallback
+from GravNN.Networks.Callbacks import SimpleCallback, RMSComponentsCallback
 from GravNN.Networks.HIG import HIG_pinv
 import GravNN
 
@@ -133,11 +133,12 @@ class PINNGravityModel(tf.keras.Model):
         self.optimizer.apply_gradients([
             (grad, var) for (grad, var) in zip(gradients, self.network.trainable_variables) if grad is not None
             ])
-
         return {
             "loss": loss,
             "percent_mean": tf.reduce_mean(percent_components),
             "percent_max": tf.reduce_max(percent_components),
+            "loss_components" : rms_components,
+            "percent_components" : percent_components
             # "weighted_percent": w_percent_error,
            # "adaptive_constant": adaptive_constant,
         }  # 'grads' : grad_comp_list}
@@ -155,6 +156,8 @@ class PINNGravityModel(tf.keras.Model):
         return {"loss": loss, 
                 "percent_mean": tf.reduce_mean(percent_components),
                 "percent_max": tf.reduce_max(percent_components),
+                "loss_components" : rms_components,
+                "percent_components" : percent_components
                 # "weighted_percent": w_percent_error,
                 }
 
@@ -168,6 +171,7 @@ class PINNGravityModel(tf.keras.Model):
         
         # Train network
         callback = SimpleCallback(self.config['batch_size'][0], print_interval=10)
+        rmscallback = RMSComponentsCallback(self.config['batch_size'][0])
         schedule = get_schedule(self.config)
 
         history = self.fit(
@@ -175,7 +179,7 @@ class PINNGravityModel(tf.keras.Model):
             epochs=self.config["epochs"][0],
             verbose=0,
             validation_data=data.valid_data,
-            callbacks=[callback, schedule],
+            callbacks=[callback, rmscallback, schedule],
             use_multiprocessing=True
         )
         history.history["time_delta"] = callback.time_delta

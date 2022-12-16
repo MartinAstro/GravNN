@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from GravNN.Networks.Callbacks import LossComponentsCallback
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
@@ -24,6 +25,7 @@ def main():
         "epochs" : [5000],
         "batch_size" : [4096],
         "PINN_constraint_fcn": ["pinn_alc"],
+        "dtype" : ['float64']
     })
 
 

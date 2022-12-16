@@ -91,6 +91,79 @@ class SimpleCallback(tf.keras.callbacks.Callback):
         self.time_delta = np.round(self.end_time - self.train_start, 2)
 
 
+class RMSComponentsCallback(tf.keras.callbacks.Callback):
+    """Loss Components Callback that prints out RMS component metrics every 100 epochs"""
+    def __init__(self, batch_size, print_interval=100):
+        super().__init__()
+        self.batch_size = batch_size
+        self.print_interval = print_interval
+
+        self.N_train_samples = 0
+        self.loss_components = [0, 0, 0, 0, 0, 0, 0]
+
+        self.N_val_samples = 0
+        self.val_loss_components = [0, 0, 0, 0, 0, 0, 0]
+
+    def incremental_average_loss(self, avg, val, N, M):
+        old_avg = [N * i for i in avg]
+        new_avg = [sum(col)/len(col) for col in zip(*val)]
+        full_new_avg = [M * i for i in new_avg]
+
+        final_avg = []
+        for i in range(len(full_new_avg)):
+            final_avg.append(full_new_avg[i] + old_avg[i])
+        final_final_avg = [(i / (N+M)) for i in final_avg]
+        return final_final_avg
+
+    def incremental_average(self, avg, val, N, M):
+        np.mean(val)
+        return ((N*avg + M*val)/(M+N))
+
+    def on_train_batch_end(self, batch, logs=None):
+        self.loss_components = self.incremental_average_loss(
+            self.loss_components,
+            logs['loss_components'],
+            self.N_train_samples,
+            self.batch_size
+        )
+        self.N_train_samples += self.batch_size
+
+    def on_test_batch_end(self, batch, logs=None):
+        self.val_loss_components = self.incremental_average_loss(
+            self.val_loss_components,
+            logs['loss_components'],
+            self.N_val_samples,
+            self.batch_size
+        )
+        self.N_val_samples += self.batch_size
+
+    def on_epoch_begin(self,epoch,logs=None):
+        self.N_train_samples = 0
+        self.loss_components = [0, 0, 0, 0, 0, 0, 0]
+
+        self.N_val_samples = 0
+        self.val_loss_components = [0, 0, 0, 0, 0, 0, 0]
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch % self.print_interval == 0:
+            print("Loss Components: ")
+            print(self.loss_components)
+            print("Validation Loss Components: ")
+            print(self.val_loss_components)        
+        
+        # Overwrite batch logs for epoch logs (to be saved in history obj)
+        logs['loss_components'] = self.loss_components
+        logs['val_loss_components'] = self.val_loss_components
+
+    def on_train_begin(self, logs=None):
+        self.train_start = time.time()
+        self.start_time = time.time()
+
+    def on_train_end(self, logs=None):
+        self.end_time = time.time()
+        self.time_delta = np.round(self.end_time - self.train_start, 2)
+
+
 class GradientCallback(tf.keras.callbacks.Callback):
     """Callback that plots out the gradients for each hidden layer after every 1000 epochs"""
 
