@@ -15,7 +15,7 @@ def main():
     config = get_default_eros_config()
 
     # hyperparameters which overwrite defaults
-    hparams = PINN_IV()
+    hparams = PINN_III()
     hparams.update(ReduceLrOnPlateauConfig())
     hparams.update({
         "grav_file" : [Eros().obj_8k],
@@ -79,15 +79,6 @@ def run(config):
     )
     history.history["time_delta"] = callback.time_delta
     model.history = history
-
-    # Saving history object to a dataframe for use in plots
-    hist_df = pd.DataFrame(history.history) 
-
-    hist_csv_file = 'history_percent.csv'
-    with open(hist_csv_file, mode='w') as f:
-        hist_df.to_csv(f)
-
-    model.save(df_file=None, history=history, transformers=transformers)
 
     # Appends the model config to a perscribed df
     return model.config
