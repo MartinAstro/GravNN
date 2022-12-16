@@ -25,7 +25,7 @@ def get_default_eros_config():
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
         "dummy_transformer": [DummyScaler()],
         "override" : [False],
-        'ref_radius' : [Eros().radius]
+        'ref_radius' : [Eros().radius],
         "ref_radius_min" : [Eros().radius_min],
     }
 
