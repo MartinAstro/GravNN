@@ -86,7 +86,7 @@ class PINNGravityModel(tf.keras.Model):
 
             rms_components = compute_rms_components(y_hat, y)
             percent_components = compute_percent_error(y_hat, y)
-
+            
             updated_rms_components = self.scale_loss(
                 tf.reduce_mean(rms_components,0), self.adaptive_constant
             )
@@ -120,11 +120,12 @@ class PINNGravityModel(tf.keras.Model):
         self.optimizer.apply_gradients([
             (grad, var) for (grad, var) in zip(gradients, self.network.trainable_variables) if grad is not None
             ])
-
         return {
             "loss": loss,
             "percent_mean": tf.reduce_mean(percent_components),
-            "percent_max": tf.reduce_max(percent_components)
+            "percent_max": tf.reduce_max(percent_components),
+            "loss_components" : rms_components,
+            "percent_components" : percent_components
            # "adaptive_constant": adaptive_constant,
         }  # 'grads' : grad_comp_list}
 
@@ -140,7 +141,9 @@ class PINNGravityModel(tf.keras.Model):
         loss = self.loss_fcn(rms_components, percent_components)
         return {"loss": loss, 
                 "percent_mean": tf.reduce_mean(percent_components),
-                "percent_max": tf.reduce_max(percent_components)
+                "percent_max": tf.reduce_max(percent_components),
+                "loss_components" : rms_components,
+                "percent_components" : percent_components
                 }
 
     # JIT wrappers
