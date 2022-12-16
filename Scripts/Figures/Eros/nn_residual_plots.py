@@ -10,7 +10,6 @@ from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Visualization.DataVisSuite import DataVisSuite
-from GravNN.Networks.Data import get_raw_data
 
 def make_fcn_name_latex_compatable(name):
     components = name.split("_")
@@ -51,7 +50,9 @@ def plot_residual_figure(df, sh_regress_files, show):
     x_sph, a_sph = get_spherical_data(x, a)
 
     config, model = load_config_and_model(df['id'].values[0], df)       
-    x_train, a_train, _, _, _, _ = get_raw_data(config)
+    data = DataSet(config)
+    x_train = data.raw_data['x_train']
+    a_train = data.raw_data['a_train']
     x_sph_train, _ = get_spherical_data(x_train, a_train)
 
     data_vis = DataVisSuite()
@@ -74,7 +75,7 @@ def plot_residual_figure(df, sh_regress_files, show):
         model_id = df['id'].values[i]
         config, model = load_config_and_model(model_id, df)
 
-        a_pred = model.generate_acceleration(x)
+        a_pred = model.compute_acceleration(x)
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
         label = "PINN %s" % str(int(config['acc_noise'][0]*100)) + "\%"

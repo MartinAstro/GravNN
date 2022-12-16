@@ -11,6 +11,10 @@ from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Losses import compute_rms_components, compute_percent_error
+from GravNN.Networks.Schedules import get_schedule
+from GravNN.Networks.utils import populate_config_objects, configure_optimizer
+from GravNN.Networks.Callbacks import SimpleCallback, RMSComponentsCallback
+from GravNN.Networks.HIG import HIG_pinv
 import GravNN
 
 np.random.seed(1234)
@@ -33,29 +37,35 @@ class PINNGravityModel(tf.keras.Model):
         self.variable_cast = config.get("dtype", [tf.float32])[0]
         super(PINNGravityModel, self).__init__(dtype=self.variable_cast)
         self.config = config
+
+        self.mixed_precision = tf.constant(self.config["mixed_precision"][0], dtype=tf.bool)
+
+        self.init_network(network)
+        self.init_physics_information()
+        self.init_annealing()       
+        self.init_training_steps()
+
+    def init_physics_information(self):
+        constraint = self.config["PINN_constraint_fcn"][0]
+        self.eval = utils._get_PI_constraint(constraint)
+        self.is_pinn = tf.cast(constraint != no_pinn, tf.bool)
+
+
+    def init_network(self, network):
+        self.training = tf.convert_to_tensor(True, dtype=tf.bool)
+        self.test_training = tf.convert_to_tensor(False, dtype=tf.bool)
         if network is None:
-            self.network = load_network(config)
+            self.network = load_network(self.config)
         else:
             self.network = network
-        self.mixed_precision = tf.constant(
-            self.config["mixed_precision"][0], dtype=tf.bool
-        )
-        
-        self.calc_adaptive_constant = utils._get_annealing_fcn(config["lr_anneal"][0])
-        self.loss_fcn = utils._get_loss_fcn(config['loss_fcn'][0])
-        PINN_variables = utils._get_PI_constraint(config["PINN_constraint_fcn"][0])
-        self.eval = PINN_variables[0]
-        self.scale_loss = PINN_variables[1]
-        self.adaptive_constant = tf.Variable(PINN_variables[2], dtype=self.variable_cast)
-        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
+        self.loss_fcn = utils._get_loss_fcn(self.config['loss_fcn'][0])
 
-        self.is_pinn = tf.cast(self.config["PINN_constraint_fcn"][0] != no_pinn, tf.bool)
-        self.is_modified_potential = tf.cast(self.config["PINN_constraint_fcn"][0] == pinn_A_Ur, tf.bool)
-        
+
+    def init_training_steps(self):
         # jacobian ops (needed in LC loss terms) incompatible with XLA
         if ("L" in self.eval.__name__) or \
            ("C" in self.eval.__name__) or \
-           (config['init_file'][0] is not None) or \
+           (self.config['init_file'][0] is not None) or \
            (not self.config['jit_compile'][0]):
             self.train_step = self.wrap_train_step_njit
             self.test_step = self.wrap_test_step_njit
@@ -63,11 +73,20 @@ class PINNGravityModel(tf.keras.Model):
             self.train_step = self.wrap_train_step_jit
             self.test_step = self.wrap_test_step_jit
 
-    def call(self, x, training=None):
+    def init_annealing(self):
+        constants = utils._get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
+        self.scale_loss = utils._get_PI_annealing(self.config['PINN_constraint_fcn'][0]) # anneal function
+        self.calc_adaptive_constant = utils._get_annealing_fcn(self.config["lr_anneal"][0]) # hold, anneal, custom
+        self.adaptive_constant = tf.Variable(constants, dtype=self.variable_cast, trainable=False)
+        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
+
+    def set_training_kwarg(self, training):
+        self.training = tf.convert_to_tensor(training, dtype=tf.bool)
+
+    def call(self, x, training):
         return self.eval(self.network, x, training)
 
-
-
+    # Training
     def train_step_fcn(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
         summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
@@ -82,32 +101,26 @@ class PINNGravityModel(tf.keras.Model):
  
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=True)
+            y_hat = self(x, training=self.training) # [N x (3 or 7)]
 
-            rms_components = compute_rms_components(y_hat, y)
-            percent_components = compute_percent_error(y_hat, y)
-            
+            rms_components = compute_rms_components(y_hat, y) # [N x (3 or 7)]
+            percent_components = compute_percent_error(y_hat, y) # [N x 1]
+
             updated_rms_components = self.scale_loss(
-                tf.reduce_mean(rms_components,0), self.adaptive_constant
+               rms_components, self.adaptive_constant
             )
 
-            loss = self.loss_fcn(rms_components, percent_components)
+            loss = self.loss_fcn(updated_rms_components, percent_components)
             loss = self.optimizer.get_scaled_loss(loss)
 
-        # calculate new adaptive constant
-        adaptive_constant = self.calc_adaptive_constant(
+        new_adaptive_constant = self.calc_adaptive_constant(
             tape,
             updated_rms_components,
             self.adaptive_constant,
             self.beta,
             self.trainable_weights,
         )
-
-        # # These lines are needed if using the gradient callback.
-        # grad_comp_list = []
-        # for loss_comp in updated_loss_components:
-        #     gradient_components = tape.gradient(loss_comp, self.network.trainable_variables)
-        #     grad_comp_list.append(gradient_components)
+        self.adaptive_constant.assign(new_adaptive_constant)
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -126,86 +139,58 @@ class PINNGravityModel(tf.keras.Model):
             "percent_max": tf.reduce_max(percent_components),
             "loss_components" : rms_components,
             "percent_components" : percent_components
+            # "weighted_percent": w_percent_error,
            # "adaptive_constant": adaptive_constant,
         }  # 'grads' : grad_comp_list}
 
     def test_step_fcn(self, data):
         x, y = data
-        y_hat = self(x, training=True)
+        y_hat = self(x, training=self.test_training)
 
         rms_components = compute_rms_components(y_hat, y)
         percent_components = compute_percent_error(y_hat, y)
         updated_rms_components = self.scale_loss(
-            tf.reduce_mean(rms_components,0), self.adaptive_constant
+            rms_components, self.adaptive_constant
         )
-        loss = self.loss_fcn(rms_components, percent_components)
+        loss = self.loss_fcn(updated_rms_components, percent_components)
         return {"loss": loss, 
                 "percent_mean": tf.reduce_mean(percent_components),
                 "percent_max": tf.reduce_max(percent_components),
                 "loss_components" : rms_components,
                 "percent_components" : percent_components
+                # "weighted_percent": w_percent_error,
                 }
 
-    # JIT wrappers
-    @tf.function(jit_compile=True)
-    def wrap_train_step_jit(self, data):
-        return self.train_step_fcn(data)
-    
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_train_step_njit(self, data):
-        return self.train_step_fcn(data)
-    
-    @tf.function(jit_compile=True)
-    def wrap_test_step_jit(self, data):
-        return self.test_step_fcn(data)
+    def train(self, data, initialize_optimizer=True):
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_test_step_njit(self, data):
-        return self.test_step_fcn(data)
+        if initialize_optimizer:
+            optimizer = configure_optimizer(self.config, mixed_precision=False)
+        else:
+            optimizer = self.optimizer
+        self.compile(optimizer=optimizer, loss="mse")
+        
+        # Train network
+        callback = SimpleCallback(self.config['batch_size'][0], print_interval=10)
+        rmscallback = RMSComponentsCallback(self.config['batch_size'][0])
+        schedule = get_schedule(self.config)
+
+        history = self.fit(
+            data.train_data,
+            epochs=self.config["epochs"][0],
+            verbose=0,
+            validation_data=data.valid_data,
+            callbacks=[callback, rmscallback, schedule],
+            use_multiprocessing=True
+        )
+        history.history["time_delta"] = callback.time_delta
+
+        return history
 
 
-    # API calls 
-    def generate_nn_data(
-        self,
-        x,
-    ):
-        """Method responsible for generating all possible outputs of the
-        PINN gravity model (U, a, L, C). Note that this is an expensive
-        calculation due to the second order derivatives.
 
-        TODO: Investigate if this method can be jit complied and be compatible
-        with tf.Datasets for increased speed.
-
-        Args:
-            x (np.array): Input data (position)
-
-        Returns:
-            dict: dictionary containing all input and outputs of the network
-        """
-        x = copy.deepcopy(x)
-        x_transformer = self.config["x_transformer"][0]
-        a_transformer = self.config["a_transformer"][0]
-        u_transformer = self.config["u_transformer"][0]
-        x = x_transformer.transform(x)
-
-        # This is a cumbersome operation as it computes the Hessian for each term
-        u_pred, a_pred, laplace_pred, curl_pred = self.__nn_output((x, x))
-
-        x_pred = x_transformer.inverse_transform(x)
-        u_pred = u_transformer.inverse_transform(u_pred)
-        a_pred = a_transformer.inverse_transform(a_pred)
-
-        # TODO: (07/02/21): It's likely that laplace and curl should also be inverse transformed as well
-        return {
-            "x": x_pred,
-            "u": u_pred,
-            "a": a_pred,
-            "laplace": laplace_pred,
-            "curl": curl_pred,
-        }
-
+    # Post-training API calls 
     @tf.function()
-    def generate_potential_tf(self, x):
+    def compute_potential_tf(self, x):
         x_preprocessor = getattr(self, 'x_preprocessor')
         u_postprocessor = getattr(self, 'u_postprocessor')
         x_network_input = x_preprocessor(x) 
@@ -213,7 +198,7 @@ class PINNGravityModel(tf.keras.Model):
         u_output = u_postprocessor(u_network_output)
         return u_output
 
-    def generate_potential(self, x):
+    def compute_potential(self, x):
         """Method responsible for returning just the PINN potential.
         Use this method if a lightweight TF execution is desired
 
@@ -236,8 +221,7 @@ class PINNGravityModel(tf.keras.Model):
             u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
-    #@tf.function(jit_compile=True)
-    def generate_acceleration(self, x, batch_size=131072):
+    def compute_acceleration(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -260,10 +244,11 @@ class PINNGravityModel(tf.keras.Model):
             a_pred = self._pinn_acceleration_output(x)
         else:
             a_pred = self._nn_acceleration_output(x)
-        a_pred = a_transformer.inverse_transform(a_pred)
+        a_pred = a_transformer.inverse_transform(a_pred).numpy()
+
         return a_pred
 
-    def generate_dU_dxdx(self, x, batch_size=131072):
+    def compute_dU_dxdx(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -304,28 +289,25 @@ class PINNGravityModel(tf.keras.Model):
         return jacobian
 
 
+    # JIT wrappers
+    @tf.function(jit_compile=True)
+    def wrap_train_step_jit(self, data):
+        return self.train_step_fcn(data)
+    
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_train_step_njit(self, data):
+        return self.train_step_fcn(data)
+    
+    @tf.function(jit_compile=True)
+    def wrap_test_step_jit(self, data):
+        return self.test_step_fcn(data)
+
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def wrap_test_step_njit(self, data):
+        return self.test_step_fcn(data)
+
+
     # private functions
-    def __nn_output(self, dataset):
-        x, y = dataset
-        x = tf.Variable(x, dtype=self.variable_cast)
-        assert self.config["PINN_constraint_fcn"][0] != no_pinn
-        with tf.GradientTape(persistent=True) as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        u_xx = g1.batch_jacobian(u_x, x)
-
-        laplacian = tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
-
-        curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
-        curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
-        curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
-
-        curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-        return u, -u_x, laplacian, curl
-
     @tf.function(jit_compile=True)
     def _nn_acceleration_output(self, x):
         a = self.network(x) 
@@ -333,10 +315,7 @@ class PINNGravityModel(tf.keras.Model):
     
     @tf.function()
     def _pinn_acceleration_output(self, x):
-        if self.is_modified_potential:
-            a = pinn_A_Ur(self.network, x, training=False)
-        else:
-            a = pinn_A(self.network, x, training=False)
+        a = pinn_A(self.network, x, training=False)
         return a
 
     @tf.function(experimental_relax_shapes=True)
@@ -359,140 +338,7 @@ class PINNGravityModel(tf.keras.Model):
         return jacobian
 
 
-
-    # https://pychao.com/2019/11/02/optimize-tensorflow-keras-models-with-l-bfgs-from-tensorflow-probability/
-    def optimize(self, dataset):
-        """L-BFGS optimizer proposed in original PINN paper, but compatable with TF >2.0. Significantly slower
-        than adam, and recommended only for fine tuning the networks after initial optimization with adam.
-
-        Args:
-            dataset (tf.Dataset): training input and output data
-
-        """
-        import tensorflow_probability as tfp
-
-        class History:
-            def __init__(self):
-                self.history = []
-
-        self.history = History()
-
-        def function_factory(model, loss, train_x, train_y):
-            """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
-
-            Args:
-                model [in]: an instance of `tf.keras.Model` or its subclasses.
-                loss [in]: a function with signature loss_value = loss(pred_y, true_y).
-                train_x [in]: the input part of training data.
-                train_y [in]: the output part of training data.
-
-            Returns:
-                A function that has a signature of:
-                    loss_value, gradients = f(model_parameters).
-            """
-
-            # obtain the shapes of all trainable parameters in the model
-            shapes = tf.shape_n(model.trainable_variables)
-            n_tensors = len(shapes)
-
-            # we'll use tf.dynamic_stitch and tf.dynamic_partition later, so we need to
-            # prepare required information first
-            count = 0
-            idx = []  # stitch indices
-            part = []  # partition indices
-
-            for i, shape in enumerate(shapes):
-                n = np.product(shape)
-                idx.append(
-                    tf.reshape(tf.range(count, count + n, dtype=tf.int32), shape)
-                )
-                part.extend([i] * n)
-                count += n
-
-            part = tf.constant(part)
-
-            @tf.function  # (jit_compile=True)
-            def assign_new_model_parameters(params_1d):
-                """A function updating the model's parameters with a 1D tf.Tensor.
-
-                Args:
-                    params_1d [in]: a 1D tf.Tensor representing the model's trainable parameters.
-                """
-
-                params = tf.dynamic_partition(params_1d, part, n_tensors)
-                for i, (shape, param) in enumerate(zip(shapes, params)):
-                    model.trainable_variables[i].assign(tf.reshape(param, shape))
-
-            # now create a function that will be returned by this factory
-            @tf.function  # (jit_compile=True)
-            def f(params_1d):
-                """A function that can be used by tfp.optimizer.lbfgs_minimize.
-
-                This function is created by function_factory.
-
-                Args:
-                params_1d [in]: a 1D tf.Tensor.
-
-                Returns:
-                    A scalar loss and the gradients w.r.t. the `params_1d`.
-                """
-
-                # use GradientTape so that we can calculate the gradient of loss w.r.t. parameters
-                with tf.GradientTape() as tape:
-                    # update the parameters in the model
-                    assign_new_model_parameters(params_1d)
-                    # calculate the loss
-                    U_dummy = tf.zeros_like(train_x[:, 0:1])
-
-                    # U_dummy = tf.zeros((tf.divide(tf.size(train_x),tf.constant(3)),1))
-                    pred_y = model(train_x, training=True)
-                    loss_value = loss(pred_y, train_y)
-
-                # calculate gradients and convert to 1D tf.Tensor
-                grads = tape.gradient(loss_value, model.trainable_variables)
-                grads = tf.dynamic_stitch(idx, grads)
-
-                # print out iteration & loss
-                f.iter.assign_add(1)
-                tf.print("Iter:", f.iter, "loss:", loss_value)
-
-                # store loss value so we can retrieve later
-                tf.py_function(f.history.append, inp=[loss_value], Tout=[])
-
-                return loss_value, grads
-
-            # store these information as members so we can use them outside the scope
-            f.iter = tf.Variable(0)
-            f.idx = idx
-            f.part = part
-            f.shapes = shapes
-            f.assign_new_model_parameters = assign_new_model_parameters
-            f.history = []
-
-            return f
-
-        inps = np.concatenate([x for x, y in dataset], axis=0)
-        outs = np.concatenate([y for x, y in dataset], axis=0)
-
-        # prepare prediction model, loss function, and the function passed to L-BFGS solver
-
-        loss_fun = tf.keras.losses.MeanSquaredError()
-        func = function_factory(self, loss_fun, inps, outs)
-
-        # convert initial model parameters to a 1D tf.Tensor
-        init_params = tf.dynamic_stitch(func.idx, self.network.trainable_variables)
-
-        # train the model with L-BFGS solver
-        results = tfp.optimizer.lbfgs_minimize(
-            value_and_gradients_function=func,
-            initial_position=init_params,
-            max_iterations=2000,
-            tolerance=1e-12,
-        )  # , parallel_iterations=4)
-
-        func.assign_new_model_parameters(results.position)
-        self.history.history = func.history
-
+    # saving
     def model_size_stats(self):
         """Method which computes the number of trainable variables in the model as well
         as the binary size of the saved network and adds it to the configuration dictionary.
@@ -631,7 +477,6 @@ def backwards_compatibility(config):
 
     return config
 
-
 def load_config_and_model(model_id, df_file, custom_data_dir=None):
     """Primary loading function for the networks and their
     configuration information.
@@ -669,7 +514,6 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     model.compile(optimizer=optimizer, loss="mse") 
 
     return config, model
-
 
 def count_nonzero_params(model):
     params = 0

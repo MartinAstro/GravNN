@@ -23,7 +23,7 @@ def compute_nn_regression_statistics(nn_df, nn_df_stats_file, model_df, trajecto
         row = nn_df.iloc[i]
         model_id = row['model_identifier'] # TODO: Change this name
         config, model = load_config_and_model(model_id, model_df)
-        a_est = model.generate_acceleration(x)
+        a_est = model.compute_acceleration(x)
         grid_pred = StateObject(trajectory=trajectory, accelerations=a_est)
 
         entries = compute_stats(grid_true, grid_pred)

@@ -19,7 +19,8 @@ def compute_percent_error(y_hat, y):
     da = tf.subtract(y_hat[:,0:3], y[:,0:3])
     da_norm = tf.norm(da, axis=1)
     a_true_norm = tf.norm(tf.abs(y[:,0:3]),axis=1)
-    loss_components = da_norm/a_true_norm*100
+    percent_multiplier = tf.constant(1, dtype=da.dtype)
+    loss_components = da_norm/a_true_norm*percent_multiplier
     return loss_components
 
 
@@ -77,10 +78,10 @@ def avg_percent_summed_rms_max_error_loss(rms_components, percent_error):
     loss = sum_rms + avg_percent + max_percent
     return loss
 
-
-
-
-def weighted_percent_rms_loss(rms_components, percent_error):
-    loss = tf.reduce_sum(tf.reduce_sum(rms_components,1)*percent_error)#*tf.reduce_sum(percent_error)
+def weighted_mean_percent_loss(rms_components, percent_error):
+    w_i = tf.reduce_sum(rms_components,1)
+    w_sum = tf.reduce_sum(w_i)
+    L_i = percent_error
+    loss = tf.reduce_sum(tf.multiply(w_i,L_i)) / w_sum
     return loss
 

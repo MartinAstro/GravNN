@@ -39,7 +39,6 @@ def print_stats(data, name):
         )
     )
 
-
 def compute_input_layer_normalization_constants(config):
     """Function responsible for determining how to normalize the spherical coordinates
     before entering the network. Currently the tensorflow graph accepts a normalized cartesian vector
@@ -54,7 +53,7 @@ def compute_input_layer_normalization_constants(config):
     Args:
         config (dict): hyperparameters and configuration variables for the TF model.
     """
-    if config["skip_normalization"][0]:
+    if config.get("skip_normalization", [True])[0]:
         return
 
     trajectory = config["distribution"][0](
@@ -99,82 +98,6 @@ def compute_input_layer_normalization_constants(config):
     ]
     config["norm_mins"] = [np.concatenate([r_transformer.min_, angles_transformer.min_])]
     return
-
-def get_raw_data(config):
-    """Function responsible for getting the raw training data (without
-    any preprocessing). This may include concatenating an "extra" training
-    data distribution defined within config.
-
-    Args:
-        config (dict): hyperparameters and configuration variables for TF Model
-
-    Returns:
-        tuple: x,a,u training and validation data
-    """
-    planet = config["planet"][0]
-    radius_bounds = [config["radius_min"][0], config["radius_max"][0]]
-    N_dist = config["N_dist"][0]
-    grav_file = config["grav_file"][0]
-
-    trajectory = config["distribution"][0](planet, radius_bounds, N_dist, **config)
-    get_analytic_data_fcn = config['gravity_data_fcn'][0]
-    
-    x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-        trajectory, grav_file, **config
-    )
-
-    if "extra_distribution" in config:
-        extra_radius_bounds = [
-            config["extra_radius_min"][0],
-            config["extra_radius_max"][0],
-        ]
-        extra_N_dist = config["extra_N_dist"][0]
-
-        extra_trajectory = config["extra_distribution"][0](
-            planet, extra_radius_bounds, extra_N_dist, **config
-        )
-        extra_x_unscaled, extra_a_unscaled, extra_u_unscaled = get_analytic_data_fcn(
-            extra_trajectory, grav_file, **config
-        )
-
-    # This condition is for meant to correct for when gravity models didn't always have the proper sign of the potential.
-    # TODO: This should be removed prior to production.
-    deg_removed = config.get("deg_removed", -1)
-    remove_point_mass = config.get("remove_point_mass", False)
-    # if part of the model is removed (i.e. point mass) it is reasonable for some of the potential to be > 0.0, so only rerun if there is no degree removed.
-    if np.max(u_unscaled) > 0.0 and deg_removed == -1 and not remove_point_mass:
-        sys.exit("ERROR: This pickled acceleration/potential pair was generated \
-              when the potential had a wrong sign. \n You must overwrite the data!")
-
-    x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
-        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0], random_state=config.get('seed', [42])[0]
-    )
-
-    if "extra_distribution" in config:
-        (
-            extra_x_train,
-            extra_a_train,
-            extra_u_train,
-            extra_x_val,
-            extra_a_val,
-            extra_u_val,
-        ) = training_validation_split(
-            extra_x_unscaled,
-            extra_a_unscaled,
-            extra_u_unscaled,
-            config["extra_N_train"][0],
-            config["extra_N_val"][0],
-        )
-
-        x_train = np.concatenate([x_train, extra_x_train])
-        a_train = np.concatenate([a_train, extra_a_train])
-        u_train = np.concatenate([u_train, extra_u_train])
-
-        x_val = np.concatenate([x_val, extra_x_val])
-        a_val = np.concatenate([a_val, extra_a_val])
-        u_val = np.concatenate([u_val, extra_u_val])
-
-    return x_train, a_train, u_train, x_val, a_val, u_val
 
 def add_error(data_dict, percent_noise):
 
@@ -382,11 +305,12 @@ def scale_by_constants(data_dict, config):
     m = m_tilde / m_star # mass
     t = t_tilde / t_star # time
     """
-
-    x_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["x_train"],axis=1))) # average magnitude 
+    x_norm = np.linalg.norm(data_dict["x_train"],axis=1)
+    x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
 
     # scale time coordinate based on what makes the accelerations behave nicely
-    a_star = 10**np.mean(np.log10(np.linalg.norm(data_dict["a_train"],axis=1))) # average magnitude acceleration
+    a_norm = np.linalg.norm(data_dict["a_train"],axis=1)
+    a_star = 10**np.mean(np.log10(a_norm)) # average magnitude acceleration
     a_star_tmp = a_star / x_star 
     t_star = np.sqrt(1 / a_star_tmp)
 
@@ -401,8 +325,8 @@ def scale_by_constants(data_dict, config):
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
     # can't just select max from non-dim x_train because config is dimensionalized 
-    ref_radius_min = config.get('ref_radius_min', [data_dict["x_train"].min()])[0]
-    ref_radius_max = config.get('ref_radius_max', [data_dict["x_train"].max()])[0]
+    ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
+    ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
     ref_radius = config.get('ref_radius', [ref_radius_max])[0]
     if ref_radius is not None:
         x_vec = np.array([[ref_radius, ref_radius_min, ref_radius_max]])
@@ -410,6 +334,9 @@ def scale_by_constants(data_dict, config):
         config['ref_radius'] = [x_vec_normalized[0,0]]
         config['ref_radius_min'] = [x_vec_normalized[0,1]]
         config['ref_radius_max'] = [x_vec_normalized[0,2]]
+    
+    if config.get('mu', [None])[0] is not None:
+        config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
 
     data_dict = {
         "x_train" : x_train,
@@ -442,163 +369,6 @@ def no_scale(data_dict, config):
     }
     return data_dict, transformers
 
-def get_preprocessed_data(config):
-    """Function responsible for normalizing the training data. Possible options include
-    normalizing by the bounds of the acceleration, the potential, neither, or in a manner that non-
-    dimensionalizes the equations (this amounts to scaling the acceleration in proportion to
-    the more fundamental scalar potential and position). Recommend normalizing by non-dim
-    in most circumstances for which the underlying network is a PINN."""
-    x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(config)
-
-    print_stats(x_train, "Position")
-    print_stats(a_train, "Acceleration")
-    print_stats(u_train, "Potential")
-
-    data_dict = {
-        "x_train" : x_train,
-        "a_train" : a_train,
-        "u_train" : u_train,
-        "x_val" : x_val,
-        "a_val" : a_val,
-        "u_val" : u_val,
-    }
-
-    data_dict = add_error(
-        data_dict, config['acc_noise'][0]
-    )
-
-    # Preprocessing
-    if config["scale_by"][0] == "a":   
-        data_dict, transformers = scale_by_acceleration(data_dict, config)
-    elif config["scale_by"][0] == "u":
-        data_dict, transformers = scale_by_potential(data_dict, config)
-    elif config["scale_by"][0] == "non_dim":
-        data_dict, transformers = scale_by_non_dimensional(data_dict, config)
-    elif config["scale_by"][0] == "non_dim_radius":
-        data_dict, transformers = scale_by_non_dimensional_radius(data_dict, config)
-    elif config["scale_by"][0] == "non_dim_v2":
-        data_dict, transformers = scale_by_constants(data_dict, config)
-    elif config["scale_by"][0] == "none":
-        data_dict, transformers = no_scale(data_dict, config)
-        
-    x_train = data_dict["x_train"]
-    a_train = data_dict["a_train"]
-    u_train = data_dict["u_train"]
-    x_val = data_dict["x_val"]
-    a_val = data_dict["a_val"]
-    u_val = data_dict["u_val"]
-
-    print_stats(x_train, "Scaled Position")
-    print_stats(a_train, "Scaled Acceleration")
-    print_stats(u_train, "Scaled Potential")
-
-    laplace_train = np.zeros((np.shape(u_train)))
-    laplace_val = np.zeros((np.shape(u_val)))
-
-    curl_train = np.zeros((np.shape(a_train)))
-    curl_val = np.zeros((np.shape(a_val)))
-
-    compute_input_layer_normalization_constants(config)
-
-    return (
-        (x_train, u_train, a_train, laplace_train, curl_train),
-        (x_val, u_val, a_val, laplace_val, curl_val),
-        transformers,
-    )
-
-
-def configure_dataset(train_data, val_data, config):
-    """Function that partitions the training data to include only that
-    which is required for the use PINN constraint. I.e. if using the
-    AP constraint, there is no need to send extra vectors for L and C
-    onto the device (GPU) and slow calculations."""
-    x_train, u_train, a_train, laplace_train, curl_train = train_data
-    x_val, u_val, a_val, laplace_val, curl_val = val_data
-    pinn_constraint_fcn = config["PINN_constraint_fcn"][0]
-
-    # Decide to train with potential or not
-    # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint.
-    if pinn_constraint_fcn == "no_pinn":
-        y_train = np.hstack([a_train])
-        y_val = np.hstack([a_val])
-
-    # Just use acceleration
-    elif pinn_constraint_fcn == "pinn_a" or pinn_constraint_fcn == "pinn_a_ur":
-        y_train = np.hstack([a_train])
-        y_val = np.hstack([a_val])
-
-    # Just use acceleration
-    elif pinn_constraint_fcn == "pinn_p":
-        y_train = np.hstack([u_train])
-        y_val = np.hstack([u_val])
-
-    # Potential + 2nd order constraints
-    elif pinn_constraint_fcn == "pinn_pl":
-        y_train = np.hstack([u_train, laplace_train])
-        y_val = np.hstack([u_val, laplace_val])
-    elif pinn_constraint_fcn == "pinn_plc":
-        y_train = np.hstack([u_train, laplace_train, curl_train])
-        y_val = np.hstack([u_val, laplace_val, curl_val])
-
-    # Accelerations + 2nd order constraints
-    elif pinn_constraint_fcn == "pinn_al":
-        y_train = np.hstack([a_train, laplace_train])
-        y_val = np.hstack([a_val, laplace_val])
-    elif pinn_constraint_fcn == "pinn_alc":
-        y_train = np.hstack([a_train, laplace_train, curl_train])
-        y_val = np.hstack([a_val, laplace_val, curl_val])
-
-    # Accelerations + Potential + 2nd order constraints
-    elif pinn_constraint_fcn == "pinn_ap":
-        y_train = np.hstack([u_train, a_train])
-        y_val = np.hstack([u_val, a_val])
-    elif pinn_constraint_fcn == "pinn_apl":
-        y_train = np.hstack([u_train, a_train, laplace_train])
-        y_val = np.hstack([u_val, a_val, laplace_val])
-    elif pinn_constraint_fcn == "pinn_aplc":
-        y_train = np.hstack([u_train, a_train, laplace_train, curl_train])
-        y_val = np.hstack([u_val, a_val, laplace_val, curl_val])
-
-    else:
-        exit("No PINN Constraint Selected!")
-
-    dataset = generate_dataset(
-        x_train, y_train, config["batch_size"][0], dtype=config["dtype"][0]
-    )
-    val_dataset = generate_dataset(
-        x_val, y_val, config["batch_size"][0], dtype=config["dtype"][0]
-    )
-
-    return dataset, val_dataset
-
-
-def generate_dataset(x, y, batch_size, dtype=None):
-    """Function which takes numpy arrays and converts
-    them into a tensorflow Dataset -- a much faster
-    type for training."""
-    if dtype is None:
-        x = x.astype("float32")
-        y = y.astype("float32")
-    else:
-        if dtype == tf.float32:
-            x = x.astype("float32")
-            y = y.astype("float32")
-        elif dtype == tf.float64:
-            x = x.astype("float64")
-            y = y.astype("float64")
-        else:
-            exit("No dtype specified")
-    dataset = tf.data.Dataset.from_tensor_slices((x, y))
-    # dataset = dataset.shuffle(1000, seed=1234)
-    dataset = dataset.batch(batch_size)
-    dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    dataset = dataset.cache()
-
-    # Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
-    return dataset
-
-
 def single_training_validation_split(X, N_train, N_val, random_state=42):
     """Function responsible for splitting the variable into separate training
     and validation sets"""
@@ -606,7 +376,6 @@ def single_training_validation_split(X, N_train, N_val, random_state=42):
     X_train = X[:N_train]
     X_val = X[N_train:N_train+N_val]
     return X_train, X_val
-
 
 def training_validation_split(X, Y, Z, N_train, N_val, random_state=42):
     """Function which automates splitting the training and validation data
@@ -622,7 +391,6 @@ def training_validation_split(X, Y, Z, N_train, N_val, random_state=42):
     )
 
     return X_train, Y_train, Z_train, X_val, Y_val, Z_val
-
 
 def cart2sph_tf(x, acc_N):
     X = x[:,0]
@@ -650,3 +418,331 @@ def cart2sph_tf(x, acc_N):
     acc_B = tf.reshape(acc_B_3d,(-1,3))
 
     return acc_B
+
+class DataSet():
+    def __init__(self, data_config=None):
+        self.config = data_config
+
+        # populate these variables
+        self.train_data = None
+        self.valid_data = None
+        self.transformers = None
+
+        if data_config is not None:
+            self.from_config(data_config)
+
+
+    def get_raw_data(self):
+        """Function responsible for getting the raw training data (without
+        any preprocessing). This may include concatenating an "extra" training
+        data distribution defined within config.
+
+        Args:
+            config (dict): hyperparameters and configuration variables for TF Model
+
+        Returns:
+            tuple: x,a,u training and validation data
+        """
+        planet = self.config["planet"][0]
+        radius_bounds = [self.config["radius_min"][0], self.config["radius_max"][0]]
+        N_dist = self.config["N_dist"][0]
+        grav_file = self.config["grav_file"][0]
+
+        trajectory = self.config["distribution"][0](planet, radius_bounds, N_dist, **self.config)
+        get_analytic_data_fcn = self.config['gravity_data_fcn'][0]
+        
+        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
+            trajectory, grav_file, **self.config
+        )
+
+        # TODO: this is hack b/c extra distribution gets populated with nan sometime
+        if "extra_distribution" in self.config:
+            if np.isnan(self.config['extra_distribution'][0]):
+                self.config.pop('extra_distribution')
+        # TODO: this is hack b/c gets populated with nan sometime -- this is when a dataframe which adds the column and populates rows w/o as nan
+        if "augment_data_config" in self.config:
+            try:
+                if np.isnan(self.config['augment_data_config'][0]):
+                    self.config.pop('augment_data_config')
+            except:
+                if self.config['augment_data_config'][0]: # if not an empty dictionary
+                    self.config.pop('augment_data_config')
+
+
+        if "extra_distribution" in self.config:
+            extra_radius_bounds = [
+                self.config["extra_radius_min"][0],
+                self.config["extra_radius_max"][0],
+            ]
+            extra_N_dist = self.config["extra_N_dist"][0]
+
+            extra_trajectory = self.config["extra_distribution"][0](
+                planet, extra_radius_bounds, extra_N_dist, **self.config
+            )
+            extra_x_unscaled, extra_a_unscaled, extra_u_unscaled = get_analytic_data_fcn(
+                extra_trajectory, grav_file, **self.config
+            )
+
+        # This condition is for meant to correct for when gravity models didn't always have the proper sign of the potential.
+        # TODO: This should be removed prior to production.
+        deg_removed = self.config.get("deg_removed", -1)
+        remove_point_mass = self.config.get("remove_point_mass", False)
+        # if part of the model is removed (i.e. point mass) it is reasonable for some of the potential to be > 0.0, so only rerun if there is no degree removed.
+        if np.max(u_unscaled) > 0.0 and deg_removed == -1 and not remove_point_mass:
+            sys.exit("ERROR: This pickled acceleration/potential pair was generated \
+                when the potential had a wrong sign. \n You must overwrite the data!")
+
+        x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
+            x_unscaled, a_unscaled, u_unscaled, self.config["N_train"][0], self.config["N_val"][0], random_state=self.config.get('seed', [42])[0]
+        )
+
+        if "extra_distribution" in self.config:
+            self.config["extra_N_train"][0] = int(self.config["extra_N_train"][0])
+            self.config["extra_N_val"][0] = int(self.config["extra_N_val"][0])
+            (
+                extra_x_train,
+                extra_a_train,
+                extra_u_train,
+                extra_x_val,
+                extra_a_val,
+                extra_u_val,
+            ) = training_validation_split(
+                extra_x_unscaled,
+                extra_a_unscaled,
+                extra_u_unscaled,
+                self.config["extra_N_train"][0],
+                self.config["extra_N_val"][0],
+            )
+
+            x_train = np.concatenate([x_train, extra_x_train])
+            a_train = np.concatenate([a_train, extra_a_train])
+            u_train = np.concatenate([u_train, extra_u_train])
+
+            x_val = np.concatenate([x_val, extra_x_val])
+            a_val = np.concatenate([a_val, extra_a_val])
+            u_val = np.concatenate([u_val, extra_u_val])
+
+
+        data_dict = {
+            "x_train" : x_train,
+            "a_train" : a_train,
+            "u_train" : u_train,
+            "x_val" : x_val,
+            "a_val" : a_val,
+            "u_val" : u_val,
+        }
+
+        if "augment_data_config" in self.config:
+            # augment the original data (example: high altitude point mass data)
+            augment_config = copy.deepcopy(self.config)
+            augment_config.update(augment_config['augment_data_config'][0])
+            augment_config.pop('augment_data_config')
+            new_dataset = DataSet(augment_config)
+            for key in data_dict.keys():
+                current_data = data_dict[key]
+                new_data = new_dataset.raw_data[key]
+                data_dict[key] = np.concatenate([current_data, new_data])
+
+        print_stats(data_dict['x_train'], "Position")
+        print_stats(data_dict['a_train'], "Acceleration")
+        print_stats(data_dict['u_train'], "Potential")
+
+        return data_dict
+
+    def get_preprocessed_data(self, data_dict):
+        """Function responsible for normalizing the training data. Possible options include
+        normalizing by the bounds of the acceleration, the potential, neither, or in a manner that non-
+        dimensionalizes the equations (this amounts to scaling the acceleration in proportion to
+        the more fundamental scalar potential and position)."""
+
+
+        data_dict = add_error(
+            data_dict, self.config['acc_noise'][0]
+        )
+
+        # Preprocessing
+        scale_by = self.config.get("scale_by", ['none'])[0]
+        if scale_by == "a":   
+            preprocess_fcn = scale_by_acceleration
+        elif scale_by == "u":
+            preprocess_fcn = scale_by_potential
+        elif scale_by == "non_dim":
+            preprocess_fcn = scale_by_non_dimensional
+        elif scale_by == "non_dim_radius":
+            preprocess_fcn = scale_by_non_dimensional_radius
+        elif scale_by == "non_dim_v2":
+            preprocess_fcn = scale_by_constants
+        elif scale_by == "none":
+            preprocess_fcn = no_scale
+            
+        data_dict, transformers = preprocess_fcn(data_dict, self.config)
+
+        x_train = data_dict["x_train"]
+        a_train = data_dict["a_train"]
+        u_train = data_dict["u_train"]
+        x_val = data_dict["x_val"]
+        a_val = data_dict["a_val"]
+        u_val = data_dict["u_val"]
+
+        print_stats(x_train, "Scaled Position")
+        print_stats(a_train, "Scaled Acceleration")
+        print_stats(u_train, "Scaled Potential")
+
+        laplace_train = np.zeros_like(u_train)
+        laplace_val = np.zeros_like(u_val)
+
+        curl_train = np.zeros_like(a_train)
+        curl_val = np.zeros_like(a_val)
+
+        train_tuple = (x_train, u_train, a_train, laplace_train, curl_train)
+        val_tuple = (x_val, u_val, a_val, laplace_val, curl_val)
+
+        compute_input_layer_normalization_constants(self.config)
+
+        return (train_tuple, val_tuple, transformers,)
+
+    def generate_tensorflow_dataset(self, x, y, batch_size, dtype=None):
+        """Function which takes numpy arrays and converts
+        them into a tensorflow Dataset -- a much faster
+        type for training."""
+        if dtype is None:
+            x = x.astype("float32")
+            y = y.astype("float32")
+        else:
+            if dtype == tf.float32:
+                x = x.astype("float32")
+                y = y.astype("float32")
+            elif dtype == tf.float64:
+                x = x.astype("float64")
+                y = y.astype("float64")
+            else:
+                exit("No dtype specified")
+        dataset = tf.data.Dataset.from_tensor_slices((x, y))
+        dataset = dataset.shuffle(len(x), seed=1234)
+        dataset = dataset.batch(batch_size)
+        dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        dataset = dataset.cache()
+
+        # Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
+        return dataset
+
+    def configure_dataset(self, train_data, val_data, config):
+        """Function that partitions the training data to include only that
+        which is required for the use PINN constraint. I.e. if using the
+        AP constraint, there is no need to send extra vectors for L and C
+        onto the device (GPU) and slow calculations."""
+        x_train, u_train, a_train, laplace_train, curl_train = train_data
+        x_val, u_val, a_val, laplace_val, curl_val = val_data
+        pinn_constraint_fcn = config.get("PINN_constraint_fcn", ["no_pinn"])[0]
+
+        # Decide to train with potential or not
+        # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint.
+        if pinn_constraint_fcn == "no_pinn":
+            y_train = np.hstack([a_train])
+            y_val = np.hstack([a_val])
+
+        # Just use acceleration
+        elif pinn_constraint_fcn == "pinn_a" or pinn_constraint_fcn == "pinn_a_ur":
+            y_train = np.hstack([a_train])
+            y_val = np.hstack([a_val])
+
+        # Just use acceleration
+        elif pinn_constraint_fcn == "pinn_p":
+            y_train = np.hstack([u_train])
+            y_val = np.hstack([u_val])
+
+        # Potential + 2nd order constraints
+        elif pinn_constraint_fcn == "pinn_pl":
+            y_train = np.hstack([u_train, laplace_train])
+            y_val = np.hstack([u_val, laplace_val])
+        elif pinn_constraint_fcn == "pinn_plc":
+            y_train = np.hstack([u_train, laplace_train, curl_train])
+            y_val = np.hstack([u_val, laplace_val, curl_val])
+
+        # Accelerations + 2nd order constraints
+        elif pinn_constraint_fcn == "pinn_al":
+            y_train = np.hstack([a_train, laplace_train])
+            y_val = np.hstack([a_val, laplace_val])
+        elif pinn_constraint_fcn == "pinn_alc":
+            y_train = np.hstack([a_train, laplace_train, curl_train])
+            y_val = np.hstack([a_val, laplace_val, curl_val])
+
+        # Accelerations + Potential + 2nd order constraints
+        elif pinn_constraint_fcn == "pinn_ap":
+            y_train = np.hstack([u_train, a_train])
+            y_val = np.hstack([u_val, a_val])
+        elif pinn_constraint_fcn == "pinn_apl":
+            y_train = np.hstack([u_train, a_train, laplace_train])
+            y_val = np.hstack([u_val, a_val, laplace_val])
+        elif pinn_constraint_fcn == "pinn_aplc":
+            y_train = np.hstack([u_train, a_train, laplace_train, curl_train])
+            y_val = np.hstack([u_val, a_val, laplace_val, curl_val])
+
+        else:
+            exit("No PINN Constraint Selected!")
+
+        batch_size = config.get('batch_size', [len(y_train)])[0]
+        dtype = config.get('dtype', [tf.float64])[0]
+        dataset = self.generate_tensorflow_dataset(
+            x_train, y_train, batch_size, dtype=dtype
+        )
+        val_dataset = self.generate_tensorflow_dataset(
+            x_val, y_val, batch_size, dtype=dtype
+        )
+
+        return dataset, val_dataset
+
+ 
+    def from_config(self, config):
+        self.config = config
+        data_dict = self.get_raw_data()
+        train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
+        dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
+
+        self.raw_data = data_dict
+        self.train_data = dataset
+        self.valid_data = val_dataset
+        self.transformers = transformers
+
+    def from_raw_data(self, x, a, percent_validation=0.1):
+
+        N_train = int(len(x)*(1.0-percent_validation))
+        N_val = int(len(x)*percent_validation)
+        x_train, x_val = single_training_validation_split(x, N_train, N_val, random_state=42)
+        a_train, a_val = single_training_validation_split(a, N_train, N_val, random_state=42)
+        u_train = np.zeros((N_train, 1))
+        u_val = np.zeros((N_val, 1))
+
+        data_dict = {
+            "x_train" : x_train,
+            "a_train" : a_train,
+            "u_train" : u_train,
+            "x_val" : x_val,
+            "a_val" : a_val,
+            "u_val" : u_val,
+        }
+
+        train_data, val_data, transformers = self.get_preprocessed_data(self.config, data_dict)
+        dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
+        
+        self.raw_data = data_dict
+        self.train_data = dataset
+        self.valid_data = val_dataset
+        self.transformers = transformers
+    
+    def add_dataset(self, new_dataset):
+        # append new data 
+        data_dict = self.raw_data.copy()
+        for key in data_dict.keys():
+            current_data = data_dict[key]
+            new_data = new_dataset.raw_data[key]
+            data_dict[key] = np.concatenate([current_data, new_data])
+
+        train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
+        dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
+
+        self.raw_data = data_dict
+        self.train_data = dataset
+        self.valid_data = val_dataset
+        self.transformers = transformers

@@ -165,7 +165,7 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         # bounds of the feature -- shouldn't necessarily be a large difference.
         # think about how much the output should change with respect to the inputs
         self.s_min = tf.constant(1.0, dtype=dtype).numpy()
-        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min), dtype=dtype).numpy()           
+        self.s_max = tf.constant(1.0 + (self.ref_radius_max - self.ref_radius_min)/self.ref_radius_min, dtype=dtype).numpy()           
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs)
@@ -193,6 +193,76 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
                 "s_max" : self.s_max,
                 "ref_radius_min" : self.ref_radius_min,
                 "ref_radius_max" : self.ref_radius_max
+            }
+        )
+        return config
+
+
+class AugmentedPotentialLayer(tf.keras.layers.Layer):
+    def __init__(self, dtype, mu, r_max):
+        super(AugmentedPotentialLayer, self).__init__(dtype=dtype)
+        self.mu = tf.constant(mu, dtype=dtype).numpy()
+        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+
+    def call(self, u_nn, inputs):
+        one = tf.constant(1.0, dtype=u_nn.dtype)
+        half = tf.constant(0.5, dtype=u_nn.dtype)
+        k = tf.constant(10.0, dtype=u_nn.dtype)
+        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        dr = tf.subtract(r,self.r_max)
+        h = half+half*tf.tanh(k*dr)
+        u_pm = tf.negative(tf.divide(self.mu,r))
+        u_model = (one - h)*(u_nn + u_pm) + h*u_pm 
+        return u_model
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "r_max" : self.r_max,
+            }
+        )
+        return config
+
+class AugmentedPotentialLayer_v2(tf.keras.layers.Layer):
+    def __init__(self, dtype, mu, r_max):
+        super(AugmentedPotentialLayer_v2, self).__init__(dtype=dtype)
+        self.mu = tf.constant(mu, dtype=dtype).numpy()
+        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+
+    def build(self, input_shapes):
+        self.radius = self.add_weight("radius",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=self.r_max),
+                            )
+        self.k = self.add_weight("k",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=10),
+                            )
+        super(AugmentedPotentialLayer_v2, self).build(input_shapes)
+
+
+    def call(self, u_nn, inputs):
+        one = tf.constant(1.0, dtype=u_nn.dtype)
+        half = tf.constant(0.5, dtype=u_nn.dtype)
+        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        dr = tf.subtract(r,self.radius)
+        h = half+half*tf.tanh(self.k*dr)
+        u_pm = tf.negative(tf.divide(self.mu,r))
+        # u_model = (one - h)*(u_nn) + h*u_pm 
+        u_model = (one - h)*(u_nn + u_pm) + h*u_pm 
+        return u_model
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "r_max" : self.r_max,
+                "dtype": self.dtype
             }
         )
         return config

@@ -1,8 +1,11 @@
 from GravNN.Networks.Layers import (
+    AugmentedPotentialLayer,
+    AugmentedPotentialLayer_v2,
     PinesSph2NetRefLayer,
     PinesSph2NetLayer,
     Cart2PinesSphLayer,
     PinesSph2NetLayer_v2
+
 )
 import tensorflow as tf
 import os
@@ -350,3 +353,79 @@ def SphericalPinesTransformerNet_v2(**kwargs):
     super(tf.keras.Model, model).__init__(dtype=dtype)
     return model
 
+
+
+def _heaviside_cond(dr):
+    zero = tf.constant(0.0, dtype=dr.dtype)
+    one = tf.constant(1.0, dtype=dr.dtype)
+    heaviside = tf.cond(dr > zero, lambda: one, lambda : zero)
+    return heaviside
+
+def heaviside(dr):
+    dr = tf.reshape(dr, [-1,1])
+    heaviside = tf.map_fn(fn=lambda dr: _heaviside_cond(dr), elems=dr)
+    return heaviside
+
+def SphericalPinesTransformerNet_v3(**kwargs):
+
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    dtype = kwargs.get("dtype", [tf.float32])[0]
+    transformer_units = kwargs["num_units"][0]
+    ref_radius_max = kwargs.get('ref_radius_max', [None])[0]
+    ref_radius_min = kwargs.get('ref_radius_min', [None])[0]
+    mu = kwargs.get('mu_non_dim', [1.0])[0]
+
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
+    features = Cart2PinesSphLayer(dtype)(inputs)
+    x = PinesSph2NetLayer_v2(dtype, 
+                    ref_radius_min=ref_radius_min, 
+                    ref_radius_max=ref_radius_max)(features)
+
+    # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
+    encoder_1 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
+    encoder_2 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=initializer,
+        dtype=dtype,
+    )(x)
+
+    one = tf.constant(1.0, dtype=dtype, shape=(1,transformer_units))
+    for i in range(1, len(layers) - 1):
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=initializer,
+            dtype=dtype,
+        )(x)
+        UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
+        V = tf.keras.layers.Subtract(dtype=dtype)([one, x])
+        VX = tf.keras.layers.Multiply(dtype=dtype)([V, encoder_2])
+
+        x = tf.keras.layers.add([UX, VX], dtype=dtype)
+
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization(dtype=dtype)(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0], dtype=dtype)(x)
+    u_nn = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer='glorot_uniform',
+        dtype=dtype,
+    )(x)
+
+    u = AugmentedPotentialLayer_v2(dtype, mu, ref_radius_max)(u_nn, inputs)
+
+    model = tf.keras.Model(inputs=inputs, outputs=u)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+    return model

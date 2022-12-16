@@ -108,7 +108,10 @@ def main():
         a = test_poly_gm.accelerations
         u = test_poly_gm.potentials
   
-        data_pred = model.generate_nn_data(x)
+        data_pred = {
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
+        }
         a_pred = data_pred['a']
         u_pred = data_pred['u']
 
@@ -129,7 +132,10 @@ def main():
         x = poly_gm.positions
         a = poly_gm.accelerations
         u = poly_gm.potentials
-        data_pred = model.generate_nn_data(x)
+        data_pred = {
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
+        }
         a_pred = data_pred['a']
         u_pred = data_pred['u']
         grid_pot_pred = Grid(trajectory=DH_trajectory, accelerations=format_potential_as_Nx3(u_pred), transform=False)

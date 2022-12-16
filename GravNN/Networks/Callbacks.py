@@ -67,8 +67,8 @@ class SimpleCallback(tf.keras.callbacks.Callback):
                     self.epoch_loss, 
                     self.epoch_val_loss, 
                     time.time() - self.start_time, 
-                    self.epoch_val_percent_mean, 
-                    self.epoch_val_percent_max)
+                    self.epoch_val_percent_mean*100.0, 
+                    self.epoch_val_percent_max*100.0)
                 )            
             self.start_time = time.time()
         
