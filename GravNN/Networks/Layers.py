@@ -197,41 +197,12 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         )
         return config
 
-
-class AugmentedPotentialLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, mu, r_max):
-        super(AugmentedPotentialLayer, self).__init__(dtype=dtype)
-        self.mu = tf.constant(mu, dtype=dtype).numpy()
-        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
-
-    def call(self, u_nn, inputs):
-        one = tf.constant(1.0, dtype=u_nn.dtype)
-        half = tf.constant(0.5, dtype=u_nn.dtype)
-        k = tf.constant(10000.0, dtype=u_nn.dtype)
-        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
-        dr = tf.subtract(r,self.r_max)
-        h = half+half*tf.tanh(k*dr)
-        u_pm = tf.negative(tf.divide(self.mu,r))
-        u_model = (one - h)*(u_nn + u_pm) + h*u_pm 
-        return u_model
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "mu" : self.mu,
-                "r_max" : self.r_max,
-            }
-        )
-        return config
-
-
 class PointMassLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, mu, r_max):
         super(PointMassLayer, self).__init__(dtype=dtype)
         self.mu = tf.constant(mu, dtype=dtype).numpy()
 
-    def call(self, u_nn, inputs):
+    def call(self, inputs):
         r = tf.linalg.norm(inputs, axis=1, keepdims=True)
         u_pm = tf.negative(tf.divide(self.mu,r))
         return u_pm
@@ -284,8 +255,6 @@ class BlendPotentialLayer(tf.keras.layers.Layer):
             }
         )
         return config
-
-
 
 
 class PinesAlgorithmLayer(tf.keras.layers.Layer):
@@ -455,7 +424,6 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
                 "mu" : self.mu,
                 "a" : self.a,
                 "C20" : self.C20,
-                # "dtype" : self.dtype,
             }
         )
         return config
