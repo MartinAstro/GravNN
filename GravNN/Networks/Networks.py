@@ -1,13 +1,6 @@
-from GravNN.Networks.Layers import (
-    AugmentedPotentialLayer,
-    AugmentedPotentialLayer_v2,
-    PinesSph2NetRefLayer,
-    PinesSph2NetLayer,
-    Cart2PinesSphLayer,
-    PinesSph2NetLayer_v2
-
-)
+from GravNN.Networks.Layers import *
 import tensorflow as tf
+
 import os
 import warnings
 from GravNN.Networks import utils
