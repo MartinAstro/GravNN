@@ -17,7 +17,7 @@ def evaluate_network_error(model, trajectory, a_true,):
     model_name = os.path.basename(model).split('.')[0]
     samples = int(model_name.split("_")[-1])
     config, model = load_config_and_model(ids[-1], df)
-    a = model.generate_acceleration(trajectory.positions.astype(np.float32))
+    a = model.compute_acceleration(trajectory.positions.astype(np.float32))
     a_error = np.linalg.norm(a - a_true, axis=1)/np.linalg.norm(a_true, axis=1)*100
     return samples, np.average(a_error)
 

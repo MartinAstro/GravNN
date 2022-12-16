@@ -10,30 +10,18 @@ def main():
 
     threads = 1
 
-    # df_file = "Data/Dataframes/eros_pinn_III_040822.data" 
-
-    df_file = "Data/Dataframes/eros_pinn_II_III.data" 
-    df_file = "Data/Dataframes/eros_pinn_II_III_warm_start.data" 
-    df_file = "Data/Dataframes/eros_comp_planes.data" 
-    df_file = "Data/Dataframes/eros_BVP_PINN_III.data" 
-    df_file = "Data/Dataframes/eros_point_mass.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v2.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v3.data" 
-    df_file = "Data/Dataframes/eros_point_mass_v4.data" 
-    # df_file = "Data/Dataframes/eros_point_mass_alc.data" 
+    df_file = "Data/Dataframes/eros_point_mass_v5_3.data" 
+    df_file = "Data/Dataframes/test.data" 
     config = get_default_eros_config()
-    # config = get_default_earth_config()
 
     from GravNN.GravityModels.PointMass import get_pm_data
     from GravNN.GravityModels.Polyhedral import get_poly_data
     from GravNN.CelestialBodies.Asteroids import Eros
 
     config.update(PINN_III())
-    # config.update(PINN_II())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        # "grav_file": [Eros().obj_200k],
         "grav_file": [Eros().obj_8k],
         "N_dist": [100000],
         "N_train": [9850],
@@ -42,80 +30,50 @@ def main():
     
         "learning_rate": [0.002],
         "num_units": [40],
-        # "PINN_constraint_fcn" : ['pinn_alc'],
         "PINN_constraint_fcn" : ['pinn_a'],
         "patience" : [50],
         'override': [False],
         'ref_radius': [Eros().radius],
         "batch_size" : [2**13],
         "epochs" : [1000],
-        # "init_file" : [2459774.886435185] #  Best one yet, batch size of 2**14 for 15000 epochs, max error 3% average at 0.5%. Goal now is to reduce average error 
         "remove_point_mass" : [False],
         "gravity_data_fcn" : [get_pm_data],
-        # "init_file" : [2459811.101574074] #PM PINN-A
-        # "init_file" : [2459816.249097222], #PM PINN-A
         "jit_compile" : [False],
         "dtype" : ['float64'],
         "scale_by" : ['non_dim_v2'],
-        "eager" : [False]
+        "eager" : [False],
+        "ref_radius" : [Eros().radius],
+        "ref_radius_min" : [Eros().radius_min],
+        "loss_fcn" : ['weighted_mean_percent'],
+
     }
 
-
-
     args = configure_run_args(config, hparams)
+    configs = run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
     save_training(df_file, configs)
 
 
-def run(config):
-    import copy
-    import numpy as np
-    from GravNN.Networks.utils import (
-        configure_tensorflow,
-        set_mixed_precision,
-        check_config_combos,
-    )
-    from GravNN.Networks.Callbacks import SimpleCallback
-    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset
+def run(config):    
+    from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
-    from GravNN.Networks.Networks import load_network
-    from GravNN.Networks.utils import populate_config_objects, configure_optimizer
-    from GravNN.Networks.Schedules import get_schedule
+    from GravNN.Networks.utils import configure_tensorflow
+    from GravNN.Networks.utils import populate_config_objects
 
-    tf, mixed_precision = configure_tensorflow(config)
+    configure_tensorflow(config)
 
     # Standardize Configuration
     config = populate_config_objects(config)
     print(config)
 
     # Get data, network, optimizer, and generate model
-    train_data, val_data, transformers = get_preprocessed_data(config)
-    dataset, val_dataset = configure_dataset(train_data, val_data, config)
-    optimizer = configure_optimizer(config, mixed_precision)
+    data = DataSet(config)
     model = PINNGravityModel(config)
-    model.compile(optimizer=optimizer, loss="mse")
-    
-    # Train network
-    callback = SimpleCallback(config['batch_size'][0], print_interval=1)
-    schedule = get_schedule(config)
+    history = model.train(data)
 
-    import datetime
-    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    #tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=500)
-
-    history = model.fit(
-        dataset,
-        epochs=config["epochs"][0],
-        verbose=0,
-        validation_data=val_dataset,
-        callbacks=[callback, schedule],#, tensorboard_callback],
-        use_multiprocessing=True
-    )
-    history.history["time_delta"] = callback.time_delta
-
-    model.save(df_file=None, history=history, transformers=transformers)
+    model.save(df_file=None, history=history, transformers=data.transformers)
     return model.config
 
 

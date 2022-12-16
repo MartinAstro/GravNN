@@ -105,22 +105,22 @@ def _get_optimizer(name):
     }[name.lower()]
 
 
-def _get_annealing_fcn(anneal_flag):
+def _get_annealing_fcn(name):
     """Helper function to determine if the annealing learning rates of Wang2020
     are going to be used
 
     Args:
-        anneal_flag (bool): flag indicating if lr will be annealed
+        name (str): key specifying how lr will be annealed
 
     Returns:
         function: lr annealing method
     """
-    from GravNN.Networks.Annealing import update_constant, hold_constant
-
-    if anneal_flag:
-        return update_constant
-    else:
-        return hold_constant
+    from GravNN.Networks.Annealing import update_constant, hold_constant, custom_constant
+    return {
+        "anneal": update_constant,
+        "hold": hold_constant,
+        "custom": custom_constant,
+    }[name.lower()]
 
 
 def _get_acceleration_nondim_constants(value, config):
@@ -210,7 +210,7 @@ def _get_acceleration_nondim_constants(value, config):
     }[value.lower()]
 
 
-def _get_PI_constraint(value):
+def _get_PI_constraint_all(value):
     """Method responsible for getting all variables / methods used in the physics informed constraint.
 
     Args:
@@ -222,7 +222,6 @@ def _get_PI_constraint(value):
     from GravNN.Networks.Constraints import (
         no_pinn,
         pinn_A,
-        pinn_A_Ur,
         pinn_P,
         pinn_PLC,
         pinn_AP,
@@ -251,18 +250,122 @@ def _get_PI_constraint(value):
 
     # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
     return {
-        "no_pinn": [no_pinn, no_pinn_anneal, [-1.0]],  # scaling ignored
-        "pinn_a": [pinn_A, pinn_A_anneal, [-1.0]],  # scaling ignored
-        "pinn_a_ur": [pinn_A_Ur, pinn_A_anneal, [-1.0]],  # scaling ignored
-        "pinn_p": [pinn_P, pinn_P_anneal, [-1.0]],
-        "pinn_pl": [pinn_P, pinn_P_anneal, [-1.0, 1.0]],
-        "pinn_plc": [pinn_PLC, pinn_PLC_anneal, [-1.0, 1.0, 1.0]],
-        "pinn_ap": [pinn_AP, pinn_AP_anneal, [-1.0, 1.0]],
-        "pinn_al": [pinn_AL, pinn_AL_anneal, [-1.0, 1.0]],
-        "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [-1.0, 1.0, 1.0]],
-        "pinn_apl": [pinn_APL, pinn_APL_anneal, [-1.0, 1.0, 1.0]],
-        "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [-1.0, 1.0, 1.0, 1.0]],
+        "no_pinn": [no_pinn, no_pinn_anneal, [1.0]],  # scaling ignored
+        "pinn_a": [pinn_A, pinn_A_anneal, [1.0]],  # scaling ignored
+        "pinn_p": [pinn_P, pinn_P_anneal, [1.0]],
+        "pinn_pl": [pinn_P, pinn_P_anneal, [1.0, 1.0]],
+        "pinn_plc": [pinn_PLC, pinn_PLC_anneal, [1.0, 1.0, 1.0]],
+        "pinn_ap": [pinn_AP, pinn_AP_anneal, [1.0, 1.0]],
+        "pinn_al": [pinn_AL, pinn_AL_anneal, [1.0, 1.0]],
+        "pinn_alc": [pinn_ALC, pinn_ALC_anneal, [1.0, 1.0, 1.0]],
+        "pinn_apl": [pinn_APL, pinn_APL_anneal, [1.0, 1.0, 1.0]],
+        "pinn_aplc": [pinn_APLC, pinn_APLC_anneal, [1.0, 1.0, 1.0, 1.0]],
     }[value.lower()]
+
+
+def _get_PI_constraint(value):
+    """Method responsible for getting all variables / methods used in the physics informed constraint.
+
+    Args:
+        value (str): PINN constraint name (i.e. 'pinn_A', 'pinn_aplc', etc)
+
+    Returns:
+        list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
+    """
+    from GravNN.Networks.Constraints import (
+        no_pinn,
+        pinn_A,
+        pinn_P,
+        pinn_PLC,
+        pinn_AP,
+        pinn_AL,
+        pinn_ALC,
+        pinn_APL,
+        pinn_APLC,
+    )
+
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
+    # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
+    return {
+        "no_pinn": no_pinn,
+        "pinn_a": pinn_A,
+        "pinn_p": pinn_P,
+        "pinn_pl": pinn_P,
+        "pinn_plc": pinn_PLC,
+        "pinn_ap": pinn_AP,
+        "pinn_al": pinn_AL,
+        "pinn_alc": pinn_ALC,
+        "pinn_apl": pinn_APL,
+        "pinn_aplc": pinn_APLC,
+    }[value.lower()]
+
+def _get_PI_annealing(value):
+    """Method responsible for getting all variables / methods used in the physics informed constraint.
+
+    Args:
+        value (str): PINN constraint name (i.e. 'pinn_A', 'pinn_aplc', etc)
+
+    Returns:
+        list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
+    """
+    from GravNN.Networks.Annealing import (
+        no_pinn_anneal,
+        pinn_A_anneal,
+        pinn_P_anneal,
+        pinn_AP_anneal,
+        pinn_AL_anneal,
+        pinn_ALC_anneal,
+        pinn_APL_anneal,
+        pinn_APLC_anneal,
+        pinn_PLC_anneal,
+    )
+
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
+    # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
+    return {
+        "no_pinn": no_pinn_anneal,
+        "pinn_a": pinn_A_anneal,
+        "pinn_p": pinn_P_anneal,
+        "pinn_pl": pinn_P_anneal,
+        "pinn_plc": pinn_PLC_anneal,
+        "pinn_ap": pinn_AP_anneal,
+        "pinn_al": pinn_AL_anneal,
+        "pinn_alc": pinn_ALC_anneal,
+        "pinn_apl": pinn_APL_anneal,
+        "pinn_aplc": pinn_APLC_anneal,
+    }[value.lower()]
+
+def _get_PI_adaptive_constants(value):
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
+    # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
+    return {
+        "no_pinn": [1.0], 
+        "pinn_a": [1.0], 
+        "pinn_p": [1.0],
+        "pinn_pl": [1.0, 1.0],
+        "pinn_plc": [1.0, 1.0, 1.0],
+        "pinn_ap": [1.0, 1.0],
+        "pinn_al": [1.0, 1.0],
+        "pinn_alc": [1.0, 1.0, 1.0],
+        "pinn_apl": [1.0, 1.0, 1.0],
+        "pinn_aplc": [1.0, 1.0, 1.0, 1.0],
+    }[value.lower()]
+
 
 
 def _get_network_fcn(name):
@@ -279,7 +382,8 @@ def _get_network_fcn(name):
         SphericalPinesTraditionalNet,
         SphericalPinesTransformerNet,
         SphericalPinesTraditionalNet_v2,
-        SphericalPinesTransformerNet_v2
+        SphericalPinesTransformerNet_v2,
+        SphericalPinesTransformerNet_v3
     )
 
     return {
@@ -288,6 +392,7 @@ def _get_network_fcn(name):
         "sph_pines_transformer": SphericalPinesTransformerNet,
         "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
         "sph_pines_transformer_v2": SphericalPinesTransformerNet_v2,
+        "sph_pines_transformer_v3": SphericalPinesTransformerNet_v3,
     }[name.lower()]
 
 
@@ -309,7 +414,8 @@ def _get_loss_fcn(name):
         rms_avg_loss,
         percent_rms_avg_loss,
         avg_percent_summed_rms_loss,
-        avg_percent_summed_rms_max_error_loss
+        avg_percent_summed_rms_max_error_loss,
+        weighted_mean_percent_loss
     )
 
     return {
@@ -322,6 +428,7 @@ def _get_loss_fcn(name):
         'percent_rms_avg' : percent_rms_avg_loss,
         'avg_percent_summed_rms' : avg_percent_summed_rms_loss,
         "avg_percent_summed_rms_max_error" : avg_percent_summed_rms_max_error_loss,
+        'weighted_mean_percent' : weighted_mean_percent_loss
 
     }[name.lower()]
 

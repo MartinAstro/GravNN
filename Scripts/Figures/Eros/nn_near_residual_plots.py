@@ -9,7 +9,6 @@ from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Visualization.DataVisSuite import DataVisSuite
-from GravNN.Networks.Data import get_raw_data
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories
 
 def make_fcn_name_latex_compatable(name):
@@ -121,7 +120,10 @@ def main():
         a = test_poly_gm.accelerations
         u = test_poly_gm.potentials
   
-        data_pred = model.generate_nn_data(x)
+        data_pred = {
+            "u" : model.compute_potential(x),
+            "a" : model.compute_acceleration(x)
+        }
         a_pred = data_pred['a']
         u_pred = data_pred['u']
 

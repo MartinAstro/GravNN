@@ -32,8 +32,7 @@ class AsteroidAnalyzer:
     def compute_stats(self, trajectory, prefix):
         x, a, u = get_poly_data(trajectory, self.model_file, **self.config)
 
-        # data_pred = self.model.generate_nn_data(x)
-        a_pred = self.model.generate_acceleration(x.astype(np.float32))
+        a_pred = self.model.compute_acceleration(x.astype(np.float32))
 
         diff = a - a_pred
         rse = np.linalg.norm(diff, axis=1) ** 2
@@ -94,7 +93,7 @@ class AsteroidAnalyzer:
         true_accelerations = gravity_model.compute_acceleration(trajectory.positions)
 
         # Time PINN gravity model
-        pred_accelerations = self.model.generate_acceleration(trajectory.positions)
+        pred_accelerations = self.model.compute_acceleration(trajectory.positions)
 
         # Compute the error of the PINN model
         diff = true_accelerations - pred_accelerations

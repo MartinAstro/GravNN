@@ -25,7 +25,7 @@ def main():
 
     # Gather true and predicted accelerations
     a_true = grav_model.accelerations
-    a_pred = model.generate_acceleration(trajectory.positions)
+    a_pred = model.compute_acceleration(trajectory.positions)
 
     # Store the results in a grid object which allows for quick operations
     # and easy plotting

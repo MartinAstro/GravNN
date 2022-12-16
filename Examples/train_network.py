@@ -24,7 +24,6 @@ def main():
         "N_val": [500],
         "epochs" : [5000],
         "batch_size" : [4096],
-        "network_type" : ["sph_pines_traditional"],
         "PINN_constraint_fcn": ["pinn_alc"],
         "dtype" : ['float64']
     })
@@ -41,44 +40,22 @@ def main():
 def run(config):
     # Tensorflow dependent functions must be defined inside of 
     # run function for thread-safe behavior.
-    import numpy as np
-    import pandas as pd
-    np.random.seed(config['seed'][0])
-    from GravNN.Networks.utils import configure_tensorflow
-    from GravNN.Networks.Callbacks import SimpleCallback
-    from GravNN.Networks.Data import get_preprocessed_data, configure_dataset, compute_input_layer_normalization_constants
+    from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
-    from GravNN.Networks.utils import populate_config_objects, configure_optimizer
-    from GravNN.Networks.Schedules import get_schedule
+    from GravNN.Networks.utils import configure_tensorflow
+    from GravNN.Networks.utils import populate_config_objects
 
-    tf, mixed_precision = configure_tensorflow(config)
+    configure_tensorflow(config)
 
     # Standardize Configuration
     config = populate_config_objects(config)
     print(config)
 
     # Get data, network, optimizer, and generate model
-    train_data, val_data, transformers = get_preprocessed_data(config)
-    compute_input_layer_normalization_constants(config)
-    dataset, val_dataset = configure_dataset(train_data, val_data, config)
-    optimizer = configure_optimizer(config, mixed_precision)
+    data = DataSet(config)
     model = PINNGravityModel(config)
-    model.compile(optimizer=optimizer, loss="mse")
-    
-    # Train network
-    callback = SimpleCallback(config['batch_size'][0])
-    loss_callback = LossComponentsCallback(config['batch_size'][0])
-    schedule = get_schedule(config)
-
-    history = model.fit(
-        dataset,
-        epochs=config["epochs"][0],
-        verbose=0,
-        validation_data=val_dataset,
-        callbacks=[callback, loss_callback, schedule],
-    )
-    history.history["time_delta"] = callback.time_delta
-    model.history = history
+    history = model.train(data)
+    model.save(df_file=None, history=history, transformers=data.transformers)
 
     # Appends the model config to a perscribed df
     return model.config

@@ -77,7 +77,7 @@ class Earth:
             processor=format_EGM2008_sh
         )
 
-        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Misc/unit_sphere.obj"
+        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Earth/Earth.obj"
 
         # Backwards compatability
         # self.sh_file = self.EGM96
@@ -115,4 +115,4 @@ class Moon:
         )
         
         self.sh_file = self.GRGM1200
-        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Misc/unit_sphere.obj"
+        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Moon/Moon.obj"

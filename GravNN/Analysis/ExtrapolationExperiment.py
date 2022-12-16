@@ -1,9 +1,9 @@
 
 from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import SurfaceDist, RandomAsteroidDist
+from GravNN.Trajectories import SurfaceDist, RandomDist
 from GravNN.Networks.utils import _get_loss_fcn
-from GravNN.Networks.Data import get_raw_data
+from GravNN.Networks.Data import DataSet
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ class ExtrapolationExperiment:
 
         self.brillouin_radius = config['planet'][0].radius
         original_max_radius = self.config['radius_max'][0]
-        extra_max_radius = self.config.get('extra_radius_max', [0])[0]
+        extra_max_radius = np.nan_to_num(self.config.get('extra_radius_max', [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config['radius_min'][0], max_radius]
 
@@ -38,7 +38,10 @@ class ExtrapolationExperiment:
 
 
     def get_train_data(self):
-        x_train, a_train, u_train, x_val, a_val, u_val = get_raw_data(self.config)
+
+        data = DataSet(self.config)
+        x_train = data.raw_data['x_train']
+        a_train = data.raw_data['a_train']
         train_r_COM = cart2sph(x_train)[:,0] 
 
         # sort
@@ -60,7 +63,8 @@ class ExtrapolationExperiment:
     def get_test_data(self):
         planet = self.config['planet'][0]
         original_max_radius = self.config['radius_max'][0]
-        extra_max_radius = self.config.get('extra_radius_max', [0])[0]
+        augment_data = self.config.get('augment_data_config', [{}])[0]
+        extra_max_radius = augment_data.get('radius_max', [0])[0]
         max_radius = np.max([original_max_radius, extra_max_radius])
 
         min_radius = self.config['radius_min'][0]
@@ -68,19 +72,25 @@ class ExtrapolationExperiment:
 
         gravity_data_fcn = self.config['gravity_data_fcn'][0]
 
-        interpolation_dist = RandomAsteroidDist(planet, 
+        interpolation_dist = RandomDist(planet, 
                             radius_bounds=self.training_bounds,
                             points=self.points,
                             **self.config)
-        extrapolation_dist = RandomAsteroidDist(planet, 
+        extrapolation_dist = RandomDist(planet, 
                             radius_bounds=[max_radius, max_radius*10],
                             points=self.points,
                             **self.config)
 
+        x, a, u = gravity_data_fcn(interpolation_dist, obj_file, **self.config)
+        x_extra, a_extra, u_extra = gravity_data_fcn(extrapolation_dist, obj_file, **self.config)
+        
+        x = np.append(x, x_extra, axis=0)
+        a = np.append(a, a_extra, axis=0)
+        u = np.append(u, u_extra, axis=0)
+
         full_dist = interpolation_dist
         full_dist.positions = np.append(full_dist.positions, extrapolation_dist.positions, axis=0)
         
-        x, a, u = gravity_data_fcn(full_dist, obj_file, **self.config)
 
         # Compute distance to COM
         x_sph = cart2sph(x)
@@ -99,9 +109,9 @@ class ExtrapolationExperiment:
         self.test_potentials = u
 
     def get_PINN_data(self):
-        positions = self.positions.astype(self.model.network.compute_dtype)
-        self.predicted_accelerations =  self.model.generate_acceleration(positions)
-        self.predicted_potentials =  self.model.generate_potential(positions)
+        positions = self.positions#.astype(self.model.network.compute_dtype)
+        self.predicted_accelerations =  self.model.compute_acceleration(positions)
+        self.predicted_potentials =  self.model.compute_potential(positions)
 
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):
@@ -127,7 +137,7 @@ class ExtrapolationExperiment:
             percent_error = np.linalg.norm(y - y_hat, axis=1) / np.linalg.norm(y, axis=1)*100
             return rms_error.astype(np.float32), percent_error.astype(np.float32)
 
-        loss_fcn = _get_loss_fcn(self.config['loss_fcn'][0])
+        loss_fcn = _get_loss_fcn(self.config.get('loss_fcn',["percent_rms_summed"])[0])
 
         rms_accelerations, percent_accelerations = compute_errors(self.test_accelerations, self.predicted_accelerations) 
         self.loss_acc = np.array([
@@ -158,30 +168,13 @@ class ExtrapolationExperiment:
 
 def main():
     import pandas as pd
-    import numpy as np
-    import importlib
     from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
-    from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
     import matplotlib.pyplot as plt
-    
-    # Original U 
+    from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
     from GravNN.Networks.Model import load_config_and_model
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031522_original_more_data.data")
-    df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031522_model2_2500_500R_float64.data")
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031222_500R_more_units.data")
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031222_500R.data")
 
-    # U r 
-    # from GravNN.Networks.Model2 import load_config_and_model
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031522_zeros.data")
-
-    # Sqrt U
-    # from GravNN.Networks.Model3 import load_config_and_model
-    # df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031522_sqrt_u.data")
+    df = pd.read_pickle("Data/Dataframes/optimize_20.data")
     model_id = df["id"].values[-1] 
-
-    df = pd.read_pickle("Data/Dataframes/eros_pinn_III_031722.data")
-    model_id = df["id"].values[7] 
     config, model = load_config_and_model(model_id, df)
     extrapolation_exp = ExtrapolationExperiment(model, config, 500)
     extrapolation_exp.run()

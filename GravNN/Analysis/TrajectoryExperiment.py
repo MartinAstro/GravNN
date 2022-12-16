@@ -69,21 +69,21 @@ class TrajectoryExperiment:
             "Return the first-order system"
             R = np.array([y[0:3]])
             V = np.array([y[3:6]])
-            a = model.generate_acceleration(R)
+            a = model.compute_acceleration(R)
             dxdt = np.hstack((V, a)).squeeze()
             return dxdt
         
         sol = solve_ivp(fun, [0, t_eval[-1]], X0.reshape((-1,)), t_eval=t_eval, atol=1e-8, rtol=1e-10)
         return sol
 
-    def generate_accelerations(self):
-        true_acc = self.truth_grav_model.generate_acceleration(self.true_sol.y[0:3,:])
-        test_acc = self.test_grav_model.generate_acceleration(self.true_sol.y[0:3,:])
+    def compute_accelerations(self):
+        true_acc = self.truth_grav_model.compute_acceleration(self.true_sol.y[0:3,:])
+        test_acc = self.test_grav_model.compute_acceleration(self.true_sol.y[0:3,:])
         return true_acc, test_acc
 
-    def generate_potentials(self):
-        true_pot = self.truth_grav_model.generate_potential(self.true_sol.y[0:3,:])
-        test_pot = self.test_grav_model.generate_potential(self.true_sol.y[0:3,:])
+    def compute_potentials(self):
+        true_pot = self.truth_grav_model.compute_potential(self.true_sol.y[0:3,:])
+        test_pot = self.test_grav_model.compute_potential(self.true_sol.y[0:3,:])
         return true_pot, test_pot
 
     def diff_and_error(self, true, test):
@@ -104,8 +104,8 @@ class TrajectoryExperiment:
 
         # Evaluate the accelerations and potentials along the trajectory from the true
         # trajectory 
-        self.true_acc, self.test_acc = self.generate_accelerations()
-        self.true_pot, self.test_pot = self.generate_potentials()
+        self.true_acc, self.test_acc = self.compute_accelerations()
+        self.true_pot, self.test_pot = self.compute_potentials()
 
         # Differences and error (1D)
         self.diff_acc, self.error_acc = self.diff_and_error(self.true_acc, self.test_acc)
