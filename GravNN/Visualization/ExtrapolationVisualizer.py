@@ -110,7 +110,7 @@ class ExtrapolationVisualizer(VisualizationBase):
             )
         plt.gca().set_yscale('log')
         plt.xlim(self.training_bounds / self.radius)
-        plt.ylabel("Loss")
+        plt.ylabel("RMS")
         plt.xlabel(self.x_label)
         plt.ylim([0,None])
         self.plot_histogram(self.x_train)
@@ -121,7 +121,7 @@ class ExtrapolationVisualizer(VisualizationBase):
             self.experiment.RMS_acc[self.idx_test]
             )       
         plt.gca().set_yscale('log')
-        plt.ylabel("Loss")
+        plt.ylabel("RMS")
         plt.xlabel(self.x_label)
 
     def plot_interpolation_percent_error(self):
