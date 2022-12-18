@@ -366,15 +366,19 @@ def SphericalPinesTransformerNet_v3(**kwargs):
     initializer = kwargs["initializer"][0]
     dtype = kwargs.get("dtype", [tf.float32])[0]
     transformer_units = kwargs["num_units"][0]
-    ref_radius_max = kwargs.get('ref_radius_max', [None])[0]
+    transition_radius = kwargs.get('transition_radius', [None])[0]
     ref_radius_min = kwargs.get('ref_radius_min', [None])[0]
     mu = kwargs.get('mu_non_dim', [1.0])[0]
+    fourier_features = kwargs.get('fourier_features', [8])[0]
+    fourier_sigma = kwargs.get('fourier_sigma', [1])[0]
+    fourier_scale = kwargs.get('fourier_scale', [1])[0]
 
     inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
     features = Cart2PinesSphLayer(dtype)(inputs)
     x = PinesSph2NetLayer_v2(dtype, 
                     ref_radius_min=ref_radius_min, 
-                    ref_radius_max=ref_radius_max)(features)
+                    ref_radius_max=transition_radius)(features)
+    x = FourierFeatureLayer(fourier_features, fourier_sigma, fourier_scale)(x)
 
     # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
     encoder_1 = tf.keras.layers.Dense(
@@ -417,7 +421,18 @@ def SphericalPinesTransformerNet_v3(**kwargs):
         dtype=dtype,
     )(x)
 
-    u = AugmentedPotentialLayer_v2(dtype, mu, ref_radius_max)(u_nn, inputs)
+
+    cBar = kwargs.get("cBar",[0])[0]
+    sBar = kwargs.get("sBar",[0])[0]
+    ref_radius = kwargs.get('ref_radius', [None])[0]
+    transition_radius = kwargs.get('transition_radius', [None])[0]
+
+    C20 = cBar[2,0]
+    if kwargs.get('deg_removed', [-1])[0] == -1:
+        u_analytic = PlanetaryOblatenessLayer(dtype, mu, ref_radius, C20)(features)
+        u = BlendPotentialLayer(dtype, mu, transition_radius)(u_nn, u_analytic, features)
+    else:
+        u = u_nn
 
     model = tf.keras.Model(inputs=inputs, outputs=u)
     super(tf.keras.Model, model).__init__(dtype=dtype)
