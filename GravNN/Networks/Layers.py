@@ -199,6 +199,53 @@ class PinesSph2NetLayer_v2(tf.keras.layers.Layer):
         )
         return config
 
+class FourierFeatureLayer(tf.keras.layers.Layer):
+    def __init__(self, M_features, sigma, scale):
+        super(FourierFeatureLayer, self).__init__()
+        # self.a = np.ones((len(M),)).astype(self.dtype)#
+        # self.a = np.diag(np.array([1.0/j for j in range(1,M+1)], dtype=self.dtype))
+        self.B = np.random.normal(0, sigma, size=(M_features, 3)).astype(self.dtype) * scale
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs) # [4 x N]
+
+        one = tf.constant(1.0, dtype=self.dtype)
+        two = tf.constant(2.0, dtype=self.dtype)
+
+        r = inputs_transpose[0]
+
+        # force geometry to be between 0 - 1
+        s = (inputs_transpose[1] + one) / two
+        t = (inputs_transpose[2] + one) / two
+        u = (inputs_transpose[3] + one) / two
+
+        # project into random fourier space
+        v = tf.stack([s, t, u], 0)
+        v_proj = self.B@v # [M x N]
+
+        C = tf.constant(2*np.pi, dtype=self.dtype)
+        v_sin = tf.sin(C*v_proj)
+        v_cos = tf.cos(C*v_proj)
+        
+        # v_sin = tf.transpose(tf.tensordot(tf.sin(C*v_proj), self.a, [[0],[1]]))
+        # v_cos = tf.transpose(tf.tensordot(tf.cos(C*v_proj), self.a, [[0],[1]]))
+
+        # stack radius and fourier basis together
+        r_feature = tf.reshape(r, shape=(1, -1))
+        features = tf.concat([r_feature, v_sin, v_cos], 0) # [2M x N]
+
+        return tf.transpose(features)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "B" : self.B
+            }
+        )
+        return config
+
+
 class PointMassLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, mu, r_max):
         super(PointMassLayer, self).__init__(dtype=dtype)
@@ -233,7 +280,7 @@ class BlendPotentialLayer(tf.keras.layers.Layer):
         self.k = self.add_weight("k",
                             shape=[1],
                             trainable=True, 
-                            initializer =tf.keras.initializers.Constant(value=10),
+                            initializer =tf.keras.initializers.Constant(value=1000),
                             )
         super(BlendPotentialLayer, self).build(input_shapes)
 
@@ -241,7 +288,7 @@ class BlendPotentialLayer(tf.keras.layers.Layer):
     def call(self, u_nn, u_analytic, inputs):
         one = tf.constant(1.0, dtype=u_nn.dtype)
         half = tf.constant(0.5, dtype=u_nn.dtype)
-        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        r = tf.reshape(inputs[:,0], shape=(-1,1))
         dr = tf.subtract(r,self.radius)
         h = half+half*tf.tanh(self.k*dr)
         u_model = (one - h)*(u_nn + u_analytic) + h*u_analytic 
@@ -414,7 +461,7 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*c1 - c2)*self.C20
         potential = tf.negative(u_pm + u_C20)
 
-        u = tf.reshape(potential, (-1,1))
+        u = tf.reshape(potential, (-1,1)) 
         return u
 
 
@@ -428,3 +475,8 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
             }
         )
         return config
+
+if __name__ == "__main__":
+    inputs = np.array([[100.0,-0.1,0.5,-0.9],[200,0.2,-0.4,0.8]])
+    layer = FourierFeatureLayer(16, 2)
+    layer(inputs)
