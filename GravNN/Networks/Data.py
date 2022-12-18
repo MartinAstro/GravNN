@@ -328,12 +328,85 @@ def scale_by_constants(data_dict, config):
     ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
     ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
     ref_radius = config.get('ref_radius', [ref_radius_max])[0]
+    transition_radius = config.get('transition_radius', [x_norm.max()])[0]
     if ref_radius is not None:
-        x_vec = np.array([[ref_radius, ref_radius_min, ref_radius_max]])
+        x_vec = np.array([
+                        [ref_radius, ref_radius_min, ref_radius_max],
+                        [transition_radius, 0, 0]])
         x_vec_normalized = x_transformer.transform(x_vec)
         config['ref_radius'] = [x_vec_normalized[0,0]]
         config['ref_radius_min'] = [x_vec_normalized[0,1]]
         config['ref_radius_max'] = [x_vec_normalized[0,2]]
+        config['transition_radius'] = [x_vec_normalized[1,0]]
+
+    
+    if config.get('mu', [None])[0] is not None:
+        config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
+
+    data_dict = {
+        "x_train" : x_train,
+        "a_train" : a_train,
+        "u_train" : u_train,
+        "x_val" : x_val,
+        "a_val" : a_val,
+        "u_val" : u_val,
+    }
+
+    transformers = {
+        "x": x_transformer,
+        "a": a_transformer,
+        "u": u_transformer,
+        "a_bar": a_bar_transformer,
+    }
+    return data_dict, transformers
+
+def scale_by_non_dim_potential(data_dict, config):
+
+    x_transformer = config["x_transformer"][0]
+    a_transformer = config["a_transformer"][0]
+    u_transformer = config["u_transformer"][0]
+    a_bar_transformer = config["a_transformer"][0]
+
+    """
+    non-dimensionalize by units, not by values
+    x = x_tilde / x_star # length
+    m = m_tilde / m_star # mass
+    t = t_tilde / t_star # time
+    """
+    x_norm = np.linalg.norm(data_dict["x_train"],axis=1)
+    x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
+
+    # scale time coordinate based on what makes the accelerations behave nicely
+    u_brill = config['mu'][0]/config['planet'][0].radius 
+    u_star = 0.00001*u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
+
+    t_star = np.sqrt(x_star**2/u_star)
+
+    x_train = x_transformer.fit_transform(data_dict["x_train"], scaler=1/x_star)
+    a_train = a_transformer.fit_transform(data_dict["a_train"], scaler=1/(x_star/t_star**2))
+    u_train = u_transformer.fit_transform(data_dict["u_train"], scaler=1/(x_star/t_star)**2)
+
+    u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
+
+    x_val = x_transformer.transform(data_dict["x_val"])
+    a_val = a_transformer.transform(data_dict["a_val"])
+    u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+
+    # can't just select max from non-dim x_train because config is dimensionalized 
+    ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
+    ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
+    ref_radius = config.get('ref_radius', [ref_radius_max])[0]
+    transition_radius = config.get('transition_radius', [x_norm.max()])[0]
+    if ref_radius is not None:
+        x_vec = np.array([
+                        [ref_radius, ref_radius_min, ref_radius_max],
+                        [transition_radius, 0, 0]])
+        x_vec_normalized = x_transformer.transform(x_vec)
+        config['ref_radius'] = [x_vec_normalized[0,0]]
+        config['ref_radius_min'] = [x_vec_normalized[0,1]]
+        config['ref_radius_max'] = [x_vec_normalized[0,2]]
+        config['transition_radius'] = [x_vec_normalized[1,0]]
+
     
     if config.get('mu', [None])[0] is not None:
         config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
@@ -572,6 +645,8 @@ class DataSet():
             preprocess_fcn = scale_by_non_dimensional_radius
         elif scale_by == "non_dim_v2":
             preprocess_fcn = scale_by_constants
+        elif scale_by == "non_dim_v3":
+            preprocess_fcn = scale_by_non_dim_potential
         elif scale_by == "none":
             preprocess_fcn = no_scale
             
