@@ -18,8 +18,11 @@ def load_network(config):
     return network
 
 
-def TraditionalNet(**kwargs):
-    """Vanilla densely connected neural network.
+def get_network_fcn(network_type):
+    return {
+        "traditional" : traditional_network,
+        "transformer" : transformer_network,
+    }[network_type.lower()]
 
 def get_preprocess_layer_fcn(layer_key):
     return {
@@ -55,45 +58,14 @@ def get_preprocess_layers(config):
         layers.append(get_preprocess_layer_fcn(layer_key))
     return layers
 
-    .. Note:: This network superseeds the SphericalTraditionalNet as its spherical derivatives are non-singular.
-
-    TODO: fix keyword acquisition such that some parameters can be optional.
-
-    Args:
-        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
-        layer with 10 nodes, followed by a second layer with 10, ...)
-        activation (str): non-linear activation function to be used
-        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
-        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
-        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
-        custom_input_layer (str): selects any custom configuration option for the layer that enters the network. (e.g. concatenate the cartesian inputs
-        with the spherical coordinates using "cart_and_sph").
-        skip_normalization (bool): flag determining if the spherical values entering the network should be normalized
-        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
-        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
-        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
-    Returns:
-        tf.keras.Model: densely connected network
-    """
+def traditional_network(inputs, **kwargs):
+    """Vanilla densely connected neural network."""
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
-    custom_input_layer = kwargs["custom_input_layer"][0]
     dtype = kwargs["dtype"][0]
-    skip_normalization = kwargs["skip_normalization"][0]
-    ref_radius = kwargs["ref_radius"][0]
 
-    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
-    x = Cart2PinesSphLayer(dtype)(inputs)
-
-    if not skip_normalization:
-        scalers = kwargs["norm_scalers"][0]
-        mins = kwargs["norm_mins"][0]
-        x = PinesSph2NetLayer(dtype, scalers, mins, ref_radius)(x)
-
-    if custom_input_layer == "cart_and_sph":
-        x = tf.keras.layers.Concatenate(axis=-1)([inputs, x])
-
+    x = inputs
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
             units=layers[i],
@@ -113,53 +85,21 @@ def get_preprocess_layers(config):
         kernel_initializer=initializer,
         dtype=dtype,
     )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    super(tf.keras.Model, model).__init__(dtype=dtype)
+    return outputs
 
-    return model
-
-def SphericalPinesTransformerNet(**kwargs):
+def transformer_network(inputs, **kwargs):
     """Transformer model that takes 4D spherical coordinates as inputs. This architecture was recommended by the
     Wang2020 PINN Gradient Pathologies paper to help expose symmetries and invariances between different layers within the network.
-
-    TODO: fix keyword acquisition such that some parameters can be optional.
-    TODO: Check if the transformer_units have to be the same as the hidden layer node count. If so remove the keyword. s
-
-    Args:
-        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
-        layer with 10 nodes, followed by a second layer with 10, ...)
-        transformer_units (int): number of nodes used within the encoder layers.
-        activation (str): non-linear activation function to be used
-        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
-        dtype (str): float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
-        dropout (float, optional): fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
-        skip_normalization (bool): flag determining if the spherical values entering the network should be normalized
-        norm_mins (tf.Tensor or np.array): values used to bias the spherical inputs to the network before scaling such that inputs will ultimately be between [-1,1]
-        norm_scalers (tf.Tensor or np.array): values used to scale the spherical inputs to the network after biasing such that inputs will be between [-1,1]
-        batch_norm (bool, optional): Flag determining if batch normalization layers should be inserted between hidden layers.
-    Returns:
-        tf.keras.Model: densely connected network
     """
+    # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
+
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
-    scalers = kwargs["norm_scalers"][0]
-    mins = kwargs["norm_mins"][0]
     dtype = kwargs["dtype"][0]
     transformer_units = layers[1]
-    normalization_strategy = kwargs["normalization_strategy"][0]
-    ref_radius = kwargs["ref_radius"][0]
-    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
-    x = Cart2PinesSphLayer(dtype)(inputs)
 
-
-    if normalization_strategy == 'radial':
-        x = PinesSph2NetRefLayer(dtype, scalers, mins, ref_radius)(x)
-    if normalization_strategy == 'uniform':
-        x = PinesSph2NetLayer(dtype, scalers, mins, ref_radius)(x)
-
-
-    # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
+    x = inputs
     encoder_1 = tf.keras.layers.Dense(
         units=transformer_units,
         activation=activation,
@@ -182,7 +122,8 @@ def SphericalPinesTransformerNet(**kwargs):
             dtype=dtype,
         )(x)
         UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
-        VX = tf.keras.layers.Multiply(dtype=dtype)([one- x, encoder_2])
+        one_minus_x = tf.keras.layers.Subtract(dtype=dtype)([one, x])
+        VX = tf.keras.layers.Multiply(dtype=dtype)([one_minus_x, encoder_2])
 
         x = tf.keras.layers.add([UX, VX],dtype=dtype)
 
@@ -198,8 +139,7 @@ def SphericalPinesTransformerNet(**kwargs):
         kernel_initializer='glorot_uniform',
         dtype=dtype,
     )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    super(tf.keras.Model, model).__init__(dtype=dtype)
+    return outputs
 
     return model
 
