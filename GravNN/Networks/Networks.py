@@ -21,47 +21,39 @@ def load_network(config):
 def TraditionalNet(**kwargs):
     """Vanilla densely connected neural network.
 
-    TODO: fix keyword acquisition such that some parameters can be optional.
+def get_preprocess_layer_fcn(layer_key):
+    return {
+        "pines" : Cart2PinesSphLayer,
+        "r_scale" : ScaleRLayer,
+        "r_normalize" : NormalizeRLayer,
+        "r_inv" : InvRLayer,
+        "fourier" : FourierFeatureLayer
+    }[layer_key.lower()]
 
-    Args:
-        layers (list): list of number of nodes per layer (i.e. [3,10,10,10,3] has 3 inputs nodes, followed by a first
-        layer with 10 nodes, followed by a second layer with 10, ...)
-        activation (str): non-linear activation function to be used
-        initializer (str): weight and bias initialization strategy (ex. 'glorot_normal' or 'glorot_uniform')
-        dtype (str) : float dtype (ex. 'float32' or 'float64') -- this is especially important if using mixed precision in TF.
-        dropout (float, optional) : fraction of nodes to be dropped between each hidden layer (0.0 means no nodes dropped, 0.5 means half, ...)
-    Returns:
-        tf.keras.Model: densely connected network
-    """
-    layers = kwargs["layers"][0]
-    activation = kwargs["activation"][0]
-    initializer = kwargs["initializer"][0]
-    dtype = kwargs["dtype"][0]
-    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
-    x = inputs
-    for i in range(1, len(layers) - 1):
-        x = tf.keras.layers.Dense(
-            units=layers[i],
-            activation=activation,
-            kernel_initializer=initializer,
-            dtype=dtype,
-        )(x)
-        if "dropout" in kwargs:
-            if kwargs["dropout"][0] != 0.0:
-                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
-    outputs = tf.keras.layers.Dense(
-        units=layers[-1],
-        activation="linear",
-        kernel_initializer=initializer,
-        dtype=dtype,
-    )(x)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    super(tf.keras.Model, model).__init__(dtype=dtype)
-    return model
+def get_preprocess_args(config):
+    ref_radius_max = config.get('ref_radius_max', [1E-3])[0]
+    ref_radius_min = config.get('ref_radius_min', [1.0])[0]
+    feature_min = config.get('feature_min', [1.0])[0]
+    feature_max = config.get('feature_max', 
+        [1.0 + (ref_radius_max - ref_radius_min)/ref_radius_max])[0]
+    preprocess_args = {
+        "dtype" : config["dtype"][0],
+        "ref_radius_max" : ref_radius_max, 
+        "ref_radius_min" : ref_radius_min, 
+        "feature_min" : feature_min, 
+        "feature_max" : feature_max, 
+        "fourier_features" : config.get('fourier_features', [1])[0],
+        "fourier_sigma" : config.get('fourier_sigma', [1])[0],
+        "fourier_scale" : config.get('fourier_scale', [1])[0],
+    }
+    return preprocess_args
 
-def SphericalPinesTraditionalNet(**kwargs):
-    """Densely connected neural network that will convert inputs into 4D spherical coordinates
-    before proceeding into the network.
+def get_preprocess_layers(config):
+    preprocess_layers = config.get("preprocessing")[0]
+    layers = []
+    for layer_key in preprocess_layers:
+        layers.append(get_preprocess_layer_fcn(layer_key))
+    return layers
 
     .. Note:: This network superseeds the SphericalTraditionalNet as its spherical derivatives are non-singular.
 
