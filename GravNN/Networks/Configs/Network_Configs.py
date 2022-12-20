@@ -30,14 +30,14 @@ def PINN_I():
         "lr_anneal": ['hold'],
         "beta" : [0.0],
         "input_layer": [False],
-        "network_type": ["traditional"],
-        "custom_input_layer": [None],
+        "network_type": ["custom"],        
+        "preprocessing" : [[]],
         'seed' : [0],
         'init_file' : [None],
-        'normalization_strategy' : ['uniform'], #'radial, uniform
         'jit_compile' : [False],
         'eager' : [False],
-        "dtype" : ['float64']
+        "dtype" : ['float64'],
+        "network_arch" : ['traditional']
     }
     return network_config
 
@@ -50,8 +50,9 @@ def PINN_II():
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
 
         "activation": ["gelu"],
-        "network_type": ["sph_pines_transformer"],
         "scale_by": ["non_dim"],
+        "network_arch" : ['transformer'],
+        "preprocessing" : [['pines']]
     }
     config.update(network_config)
     return config
@@ -60,9 +61,9 @@ def PINN_II():
 def PINN_III():
     config = PINN_II()
     network_config = {
-        "network_type": ["sph_pines_transformer_v2"],
         "scale_by": ["non_dim_v2"],
         "loss_fcn" : ['avg_percent_summed_rms'],
+        "preprocessing" : [['pines', 'r_normalize', 'r_inv']]
     }
     config.update(network_config)
     return config
