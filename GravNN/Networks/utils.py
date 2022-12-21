@@ -385,10 +385,6 @@ def _get_network_fcn(name):
     return {
         "basic": BasicNet,
         "custom": CustomNet,
-        # "sph_pines_transformer": SphericalPinesTransformerNet,
-        # "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
-        # "sph_pines_transformer_v2": SphericalPinesTransformerNet_v2,
-        # "sph_pines_transformer_v3": SphericalPinesTransformerNet_v3,
     }[name.lower()]
 
 
