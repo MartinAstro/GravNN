@@ -39,65 +39,6 @@ def print_stats(data, name):
         )
     )
 
-def compute_input_layer_normalization_constants(config):
-    """Function responsible for determining how to normalize the spherical coordinates
-    before entering the network. Currently the tensorflow graph accepts a normalized cartesian vector
-    input, which is then (within the graph) transformed to spherical coordinates. The theta and phi components
-    grossly exceed the [-1,1] bounds if left unnormalized, so this function identifies those mins and max values
-    for normalization purposes within the graph. 
-
-    .. Note:: In the PinesSphericalNet these constants are generally irrelevant given the 4D coordinate system
-    in which all parameters exist naturally between -1,1. Consequently this is only used for the SphTraditionalNet
-    with 3D coordinates. 
-
-    Args:
-        config (dict): hyperparameters and configuration variables for the TF model.
-    """
-    if config.get("skip_normalization", [True])[0]:
-        return
-
-    trajectory = config["distribution"][0](
-        config["planet"][0],
-        [config["radius_min"][0], config["radius_max"][0]],
-        config["N_dist"][0],
-        **config
-    )
-    get_analytic_data_fcn = config['gravity_data_fcn'][0]
-    
-    x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-        trajectory, config["grav_file"][0], **config
-    )
-
-    # Transform into cartesian normalized (i.e unit vectors)
-    x_unscaled = config["x_transformer"][0].transform(x_unscaled)
-
-    # Convert to spherical coordinates
-    x_unscaled = cart2sph(x_unscaled)
-    x_unscaled[:, 1:3] = np.deg2rad(x_unscaled[:, 1:3])
-
-    x_train, a_train, u_train, x_val, a_val, u_val = training_validation_split(
-        x_unscaled, a_unscaled, u_unscaled, config["N_train"][0], config["N_val"][0]
-    )
-
-    a_train = a_train + config["acc_noise"][0] * np.std(a_train) * np.random.randn(
-        a_train.shape[0], a_train.shape[1]
-    )
-
-    # Determine scalers for the normalized spherical coordinates
-
-    # Scale the radial component independently
-    r_transformer = MinMaxScaler(feature_range=(-1, 1))
-    x_train[:, 0:1] = r_transformer.fit_transform(x_train[:, 0:1])
-
-    # Also scale the angles together
-    angles_transformer = MinMaxScaler(feature_range=(-1, 1))
-    x_train[:, 1:3] = angles_transformer.fit_transform(x_train[:, 1:3])
-
-    config["norm_scalers"] = [
-        np.concatenate([r_transformer.scale_, angles_transformer.scale_])
-    ]
-    config["norm_mins"] = [np.concatenate([r_transformer.min_, angles_transformer.min_])]
-    return
 
 def add_error(data_dict, percent_noise):
 
@@ -225,9 +166,9 @@ def scale_by_non_dimensional(data_dict, config):
     a_val = a_transformer.transform(data_dict["a_val"])
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
-    ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+    ref_r_vec = np.array([[config['ref_radius_max'][0], 0, 0]])
     ref_r_vec = x_transformer.transform(ref_r_vec)
-    config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
+    config['ref_radius_max'] = [ref_r_vec[0,0].astype(np.float32)]
 
     data_dict = {
         "x_train" : x_train,
@@ -272,9 +213,6 @@ def scale_by_non_dimensional_radius(data_dict, config):
     a_val = a_transformer.transform(data_dict["a_val"])
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
-    # ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
-    # ref_r_vec = x_transformer.transform(ref_r_vec)
-    # config['ref_radius'] = [ref_r_vec[0,0].astype(np.float32)]
     data_dict = {
         "x_train" : x_train,
         "a_train" : a_train,
@@ -327,19 +265,13 @@ def scale_by_constants(data_dict, config):
     # can't just select max from non-dim x_train because config is dimensionalized 
     ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
     ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
-    ref_radius = config.get('ref_radius', [ref_radius_max])[0]
-    transition_radius = config.get('transition_radius', [x_norm.max()])[0]
-    if ref_radius is not None:
-        x_vec = np.array([
-                        [ref_radius, ref_radius_min, ref_radius_max],
-                        [transition_radius, 0, 0]])
-        x_vec_normalized = x_transformer.transform(x_vec)
-        config['ref_radius'] = [x_vec_normalized[0,0]]
-        config['ref_radius_min'] = [x_vec_normalized[0,1]]
-        config['ref_radius_max'] = [x_vec_normalized[0,2]]
-        config['transition_radius'] = [x_vec_normalized[1,0]]
+    ref_radius_analytic = config.get('ref_radius_analytic', [x_norm.max()])[0]
+    x_vec = np.array([[ref_radius_min, ref_radius_max, ref_radius_analytic]])
+    x_vec_normalized = x_transformer.transform(x_vec)
+    config['ref_radius_min'] = [x_vec_normalized[0,0]]
+    config['ref_radius_max'] = [x_vec_normalized[0,1]]
+    config['ref_radius_analytic'] = [x_vec_normalized[0,2]]
 
-    
     if config.get('mu', [None])[0] is not None:
         config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
 
@@ -395,19 +327,13 @@ def scale_by_non_dim_potential(data_dict, config):
     # can't just select max from non-dim x_train because config is dimensionalized 
     ref_radius_min = config.get('ref_radius_min', [x_norm.min()])[0]
     ref_radius_max = config.get('ref_radius_max', [x_norm.max()])[0]
-    ref_radius = config.get('ref_radius', [ref_radius_max])[0]
-    transition_radius = config.get('transition_radius', [x_norm.max()])[0]
-    if ref_radius is not None:
-        x_vec = np.array([
-                        [ref_radius, ref_radius_min, ref_radius_max],
-                        [transition_radius, 0, 0]])
-        x_vec_normalized = x_transformer.transform(x_vec)
-        config['ref_radius'] = [x_vec_normalized[0,0]]
-        config['ref_radius_min'] = [x_vec_normalized[0,1]]
-        config['ref_radius_max'] = [x_vec_normalized[0,2]]
-        config['transition_radius'] = [x_vec_normalized[1,0]]
+    ref_radius_analytic = config.get('ref_radius_analytic', [x_norm.max()])[0]
+    x_vec = np.array([[ref_radius_min, ref_radius_max, ref_radius_analytic]])
+    x_vec_normalized = x_transformer.transform(x_vec)
+    config['ref_radius_min'] = [x_vec_normalized[0,0]]
+    config['ref_radius_max'] = [x_vec_normalized[0,1]]
+    config['ref_radius_analytic'] = [x_vec_normalized[0,2]]
 
-    
     if config.get('mu', [None])[0] is not None:
         config['mu_non_dim'] = [config['mu'][0] * (t_star**2)/(x_star)**3]
 
@@ -671,8 +597,6 @@ class DataSet():
 
         train_tuple = (x_train, u_train, a_train, laplace_train, curl_train)
         val_tuple = (x_val, u_val, a_val, laplace_val, curl_val)
-
-        compute_input_layer_normalization_constants(self.config)
 
         return (train_tuple, val_tuple, transformers,)
 
