@@ -64,8 +64,8 @@ def main():
     # If the PINN model includes point mass + J2, remove it
     if config['deg_removed'][0] == -1:
         grid_pred -= grid_a2
-        grid_true -= grid_a2
-        grid_sh -= grid_a2
+    grid_true -= grid_a2
+    grid_sh -= grid_a2
         
     vlim = [grid_pred.total.min(), np.mean(grid_pred.total) + 2*np.std(grid_pred.total)]
     map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None)
