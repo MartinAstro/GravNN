@@ -378,21 +378,17 @@ def _get_network_fcn(name):
         function: network function
     """
     from GravNN.Networks.Networks import (
-        TraditionalNet,
-        SphericalPinesTraditionalNet,
-        SphericalPinesTransformerNet,
-        SphericalPinesTraditionalNet_v2,
-        SphericalPinesTransformerNet_v2,
-        SphericalPinesTransformerNet_v3
+        BasicNet,
+        CustomNet,
     )
 
     return {
-        "traditional": TraditionalNet,
-        "sph_pines_traditional": SphericalPinesTraditionalNet,
-        "sph_pines_transformer": SphericalPinesTransformerNet,
-        "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
-        "sph_pines_transformer_v2": SphericalPinesTransformerNet_v2,
-        "sph_pines_transformer_v3": SphericalPinesTransformerNet_v3,
+        "basic": BasicNet,
+        "custom": CustomNet,
+        # "sph_pines_transformer": SphericalPinesTransformerNet,
+        # "sph_pines_traditional_v2": SphericalPinesTraditionalNet_v2,
+        # "sph_pines_transformer_v2": SphericalPinesTransformerNet_v2,
+        # "sph_pines_transformer_v3": SphericalPinesTransformerNet_v3,
     }[name.lower()]
 
 
