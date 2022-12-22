@@ -118,7 +118,10 @@ class InvRLayer(tf.keras.layers.Layer):
         spheres = tf.stack([r_inv, s, t, u], axis=1)
         return spheres
 
+    def get_config(self):
+        config = super().get_config().copy()
 
+        return config
 
 class FourierFeatureLayer(tf.keras.layers.Layer):
     def __init__(self, fourier_features, fourier_sigma, fourier_scale, **kwargs):
