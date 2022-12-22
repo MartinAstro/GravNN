@@ -5,7 +5,8 @@ def get_loss_fcn(loss_key):
     return { 
         "rms" : rms,
         "percent" : percent,
-        "angle" : angle
+        "angle" : angle,
+        "magnitude" : magnitude
 
     }[loss_key.lower()]
 
@@ -24,7 +25,7 @@ def rms(y_hat, y):
 def percent(y_hat, y):
     da = tf.subtract(y_hat[:,0:3], y[:,0:3])
     da_norm = tf.norm(da, axis=1)
-    a_true_norm = tf.norm(tf.abs(y[:,0:3]),axis=1)
+    a_true_norm = tf.norm(y[:,0:3],axis=1)
     loss_components = da_norm/a_true_norm
     return loss_components
 
@@ -45,3 +46,9 @@ def angle(y_hat, y):
     cos_theta_clipped = tf.clip_by_value(cos_theta, -1.0+eps, 1.0-eps)
     theta = tf.acos(cos_theta_clipped) / tf.constant(np.pi, dtype=y.dtype)
     return theta
+
+def magnitude(y_hat, y):
+    a_hat_mag = tf.norm(y_hat[:,0:3],axis=1)
+    a_mag = tf.norm(y[:,0:3],axis=1)
+    mag_error = tf.abs(a_hat_mag - a_mag) / a_mag
+    return mag_error
