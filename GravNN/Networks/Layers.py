@@ -81,7 +81,6 @@ class NormalizeRLayer(tf.keras.layers.Layer):
         )
         return config
 
-
 class ScaleRLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, ref_radius_max, **kwargs):
         super(ScaleRLayer, self).__init__(dtype=dtype)
