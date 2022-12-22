@@ -22,7 +22,6 @@ def PINN_I():
         "epochs": [7500],
         "initializer": ["glorot_normal"],
         "optimizer": ["adam"],
-        "loss_fcn" : ['rms_avg'],
         "batch_size": [131072 // 2],
         "learning_rate": [0.001*2],
         "dropout": [0.0],
@@ -37,7 +36,8 @@ def PINN_I():
         'jit_compile' : [False],
         'eager' : [False],
         "dtype" : ['float64'],
-        "network_arch" : ['traditional']
+        "network_arch" : ['traditional'],
+        "loss_fcns" : [['rms']],
     }
     return network_config
 
@@ -62,7 +62,7 @@ def PINN_III():
     config = PINN_II()
     network_config = {
         "scale_by": ["non_dim_v2"],
-        "loss_fcn" : ['avg_percent_summed_rms'],
+        "loss_fcns" : [['rms', 'percent']],
         "preprocessing" : [['pines', 'r_normalize', 'r_inv']]
     }
     config.update(network_config)

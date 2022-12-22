@@ -10,7 +10,7 @@ from GravNN.Networks import utils
 from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import update_constant
 from GravNN.Networks.Networks import load_network
-from GravNN.Networks.Losses import compute_rms_components, compute_percent_error
+from GravNN.Networks.Losses import *
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
@@ -42,6 +42,7 @@ class PINNGravityModel(tf.keras.Model):
 
         self.init_network(network)
         self.init_physics_information()
+        self.init_loss_fcns()
         self.init_annealing()       
         self.init_training_steps()
 
@@ -50,6 +51,10 @@ class PINNGravityModel(tf.keras.Model):
         self.eval = utils._get_PI_constraint(constraint)
         self.is_pinn = tf.cast(constraint != no_pinn, tf.bool)
 
+    def init_loss_fcns(self):
+        self.loss_fcn_list = [] 
+        for loss_key in self.config['loss_fcns'][0]:
+            self.loss_fcn_list.append(get_loss_fcn(loss_key))
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -58,7 +63,6 @@ class PINNGravityModel(tf.keras.Model):
             self.network = load_network(self.config)
         else:
             self.network = network
-        self.loss_fcn = utils._get_loss_fcn(self.config['loss_fcn'][0])
 
 
     def init_training_steps(self):
@@ -103,24 +107,9 @@ class PINNGravityModel(tf.keras.Model):
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=self.training) # [N x (3 or 7)]
 
-            rms_components = compute_rms_components(y_hat, y) # [N x (3 or 7)]
-            percent_components = compute_percent_error(y_hat, y) # [N x 1]
-
-            updated_rms_components = self.scale_loss(
-               rms_components, self.adaptive_constant
-            )
-
-            loss = self.loss_fcn(updated_rms_components, percent_components)
+            losses = MetaLoss(y_hat, y, self.loss_fcn_list)
+            loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
             loss = self.optimizer.get_scaled_loss(loss)
-
-        new_adaptive_constant = self.calc_adaptive_constant(
-            tape,
-            updated_rms_components,
-            self.adaptive_constant,
-            self.beta,
-            self.trainable_weights,
-        )
-        self.adaptive_constant.assign(new_adaptive_constant)
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -136,26 +125,18 @@ class PINNGravityModel(tf.keras.Model):
 
         return {
             "loss": loss,
-            "percent_mean": tf.reduce_mean(percent_components),
-            "percent_max": tf.reduce_max(percent_components),
-            # "weighted_percent": w_percent_error,
-           # "adaptive_constant": adaptive_constant,
+            "percent_mean": tf.reduce_mean(losses['percent']),
+            "percent_max": tf.reduce_max(losses['percent']),
         }  # 'grads' : grad_comp_list}
 
     def test_step_fcn(self, data):
         x, y = data
         y_hat = self(x, training=self.test_training)
-
-        rms_components = compute_rms_components(y_hat, y)
-        percent_components = compute_percent_error(y_hat, y)
-        updated_rms_components = self.scale_loss(
-            rms_components, self.adaptive_constant
-        )
-        loss = self.loss_fcn(updated_rms_components, percent_components)
+        losses = MetaLoss(y_hat, y, self.loss_fcn_list)
+        loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
         return {"loss": loss, 
-                "percent_mean": tf.reduce_mean(percent_components),
-                "percent_max": tf.reduce_max(percent_components),
-                # "weighted_percent": w_percent_error,
+                "percent_mean": tf.reduce_mean(losses['percent']),
+                "percent_max": tf.reduce_max(losses['percent']),
                 }
 
     def train(self, data, initialize_optimizer=True):
