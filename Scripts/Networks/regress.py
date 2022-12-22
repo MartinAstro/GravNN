@@ -134,7 +134,7 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
     config["a_transformer"] = [transformers["a"]]
     config["a_bar_transformer"] = [transformers["a_bar"]]
     
-    ref_r_vec = np.array([[config['ref_radius'][0], 0, 0]])
+    ref_r_vec = np.array([[config['planet'][0].radius, 0, 0]])
     ref_r_vec = x_transformer.transform(ref_r_vec)
     config['ref_radius'] = [ref_r_vec[0,0]]
 
