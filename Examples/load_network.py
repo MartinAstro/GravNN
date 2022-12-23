@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-from GravNN.Networks.Model import load_config_and_model
+from GravNN.Networks.Model import load_config_and_model, get_history
 from GravNN.Networks.utils import print_config
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
@@ -19,7 +19,7 @@ def main():
     print_config(config)
 
     # get the history from the network training and plot
-    history = config['history'][0]
+    history = get_history(config['id'][0])
 
     # some formatting niceties
     vis = VisualizationBase()

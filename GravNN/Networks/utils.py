@@ -7,6 +7,7 @@ import pandas as pd
 from colorama import Fore, init, deinit
 from copy import deepcopy
 from GravNN.Trajectories import ExponentialDist, GaussianDist
+from GravNN.Networks.Model import get_history
 
 
 def configure_tensorflow(hparams):
@@ -673,8 +674,8 @@ def print_config(original_config):
     for key in stats_keys:
         print(Fore.GREEN +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
         del config[key]
-    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(config['history'][0]['loss'][-1]))
-    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(config['history'][0]['val_loss'][-1]))
+    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(get_history(config['id'][0])['loss'][-1]))
+    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(get_history(config['id'][0])['val_loss'][-1]))
     print("\n")
 
     print(Back.MAGENTA + Fore.BLACK + "Miscellaneous Hyperparams")
