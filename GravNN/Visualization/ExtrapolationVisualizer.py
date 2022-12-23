@@ -106,7 +106,7 @@ class ExtrapolationVisualizer(VisualizationBase):
     def plot_interpolation_rms(self):
         self.plot(
             self.x_test[:self.max_idx],
-            self.experiment.RMS_acc[self.idx_test][:self.max_idx]
+            self.experiment.losses['rms'][self.idx_test][:self.max_idx]
             )
         plt.gca().set_yscale('log')
         plt.xlim(self.training_bounds / self.radius)
@@ -118,7 +118,7 @@ class ExtrapolationVisualizer(VisualizationBase):
     def plot_extrapolation_rms(self):
         self.plot(
             self.x_test,
-            self.experiment.RMS_acc[self.idx_test]
+            self.experiment.losses['rms'][self.idx_test]
             )       
         plt.gca().set_yscale('log')
         plt.ylabel("RMS")
@@ -127,7 +127,7 @@ class ExtrapolationVisualizer(VisualizationBase):
     def plot_interpolation_percent_error(self):
         self.plot(
             self.x_test[:self.max_idx],
-            self.experiment.percent_error_acc[self.idx_test][:self.max_idx]
+            self.experiment.losses['percent'][self.idx_test][:self.max_idx]
             )       
         plt.xlim(self.training_bounds / self.radius)
         plt.ylabel("Percent Error")
@@ -138,7 +138,7 @@ class ExtrapolationVisualizer(VisualizationBase):
     def plot_extrapolation_percent_error(self):
         self.plot(
             self.x_test,
-            self.experiment.percent_error_acc[self.idx_test]
+            self.experiment.losses['percent'][self.idx_test]
             )       
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
@@ -148,9 +148,9 @@ class ExtrapolationVisualizer(VisualizationBase):
     def plot_scatter_error(self):
 
         import OrbitalElements.orbitalPlotting as op
-        print(len(self.experiment.percent_error_acc[:self.max_idx]))
-        error = np.clip(self.experiment.percent_error_acc[:self.max_idx], 0, 10)
-        error = self.experiment.percent_error_acc[:self.max_idx]
+        print(len(self.experiment.losses['percent'][:self.max_idx]))
+        error = np.clip(self.experiment.losses['percent'][:self.max_idx], 0, 10)
+        error = self.experiment.losses['percent'][:self.max_idx]
         scale = np.max(error) - np.min(error)
         colors = plt.cm.RdYlGn(1 - ((error  - np.min(error)) / scale))   
         op.plot3d(self.experiment.positions[:self.max_idx].T, cVec=colors, obj_file=self.experiment.config['grav_file'][0], plot_type='scatter', alpha=0.2)
