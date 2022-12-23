@@ -4,6 +4,7 @@ from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import SurfaceDist, RandomDist
 from GravNN.Networks.utils import _get_loss_fcn
 from GravNN.Networks.Data import DataSet
+from GravNN.Networks.Losses import * 
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,7 @@ class ExtrapolationExperiment:
         self.config = config
         self.model = model
         self.points = points
+        self.loss_fcn_list = ['rms', 'percent']
 
         self.brillouin_radius = config['planet'][0].radius
         original_max_radius = self.config['radius_max'][0]
@@ -110,60 +112,36 @@ class ExtrapolationExperiment:
 
     def get_PINN_data(self):
         positions = self.positions#.astype(self.model.network.compute_dtype)
-        self.predicted_accelerations =  self.model.compute_acceleration(positions)
-        self.predicted_potentials =  self.model.compute_potential(positions)
+        self.predicted_accelerations =  self.model.compute_acceleration(positions).astype(float)
+        self.predicted_potentials =  self.model.compute_potential(positions).numpy().astype(float)
 
-    def compute_percent_error(self):
-        def percent_error(x_hat, x_true):
-            diff_mag = np.linalg.norm(x_true - x_hat, axis=1)
-            true_mag = np.linalg.norm(x_true, axis=1)
-            percent_error = diff_mag/true_mag*100
-            return percent_error
-        
-        self.percent_error_acc = percent_error(self.predicted_accelerations, self.test_accelerations)
-        self.percent_error_pot = percent_error(self.predicted_potentials, self.test_potentials)
-
-    def compute_RMS(self):
-        def RMS(x_hat, x_true):
-            return np.sqrt(np.sum(np.square(x_true - x_hat), axis=1))
-        
-        self.RMS_acc = RMS(self.predicted_accelerations, self.test_accelerations)
-        self.RMS_pot = RMS(self.predicted_potentials, self.test_potentials)
+    def compute_losses(self, loss_fcn_list):
+        losses = {}
+        for loss_key in loss_fcn_list:
+            loss_fcn = get_loss_fcn(loss_key)
+            
+            # Compute loss on acceleration and potential
+            losses.update({
+                f"{loss_fcn.__name__}" : loss_fcn(
+                    self.predicted_accelerations, 
+                    self.test_accelerations
+                    ).numpy()
+                })
+        self.losses = losses
 
     def compute_loss(self):
-
-        def compute_errors(y, y_hat):
-            rms_error = np.square(y_hat - y)
-            percent_error = np.linalg.norm(y - y_hat, axis=1) / np.linalg.norm(y, axis=1)*100
-            return rms_error.astype(np.float32), percent_error.astype(np.float32)
-
-        loss_fcn = _get_loss_fcn(self.config.get('loss_fcn',["percent_rms_summed"])[0])
-
-        rms_accelerations, percent_accelerations = compute_errors(self.test_accelerations, self.predicted_accelerations) 
-        self.loss_acc = np.array([
-            loss_fcn(
-                np.array([rms_accelerations[i]]), 
-                np.array([percent_accelerations[i]])
-                ) 
-            for i in range(len(rms_accelerations)) 
-            ])
-
-        rms_potentials, percent_potentials = compute_errors(self.test_potentials, self.predicted_potentials) 
-        self.loss_pot = np.array([
-            loss_fcn(
-                np.array([rms_potentials[i]]), 
-                np.array([percent_potentials[i]])
-                ) 
-            for i in range(len(rms_potentials)) 
-            ])
+        loss_fcns = self.config['loss_fcns'][0]
+        loss_list = [get_loss_fcn(loss_key) for loss_key in loss_fcns]
+        losses = MetaLoss(self.test_accelerations, self.predicted_accelerations, loss_list)
+        self.loss_acc = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
 
     def run(self):
         self.get_train_data()
         self.get_test_data()
         self.get_PINN_data()
-        self.compute_percent_error()
-        self.compute_RMS()
+        self.compute_losses(self.loss_fcn_list)
         self.compute_loss()
+        
 
 
 def main():
