@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-from GravNN.Networks.Model import load_config_and_model, get_history
+from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.utils import print_config
 from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Networks.utils import get_history
 
 
 def main():

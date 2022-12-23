@@ -1,4 +1,5 @@
 import os
+import pickle
 import zipfile
 import tempfile
 import itertools
@@ -7,8 +8,7 @@ import pandas as pd
 from colorama import Fore, init, deinit
 from copy import deepcopy
 from GravNN.Trajectories import ExponentialDist, GaussianDist
-from GravNN.Networks.Model import get_history
-
+import GravNN
 
 def configure_tensorflow(hparams):
     """Custom tensorflow import that configures proper flags, path settings, 
@@ -381,11 +381,13 @@ def _get_network_fcn(name):
     from GravNN.Networks.Networks import (
         BasicNet,
         CustomNet,
+        MultiScaleNet
     )
 
     return {
         "basic": BasicNet,
         "custom": CustomNet,
+        "multi" : MultiScaleNet
     }[name.lower()]
 
 
@@ -614,6 +616,13 @@ def update_df_row(model_id, df_file, entries, save=True):
     if save:
         original_df.to_pickle(df_file)
     return original_df
+
+
+def get_history(model_id):
+    network_dir = os.path.dirname(GravNN.__file__) + f"/../Data/Networks/{model_id}/"
+    with open(network_dir + "history.data", 'rb') as f:
+        history = pickle.load(f)
+    return history
 
 
 def format_config(config):

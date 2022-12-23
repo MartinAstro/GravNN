@@ -391,6 +391,9 @@ class PINNGravityModel(tf.keras.Model):
         network_id = self.config['id'][0]
         network_dir = f"{self.save_dir}/Networks/{network_id}/"
 
+        self.network.save(network_dir + "network")
+        df.to_pickle(network_dir + "config.data")
+
         with open(network_dir + "history.data", 'wb') as f:
             pickle.dump(self.history.history,f)
 
@@ -492,12 +495,6 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     model.compile(optimizer=optimizer, loss="mse") 
 
     return config, model
-
-def get_history(model_id):
-    network_dir = os.path.dirname(GravNN.__file__) + f"/../Data/Networks/{model_id}/"
-    with open(network_dir + "history.data", 'rb') as f:
-        history = pickle.load(f)
-    return history
 
 def count_nonzero_params(model):
     params = 0
