@@ -1,6 +1,7 @@
 import os
 import copy
 import time
+import pickle
 import numpy as np
 from numpy.random.mtrand import laplace
 import pandas as pd
@@ -336,10 +337,6 @@ class PINNGravityModel(tf.keras.Model):
         os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
         os.makedirs(f"{self.save_dir}/Networks/", exist_ok=True)
         self.config["timetag"] = timestamp
-        try:
-            self.config["history"] = [self.history.history]
-        except:
-            pass
         self.config["id"] = [time_JD]
 
         # dataframe cannot take fcn objects so settle on the names and convert to fcn on load 
@@ -390,9 +387,13 @@ class PINNGravityModel(tf.keras.Model):
         config = dict(sorted(self.config.items(), key=lambda kv: kv[0]))
         df = pd.DataFrame().from_dict(config).set_index("timetag")
 
-        # save network and config to unique network directory
+        # save network, history, and config to unique network directory
         network_id = self.config['id'][0]
         network_dir = f"{self.save_dir}/Networks/{network_id}/"
+
+        with open(network_dir + "history.data", 'wb') as f:
+            pickle.dump(self.history.history,f)
+
         self.network.save(network_dir + "network")
         df.to_pickle(network_dir + "config.data")
 
@@ -491,6 +492,12 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     model.compile(optimizer=optimizer, loss="mse") 
 
     return config, model
+
+def get_history(model_id):
+    network_dir = os.path.dirname(GravNN.__file__) + f"/../Data/Networks/{model_id}/"
+    with open(network_dir + "history.data", 'rb') as f:
+        history = pickle.load(f)
+    return history
 
 def count_nonzero_params(model):
     params = 0
