@@ -397,9 +397,6 @@ class PINNGravityModel(tf.keras.Model):
         with open(network_dir + "history.data", 'wb') as f:
             pickle.dump(self.history.history,f)
 
-        self.network.save(network_dir + "network")
-        df.to_pickle(network_dir + "config.data")
-
         # save config to preexisting dataframe if requested
         if df_file is not None:
             utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
