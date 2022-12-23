@@ -126,8 +126,8 @@ class PINNGravityModel(tf.keras.Model):
 
         return {
             "loss": loss,
-            "percent_mean": tf.reduce_mean(losses['percent']),
-            "percent_max": tf.reduce_max(losses['percent']),
+            "percent_mean": tf.reduce_mean(losses.get('percent',[0])),
+            "percent_max": tf.reduce_max(losses.get('percent',[0])),
         }  # 'grads' : grad_comp_list}
 
     def test_step_fcn(self, data):
@@ -136,8 +136,8 @@ class PINNGravityModel(tf.keras.Model):
         losses = MetaLoss(y_hat, y, self.loss_fcn_list)
         loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
         return {"loss": loss, 
-                "percent_mean": tf.reduce_mean(losses['percent']),
-                "percent_max": tf.reduce_max(losses['percent']),
+                "percent_mean": tf.reduce_mean(losses.get('percent',[0])),
+                "percent_max": tf.reduce_max(losses.get('percent',[0])),
                 }
 
     def train(self, data, initialize_optimizer=True):
