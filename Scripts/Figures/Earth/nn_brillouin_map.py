@@ -1,7 +1,5 @@
         
 import os
-import pickle
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -10,34 +8,14 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
-from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Networks.Model import load_config_and_model
 
-
-def main():
-    # Plotting 
-    directory = os.path.abspath('.') +"/Plots/"
-    os.makedirs(directory, exist_ok=True)
+def plot(df, idx, planet, trajectory):
 
     map_vis = MapVisualization('m/s^2')
     map_vis.fig_size = map_vis.full_page
     map_vis.tick_interval = [60, 60]
 
-    # vlim= [0, 30]
-    vlim = None
-
-    planet = Earth()
-    density_deg = 180
-
-    df_file ='C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\pinn_df.data'
-    df_file ='Data/Dataframes/earth_trajectory_v2.data'
-    df_file ='Data/Dataframes/useless_072621_v2.data'
-    df_file ='Data/Dataframes/test.data'
-
-    df = pd.read_pickle(df_file)
-
-    trajectory = DHGridDist(planet, planet.radius, degree=density_deg)
-    # trajectory = DHGridDist(planet, planet.radius+420000, degree=density_deg)
     grav_model = SphericalHarmonics(planet.sh_file,1000,trajectory).load()
     a_1000 = grav_model.accelerations
     grid_true = Grid(trajectory=trajectory, accelerations=a_1000)
@@ -50,16 +28,13 @@ def main():
     a_2 = grav_model.accelerations
     grid_a2 = Grid(trajectory=trajectory, accelerations=a_2)
 
-
-    i = -1
-    row = df.iloc[i]
+    row = df.iloc[idx]
     model_id = row['id']
     config, model = load_config_and_model(model_id, df)
 
     # The PINN Model
     a_pred = model.compute_acceleration(trajectory.positions)
     grid_pred = Grid(trajectory=trajectory, accelerations=a_pred) 
-
 
     # If the PINN model includes point mass + J2, remove it
     if config['deg_removed'][0] == -1:
@@ -69,24 +44,66 @@ def main():
         
     vlim = [grid_pred.total.min(), np.mean(grid_pred.total) + 2*np.std(grid_pred.total)]
     map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None)
-    plt.title("Pred Model a2 no Vlim")
+    plt.gcf().get_axes()[-2].set_title("PINN Model no Vlim")
     
+    plt.figure(figsize=(8,6))
+    plt.subplot(2,2,1)
     vlim = [grid_pred.total.min(), grid_pred.total.max()]
-    map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None)
-    plt.title("Pred Model a2")
+    map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("PINN Model a2")
     
-    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None)
-    plt.title("True Model a2")
+    plt.subplot(2,2,3)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("True Model a2")
 
-    error = (grid_pred - grid_true)/ grid_true * 100.0
-    map_vis.plot_grid(error.total, vlim=[0,100], label=None)
-    print(np.average(error.total))
-    plt.title("Error PINN")
+    plt.subplot(2,2,2)
+    PINN_grid_difference = grid_pred - grid_true
+    map_vis.plot_grid(PINN_grid_difference.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("PINN Model Diff")
     
-    error = (grid_sh - grid_true)/ grid_true * 100.0
-    map_vis.plot_grid(error.total, vlim=[0,100], label=None)
-    print(np.average(error.total))
-    plt.title("Error SH")
+    plt.subplot(2,2,4)
+    SH_grid_difference = grid_sh - grid_true
+    map_vis.plot_grid(SH_grid_difference.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("SH Model Diff")
+
+
+
+    plt.figure(figsize=(8,6))
+    plt.subplot(2,1,1)
+    error = PINN_grid_difference / grid_true * 100.0
+    map_vis.plot_grid(error.total, vlim=[0,100], label=None, new_fig=False)
+    print(f"PINN Percent Error: {np.average(error.total)}")
+    print(f"PINN RMS Error: {np.average(PINN_grid_difference.total)}")
+    plt.gcf().get_axes()[-2].set_title("Error PINN")
+
+    plt.subplot(2,1,2)
+    error = SH_grid_difference / grid_true * 100.0
+    map_vis.plot_grid(error.total, vlim=[0,100], label=None, new_fig=False)
+    print(f"SH Percent Error: {np.average(error.total)}")
+    print(f"SH RMS Error: {np.average(SH_grid_difference.total)}")
+    plt.gcf().get_axes()[-2].set_title("Error SH")
+
+
+def main():
+    # Plotting 
+    directory = os.path.abspath('.') +"/Plots/"
+    os.makedirs(directory, exist_ok=True)
+
+    planet = Earth()
+    density_deg = 180
+
+    df_file ='C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\pinn_df.data'
+    df_file ='Data/Dataframes/earth_trajectory_v2.data'
+    df_file ='Data/Dataframes/test_metrics.data' # i = 27 is best
+    df_file ='Data/Dataframes/multiFF.data'
+
+    df = pd.read_pickle(df_file)
+
+    surface_data = DHGridDist(planet, planet.radius, degree=density_deg)
+    LEO_data = DHGridDist(planet, planet.radius+420000, degree=density_deg)
+
+    plot(df, -1, planet, surface_data)
+    plot(df, -1, planet, LEO_data)
 
 
     plt.show()
