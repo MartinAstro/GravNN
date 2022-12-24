@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-from GravNN.Networks.Model import load_config_and_model, get_history
+from GravNN.Networks.Model import load_config_and_model
+from GravNN.Networks.utils import get_history
 
 
 class HistoryVisualizer(VisualizationBase):
@@ -16,7 +17,10 @@ class HistoryVisualizer(VisualizationBase):
         self.get_history()
 
     def get_history(self):
-        self.history = self.get_history(config['id'][0])
+        try:
+            self.history = get_history(config['id'][0])
+        except:
+            self.history = config['history'][0]
         self.loss = self.history['loss']
         self.val_loss = self.history['val_loss']
         self.percent_error = self.history['percent_mean']
