@@ -15,6 +15,7 @@ from GravNN.Networks.Losses import *
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
+from GravNN.Support.transformations_tf import cart2sph, compute_projection_matrix
 from GravNN.Networks.HIG import HIG_pinv
 import GravNN
 
@@ -107,6 +108,15 @@ class PINNGravityModel(tf.keras.Model):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=self.training) # [N x (3 or 7)]
+
+            if self.config.get('loss_sph', [False])[0]:
+                x_sph = cart2sph(x)
+                BN = compute_projection_matrix(x_sph)
+                y = tf.reshape(y, (-1, 3,1))
+                y_hat = tf.reshape(y_hat, (-1, 3,1))
+
+                y = tf.matmul(BN, y)
+                y_hat = tf.matmul(BN, y_hat)
 
             losses = MetaLoss(y_hat, y, self.loss_fcn_list)
             loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
