@@ -46,6 +46,7 @@ def main():
         "remove_point_mass" : [False],
         "jit_compile" : [True],
         "eager" : [False],
+        "loss_sph" : [True],
 
         "num_units": [10],
         "fourier_features" : [20],
