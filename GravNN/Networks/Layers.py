@@ -126,7 +126,9 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         super(FourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
         # self.a = np.ones((len(M),)).astype(self.dtype)#
         # self.a = np.diag(np.array([1.0/j for j in range(1,M+1)], dtype=self.dtype))
-        self.B = np.random.normal(0, fourier_sigma, size=(fourier_features, 3)).astype(self.dtype) * fourier_scale
+        self.fourier_sigma = fourier_sigma
+        self.B = np.random.normal(0, fourier_sigma, size=(fourier_features // 2, 3)).astype(self.dtype) * fourier_scale
+        self.freq_decay = kwargs.get('freq_decay', [False])[0]
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs) # [4 x N]
@@ -146,11 +148,14 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         v_proj = self.B@v # [M x N]
 
         C = tf.constant(2*np.pi, dtype=self.dtype)
-        v_sin = tf.sin(C*v_proj)
-        v_cos = tf.cos(C*v_proj)
-        
-        # v_sin = tf.transpose(tf.tensordot(tf.sin(C*v_proj), self.a, [[0],[1]]))
-        # v_cos = tf.transpose(tf.tensordot(tf.cos(C*v_proj), self.a, [[0],[1]]))
+
+        if self.freq_decay:
+            # # scale by (1/r)^sigma. Takes inspiration from SH (higher frequencies typically decay)
+            v_sin = tf.pow(r,self.fourier_sigma)*tf.sin(C*v_proj)
+            v_cos = tf.pow(r,self.fourier_sigma)*tf.cos(C*v_proj)
+        else:
+            v_sin = tf.sin(C*v_proj)
+            v_cos = tf.cos(C*v_proj)
 
         # stack radius and fourier basis together
         r_feature = tf.reshape(r, shape=(1, -1))
@@ -162,6 +167,7 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         config.update(
             {
+                "fourier_sigma" : self.fourier_sigma,
                 "B" : self.B
             }
         )

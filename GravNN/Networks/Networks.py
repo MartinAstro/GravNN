@@ -1,9 +1,7 @@
-from GravNN.Networks.Layers import *
-import tensorflow as tf
-
 import os
-import warnings
+import tensorflow as tf
 from GravNN.Networks import utils
+from GravNN.Networks.Layers import *
 def load_network(config):
     if config["init_file"][0] is not None:
         network = tf.keras.models.load_model(
@@ -165,6 +163,55 @@ def CustomNet(**kwargs):
             features = x 
 
     u_nn = get_network_fcn(kwargs['network_arch'][0])(x, **kwargs)
+
+    if kwargs.get('deg_removed', [-1])[0] == -1:
+        cBar = kwargs.get("cBar",[0])[0]
+        C20 = cBar[2,0]
+
+        mu = kwargs.get('mu_non_dim', [1.0])[0]
+        radius = kwargs['planet'][0].radius
+        x_transformer = kwargs['x_transformer'][0]
+        radius_non_dim = x_transformer.transform(np.array([[radius, 0,0]]))[0,0]
+        ref_radius_analytic = kwargs.get('ref_radius_analytic', [None])[0]
+        u_analytic = PlanetaryOblatenessLayer(dtype, mu, radius_non_dim, C20)(features)
+        u = BlendPotentialLayer(dtype, mu, ref_radius_analytic)(u_nn, u_analytic, features)
+    else:
+        u = u_nn
+
+    model = tf.keras.Model(inputs=inputs, outputs=u)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
+    return model
+
+def MultiScaleNet(**kwargs):
+    layers = kwargs["layers"][0]
+    dtype = kwargs["dtype"][0]
+
+    preprocess_args = get_preprocess_args(kwargs)
+    preprocess_layers = get_preprocess_layers(kwargs)
+    network = get_network_fcn(kwargs['network_arch'][0])
+
+
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
+    x = inputs   
+    for layer in preprocess_layers:
+        x = layer(**preprocess_args)(x)
+        if layer.__name__ == "Cart2PinesSphLayer":
+            features = x 
+
+    u_nn_fourier_features = []
+    for sigma in kwargs['fourier_sigma'][0]:
+        # make a unique fourier feature
+        num_features = kwargs['fourier_features'][0]
+        ff_layer = FourierFeatureLayer(num_features, sigma, 1)(x)
+        # pass through network
+        u_nn_feature = network(ff_layer, **kwargs)
+        #append outputs for concatenation
+        u_nn_fourier_features.append(u_nn_feature)
+
+    u_inputs = tf.concat(u_nn_fourier_features,1)
+    u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
+
 
     if kwargs.get('deg_removed', [-1])[0] == -1:
         cBar = kwargs.get("cBar",[0])[0]
