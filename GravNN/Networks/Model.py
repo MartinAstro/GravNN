@@ -16,7 +16,6 @@ from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Support.transformations_tf import cart2sph, compute_projection_matrix
-from GravNN.Networks.HIG import HIG_pinv
 import GravNN
 
 np.random.seed(1234)
