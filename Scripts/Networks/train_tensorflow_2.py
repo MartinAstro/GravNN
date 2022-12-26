@@ -1,55 +1,78 @@
 import multiprocessing as mp
+from GravNN.Analysis.PlanesExperiment import PlanesExperiment
+from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
 from GravNN.Networks.Configs import *
-from Hyperparam_inits import hyperparams_eros
+from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
+from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 import os
+from pprint import pprint
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
 
 def main():
 
-    threads = 1
+    threads = 6
 
-    df_file = "Data/Dataframes/eros_point_mass_v5_3.data" 
-    df_file = "Data/Dataframes/test.data" 
-    config = get_default_eros_config()
+    df_file = "Data/Dataframes/multiFF_hparams.data" 
+    df_file = "Data/Dataframes/multiFF_followup.data" 
 
-    from GravNN.GravityModels.PointMass import get_pm_data
-    from GravNN.GravityModels.Polyhedral import get_poly_data
-    from GravNN.CelestialBodies.Asteroids import Eros
-
+    config = get_default_earth_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        "grav_file": [Eros().obj_8k],
-        "N_dist": [100000],
-        "N_train": [9850],
-        "N_val": [1500],
-        "radius_max" : [Eros().radius*10],
     
-        "learning_rate": [0.002],
-        "num_units": [40],
+        # "radius_max" : [Earth().radius*5],
+        # "N_dist": [1100000],
+        # "N_train": [1000000],
+        # "batch_size" : [2**20],
+
+        "radius_max" : [Earth().radius + 420000],
+        "N_dist": [500000],
+        "N_train": [20000],
+        "N_val": [5000], 
+        "batch_size" : [2**20],
+
+        "learning_rate": [0.01],
         "PINN_constraint_fcn" : ['pinn_a'],
-        "patience" : [50],
-        'override': [False],
-        'ref_radius': [Eros().radius],
-        "batch_size" : [2**13],
-        "epochs" : [1000],
+
+        "epochs" : [50000],
+
+        "ref_radius_max" : [Earth().radius+420000.0],
+        "ref_radius_min" : [Earth().radius],
+
+        "deg_removed" : [2],  #-1
         "remove_point_mass" : [False],
-        "gravity_data_fcn" : [get_pm_data],
-        "jit_compile" : [False],
-        "dtype" : ['float64'],
-        "scale_by" : ['non_dim_v2'],
+        "jit_compile" : [True],
         "eager" : [False],
-        "ref_radius" : [Eros().radius],
-        "ref_radius_min" : [Eros().radius_min],
-        "loss_fcn" : ['weighted_mean_percent'],
+
+        "num_units": [10],
+        "fourier_features" : [20],
+        "fourier_sigma" : [
+            [1.0, 2.0],
+            ],
+
+        "feature_min" : [1.0],
+        "feature_max" : [1.0 + 420000.0/Earth().radius],
+        "network_type": ["multi"],        
+
+        "loss_fcns" : [
+            ['rms', 'percent'],
+        ],
+
+        # TBD
+        "lr_anneal": ['hold'],
+        "beta": [0.001],
+
+        # Investigate Later
+        "uniform_volume" : [False],
+        "dropout" : [0.00],
+
 
     }
-
     args = configure_run_args(config, hparams)
-    configs = run(*args[0])
+    # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
@@ -66,7 +89,12 @@ def run(config):
 
     # Standardize Configuration
     config = populate_config_objects(config)
-    print(config)
+    pprint(config)
+
+    from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+    grav_model = SphericalHarmonics(Earth().EGM2008,2)
+    config['cBar'] = [grav_model.C_lm]
+    config['sBar'] = [grav_model.S_lm]
 
     # Get data, network, optimizer, and generate model
     data = DataSet(config)
