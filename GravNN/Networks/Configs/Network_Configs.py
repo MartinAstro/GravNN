@@ -35,7 +35,7 @@ def PINN_I():
         'init_file' : [None],
         'jit_compile' : [False],
         'eager' : [False],
-        "dtype" : ['float64'],
+        "dtype" : ['float32'],
         "network_arch" : ['traditional'],
         "loss_fcns" : [['rms']],
     }
@@ -61,9 +61,12 @@ def PINN_II():
 def PINN_III():
     config = PINN_II()
     network_config = {
-        "scale_by": ["non_dim_v2"],
+        "scale_by": ["non_dim_v3"], 
         "loss_fcns" : [['rms', 'percent']],
-        "preprocessing" : [['pines', 'r_normalize', 'r_inv']]
+        "preprocessing" : [['pines', 'r_normalize', 'r_inv']],
+        "freq_decay" : [False],
+        "fourier_scale" : [1.0],
+
     }
     config.update(network_config)
     return config

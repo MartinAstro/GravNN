@@ -15,6 +15,7 @@ def get_default_earth_config():
         "N_val": [50000],
         "radius_min": [Earth().radius],
         "radius_max": [Earth().radius + 420000.0],
+        "ref_radius" : [Earth().radius],
         "acc_noise": [0.00],
         "basis": [None],
         "deg_removed": [2],
@@ -22,6 +23,7 @@ def get_default_earth_config():
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_"],
         "gravity_data_fcn" : [get_sh_data],
-        "shape_model" : [Earth().shape_model]
+        "shape_model" : [Earth().shape_model],
+        "mu" : [Earth().mu],
     }
     return data_config
