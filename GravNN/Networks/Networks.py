@@ -186,10 +186,10 @@ def CustomNet(**kwargs):
 def MultiScaleNet(**kwargs):
     layers = kwargs["layers"][0]
     dtype = kwargs["dtype"][0]
+    fourier_features = kwargs['fourier_features'][0]
 
     preprocess_args = get_preprocess_args(kwargs)
     preprocess_layers = get_preprocess_layers(kwargs)
-    network = get_network_fcn(kwargs['network_arch'][0])
 
 
     inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
@@ -199,17 +199,23 @@ def MultiScaleNet(**kwargs):
         if layer.__name__ == "Cart2PinesSphLayer":
             features = x 
 
-    u_nn_fourier_features = []
+    fourier_feature_layers = []
     for sigma in kwargs['fourier_sigma'][0]:
         # make a unique fourier feature
         num_features = kwargs['fourier_features'][0]
         ff_layer = FourierFeatureLayer(num_features, sigma, 1)(x)
-        # pass through network
-        u_nn_feature = network(ff_layer, **kwargs)
-        #append outputs for concatenation
-        u_nn_fourier_features.append(u_nn_feature)
+        fourier_feature_layers.append(ff_layer)
 
-    u_inputs = tf.concat(u_nn_fourier_features,1)
+    sub_net_inputs = tf.keras.Input(shape=(fourier_features+1))
+    sub_net = get_network_fcn(kwargs['network_arch'][0])(sub_net_inputs, **kwargs)
+    sub_model = tf.keras.Model(inputs=sub_net_inputs, outputs=sub_net)
+
+    u_nn_outputs = []
+    for fourier_feature in fourier_feature_layers:
+        u_nn_ff = sub_model(fourier_feature)
+        u_nn_outputs.append(u_nn_ff)
+    
+    u_inputs = tf.concat(u_nn_outputs,1)
     u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
 
 
