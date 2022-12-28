@@ -113,7 +113,10 @@ class ExtrapolationExperiment:
     def get_PINN_data(self):
         positions = self.positions#.astype(self.model.network.compute_dtype)
         self.predicted_accelerations =  self.model.compute_acceleration(positions).astype(float)
-        self.predicted_potentials =  self.model.compute_potential(positions).numpy().astype(float)
+        try:
+            self.predicted_potentials =  self.model.compute_potential(positions).numpy().astype(float)
+        except:
+            self.predicted_potentials =  self.model.compute_potential(positions).astype(float)
 
     def compute_losses(self, loss_fcn_list):
         losses = {}
@@ -130,7 +133,7 @@ class ExtrapolationExperiment:
         self.losses = losses
 
     def compute_loss(self):
-        loss_fcns = self.config['loss_fcns'][0]
+        loss_fcns = self.config.get('loss_fcns', [['rms','percent']])[0]
         loss_list = [get_loss_fcn(loss_key) for loss_key in loss_fcns]
         losses = MetaLoss(self.test_accelerations, self.predicted_accelerations, loss_list)
         self.loss_acc = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
