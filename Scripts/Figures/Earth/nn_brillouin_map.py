@@ -42,10 +42,18 @@ def plot(df, idx, planet, trajectory):
     grid_true -= grid_a2
     grid_sh -= grid_a2
         
+
+    plt.figure(figsize=(8,6))
+    plt.subplot(2,1,1)
     vlim = [grid_pred.total.min(), np.mean(grid_pred.total) + 2*np.std(grid_pred.total)]
-    map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None)
+    map_vis.plot_grid(grid_pred.total, vlim=vlim, label=None, new_fig=False)
     plt.gcf().get_axes()[-2].set_title("PINN Model no Vlim")
     
+    plt.subplot(2,1,2)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("True Model")
+    
+
     plt.figure(figsize=(8,6))
     plt.subplot(2,2,1)
     vlim = [grid_pred.total.min(), grid_pred.total.max()]
@@ -53,8 +61,8 @@ def plot(df, idx, planet, trajectory):
     plt.gcf().get_axes()[-2].set_title("PINN Model a2")
     
     plt.subplot(2,2,3)
-    map_vis.plot_grid(grid_true.total, vlim=vlim, label=None, new_fig=False)
-    plt.gcf().get_axes()[-2].set_title("True Model a2")
+    map_vis.plot_grid(grid_sh.total, vlim=vlim, label=None, new_fig=False)
+    plt.gcf().get_axes()[-2].set_title("SH Model a2")
 
     plt.subplot(2,2,2)
     PINN_grid_difference = grid_pred - grid_true
