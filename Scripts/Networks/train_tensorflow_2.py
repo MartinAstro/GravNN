@@ -23,6 +23,17 @@ def main():
 
     hparams = {
     
+        "radius_min" : [Earth().radius*1],
+        "radius_max" : [Earth().radius*1.06],
+        "ref_radius_min" : [Earth().radius*1],
+        "ref_radius_max" : [Earth().radius*1.06],
+        "feature_min" : [1.0],
+        "feature_max" : [1.0 + (Earth().radius*1.06)/Earth().radius],
+        "N_dist": [5000],
+        # "N_train": [2000],
+        "N_train": [1000],
+        "N_val" : [100],
+        "batch_size" : [2**20],
         # "radius_max" : [Earth().radius*5],
         # "N_dist": [1100000],
         # "N_train": [1000000],
@@ -34,10 +45,10 @@ def main():
         "N_val": [5000], 
         "batch_size" : [2**20],
 
-        "learning_rate": [0.01],
+        "learning_rate": [0.001],
         "PINN_constraint_fcn" : ['pinn_a'],
 
-        "epochs" : [50000],
+        "epochs" : [10000],
 
         "ref_radius_max" : [Earth().radius+420000.0],
         "ref_radius_min" : [Earth().radius],
@@ -46,7 +57,7 @@ def main():
         "remove_point_mass" : [False],
         "jit_compile" : [True],
         "eager" : [False],
-        "loss_sph" : [True],
+        "loss_sph" : [False],
 
         "num_units": [10],
         "fourier_features" : [20],
@@ -54,12 +65,12 @@ def main():
             [1.0, 2.0],
             ],
 
-        "feature_min" : [1.0],
-        "feature_max" : [1.0 + 420000.0/Earth().radius],
-        "network_type": ["multi"],        
+        "network_type": ["custom"],        
 
         "loss_fcns" : [
-            ['rms', 'percent'],
+            # ['rms', 'percent'],
+            # ['rms'],
+            ['percent'],
         ],
 
         # TBD
