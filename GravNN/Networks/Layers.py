@@ -403,6 +403,41 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         )
         return config
 
+
+class ScalePotentialNN(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        """Scale U_NN output based on natural decay rate of potential.
+        This ensures that U_NN typically stays on the order of 1E0"""
+        dtype = kwargs['dtype'][0]
+        super(ScalePotentialNN, self).__init__(dtype=dtype)
+        deg_removed = kwargs['deg_removed'][0]
+        if deg_removed == -1:
+            power = 1
+        elif np.any(deg_removed == [0,1]):
+            power = 3
+        else:
+            power = deg_removed + 2 + 0
+        self.power = tf.constant(power, dtype=dtype).numpy()
+
+    def call(self, features, u_nn):
+        # features_transpose = tf.transpose(features)
+        # r = features_transpose[0]
+        r = features[:,0]
+
+        r_p = tf.reshape(tf.pow(r, self.power), tf.shape(u_nn))
+        u = tf.divide(u_nn, r_p)
+        return u
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "power" : self.power,
+            }
+        )
+        return config
+
+
 if __name__ == "__main__":
     inputs = np.array([[100.0,-0.1,0.5,-0.9],[200,0.2,-0.4,0.8]])
     layer = FourierFeatureLayer(16, 2)
