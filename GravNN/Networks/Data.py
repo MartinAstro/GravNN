@@ -307,10 +307,12 @@ def scale_by_non_dim_potential(data_dict, config):
     """
     x_norm = np.linalg.norm(data_dict["x_train"],axis=1)
     x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
+    x_star = config['planet'][0].radius#10**np.mean(np.log10(x_norm)) # average magnitude 
 
     # scale time coordinate based on what makes the accelerations behave nicely
     u_brill = config['mu'][0]/config['planet'][0].radius 
-    u_star = 0.00001*u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
+    # u_star = 0.00001*u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
+    u_star = u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
 
     t_star = np.sqrt(x_star**2/u_star)
 
@@ -616,12 +618,20 @@ class DataSet():
                 y = y.astype("float64")
             else:
                 exit("No dtype specified")
+
+        # with tf.device(tf.config.list_logical_devices('GPU')[0].name):
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
         dataset = dataset.shuffle(len(x), seed=1234)
         dataset = dataset.batch(batch_size)
         dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         dataset = dataset.cache()
+
+        # dataset = dataset.apply(tf.data.experimental.prefetch_to_device("/gpu:0"))
+        # for element in dataset:
+        #     print(f'Tensor {element[0]} is on device {element[0].device}')
+
+
 
         # Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
         return dataset
