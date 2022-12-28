@@ -41,7 +41,7 @@ def get_data_config(max_degree, deg_removed, max_radius):
     return config
 
 
-def plot(data, planet=None, log=False):
+def plot(data, planet=None, log=False, deg_removed=None):
     if planet is not None:
         R = planet.radius
         unit = "[R]"
@@ -67,8 +67,17 @@ def plot(data, planet=None, log=False):
     if log:
         plt.gca().set_yscale("log")
 
+    power = 0
+    if deg_removed is not None:
+        if deg_removed == -1:
+            power = 1
+        elif np.any(deg_removed == [0,1]):
+            power = 3
+        else:
+            power = deg_removed + 2 
+
     plt.figure()
-    plt.scatter(r, u*r**3)
+    plt.scatter(r, u*r**power)
     plt.ylabel("Potential Scaled")
 
 
@@ -76,17 +85,17 @@ def plot(data, planet=None, log=False):
 def main():
     # spherical harmonic model 
     planet = Earth()
-    max_degree = 10
-    degree_removed = -1 
+    max_degree = 50
+    degree_removed = 2 
     
     #l = 0, power = 3
     #l = 1, power = 3
     #l = 2, power = 4
     #l = 3, power = 5
 
-    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*10) 
+    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*100) 
     data = DataSet(data_config=config)
-    plot(data, planet, log=True)
+    plot(data, planet, log=True, deg_removed=degree_removed)
     
     plt.show()
 if __name__ == "__main__":
