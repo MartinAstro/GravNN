@@ -25,15 +25,17 @@ class SphericalHarmonicWoPointMass(SphericalHarmonics):
         return high_pot - low_pot
 
 
-def get_sh_model():
+def get_sh_model(max_degree, deg_removed):
     planet = Earth()
-    deg_removed = 2
-    model = SphericalHarmonicWoPointMass(planet.EGM2008, 55, deg_removed)
+    model = SphericalHarmonicWoPointMass(planet.EGM2008, max_degree, deg_removed)
 
     # update the true "training data"
     config = get_default_earth_config()
     config.update({
-        "radius_max" : [Earth().radius*5],
+        # "radius_max" : [Earth().radius*5],
+        # "radius_max" : [Earth().radius + 420000],
+        "radius_min" : [Earth().radius*1],
+        "radius_max" : [Earth().radius*15],
         "N_dist": [10000],
         "N_train": [9500],
         "N_val": [500],
@@ -44,12 +46,12 @@ def get_sh_model():
 
 def main():
     # spherical harmonic model 
-    config, model = get_sh_model()
+    # config, model = get_sh_model(max_degree=33, deg_removed=2)
 
     # pinn model
-    # df = pd.read_pickle("Data/Dataframes/earth_40.data")
-    # model_id = df["id"].values[-1]
-    # config, model = load_config_and_model(model_id, df)
+    df = pd.read_pickle("Data/Dataframes/earth_high_alt4.data")
+    model_id = df["id"].values[-1]
+    config, model = load_config_and_model(model_id, df)
 
 
     # evaluate the error at "training" altitudes and beyond
@@ -59,7 +61,8 @@ def main():
     # visualize error @ training altitude and beyond
     vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
     vis.plot_interpolation_percent_error()
-    # vis.plot_extrapolation_percent_error()
+    vis.plot_interpolation_rms()
+    vis.plot_extrapolation_percent_error()
 
     plt.show()
 if __name__ == "__main__":
