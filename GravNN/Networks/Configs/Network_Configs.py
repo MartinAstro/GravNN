@@ -33,7 +33,7 @@ def PINN_I():
         "preprocessing" : [[]],
         'seed' : [0],
         'init_file' : [None],
-        'jit_compile' : [False],
+        'jit_compile' : [True],
         'eager' : [False],
         "dtype" : ['float32'],
         "network_arch" : ['traditional'],
