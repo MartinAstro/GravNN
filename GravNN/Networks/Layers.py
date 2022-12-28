@@ -24,7 +24,7 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         XX = tf.square(X)
         YY = tf.square(Y)
         ZZ = tf.square(Z)
-        r = tf.sqrt(XX + YY + ZZ)  # r
+        r = tf.sqrt(tf.reduce_sum([XX, YY, ZZ], 0)) # r
 
         s = X / r  # sin(beta)
         t = Y / r  # sin(gamma)
