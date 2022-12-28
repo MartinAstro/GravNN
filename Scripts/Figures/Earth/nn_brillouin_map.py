@@ -104,14 +104,19 @@ def main():
     df_file ='Data/Dataframes/earth_trajectory_v2.data'
     df_file ='Data/Dataframes/test_metrics.data' # i = 27 is best
     df_file ='Data/Dataframes/multiFF.data'
+    df_file = "Data/Dataframes/earth_high_alt3_metrics.data"
 
+    idx = -1
     df = pd.read_pickle(df_file)
 
     surface_data = DHGridDist(planet, planet.radius, degree=density_deg)
+    plot(df, idx, planet, surface_data)
+    
     LEO_data = DHGridDist(planet, planet.radius+420000, degree=density_deg)
-
-    plot(df, -1, planet, surface_data)
-    plot(df, -1, planet, LEO_data)
+    plot(df, idx, planet, LEO_data)
+    
+    high_alt_data = DHGridDist(planet, planet.radius*10, degree=density_deg)
+    plot(df, idx, planet, high_alt_data)
 
 
     plt.show()
