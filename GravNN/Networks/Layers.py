@@ -425,6 +425,7 @@ class ScalePotentialNN(tf.keras.layers.Layer):
         r = features[:,0]
 
         r_p = tf.reshape(tf.pow(r, self.power), tf.shape(u_nn))
+        u_nn = tf.clip_by_value(u_nn, tf.constant(-1.0, dtype=r.dtype), tf.constant(1.0, dtype=r.dtype))
         u = tf.divide(u_nn, r_p)
         return u
 
