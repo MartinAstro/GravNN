@@ -311,14 +311,18 @@ def scale_by_non_dim_potential(data_dict, config):
 
     # scale time coordinate based on what makes the accelerations behave nicely
     u_brill = config['mu'][0]/config['planet'][0].radius 
-    # u_star = 0.00001*u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
-    u_star = u_brill # want the potential to scale between [-100, 100] -- this ensures that u_nn is somewhat larger
+
+    # Make u_star approximately equal to value of the potential that must be learned. 
+    # If deg_removed == -1: u_brill
+    # If deg_removed == 2: u_J2/u_brill
+    u_max = np.max(data_dict["u_train"]) 
+    u_star = (u_max / u_brill)*u_brill
 
     t_star = np.sqrt(x_star**2/u_star)
 
     x_train = x_transformer.fit_transform(data_dict["x_train"], scaler=1/x_star)
     a_train = a_transformer.fit_transform(data_dict["a_train"], scaler=1/(x_star/t_star**2))
-    u_train = u_transformer.fit_transform(data_dict["u_train"], scaler=1/(x_star/t_star)**2)
+    u_train = u_transformer.fit_transform(data_dict["u_train"], scaler=1/u_star) # u_star == (x_star/t_star)**2
 
     u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
 
