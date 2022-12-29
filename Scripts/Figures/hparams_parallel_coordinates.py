@@ -33,7 +33,7 @@ def make_column_numerics(df, column):
 def scale_data(df, column):
     df, unique_strings = make_column_numerics(df, column)
     values = df[column].values.astype(float)
-    tick_values = np.round(np.unique(df[column].values.astype(float)),2)
+    tick_values = [round(value, sigfigs=3) for value in np.unique(df[column].values.astype(float)).tolist()]
     log_diff = np.log10(np.max(values)) - np.log10(np.min(values))
     log_diff = 0.0 if np.isinf(log_diff) else log_diff
     prefix = ""
@@ -73,12 +73,12 @@ def main():
             "range" : [percent_min, percent_max],
             "tickvals" : [round(value, sigfigs=3) for value in np.linspace(percent_min, percent_max, 8).tolist()]
             }, 
-        "magnitude_mean": {
-            "label" :"Magnitude",
-            },
-        "angle_mean": {
-            "label" :"Angle",
-            }, 
+        # "magnitude_mean": {
+        #     "label" :"Magnitude",
+        #     },
+        # "angle_mean": {
+        #     "label" :"Angle",
+        #     }, 
         "epochs" : {
             "label" :"Epochs",
             }, 
@@ -96,6 +96,24 @@ def main():
             },
         "freq_decay" : {
             "label" :"Fourier Decay",
+            },
+        "N_val" : {
+            "label" :"Validation Data",
+            },
+        "learning_rate" : {
+            "label" :"Learning Rate",
+            },
+        "num_units" : {
+            "label" :"Nodes per Layer",
+            },
+        "network_type" : {
+            "label" :"Architecture",
+            },
+        "preprocessing" : {
+            "label" :"Preprocessing",
+            },
+        "dropout" : {
+            "label" :"dropout",
             },
         }
     hparams_df = df[labels_dict.keys()]
