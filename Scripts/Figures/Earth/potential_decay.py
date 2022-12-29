@@ -50,7 +50,8 @@ def plot(data, planet=None, log=False, deg_removed=None):
         unit = '[m]'
 
     r = np.linalg.norm(data.raw_data['x_train'], axis=1) / R
-    u = np.linalg.norm(data.raw_data['u_train'], axis=1)
+    # u = np.linalg.norm(data.raw_data['u_train'], axis=1)
+    u = data.raw_data['u_train'].squeeze()
     plt.figure()
     plt.scatter(r, u)
     max_u = np.max(u)
@@ -93,9 +94,9 @@ def main():
     #l = 2, power = 4
     #l = 3, power = 5
 
-    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*100) 
+    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*15) 
     data = DataSet(data_config=config)
-    plot(data, planet, log=True, deg_removed=degree_removed)
+    plot(data, planet=planet, log=False, deg_removed=degree_removed)
     
     plt.show()
 if __name__ == "__main__":
