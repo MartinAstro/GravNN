@@ -134,7 +134,7 @@ def transformer_network(inputs, **kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer='glorot_uniform',
+        kernel_initializer='zeros',#'glorot_uniform',
         dtype=dtype,
     )(x)
     return outputs
