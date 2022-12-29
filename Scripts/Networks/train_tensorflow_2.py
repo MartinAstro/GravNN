@@ -45,10 +45,10 @@ def main():
         "N_val": [5000], 
         "batch_size" : [2**20],
 
-        "learning_rate": [0.001],
+        "learning_rate": [0.000005],
         "PINN_constraint_fcn" : ['pinn_a'],
 
-        "epochs" : [10000],
+        "activation" : ['tanh'],
 
         "ref_radius_max" : [Earth().radius+420000.0],
         "ref_radius_min" : [Earth().radius],
@@ -80,6 +80,7 @@ def main():
         # Investigate Later
         "uniform_volume" : [False],
         "dropout" : [0.00],
+        "preprocessing" : [['pines', 'r_inv']]#, 'r_normalize', 'r_inv']],
 
 
     }
