@@ -306,8 +306,8 @@ def scale_by_non_dim_potential(data_dict, config):
     t = t_tilde / t_star # time
     """
     x_norm = np.linalg.norm(data_dict["x_train"],axis=1)
-    x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
-    x_star = config['planet'][0].radius#10**np.mean(np.log10(x_norm)) # average magnitude 
+    # x_star = 10**np.mean(np.log10(x_norm)) # average magnitude 
+    x_star = config['planet'][0].radius
 
     # scale time coordinate based on what makes the accelerations behave nicely
     u_brill = config['mu'][0]/config['planet'][0].radius 
