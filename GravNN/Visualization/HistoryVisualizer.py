@@ -37,6 +37,7 @@ class HistoryVisualizer(VisualizationBase):
         else:
             plt_fcn = plt.plot
         plt_fcn(x, y, label=label)
+        plt.grid()
         plt.tight_layout()
 
     def plot_loss(self, **kwargs):
@@ -46,8 +47,12 @@ class HistoryVisualizer(VisualizationBase):
         plt.legend()
 
 if __name__ == "__main__":
-    df = pd.read_pickle("Data/Dataframes/test.data")
-    model_id = df["id"].values[-1]
+    # df = pd.read_pickle("Data/Dataframes/test_metrics.data")
+    # df = pd.read_pickle("Data/Dataframes/multiFF.data")
+    # df, idx = pd.read_pickle('Data/Dataframes/new_hparam_search_metrics.data'), 12 #i = 105 is best
+    df, idx = pd.read_pickle('Data/Dataframes/hparams_ll.data'), -1 #i = 105 is best
+
+    model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
 
     vis = HistoryVisualizer(model, config)
