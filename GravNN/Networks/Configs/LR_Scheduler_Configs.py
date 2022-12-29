@@ -4,7 +4,7 @@ def ReduceLrOnPlateauConfig():
         "patience" : [2500],
         "decay_rate" : [0.9],
         "min_delta" : [0.0001],
-        "min_lr" : [0.0001],
+        "min_lr" : [1E-8],
     }
     return scheduler_config
 
