@@ -122,13 +122,15 @@ class InvRLayer(tf.keras.layers.Layer):
         return config
 
 class FourierFeatureLayer(tf.keras.layers.Layer):
-    def __init__(self, fourier_features, fourier_sigma, fourier_scale, **kwargs):
+    def __init__(self, fourier_features, fourier_sigma, fourier_scale, freq_decay, **kwargs):
         super(FourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
         # self.a = np.ones((len(M),)).astype(self.dtype)#
         # self.a = np.diag(np.array([1.0/j for j in range(1,M+1)], dtype=self.dtype))
+
+
         self.fourier_sigma = fourier_sigma
         self.B = np.random.normal(0, fourier_sigma, size=(fourier_features // 2, 3)).astype(self.dtype) * fourier_scale
-        self.freq_decay = kwargs.get('freq_decay', [False])[0]
+        self.freq_decay = freq_decay
 
     def call(self, inputs):
         inputs_transpose = tf.transpose(inputs) # [4 x N]
@@ -144,15 +146,23 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         u = (inputs_transpose[3] + one) / two
 
         # project into random fourier space
-        v = tf.stack([s, t, u], 0)
-        v_proj = self.B@v # [M x N]
+        # B [M(10) x 3]
+        v = tf.stack([s, t, u], 0) # [3 x N(1000)]
+        v_proj = self.B@v # [M(10) x N(1000)]
 
         C = tf.constant(2*np.pi, dtype=self.dtype)
 
+
+
         if self.freq_decay:
             # # scale by (1/r)^sigma. Takes inspiration from SH (higher frequencies typically decay)
-            v_sin = tf.pow(r,self.fourier_sigma)*tf.sin(C*v_proj)
-            v_cos = tf.pow(r,self.fourier_sigma)*tf.cos(C*v_proj)
+            # v_sin = tf.pow(r,self.fourier_sigma)*tf.sin(C*v_proj)
+            # v_cos = tf.pow(r,self.fourier_sigma)*tf.cos(C*v_proj)
+            # scale_freq = tf.reduce_mean(self.B, axis=1)
+            scale_freq = tf.reduce_mean(tf.abs(self.B), axis=1)
+            r_scale = tf.map_fn(fn=lambda p: tf.pow(r,p), elems=scale_freq)
+            v_sin = r_scale*tf.sin(C*v_proj)
+            v_cos = r_scale*tf.cos(C*v_proj)
         else:
             v_sin = tf.sin(C*v_proj)
             v_cos = tf.cos(C*v_proj)

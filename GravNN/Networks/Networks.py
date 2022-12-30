@@ -205,7 +205,8 @@ def MultiScaleNet(**kwargs):
     for sigma in kwargs['fourier_sigma'][0]:
         # make a unique fourier feature
         num_features = kwargs['fourier_features'][0]
-        ff_layer = FourierFeatureLayer(num_features, sigma, 1)(x)
+        freq_decay = kwargs['freq_decay'][0]
+        ff_layer = FourierFeatureLayer(num_features, sigma, 1, freq_decay)(x)
         fourier_feature_layers.append(ff_layer)
 
     sub_net_inputs = tf.keras.Input(shape=(fourier_features+1))
