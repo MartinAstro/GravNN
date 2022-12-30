@@ -7,9 +7,9 @@ import tensorflow as tf
 def laplacian(u_xx):
     return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
 
-@tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3), dtype=tf.float64)])
-def laplacian(u_xx):
-    return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
+# @tf.function(input_signature=[tf.TensorSpec(shape=(None,3,3), dtype=tf.float64)])
+# def laplacian(u_xx):
+#     return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
 
 
 def no_pinn(f, x, training):
