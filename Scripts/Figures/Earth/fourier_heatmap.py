@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import os
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
     """
@@ -63,38 +63,55 @@ def heatmap(data, row_labels, col_labels, ax=None,
 
     return im, cbar
 
-def make_grid(df):    
-    sigmas = np.array(df['fourier_sigma'].values.tolist()).astype(float)
-    metric = np.array(df['percent_mean'].values.tolist()).astype(float)
+def make_grid(df, query):
+    if query is not None:
+        sub_df = df.query(query)
+    else:
+        sub_df = df.copy()
+    sub_df = sub_df.pivot_table(columns='FF1', index='FF2', 
+                            values='percent_mean', fill_value=0, aggfunc=np.mean)
+    return sub_df
 
-    df['FF_1'] = sigmas[:,0]
-    df['FF_2'] = sigmas[:,1]
+def plot(df, query, **kwargs):
+    sub_df = make_grid(df, query)
+    plt.figure()
+    im, cbar = heatmap(sub_df.values,
+                    row_labels=sub_df.index,
+                    col_labels=sub_df.columns,
+                    **kwargs
+                    )
+    return plt.gcf()
 
-    new_df = df.pivot_table(columns='FF_1', index='FF_2', 
-                            values='percent_mean', fill_value=0)
-    return new_df
+
+def save(name):
+    plt.tight_layout()
+    plt.savefig(name, bbox_inches='tight')
+
+
 
 def main():
     df_file = "Data/Dataframes/multiFF_hparams_sigma_metrics.data"
+    df_file = "Data/Dataframes/sigma_search_metrics.data"
+    df_file = "Data/Dataframes/fourier_search_2_metrics.data"
     df = pd.read_pickle(df_file)
 
+    df["FF1"] = np.array(df['fourier_sigma'].values.tolist()).astype(float)[:,0]
+    df["FF2"] = np.array(df['fourier_sigma'].values.tolist()).astype(float)[:,1]
+    
+
     v_min = df['percent_mean'].min()
-    v_max = df['percent_mean'].max()
-    vlim = [v_min, v_max]
+    v_max = 0.5# df['percent_mean'].max()
 
-    mask = df['fourier_features'] == 20
+    os.makedirs("Plots/PINNIII/", exist_ok=True)
 
-    plt.figure()
-    plt.subplot(1,2,1)
-    new_df = make_grid(df[mask])
-    heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    plt.title("20 Features")
+    query = "freq_decay == True"
+    plot(df, query, vmin=v_min, vmax=v_max)
 
-    plt.subplot(1,2,2)
-    new_df = make_grid(df[~mask])
-    heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    plt.title("40 Features")
+    query = "freq_decay == False"
+    plot(df, query, vmin=v_min, vmax=v_max)
+    # save("Plots/PINNIII/NvE_10.pdf")
     plt.show()
+
 
 
 if __name__ == "__main__":

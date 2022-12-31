@@ -11,6 +11,8 @@ import pandas as pd
 import numpy as np
 from GravNN.Networks.Data import DataSet
 
+plt.rc('text', usetex=True)
+
 class SphericalHarmonicWoPointMass(SphericalHarmonics):
     def __init__(self, sh_info, max_deg, remove_deg):
         self.high_fidelity_model = SphericalHarmonics(sh_info, max_deg)
@@ -41,30 +43,21 @@ def get_data_config(max_degree, deg_removed, max_radius):
     return config
 
 
-def plot(data, planet=None, log=False, deg_removed=None):
-    if planet is not None:
-        R = planet.radius
-        unit = "[R]"
-    else:
-        R = 1
-        unit = '[m]'
+def plot(data, planet, log=False, deg_removed=None):
 
+    R = planet.radius
     r = np.linalg.norm(data.raw_data['x_train'], axis=1) / R
-    # u = np.linalg.norm(data.raw_data['u_train'], axis=1)
-    u = data.raw_data['u_train'].squeeze()
+    u_train = data.raw_data['u_train'].squeeze()
+    u = u_train / np.max(np.abs(u_train))
     plt.figure()
-    plt.scatter(r, u)
+    plt.scatter(r, u, alpha=0.5, s=2, label='$U$')
     max_u = np.max(u)
-    plt.scatter(r, max_u/r**1, label='inv1', s=2)
-    plt.scatter(r, max_u/r**2, label='inv2', s=2)
-    plt.scatter(r, max_u/r**3, label='inv3', s=2)
-    plt.scatter(r, max_u/r**4, label='inv4', s=2)
-    plt.scatter(r, max_u/r**5, label='inv5', s=2)
-    plt.scatter(r, max_u/r**6, label='inv6', s=2)
-    plt.xlabel(f"Radius {unit}")
-    plt.ylabel("Potential")
 
-    plt.legend()
+    plt.xlabel(f"Planet Radii from Surface [-]")
+    plt.ylabel("Non-Dimensionalized Potential \n $U$ [-]")
+
+
+
     if log:
         plt.gca().set_yscale("log")
 
@@ -77,16 +70,23 @@ def plot(data, planet=None, log=False, deg_removed=None):
         else:
             power = deg_removed + 2 
 
-    plt.figure()
-    plt.scatter(r, u*r**power)
-    plt.ylabel("Potential Scaled")
+    plt.scatter(r, max_u/r**power, alpha=0.5, s=2, label='$\\frac{1}{r^p}$')
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
 
+    plt.figure()
+    plt.scatter(r, u*r**power, alpha=0.5, s=2)
+    plt.ylabel("Scaled Non-Dimensionalized Potential \n $U_{\text{NN}} = U r^p$ [-]")
+    plt.xlabel(f"Planet Radii from Surface [-]")
+    plt.grid()
+    plt.tight_layout()
 
 
 def main():
     # spherical harmonic model 
     planet = Earth()
-    max_degree = 50
+    max_degree = 1000
     degree_removed = 2 
     
     #l = 0, power = 3
@@ -94,10 +94,17 @@ def main():
     #l = 2, power = 4
     #l = 3, power = 5
 
-    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*15) 
+    config = get_data_config(max_degree, degree_removed, max_radius=planet.radius*5) 
     data = DataSet(data_config=config)
     plot(data, planet=planet, log=False, deg_removed=degree_removed)
     
+    plt.figure(1)
+    plt.savefig("Plots/PINNIII/Potential_NoScale.pdf")
+
+    plt.figure(2)
+    plt.savefig("Plots/PINNIII/Potential_Scale.pdf")
+    
+
     plt.show()
 if __name__ == "__main__":
     main()
