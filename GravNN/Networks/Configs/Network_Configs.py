@@ -29,7 +29,7 @@ def PINN_I():
         "lr_anneal": ['hold'],
         "beta" : [0.0],
         "input_layer": [False],
-        "network_type": ["custom"],        
+        "network_type": ["basic"],        
         "preprocessing" : [[]],
         'seed' : [0],
         'init_file' : [None],
@@ -48,6 +48,7 @@ def PINN_II():
         "x_transformer": [UniformScaler(feature_range=(-1, 1))],
         "u_transformer": [UniformScaler(feature_range=(-1, 1))],
         "a_transformer": [UniformScaler(feature_range=(-1, 1))],
+        "network_type": ["custom"],        
 
         "activation": ["gelu"],
         "scale_by": ["non_dim"],
@@ -66,6 +67,8 @@ def PINN_III():
         "preprocessing" : [['pines', 'r_normalize', 'r_inv']],
         "freq_decay" : [False],
         "fourier_scale" : [1.0],
+        "scale_nn_potential": [True],        
+
 
     }
     config.update(network_config)

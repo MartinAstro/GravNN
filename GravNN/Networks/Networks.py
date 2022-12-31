@@ -164,7 +164,8 @@ def CustomNet(**kwargs):
 
     u_nn = get_network_fcn(kwargs['network_arch'][0])(x, **kwargs)
 
-    u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
+    if kwargs.get("scale_nn_potential", [False]):
+        u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
     if kwargs.get('deg_removed', [-1])[0] == -1:
         cBar = kwargs.get("cBar",[0])[0]
@@ -220,7 +221,9 @@ def MultiScaleNet(**kwargs):
     
     u_inputs = tf.concat(u_nn_outputs,1)
     u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
-    u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
+    
+    if kwargs.get("scale_nn_potential", [False]):
+        u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
     if kwargs.get('deg_removed', [-1])[0] == -1:
         cBar = kwargs.get("cBar",[0])[0]
