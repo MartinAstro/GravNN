@@ -1,6 +1,54 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib as mpl
+import os
+plt.rc('text', usetex=True)
+
+def heatmap3d(df, vmin, vmax):
+
+    df_stacked = df.stack()
+    index = np.array(df_stacked.index.tolist()).astype(float)
+    x, y = np.log2(index[:,0]), np.log2(index[:,1])
+
+    z = vmin# np.zeros_like(x) 
+    dx = np.ones_like(x)*1
+    dy = np.ones_like(y)*1
+    dz = df_stacked.values - vmin
+
+    errors = df_stacked.values
+
+    # scaler = MinMaxScaler()
+    # scaler.fit([vmin, vmax])
+    # colors = scaler.transform(errors)
+
+    # colors = df.values
+    plt.gcf().add_subplot(111, projection='3d')
+
+    cmap = mpl.cm.RdYlGn.reversed()
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    colors = cmap(norm(errors))
+    ax = plt.gca()
+    ax.bar3d(
+        x, y, z,
+        dx, dy, dz,
+        color=colors
+    )
+
+    ax.set_zlim([vmin, vmax])
+    ax.view_init(elev=15, azim=45)
+
+    ax.set_xticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(x)])
+    ax.set_yticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(y)])
+
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("Data")
+    ax.set_zlabel("Mean Percent Error", rotation=180)
+
+
+
+    return 
 
 def heatmap(data, row_labels, col_labels, ax=None,
             cbar_kw=None, cbarlabel="", **kwargs):
@@ -63,67 +111,64 @@ def heatmap(data, row_labels, col_labels, ax=None,
 
     return im, cbar
 
-def make_grid(df):    
-    # sigmas = np.array(df['fourier_sigma'].values.tolist()).astype(float)
-    metric = np.array(df['percent_mean'].values.tolist()).astype(float)
-
-    new_df = df.pivot_table(columns='N_train', index='epochs', 
+def make_grid(df, query):
+    if query is not None:
+        sub_df = df.query(query)
+    else:
+        sub_df = df.copy()
+    sub_df = sub_df.pivot_table(columns='N_train', index='epochs', 
                             values='percent_mean', fill_value=0)
-    return new_df
+    return sub_df
+
+def plot(df, query, **kwargs):
+    sub_df = make_grid(df, query)
+    plt.figure()
+    im, cbar = heatmap(sub_df.values,
+                    row_labels=sub_df.index,
+                    col_labels=sub_df.columns,
+                    **kwargs
+                    )
+    return plt.gcf()
+
+def plot3d(df, query, **kwargs):
+    sub_df = make_grid(df, query)
+    plt.figure()
+    heatmap3d(sub_df,
+            **kwargs
+                    )
+    return plt.gcf()
+
+def save(name):
+    plt.tight_layout()
+    plt.savefig(name, bbox_inches='tight')
+
+
 
 def main():
-    df_file = "Data/Dataframes/epochs_N_search_20_metrics.data"
+    df_file = "Data/Dataframes/epochs_N_search_all_metrics.data"
     df = pd.read_pickle(df_file)
 
     v_min = df['percent_mean'].min()
     v_max = df['percent_mean'].max()
-    vlim = [v_min, v_max]
 
-    # mask = df['fourier_features'] == 20
+    query = "fourier_features == 20 & freq_decay == False"
 
-    plt.figure()
-    plt.subplot(1,1,1)
-    new_df = make_grid(df)
-    heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # plt.title("20 Features")
+    os.makedirs("Plots/PINNIII/", exist_ok=True)
+    query = "num_units == 10"
+    plot3d(df, query, vmin=v_min, vmax=v_max)
+    save("Plots/PINNIII/NvE_10.pdf")
 
-    # # plt.subplot(1,2,2)
-    # # new_df = make_grid(df[~mask])
-    # # heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # # plt.title("40 Features")
+    query = "num_units == 20"
+    plot3d(df, query, vmin=v_min, vmax=v_max)
+    save("Plots/PINNIII/NvE_20.pdf")
 
-
-    # sub_df = df[df['fourier_features'] == 20]
-    # sub_df = sub_df[sub_df['freq_decay'] == True]
-
-    # plt.figure()
-    # plt.subplot(1,2,1)
-    # new_df = make_grid(sub_df)
-    # heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # plt.title("20 Features + Freq True")
-
-    # sub_df = df[df['fourier_features'] == 20]
-    # sub_df = sub_df[sub_df['freq_decay'] == False]
-    # plt.subplot(1,2,2)
-    # new_df = make_grid(sub_df)
-    # heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # plt.title("20 Features + Freq False")
-
-    # sub_df = df[df['fourier_features'] == 40]
-    # sub_df = sub_df[sub_df['freq_decay'] == True]
-
-    # plt.figure()
-    # plt.subplot(1,2,1)
-    # new_df = make_grid(sub_df)
-    # heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # plt.title("40 Features + Freq True")
-    # sub_df = df[df['fourier_features'] == 40]
-    # sub_df = sub_df[sub_df['freq_decay'] == False]
-
-    # plt.subplot(1,2,2)
-    # new_df = make_grid(sub_df)
-    # heatmap(new_df.values, row_labels=new_df.index, col_labels=new_df.columns, vmin=v_min, vmax=v_max)
-    # plt.title("40 Features + Freq False")
+    query = "num_units == 40"
+    plot3d(df, query, vmin=v_min, vmax=v_max)
+    save("Plots/PINNIII/NvE_40.pdf")
+    
+    query = "num_units == 80"
+    plot3d(df, query, vmin=v_min, vmax=v_max)
+    save("Plots/PINNIII/NvE_80.pdf")
 
     plt.show()
 
