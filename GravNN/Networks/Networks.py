@@ -164,7 +164,7 @@ def CustomNet(**kwargs):
 
     u_nn = get_network_fcn(kwargs['network_arch'][0])(x, **kwargs)
 
-    if kwargs.get("scale_nn_potential", [False]):
+    if kwargs.get("scale_nn_potential", [False])[0]:
         u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
     if kwargs.get('deg_removed', [-1])[0] == -1:
