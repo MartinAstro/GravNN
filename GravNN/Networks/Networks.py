@@ -61,6 +61,7 @@ def traditional_network(inputs, **kwargs):
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
+    final_layer_initializer = kwargs.get("final_layer_initializer", ['glorot_uniform'])[0]
     dtype = kwargs["dtype"][0]
 
     x = inputs
@@ -80,7 +81,7 @@ def traditional_network(inputs, **kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer=initializer,
+        kernel_initializer=final_layer_initializer,
         dtype=dtype,
     )(x)
     return outputs
@@ -94,6 +95,7 @@ def transformer_network(inputs, **kwargs):
     layers = kwargs["layers"][0]
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
+    final_layer_initializer = kwargs['final_layer_initializer'][0]
     dtype = kwargs["dtype"][0]
     transformer_units = layers[1]
 
@@ -134,7 +136,7 @@ def transformer_network(inputs, **kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer='zeros',#'glorot_uniform',
+        kernel_initializer=final_layer_initializer,
         dtype=dtype,
     )(x)
     return outputs
@@ -167,9 +169,8 @@ def CustomNet(**kwargs):
     if kwargs.get("scale_nn_potential", [False])[0]:
         u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
-    if kwargs.get('deg_removed', [-1])[0] == -1:
-        cBar = kwargs.get("cBar",[0])[0]
-        C20 = cBar[2,0]
+    if kwargs.get('deg_removed', [-1])[0] == -1 and kwargs.get('blend_potential', [False])[0]:
+        C20 = kwargs.get("cBar",np.zeros((3,3)))[2,0]
 
         mu = kwargs.get('mu_non_dim', [1.0])[0]
         radius = kwargs['planet'][0].radius
@@ -222,10 +223,10 @@ def MultiScaleNet(**kwargs):
     u_inputs = tf.concat(u_nn_outputs,1)
     u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
     
-    if kwargs.get("scale_nn_potential", [False]):
+    if kwargs.get("scale_nn_potential", [False])[0]:
         u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
-    if kwargs.get('deg_removed', [-1])[0] == -1:
+    if kwargs.get('deg_removed', [-1])[0] == -1 and kwargs.get('blend_potential', [False])[0]:
         cBar = kwargs.get("cBar",[0])[0]
         C20 = cBar[2,0]
 
