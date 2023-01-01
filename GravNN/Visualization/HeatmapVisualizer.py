@@ -118,7 +118,10 @@ class Heatmap3DVisualizer(VisualizationBase):
         z_data = vmin
         dx = np.ones_like(x_data)*1
         dy = np.ones_like(y_data)*1
+
         dz = df_stacked.values - vmin
+        if vmax is not None:
+            dz = np.clip(df_stacked.values, 0, vmax) - vmin
 
         errors = df_stacked.values
 
