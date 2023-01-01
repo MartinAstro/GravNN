@@ -48,11 +48,17 @@ def main():
     # spherical harmonic model 
     # config, model = get_sh_model(max_degree=33, deg_removed=2)
 
-    # pinn model
-    df = pd.read_pickle("Data/Dataframes/earth_high_alt4.data")
-    model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
 
+
+    # pinn model
+    df = pd.read_pickle("Data/Dataframes/high_altitude_behavior.data")
+
+    ################
+    # With Scaling #
+    ################
+
+    model_id = df["id"].values[-1] # with scaling
+    config, model = load_config_and_model(model_id, df)
 
     # evaluate the error at "training" altitudes and beyond
     extrapolation_exp = ExtrapolationExperiment(model, config, 10000)
@@ -61,8 +67,35 @@ def main():
     # visualize error @ training altitude and beyond
     vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
     vis.plot_interpolation_percent_error()
-    vis.plot_interpolation_rms()
     vis.plot_extrapolation_percent_error()
+    vis.plot_interpolation_rms()
+    vis.plot_extrapolation_rms()
+    plt.gca().set_ylim([1E-17, 1E-3])
+    plt.savefig("Plots/PINNIII/U_with_scale_extrap.pdf")
+
+
+
+
+
+    ###################
+    # Without Scaling #
+    ###################
+
+    model_id = df["id"].values[-2] # without scaling
+    config, model = load_config_and_model(model_id, df)
+
+    # evaluate the error at "training" altitudes and beyond
+    extrapolation_exp = ExtrapolationExperiment(model, config, 10000)
+    extrapolation_exp.run()
+
+    # visualize error @ training altitude and beyond
+    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
+    vis.plot_interpolation_percent_error()
+    vis.plot_extrapolation_percent_error()
+    vis.plot_interpolation_rms()
+    vis.plot_extrapolation_rms()
+    plt.gca().set_ylim([1E-17, 1E-3])
+    plt.savefig("Plots/PINNIII/U_without_scale_extrap.pdf")
 
     plt.show()
 if __name__ == "__main__":
