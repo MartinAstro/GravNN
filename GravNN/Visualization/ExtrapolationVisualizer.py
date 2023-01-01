@@ -1,5 +1,6 @@
 from multiprocessing.sharedctypes import Value
 from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
 from GravNN.Support.transformations import sphere2cart, cart2sph
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -9,6 +10,8 @@ import os
 import pandas as pd
 import seaborn as sns
 import sigfig
+from GravNN.Networks.Model import load_config_and_model
+
 
 class ExtrapolationVisualizer(VisualizationBase):
     def __init__(self, experiment, **kwargs):
@@ -79,7 +82,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.vlines(1, ymin=0, ymax=np.max(value), color='grey')
         if self.annotate:
             self.annotate_metrics(value)
-
+        plt.tight_layout()
 
     def plot_interpolation_loss(self):
         self.plot(
@@ -166,3 +169,24 @@ class ExtrapolationVisualizer(VisualizationBase):
         # training_bounds = self.training_bounds / self.radius
         # x, y, z = self.experiment.positions
         # plt.scatter3d(x, y, z, alpha=0.2, s=2)
+
+def main():
+    df = pd.read_pickle("Data/Dataframes/high_altitude_behavior.data")
+
+    model_id = df["id"].values[-1] # with scaling
+    config, model = load_config_and_model(model_id, df)
+
+    # evaluate the error at "training" altitudes and beyond
+    extrapolation_exp = ExtrapolationExperiment(model, config, 10000)
+    extrapolation_exp.run()
+
+    # visualize error @ training altitude and beyond
+    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
+    vis.plot_interpolation_percent_error()
+    vis.plot_extrapolation_percent_error()
+    vis.plot_interpolation_rms()
+    vis.plot_extrapolation_rms()
+
+
+if __name__ == "__main__":
+    main()
