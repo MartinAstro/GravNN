@@ -145,7 +145,7 @@ def scale_by_non_dimensional(data_dict, config):
     x_transformer = config["x_transformer"][0]
     a_transformer = config["a_transformer"][0]
     u_transformer = config["u_transformer"][0]
-    a_bar_transformer = config["a_transformer"][0]
+    # a_bar_transformer = config["a_transformer"][0]
 
     # Designed to make position, acceleration, and potential all exist between [-1,1]
     x_train = x_transformer.fit_transform(data_dict["x_train"])
@@ -156,9 +156,9 @@ def scale_by_non_dimensional(data_dict, config):
     # Scale the acceleration by the potential
     scaler = 1 / (x_transformer.scale_ / u_transformer.scale_)
     a_bar = a_transformer.fit_transform(data_dict["a_train"], scaler=scaler)  # this is a_bar
-    a_bar_transformer.fit(a_bar)
+    # a_bar_transformer.fit(a_bar)
     a_train = a_bar  # this should be on the order of [-100, 100]
-    config["a_bar_transformer"] = [a_bar_transformer]
+    # config["a_bar_transformer"] = [a_bar_transformer]
 
     u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
 
@@ -166,7 +166,8 @@ def scale_by_non_dimensional(data_dict, config):
     a_val = a_transformer.transform(data_dict["a_val"])
     u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
 
-    ref_r_vec = np.array([[config['ref_radius_max'][0], 0, 0]])
+    ref_radius_max = config.get('ref_radius_max', config['radius_max'])[0]
+    ref_r_vec = np.array([[ref_radius_max, 0, 0]])
     ref_r_vec = x_transformer.transform(ref_r_vec)
     config['ref_radius_max'] = [ref_r_vec[0,0].astype(np.float32)]
 
@@ -183,7 +184,7 @@ def scale_by_non_dimensional(data_dict, config):
         "x": x_transformer,
         "a": a_transformer,
         "u": u_transformer,
-        "a_bar": a_bar_transformer,
+        # "a_bar": a_bar_transformer,
     }
     return data_dict, transformers
 
@@ -315,7 +316,7 @@ def scale_by_non_dim_potential(data_dict, config):
     # Make u_star approximately equal to value of the potential that must be learned. 
     # If deg_removed == -1: u_brill
     # If deg_removed == 2: u_J2/u_brill
-    u_max = np.max(data_dict["u_train"]) 
+    u_max = np.max(np.abs(data_dict["u_train"])) 
     u_star = (u_max / u_brill)*u_brill
 
     t_star = np.sqrt(x_star**2/u_star)
