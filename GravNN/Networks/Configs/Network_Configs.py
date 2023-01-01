@@ -53,7 +53,8 @@ def PINN_II():
         "activation": ["gelu"],
         "scale_by": ["non_dim"],
         "network_arch" : ['transformer'],
-        "preprocessing" : [['pines']]
+        "preprocessing" : [['pines']],
+        "final_layer_initializer" : ['glorot_uniform']
     }
     config.update(network_config)
     return config
@@ -63,13 +64,15 @@ def PINN_III():
     config = PINN_II()
     network_config = {
         "scale_by": ["non_dim_v3"], 
-        "loss_fcns" : [['rms', 'percent']],
-        "preprocessing" : [['pines', 'r_normalize', 'r_inv']],
+        # "loss_fcns" : [['rms', 'percent']],
+        "loss_fcns" : [['percent']],
+        # "preprocessing" : [['pines', 'r_normalize', 'r_inv']],
+        "preprocessing" : [['pines', 'r_inv']],
         "freq_decay" : [False],
         "fourier_scale" : [1.0],
         "scale_nn_potential": [True],        
-
-
+        "blend_potential" : [True],
+        "final_layer_initializer" : ['zeros']
     }
     config.update(network_config)
     return config
