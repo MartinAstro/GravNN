@@ -15,11 +15,45 @@ def load_network(config):
         network = network_fcn(**config)
     return network
 
+def compute_p(**kwargs):
+    # define the power of the analytic model
+    # if deg_removed == -1: power = 1
+    # if np.any(deg_removed == [0,1]): power = 3
+    # elif power = deg_removed + 2 
+
+    fuse_models = kwargs.get('fuse_models')
+    scale_potential = kwargs.get('scale_nn_potential')
+
+    if not scale_potential:
+        return 0 # don't scale, regardless of circumstance
+    else:
+        # at minimum, assume no analytic model and scale using p=1
+        p = 1
+
+        # if there is an analytic model, and it is fused with the 
+        # nn solution, then look for how many terms are used in it
+        if fuse_models:
+            mu = kwargs.get("mu_non_dim", [0.0])[0]
+            C20 = kwargs.get("cBar", [np.zeros((3,3))])[0][2,0]
+
+            p += 1 if mu != 0.0 else 0 # if mu is known (for planets and asteroids)
+            p += 2 if C20 != 0.0 else 0 # if C20 is known (for planets, not asteroids)
+                
+    return p
+
 
 def get_network_fcn(network_type):
     return {
         "traditional" : traditional_network,
         "transformer" : transformer_network,
+        "transformer_siren" : transformer_network_siren,
+    }[network_type.lower()]
+
+def get_initalizer_fcn(network_type, seed):
+    return {
+        "glorot_uniform" : tf.keras.initializers.GlorotUniform(seed=seed),
+        "glorot_normal" : tf.keras.initializers.GlorotNormal(seed=seed),
+        "zeros" : tf.keras.initializers.Zeros(),
     }[network_type.lower()]
 
 def get_preprocess_layer_fcn(layer_key):
@@ -63,13 +97,14 @@ def traditional_network(inputs, **kwargs):
     initializer = kwargs["initializer"][0]
     final_layer_initializer = kwargs.get("final_layer_initializer", ['glorot_uniform'])[0]
     dtype = kwargs["dtype"][0]
+    seed = kwargs['seed'][0]
 
     x = inputs
     for i in range(1, len(layers) - 1):
         x = tf.keras.layers.Dense(
             units=layers[i],
             activation=activation,
-            kernel_initializer=initializer,
+            kernel_initializer=get_initalizer_fcn(initializer, seed+i),
             dtype=dtype,
         )(x)
         if "batch_norm" in kwargs:
@@ -81,7 +116,7 @@ def traditional_network(inputs, **kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer=final_layer_initializer,
+        kernel_initializer=get_initalizer_fcn(final_layer_initializer, seed),
         dtype=dtype,
     )(x)
     return outputs
@@ -98,18 +133,19 @@ def transformer_network(inputs, **kwargs):
     final_layer_initializer = kwargs['final_layer_initializer'][0]
     dtype = kwargs["dtype"][0]
     transformer_units = layers[1]
+    seed = kwargs['seed'][0]
 
     x = inputs
     encoder_1 = tf.keras.layers.Dense(
         units=transformer_units,
         activation=activation,
-        kernel_initializer=initializer,
+        kernel_initializer=get_initalizer_fcn(initializer, seed+1234),
         dtype=dtype,
     )(x)
     encoder_2 = tf.keras.layers.Dense(
         units=transformer_units,
         activation=activation,
-        kernel_initializer=initializer,
+        kernel_initializer=get_initalizer_fcn(initializer, seed+12345),
         dtype=dtype,
     )(x)
     
@@ -118,7 +154,7 @@ def transformer_network(inputs, **kwargs):
         x = tf.keras.layers.Dense(
             units=layers[i],
             activation=activation,
-            kernel_initializer=initializer,
+            kernel_initializer=get_initalizer_fcn(initializer, seed+i),
             dtype=dtype,
         )(x)
         UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
@@ -136,7 +172,100 @@ def transformer_network(inputs, **kwargs):
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
-        kernel_initializer=final_layer_initializer,
+        kernel_initializer=get_initalizer_fcn(final_layer_initializer, seed),
+        dtype=dtype,
+    )(x)
+    return outputs
+
+def transformer_network_siren(inputs, **kwargs):
+    """Transformer model that takes 4D spherical coordinates as inputs. This architecture was recommended by the
+    Wang2020 PINN Gradient Pathologies paper to help expose symmetries and invariances between different layers within the network.
+    """
+    # adapted from `forward_pass` (~line 242): https://github.com/PredictiveIntelligenceLab/GradientPathologiesPINNs/blob/master/Helmholtz/Helmholtz2D_model_tf.py
+
+    layers = kwargs["layers"][0]
+    seed = kwargs['seed'][0]
+    in_features = 4
+    omega_0 = 30.0
+
+    activation = tf.sin
+    w_0_initializer = tf.keras.initializers.RandomUniform(
+        minval=-1.0 / in_features,
+        maxval= 1.0 / in_features,
+        seed=1234
+    )
+
+
+
+    final_layer_initializer = kwargs['final_layer_initializer'][0]
+    dtype = kwargs["dtype"][0]
+    transformer_units = layers[1]
+
+    omega_layer = tf.constant(omega_0, dtype=dtype, shape=(1,layers[2]))
+    omega_layer_inputs = tf.constant(omega_0, dtype=dtype, shape=(1,4))
+
+
+    x = inputs
+    w_0_initializer = tf.keras.initializers.RandomUniform(
+        minval=-1.0 / in_features,
+        maxval= 1.0 / in_features,
+        seed=seed+1234
+    )
+    encoder_1 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=w_0_initializer,
+        dtype=dtype,
+    )(x)
+    w_0_initializer = tf.keras.initializers.RandomUniform(
+        minval=-1.0 / in_features,
+        maxval= 1.0 / in_features,
+        seed=seed+12345
+    )
+    encoder_2 = tf.keras.layers.Dense(
+        units=transformer_units,
+        activation=activation,
+        kernel_initializer=w_0_initializer,
+        dtype=dtype,
+    )(x)
+    
+    one = tf.constant(1.0, dtype=dtype, shape=(1,transformer_units))
+    x = tf.keras.layers.multiply([x, omega_layer_inputs])
+    for i in range(1, len(layers) - 1):
+        w_i_initializer = tf.keras.initializers.RandomUniform(
+            minval=-np.sqrt(6 / in_features) / omega_0,
+            maxval= np.sqrt(6 / in_features) / omega_0,
+            seed=seed + i
+        )
+
+        x = tf.keras.layers.Dense(
+            units=layers[i],
+            activation=activation,
+            kernel_initializer=w_i_initializer,
+            dtype=dtype,
+        )(x)
+        UX = tf.keras.layers.Multiply(dtype=dtype)([x, encoder_1])
+        one_minus_x = tf.keras.layers.Subtract(dtype=dtype)([one, x])
+        VX = tf.keras.layers.Multiply(dtype=dtype)([one_minus_x, encoder_2])
+
+        x = tf.keras.layers.add([UX, VX],dtype=dtype)
+        x = tf.keras.layers.multiply([x, omega_layer])
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    
+    w_i_initializer = tf.keras.initializers.RandomUniform(
+        minval=-np.sqrt(6 / in_features) / omega_0,
+        maxval= np.sqrt(6 / in_features) / omega_0,
+        seed=seed + i
+    )
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=w_i_initializer,
         dtype=dtype,
     )(x)
     return outputs
@@ -166,21 +295,12 @@ def CustomNet(**kwargs):
 
     u_nn = get_network_fcn(kwargs['network_arch'][0])(x, **kwargs)
 
-    if kwargs.get("scale_nn_potential", [False])[0]:
-        u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
 
-    if kwargs.get('deg_removed', [-1])[0] == -1 and kwargs.get('blend_potential', [False])[0]:
-        C20 = kwargs.get("cBar",np.zeros((3,3)))[2,0]
-
-        mu = kwargs.get('mu_non_dim', [1.0])[0]
-        radius = kwargs['planet'][0].radius
-        x_transformer = kwargs['x_transformer'][0]
-        radius_non_dim = x_transformer.transform(np.array([[radius, 0,0]]))[0,0]
-        ref_radius_analytic = kwargs.get('ref_radius_analytic', [None])[0]
-        u_analytic = PlanetaryOblatenessLayer(dtype, mu, radius_non_dim, C20)(features)
-        u = BlendPotentialLayer(dtype, mu, ref_radius_analytic)(u_nn, u_analytic, features)
-    else:
-        u = u_nn
+    p = compute_p(**kwargs)
+    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
+    u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
+    u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
 
     model = tf.keras.Model(inputs=inputs, outputs=u)
     super(tf.keras.Model, model).__init__(dtype=dtype)
@@ -223,23 +343,11 @@ def MultiScaleNet(**kwargs):
     u_inputs = tf.concat(u_nn_outputs,1)
     u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
     
-    if kwargs.get("scale_nn_potential", [False])[0]:
-        u_nn = ScalePotentialNN(**kwargs)(features, u_nn)
-
-    if kwargs.get('deg_removed', [-1])[0] == -1 and kwargs.get('blend_potential', [False])[0]:
-        cBar = kwargs.get("cBar",[0])[0]
-        C20 = cBar[2,0]
-
-        mu = kwargs.get('mu_non_dim', [1.0])[0]
-        radius = kwargs['planet'][0].radius
-        x_transformer = kwargs['x_transformer'][0]
-        radius_non_dim = x_transformer.transform(np.array([[radius, 0,0]]))[0,0]
-        ref_radius_analytic = kwargs.get('ref_radius_analytic', [None])[0]
-        u_analytic = PlanetaryOblatenessLayer(dtype, mu, radius_non_dim, C20)(features)
-        u = BlendPotentialLayer(dtype, mu, ref_radius_analytic)(u_nn, u_analytic, features)
-    else:
-        u = u_nn
-
+    p = compute_p(**kwargs)
+    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
+    u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
+    u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
     model = tf.keras.Model(inputs=inputs, outputs=u)
     super(tf.keras.Model, model).__init__(dtype=dtype)
 
