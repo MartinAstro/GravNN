@@ -98,8 +98,8 @@ class MetricsExperiment:
 
 def main():
     from GravNN.Networks.Model import load_config_and_model
-    df_file = "Data/Dataframes/test_all.data"
-    df_file_new = "Data/Dataframes/test_metrics.data"
+    df_file = "Data/Dataframes/earth_PINN_III_max.data"
+    df_file_new = df_file.split(".data")[0] + "_metrics.data"
     df = pd.read_pickle(df_file)
 
     for i in range(len(df)):
