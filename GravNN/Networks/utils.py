@@ -381,13 +381,13 @@ def _get_network_fcn(name):
     from GravNN.Networks.Networks import (
         BasicNet,
         CustomNet,
-        MultiScaleNet
+        MultiScaleNet,
     )
 
     return {
         "basic": BasicNet,
         "custom": CustomNet,
-        "multi" : MultiScaleNet
+        "multi" : MultiScaleNet,
     }[name.lower()]
 
 
