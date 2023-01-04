@@ -8,9 +8,11 @@ from sklearn.preprocessing import MinMaxScaler
 def get_default_eros_config():
     data_config = {
         "planet": [Eros()],
-        "grav_file": [Eros().obj_200k],
+        "mu": [Eros().mu],
+        "grav_file": [Eros().obj_8k],
+        # "grav_file": [Eros().obj_200k],
         "distribution": [RandomDist],
-        "N_dist": [20000],
+        "N_dist": [50000],
         "N_train": [2500],
         "N_val": [1500],
         "radius_min": [0],
@@ -23,6 +25,9 @@ def get_default_eros_config():
         "override" : [False],
         "ref_radius" : [Eros().radius],
         "ref_radius_min" : [Eros().radius_min],
+        "ref_radius_max" : [Eros().radius],
+        
+        "deg_removed" : [-1],
     }
 
     return data_config

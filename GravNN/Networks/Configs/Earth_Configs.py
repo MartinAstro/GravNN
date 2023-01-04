@@ -4,6 +4,9 @@ from GravNN.Trajectories import RandomDist
 from GravNN.Preprocessors import DummyScaler, UniformScaler
 from sklearn.preprocessing import MinMaxScaler
 
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
+grav_model = SphericalHarmonics(Earth().EGM2008,2)
+
 
 def get_default_earth_config():
     data_config = {
@@ -25,5 +28,7 @@ def get_default_earth_config():
         "gravity_data_fcn" : [get_sh_data],
         "shape_model" : [Earth().shape_model],
         "mu" : [Earth().mu],
+        "cBar" : [grav_model.C_lm],
+        "sBar" : [grav_model.S_lm]
     }
     return data_config
