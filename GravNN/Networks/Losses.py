@@ -29,10 +29,6 @@ def percent(y_hat, y):
     loss_components = da_norm/a_true_norm
     return loss_components
 
-# def percent(y_hat, y):
-#     dy = tf.abs(tf.subtract(y_hat, y))
-#     percent_error = tf.math.divide_no_nan(dy, tf.abs(y))
-#     return percent_error
 
 def angle(y_hat, y):
     a_hat = y_hat[:,0:3]
