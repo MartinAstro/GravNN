@@ -10,11 +10,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+
 class ExtrapolationVisualizerMod(ExtrapolationVisualizer):
     def __init__(self, experiment, **kwargs):
         super().__init__(experiment, **kwargs)
+        plt.rc('text', usetex=True)
 
-    def plot(self, x, value):
+
+    def plot(self, x, value, **kwargs):
         # compute trend lines
         def get_rolling_lines(data):
             df = pd.DataFrame(data=data, index=None)
@@ -26,26 +29,22 @@ class ExtrapolationVisualizerMod(ExtrapolationVisualizer):
         # sort entries
         avg_line, std_line, max_line = get_rolling_lines(value)
         
-        self.newFig()
+        if kwargs.get('newFig', True):
+            self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
         self.plot_fcn(x, avg_line)
 
-        y_std_upper = np.squeeze(avg_line + 1*std_line)
-        y_std_lower = np.squeeze(avg_line - 1*std_line)
-        plt.fill_between(x, y_std_lower, y_std_upper, color='C0', alpha=0.5)
-        self.plot_fcn(x, max_line, color='red')
         
         training_bounds = self.training_bounds / self.radius
         plt.vlines(training_bounds[0], ymin=0, ymax=np.max(value), color='green')
         plt.vlines(training_bounds[1], ymin=0, ymax=np.max(value), color='green')
         plt.vlines(1, ymin=0, ymax=np.max(value), color='grey')
-        if self.annotate:
-            self.annotate_metrics(value)
+        plt.grid()
         plt.tight_layout()
 
 def main():
     # pinn model
-    df = pd.read_pickle("Data/Dataframes/eros_PINN_extrapolation.data")
+    df = pd.read_pickle("Data/Dataframes/eros_PINN_III_extrapolation_v3.data")
 
     ###########
     # PINN II #
@@ -60,15 +59,8 @@ def main():
 
     # visualize error @ training altitude and beyond
     vis = ExtrapolationVisualizerMod(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
-    # vis.plot_interpolation_percent_error()
     vis.plot_extrapolation_percent_error()
-    plt.gca().set_xlim([0, 5])
-    plt.gca().set_ylim([1E-7, 1E1])
     
-    # vis.plot_interpolation_rms()
-    # vis.plot_extrapolation_rms()
-    # plt.savefig("Plots/PINNIII/U_with_scale_extrap.pdf")
-
 
 
 
@@ -86,14 +78,11 @@ def main():
 
     # visualize error @ training altitude and beyond
     vis = ExtrapolationVisualizerMod(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
-    # vis.plot_interpolation_percent_error()
-    vis.plot_extrapolation_percent_error()
-    plt.gca().set_xlim([0, 5])
-    plt.gca().set_ylim([1E-7, 1E1])
-    
-    # vis.plot_interpolation_rms()
-    # vis.plot_extrapolation_rms()
-    # plt.savefig("Plots/PINNIII/U_without_scale_extrap.pdf")
+    vis.plot_extrapolation_percent_error(newFig=False)
+    plt.gca().set_xlim([0, 10])
+    plt.gca().set_ylim([1E-4, 1E1])
+
+    plt.savefig("Plots/PINNIII/Eros_extrapolation_IIvIII.pdf")
 
     plt.show()
 if __name__ == "__main__":
