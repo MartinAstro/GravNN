@@ -38,6 +38,11 @@ def PINN_I():
         "dtype" : ['float32'],
         "network_arch" : ['traditional'],
         "loss_fcns" : [['rms']],
+        'trainable_tanh' : [False],
+        'tanh_k' : [0.0],
+        "scale_nn_potential": [False],        
+        "fuse_models" : [False],
+        "enforce_bc" : [False],
     }
     return network_config
 
@@ -72,7 +77,13 @@ def PINN_III():
         "fourier_scale" : [1.0],
         "scale_nn_potential": [True],        
         "blend_potential" : [True],
-        "final_layer_initializer" : ['zeros']
+        "final_layer_initializer" : ['zeros'],
+        "scale_potential" : [True],
+        "fuse_models" : [True],
+        "enforce_bc" : [True],
+        'trainable_tanh' : [True],
+        'tanh_k' : [1.0],
+
     }
     config.update(network_config)
     return config
