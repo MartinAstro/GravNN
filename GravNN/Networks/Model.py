@@ -42,6 +42,7 @@ class PINNGravityModel(tf.keras.Model):
         self.mixed_precision = tf.constant(self.config["mixed_precision"][0], dtype=tf.bool)
 
         self.init_network(network)
+        self.init_analytic_model()
         self.init_physics_information()
         self.init_loss_fcns()
         self.init_annealing()       
@@ -65,6 +66,11 @@ class PINNGravityModel(tf.keras.Model):
         else:
             self.network = network
 
+    def init_analytic_model(self):
+        self.analytic_model = tf.keras.Model(
+            inputs=self.network.inputs, 
+            outputs=self.network.layers[-3].output
+            )
 
     def init_training_steps(self):
         # jacobian ops (needed in LC loss terms) incompatible with XLA
@@ -91,6 +97,12 @@ class PINNGravityModel(tf.keras.Model):
     def call(self, x, training):
         return self.eval(self.network, x, training)
 
+    def call_analytic_model(self, x):
+        with tf.GradientTape() as tape:
+            tape.watch(x)
+            u = self.analytic_model(x)
+        return -tape.gradient(u, x)
+
     # Training
     def train_step_fcn(self, data):
         """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
@@ -107,15 +119,22 @@ class PINNGravityModel(tf.keras.Model):
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
             y_hat = self(x, training=self.training) # [N x (3 or 7)]
+            y_analytic = self.call_analytic_model(x)
+            y = y - y_analytic
+            y_hat = y_hat - y_analytic
 
             if self.config.get('loss_sph', [False])[0]:
                 x_sph = cart2sph(x)
                 BN = compute_projection_matrix(x_sph)
-                y = tf.reshape(y, (-1, 3,1))
-                y_hat = tf.reshape(y_hat, (-1, 3,1))
 
-                y = tf.matmul(BN, y)
-                y_hat = tf.matmul(BN, y_hat)
+                # x_B = tf.matmul(BN, tf.reshape(x, (-1,3,1))) 
+                # this will give ~[1, 1E-8, 1E-8]
+
+                y_reshape = tf.reshape(y, (-1, 3,1))
+                y_hat_reshape = tf.reshape(y_hat, (-1, 3,1))
+
+                y = tf.matmul(BN, y_reshape)
+                y_hat = tf.matmul(BN, y_hat_reshape)
 
             losses = MetaLoss(y_hat, y, self.loss_fcn_list)
             loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
@@ -142,6 +161,20 @@ class PINNGravityModel(tf.keras.Model):
     def test_step_fcn(self, data):
         x, y = data
         y_hat = self(x, training=self.test_training)
+
+        y_analytic = self.call_analytic_model(x)
+        y = y - y_analytic
+        y_hat = y_hat - y_analytic
+
+        if self.config.get('loss_sph', [False])[0]:
+            x_sph = cart2sph(x)
+            BN = compute_projection_matrix(x_sph)
+            y = tf.reshape(y, (-1, 3,1))
+            y_hat = tf.reshape(y_hat, (-1, 3,1))
+
+            y = tf.matmul(BN, y)
+            y_hat = tf.matmul(BN, y_hat)
+
         losses = MetaLoss(y_hat, y, self.loss_fcn_list)
         loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
         return {"loss": loss, 
