@@ -2,7 +2,7 @@ from asyncio import constants
 import tensorflow as tf
 import numpy as np
 
-
+# preprocessing
 class Cart2PinesSphLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, **kwargs):
         """Successor to the Cart2SphLayer. The layer takes a
@@ -37,70 +37,6 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
-class NormalizeRLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, 
-        ref_radius_min, ref_radius_max,
-        feature_min, feature_max, **kwargs
-        ):
-        super(NormalizeRLayer, self).__init__(dtype=dtype)
-
-        self.ref_radius_min = tf.constant(ref_radius_min, dtype=dtype).numpy()
-        self.ref_radius_max = tf.constant(ref_radius_max, dtype=dtype).numpy()
-  
-        # bounds of the feature -- shouldn't necessarily be a large difference.
-        # think about how much the output should change with respect to the inputs
-        self.feature_min = tf.constant(feature_min, dtype=dtype).numpy()
-        self.feature_max = tf.constant(feature_max, dtype=dtype).numpy()           
-
-    def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        r = inputs_transpose[0]
-        s = inputs_transpose[1]
-        t = inputs_transpose[2]
-        u = inputs_transpose[3]
-
-        df = self.feature_max - self.feature_min
-        dr = self.ref_radius_max - self.ref_radius_min
-        scale = tf.divide(df, dr)
-        min_arg = self.feature_min - tf.multiply(self.ref_radius_min, scale)
-        feature = tf.multiply(r, scale) + min_arg
-
-        spheres = tf.stack([feature, s, t, u], axis=1)
-        return spheres
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "dtype" : self.dtype,
-                "feature_min" : self.feature_min,
-                "feature_max" : self.feature_max,
-                "ref_radius_min" : self.ref_radius_min,
-                "ref_radius_max" : self.ref_radius_max
-            }
-        )
-        return config
-
-class ScaleRLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, ref_radius_max, **kwargs):
-        super(ScaleRLayer, self).__init__(dtype=dtype)
-        self.ref_radius_max = tf.constant(ref_radius_max, dtype=dtype)
-
-    def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        r = inputs_transpose[0]
-        s = inputs_transpose[1]
-        t = inputs_transpose[2]
-        u = inputs_transpose[3]
-        r_star = tf.divide(r, self.ref_radius_max)
-        spheres = tf.stack([r_star, s, t, u], axis=1)
-        return spheres
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update({ "ref_radius_max" : self.ref_radius_max})
-        return config
-
 class InvRLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, **kwargs):
         super(InvRLayer, self).__init__(dtype=dtype)
@@ -121,6 +57,189 @@ class InvRLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
+
+# postprocessing
+
+
+
+
+class BlendPotentialLayer(tf.keras.layers.Layer):
+
+    def __init__(self, dtype, mu, r_max):
+        super(BlendPotentialLayer, self).__init__(dtype=dtype)
+        self.mu = tf.constant(mu, dtype=dtype).numpy()
+        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+
+    def build(self, input_shapes):
+        self.radius = self.add_weight("radius",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=self.r_max),
+                            )
+        self.k = self.add_weight("k",
+                            shape=[1],
+                            trainable=True, 
+                            initializer =tf.keras.initializers.Constant(value=1),
+                            )
+        super(BlendPotentialLayer, self).build(input_shapes)
+
+
+    def call(self, u_nn, u_analytic, inputs):
+        one = tf.constant(1.0, dtype=u_nn.dtype)
+        half = tf.constant(0.5, dtype=u_nn.dtype)
+        r = tf.reshape(inputs[:,0], shape=(-1,1))
+        dr = tf.subtract(r,self.radius)
+        h = half+half*tf.tanh(self.k*dr)
+        u_model = (one - h)*(u_nn + u_analytic) + h*u_analytic  
+        return u_model
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "r_max" : self.r_max,
+            }
+        )
+        return config
+
+class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        dtype = kwargs.get('dtype')[0]
+        super(PlanetaryOblatenessLayer, self).__init__(dtype=dtype)
+
+        # defaults to zero
+        self.mu = kwargs.get('mu_non_dim', [0.0])[0]
+        self.C20 = kwargs.get("cBar",[np.zeros((3,3))])[0][2,0]
+
+        # compute reference radius
+        radius = kwargs['planet'][0].radius
+        x_transformer = kwargs['x_transformer'][0]
+        radius_non_dim = x_transformer.transform(np.array([[radius, 0,0]]))[0,0]
+        self.a = radius_non_dim
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        u = inputs_transpose[3]
+
+        u_pm = self.mu/r
+
+        c1 = tf.sqrt(tf.constant(15.0/4.0, dtype=self.dtype)) * \
+             tf.sqrt(tf.constant(3.0, dtype=self.dtype))
+        c2 = tf.sqrt(tf.constant(5.0/4.0, dtype=self.dtype))
+
+        u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*c1 - c2)*self.C20
+        potential = tf.negative(u_pm + u_C20)
+
+        u = tf.reshape(potential, (-1,1)) 
+        return u
+
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu" : self.mu,
+                "a" : self.a,
+                "C20" : self.C20,
+            }
+        )
+        return config
+
+class ScaleNNPotential(tf.keras.layers.Layer):
+    def __init__(self, power, **kwargs):
+        """Scale U_NN output based on natural decay rate of potential.
+        This ensures that U_NN typically stays on the order of 1E0"""
+        dtype = kwargs['dtype'][0]
+        super(ScaleNNPotential, self).__init__(dtype=dtype)
+        self.power = tf.constant(power, dtype=dtype).numpy()
+
+    def call(self, features, u_nn):
+        r = features[:,0]
+        r_p = tf.reshape(tf.pow(r, self.power), tf.shape(u_nn))
+        u = tf.divide(u_nn, r_p)
+        return u
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "power" : self.power,
+            }
+        )
+        return config
+
+class FuseModels(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        dtype = kwargs['dtype'][0]
+        fuse_models = kwargs['fuse_models'][0]
+        super(FuseModels, self).__init__(dtype=dtype)
+        self.fuse = tf.constant(int(fuse_models), dtype=dtype).numpy()
+
+    def call(self, u_nn, u_analytic):
+        fuse_vector = tf.constant(self.fuse, dtype=u_nn.dtype)
+        u = u_nn + fuse_vector*u_analytic
+        return u
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "fuse" : self.fuse,
+            }
+        )
+        return config
+
+class EnforceBoundaryConditions(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        dtype = kwargs['dtype'][0]
+        super(EnforceBoundaryConditions, self).__init__(dtype=dtype)
+        self.enforce_bc = kwargs['enforce_bc'][0]
+        r_max = kwargs.get('ref_radius_analytic', [np.nan])[0]
+        self.trainable_tanh = kwargs.get('trainable_tanh')[0]
+        self.k_init = kwargs.get('tanh_k', [1])[0]
+        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+
+    def build(self, input_shapes):
+        self.radius = self.add_weight("radius",
+                            shape=[1],
+                            trainable=self.trainable_tanh, 
+                            initializer =tf.keras.initializers.Constant(value=self.r_max),
+                            )
+        self.k = self.add_weight("k",
+                            shape=[1],
+                            trainable=self.trainable_tanh, 
+                            initializer =tf.keras.initializers.Constant(value=self.k_init),
+                            )
+        super(EnforceBoundaryConditions, self).build(input_shapes)
+
+    def call(self, features, u_nn, u_analytic):
+        if not self.enforce_bc:
+            return u_nn
+
+        one = tf.constant(1.0, dtype=u_nn.dtype)
+        half = tf.constant(0.5, dtype=u_nn.dtype)
+        r = tf.reshape(features[:,0], shape=(-1,1))
+        dr = tf.subtract(r,self.radius)
+        h = half+half*tf.tanh(self.k*dr)
+        u_model = (one - h)*u_nn + h*u_analytic  
+        return u_model
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "enforce_bc" : self.enforce_bc,
+                "trainable_tanh" : self.trainable_tanh,
+                "k" : self.k_init,
+                "r_max" : self.r_max,
+            }
+        )
+        return config
+
+
+# Experimental
 class FourierFeatureLayer(tf.keras.layers.Layer):
     def __init__(self, fourier_features, fourier_sigma, fourier_scale, freq_decay, **kwargs):
         super(FourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
@@ -183,65 +302,8 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         )
         return config
 
-class BlendPotentialLayer(tf.keras.layers.Layer):
 
-    def __init__(self, dtype, mu, r_max):
-        super(BlendPotentialLayer, self).__init__(dtype=dtype)
-        self.mu = tf.constant(mu, dtype=dtype).numpy()
-        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
-
-    def build(self, input_shapes):
-        self.radius = self.add_weight("radius",
-                            shape=[1],
-                            trainable=True, 
-                            initializer =tf.keras.initializers.Constant(value=self.r_max),
-                            )
-        self.k = self.add_weight("k",
-                            shape=[1],
-                            trainable=True, 
-                            initializer =tf.keras.initializers.Constant(value=1000),
-                            )
-        super(BlendPotentialLayer, self).build(input_shapes)
-
-
-    def call(self, u_nn, u_analytic, inputs):
-        one = tf.constant(1.0, dtype=u_nn.dtype)
-        half = tf.constant(0.5, dtype=u_nn.dtype)
-        r = tf.reshape(inputs[:,0], shape=(-1,1))
-        dr = tf.subtract(r,self.radius)
-        h = half+half*tf.tanh(self.k*dr)
-        u_model = (one - h)*(u_nn + u_analytic) + h*u_analytic 
-        return u_model
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "mu" : self.mu,
-                "r_max" : self.r_max,
-            }
-        )
-        return config
-
-class PointMassLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, mu, r_max):
-        super(PointMassLayer, self).__init__(dtype=dtype)
-        self.mu = tf.constant(mu, dtype=dtype).numpy()
-
-    def call(self, inputs):
-        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
-        u_pm = tf.negative(tf.divide(self.mu,r))
-        return u_pm
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "mu" : self.mu,
-            }
-        )
-        return config
-
+# Legacy
 class PinesAlgorithmLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, mu, a, cBar, sBar):
         super(PinesAlgorithmLayer, self).__init__(dtype=dtype)
@@ -376,77 +438,87 @@ class PinesAlgorithmLayer(tf.keras.layers.Layer):
         )
         return config
 
-class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, mu, a, C20):
-        super(PlanetaryOblatenessLayer, self).__init__(dtype=dtype)
+class PointMassLayer(tf.keras.layers.Layer):
+    def __init__(self, dtype, mu, r_max):
+        super(PointMassLayer, self).__init__(dtype=dtype)
         self.mu = tf.constant(mu, dtype=dtype).numpy()
-        self.a = tf.constant(a, dtype=dtype).numpy()
-        self.C20 = tf.constant(C20, dtype=dtype).numpy()
-   
 
     def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        r = inputs_transpose[0]
-        u = inputs_transpose[3]
-
-        u_pm = self.mu/r
-
-        c1 = tf.sqrt(tf.constant(15.0/4.0, dtype=self.dtype)) * \
-             tf.sqrt(tf.constant(3.0, dtype=self.dtype))
-        c2 = tf.sqrt(tf.constant(5.0/4.0, dtype=self.dtype))
-
-        u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*c1 - c2)*self.C20
-        potential = tf.negative(u_pm + u_C20)
-
-        u = tf.reshape(potential, (-1,1)) 
-        return u
-
+        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        u_pm = tf.negative(tf.divide(self.mu,r))
+        return u_pm
 
     def get_config(self):
         config = super().get_config().copy()
         config.update(
             {
                 "mu" : self.mu,
-                "a" : self.a,
-                "C20" : self.C20,
             }
         )
         return config
 
+class NormalizeRLayer(tf.keras.layers.Layer):
+    def __init__(self, dtype, 
+        ref_radius_min, ref_radius_max,
+        feature_min, feature_max, **kwargs
+        ):
+        super(NormalizeRLayer, self).__init__(dtype=dtype)
 
-class ScalePotentialNN(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        """Scale U_NN output based on natural decay rate of potential.
-        This ensures that U_NN typically stays on the order of 1E0"""
-        dtype = kwargs['dtype'][0]
-        super(ScalePotentialNN, self).__init__(dtype=dtype)
-        deg_removed = kwargs['deg_removed'][0]
-        if deg_removed == -1:
-            power = 1
-        elif np.any(deg_removed == [0,1]):
-            power = 3
-        else:
-            power = deg_removed + 2 + 0
-        self.power = tf.constant(power, dtype=dtype).numpy()
+        self.ref_radius_min = tf.constant(ref_radius_min, dtype=dtype).numpy()
+        self.ref_radius_max = tf.constant(ref_radius_max, dtype=dtype).numpy()
+  
+        # bounds of the feature -- shouldn't necessarily be a large difference.
+        # think about how much the output should change with respect to the inputs
+        self.feature_min = tf.constant(feature_min, dtype=dtype).numpy()
+        self.feature_max = tf.constant(feature_max, dtype=dtype).numpy()           
 
-    def call(self, features, u_nn):
-        # features_transpose = tf.transpose(features)
-        # r = features_transpose[0]
-        r = features[:,0]
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        s = inputs_transpose[1]
+        t = inputs_transpose[2]
+        u = inputs_transpose[3]
 
-        r_p = tf.reshape(tf.pow(r, self.power), tf.shape(u_nn))
-        # u_nn = tf.clip_by_value(u_nn, tf.constant(-1.0, dtype=r.dtype), tf.constant(1.0, dtype=r.dtype))
-        # u_nn = tf.tanh(u_nn) #soft clip from [-1, 1]
-        u = tf.divide(u_nn, r_p)
-        return u
+        df = self.feature_max - self.feature_min
+        dr = self.ref_radius_max - self.ref_radius_min
+        scale = tf.divide(df, dr)
+        min_arg = self.feature_min - tf.multiply(self.ref_radius_min, scale)
+        feature = tf.multiply(r, scale) + min_arg
+
+        spheres = tf.stack([feature, s, t, u], axis=1)
+        return spheres
 
     def get_config(self):
         config = super().get_config().copy()
         config.update(
             {
-                "power" : self.power,
+                "dtype" : self.dtype,
+                "feature_min" : self.feature_min,
+                "feature_max" : self.feature_max,
+                "ref_radius_min" : self.ref_radius_min,
+                "ref_radius_max" : self.ref_radius_max
             }
         )
+        return config
+
+class ScaleRLayer(tf.keras.layers.Layer):
+    def __init__(self, dtype, ref_radius_max, **kwargs):
+        super(ScaleRLayer, self).__init__(dtype=dtype)
+        self.ref_radius_max = tf.constant(ref_radius_max, dtype=dtype)
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs)
+        r = inputs_transpose[0]
+        s = inputs_transpose[1]
+        t = inputs_transpose[2]
+        u = inputs_transpose[3]
+        r_star = tf.divide(r, self.ref_radius_max)
+        spheres = tf.stack([r_star, s, t, u], axis=1)
+        return spheres
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({ "ref_radius_max" : self.ref_radius_max})
         return config
 
 
