@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 def PINN_III():
     df_file = "Data/Dataframes/epochs_N_search_all_metrics.data"
     df = pd.read_pickle(df_file)
+    df.percent_mean = df.percent_mean*100
 
     v_min = df['percent_mean'].min()
     v_max = df['percent_mean'].max()
@@ -59,9 +60,11 @@ def PINN_III():
 def PINN_I():
     df_file = "Data/Dataframes/epochs_N_search_PINN_I_metrics.data"
     df = pd.read_pickle(df_file)
+    df.percent_mean = df.percent_mean*100
 
     df_file_PINN_III = "Data/Dataframes/epochs_N_search_all_metrics.data"
     df_PINN_III = pd.read_pickle(df_file_PINN_III)
+    df_PINN_III.percent_mean = df_PINN_III.percent_mean*100
 
     # scale by PINN III Results
     v_min = df_PINN_III['percent_mean'].min()
