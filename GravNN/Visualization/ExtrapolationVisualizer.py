@@ -16,6 +16,7 @@ from GravNN.Networks.Model import load_config_and_model
 class ExtrapolationVisualizer(VisualizationBase):
     def __init__(self, experiment, **kwargs):
         super().__init__(**kwargs)
+        plt.rc('font', size= 7.0)
         self.experiment = experiment
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         self.radius = self.experiment.config['planet'][0].radius
@@ -55,7 +56,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.ylabel('Frequency')
         ax.set_zorder(1)
 
-    def plot(self, x, value):
+    def plot(self, x, value, **kwargs):
         # compute trend lines
         def get_rolling_lines(data):
             df = pd.DataFrame(data=data, index=None)
@@ -71,9 +72,11 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.scatter(x, value, alpha=0.2, s=2)
         self.plot_fcn(x, avg_line)
 
-        y_std_upper = np.squeeze(avg_line + 1*std_line)
-        y_std_lower = np.squeeze(avg_line - 1*std_line)
-        plt.fill_between(x, y_std_lower, y_std_upper, color='C0', alpha=0.5)
+        if kwargs.get("plot_std", True):
+            y_std_upper = np.squeeze(avg_line + 1*std_line)
+            y_std_lower = np.squeeze(avg_line - 1*std_line)
+            plt.fill_between(x, y_std_lower, y_std_upper, color='C0', alpha=0.5)
+            
         self.plot_fcn(x, max_line, color='red')
         
         training_bounds = self.training_bounds / self.radius
@@ -84,11 +87,11 @@ class ExtrapolationVisualizer(VisualizationBase):
             self.annotate_metrics(value)
         plt.tight_layout()
 
-    def plot_interpolation_loss(self):
+    def plot_interpolation_loss(self, **kwargs):
         self.plot(
             self.x_test[:self.max_idx],
-            self.experiment.loss_acc[self.idx_test][:self.max_idx]
-        )
+            self.experiment.loss_acc[self.idx_test][:self.max_idx],
+            **kwargs)       
         plt.gca().set_yscale('log')
         plt.xlim(self.training_bounds / self.radius)
         plt.ylabel("Loss")
@@ -97,52 +100,52 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.xlim([0,2])
         self.plot_histogram(self.x_train)
 
-    def plot_extrapolation_loss(self):
+    def plot_extrapolation_loss(self, **kwargs):
         self.plot(
             self.x_test,
-            self.experiment.loss_acc[self.idx_test]
-            )       
+            self.experiment.loss_acc[self.idx_test],
+            **kwargs)       
         plt.gca().set_yscale('log')
         plt.ylabel("Loss")
         plt.xlabel(self.x_label)
 
-    def plot_interpolation_rms(self):
+    def plot_interpolation_rms(self, **kwargs):
         self.plot(
             self.x_test[:self.max_idx],
-            self.experiment.losses['rms'][self.idx_test][:self.max_idx]
-            )
+            self.experiment.losses['rms'][self.idx_test][:self.max_idx],
+            **kwargs)       
         plt.gca().set_yscale('log')
         plt.xlim(self.training_bounds / self.radius)
-        plt.ylabel("RMS")
+        plt.ylabel("RMS [$m/s^2$]")
         plt.xlabel(self.x_label)
         plt.ylim([0,None])
         self.plot_histogram(self.x_train)
 
-    def plot_extrapolation_rms(self):
+    def plot_extrapolation_rms(self, **kwargs):
         self.plot(
             self.x_test,
-            self.experiment.losses['rms'][self.idx_test]
-            )       
+            self.experiment.losses['rms'][self.idx_test],
+            **kwargs)       
         plt.gca().set_yscale('log')
-        plt.ylabel("RMS")
+        plt.ylabel("RMS [$m/s^2$]")
         plt.xlabel(self.x_label)
 
-    def plot_interpolation_percent_error(self):
+    def plot_interpolation_percent_error(self, **kwargs):
         self.plot(
             self.x_test[:self.max_idx],
-            self.experiment.losses['percent'][self.idx_test][:self.max_idx]
-            )       
+            self.experiment.losses['percent'][self.idx_test][:self.max_idx],
+            **kwargs)       
         plt.xlim(self.training_bounds / self.radius)
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
         plt.ylim([0,None])
         self.plot_histogram(self.x_train)
 
-    def plot_extrapolation_percent_error(self):
+    def plot_extrapolation_percent_error(self, **kwargs):
         self.plot(
             self.x_test,
-            self.experiment.losses['percent'][self.idx_test]
-            )       
+            self.experiment.losses['percent'][self.idx_test],
+            **kwargs)       
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
 
