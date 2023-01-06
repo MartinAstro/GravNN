@@ -7,6 +7,8 @@ def PINN_III():
     df = pd.read_pickle(df_file)
 
     df.percent_mean = df.percent_mean.astype(float)
+    df.percent_mean = df.percent_mean*100
+
     v_min = df['percent_mean'].min()
     v_max = df.nlargest(2, 'percent_mean')['percent_mean'].values[1]#['percent_mean'].max()
 
@@ -60,12 +62,15 @@ def PINN_III():
 def PINN_II():
     df_file = "Data/Dataframes/eros_PINN_II_hparams_metrics.data"
     df = pd.read_pickle(df_file)
+    df.percent_mean = df.percent_mean*100
 
     df_file_PINN_III = "Data/Dataframes/eros_PINN_III_hparams_metrics.data"
     df_PINN_III = pd.read_pickle(df_file_PINN_III)
+    df_PINN_III.percent_mean = df_PINN_III.percent_mean*100
 
     # scale by PINN III Results
     df_PINN_III.percent_mean = df_PINN_III.percent_mean.astype(float)
+
     v_min = df_PINN_III['percent_mean'].min()
     v_max = df_PINN_III.nlargest(2, 'percent_mean')['percent_mean'].values[1]#['percent_mean'].max()
 
