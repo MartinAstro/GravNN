@@ -66,10 +66,16 @@ class PINNGravityModel(tf.keras.Model):
         else:
             self.network = network
 
+        idx = -1
+        for i, layer in enumerate(self.network.layers):
+            if layer.name == 'planetary_oblateness_layer':
+                idx = i
+        self.analytic_idx = idx
+
     def init_analytic_model(self):
         self.analytic_model = tf.keras.Model(
             inputs=self.network.inputs, 
-            outputs=self.network.layers[-3].output
+            outputs=self.network.layers[self.analytic_idx].output
             )
 
     def init_training_steps(self):
@@ -97,6 +103,27 @@ class PINNGravityModel(tf.keras.Model):
     def call(self, x, training):
         return self.eval(self.network, x, training)
 
+    def update_w_loss(self, losses, tape):
+        traces = []
+        self.w_loss = tf.constant(1.0, dtype=self.dtype)
+        if tf.math.mod(self._train_counter, tf.constant(100, dtype=tf.int64)) == 0:
+
+            for loss_i in losses.values():
+                jacobian = tape.jacobian(loss_i, self.network.trainable_variables)
+
+                gradients = []
+                for i in range(len(jacobian)-1): #batch size
+                    gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
+
+                J = tf.transpose(tf.concat(gradients, 1))
+
+                K_i = J@tf.transpose(J) # NTK of the values  [NxN]
+                trace_K_i = tf.linalg.trace(K_i)
+                traces.append(trace_K_i)
+            trace_K = tf.reduce_sum(traces)
+            self.w_loss = tf.stack([trace_K/trace for trace in traces],0)
+            tf.print(self.w_loss)
+
     def call_analytic_model(self, x):
         with tf.GradientTape() as tape:
             tape.watch(x)
@@ -118,6 +145,7 @@ class PINNGravityModel(tf.keras.Model):
  
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
+            # with tf.GradientTape(persistent=True) as loss_tape:
             y_hat = self(x, training=self.training) # [N x (3 or 7)]
             y_analytic = self.call_analytic_model(x)
             y = y - y_analytic
@@ -137,8 +165,19 @@ class PINNGravityModel(tf.keras.Model):
                 y_hat = tf.matmul(BN, y_hat_reshape)
 
             losses = MetaLoss(y_hat, y, self.loss_fcn_list)
-            loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
+
+            # with loss_tape.stop_recording():    
+            # self.update_w_loss(losses, tape)
+            self.w_loss = tf.constant(1.0, dtype=y_hat.dtype)
+
+            loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
+            loss = tf.reduce_sum(self.w_loss*loss_i)
             loss = self.optimizer.get_scaled_loss(loss)
+        # del loss_tape
+
+            # losses = MetaLoss(y_hat, y, self.loss_fcn_list)
+            # loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
+            # loss = self.optimizer.get_scaled_loss(loss)
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -438,6 +477,7 @@ class PINNGravityModel(tf.keras.Model):
 
         with open(network_dir + "history.data", 'wb') as f:
             pickle.dump(self.history.history,f)
+        del self.history
 
         # save config to preexisting dataframe if requested
         if df_file is not None:
