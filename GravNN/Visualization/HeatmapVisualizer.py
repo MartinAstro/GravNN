@@ -92,12 +92,16 @@ class Heatmap3DVisualizer(VisualizationBase):
     def __init__(self, df, **kwargs):
         self.df = df
         super().__init__(**kwargs)
+        plt.rc('font', size= 7.0)
+        self.fig_size = self.quarter_page_default
 
     def plot(self,x, y, z, query=None, vmin=None, vmax=None, **kwargs):
         
         if kwargs.get("newFig", True):
-            plt.figure()
-
+            fig, ax = self.new3DFig()
+            ax.set_xlabel(None)
+            ax.set_ylabel(None)
+            ax.set_zlabel(None)
         # query the dataframe
         if query is not None:
             df = self.df.query(query)
@@ -125,7 +129,6 @@ class Heatmap3DVisualizer(VisualizationBase):
 
         errors = df_stacked.values
 
-        plt.gcf().add_subplot(111, projection='3d')
 
         cmap = mpl.cm.RdYlGn.reversed()
         norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -140,12 +143,16 @@ class Heatmap3DVisualizer(VisualizationBase):
         ax.set_zlim([vmin, vmax])
         ax.view_init(elev=15, azim=45)
 
-        ax.set_xticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(x_data)])
-        ax.set_yticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)])
+        ax.set_xticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(x_data)])#, tickpad=0.0)
+        ax.set_yticklabels(["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)])#, tickpad=0.0)
 
-        ax.set_xlabel(x)
-        ax.set_ylabel(y)
-        ax.set_zlabel(z)
+        ax.tick_params(pad=0.0)
+
+        x_formatted = " ".join(x.split("_"))
+        y_formatted = " ".join(y.split("_"))
+
+        ax.set_xlabel(x_formatted, labelpad=0.0)
+        ax.set_ylabel(y_formatted, labelpad=0.0)
 
         return 
 
@@ -154,6 +161,7 @@ def main():
     df_file = "Data/Dataframes/epochs_N_search_all_metrics.data"
     df = pd.read_pickle(df_file)
 
+    df['percent_mean'] = df['percent_mean']*100
     v_min = df['percent_mean'].min()
     v_max = df['percent_mean'].max()
 
