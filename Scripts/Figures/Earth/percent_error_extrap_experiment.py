@@ -29,14 +29,17 @@ def main():
     extrapolation_exp.run()
 
     # visualize error @ training altitude and beyond
-    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
+    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy, annotate=False)
+    vis.fig_size = vis.half_page_default
     vis.plot_interpolation_percent_error()
     plt.gcf().axes[0].set_ylim([1E-2, 1E2])
-    plt.savefig("Plots/PINNIII/Cost_with_Percent_Percent.pdf")
+    plt.tight_layout()
+    plt.savefig("Plots/PINNIII/Cost_with_Percent_Percent.pdf", pad_inches=0.0)
     
     vis.plot_interpolation_rms()
     plt.gcf().axes[0].set_ylim([1E-11, 1E-3])
-    plt.savefig("Plots/PINNIII/Cost_with_Percent_RMS.pdf")
+    plt.tight_layout()
+    plt.savefig("Plots/PINNIII/Cost_with_Percent_RMS.pdf", pad_inches=0.0)
 
     
 
@@ -55,14 +58,18 @@ def main():
     extrapolation_exp.run()
 
     # visualize error @ training altitude and beyond
-    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy)
+    vis = ExtrapolationVisualizer(extrapolation_exp, x_axis='dist_2_COM', plot_fcn=plt.semilogy, annotate=False)
+    vis.fig_size = vis.half_page_default
+
     vis.plot_interpolation_percent_error()
     plt.gcf().axes[0].set_ylim([1E-2, 1E2])
-    plt.savefig("Plots/PINNIII/Cost_without_Percent_Percent.pdf")
+    plt.tight_layout()
+    plt.savefig("Plots/PINNIII/Cost_without_Percent_Percent.pdf", pad_inches=0.0)
 
     vis.plot_interpolation_rms()
     plt.gcf().axes[0].set_ylim([1E-11, 1E-3])
-    plt.savefig("Plots/PINNIII/Cost_without_Percent_RMS.pdf")
+    plt.tight_layout()
+    plt.savefig("Plots/PINNIII/Cost_without_Percent_RMS.pdf", pad_inches=0.0)
 
 
     plt.show()
