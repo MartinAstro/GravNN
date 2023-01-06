@@ -61,7 +61,9 @@ def check_fix_radial_precision_errors(position):
 
 @njit(parallel=True, cache=True)
 def project_acceleration(positions, accelerations):
-    """Converts the acceleration measurements from cartesian coordinates to body frame (r, theta, phi). 
+    """
+    Uses position spherical coordinate frame and projects acceleration onto said frame. 
+    (r, theta, phi). 
 
     Args:
         positions (np.array): position in spherical coordinates
