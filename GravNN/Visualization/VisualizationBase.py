@@ -32,14 +32,32 @@ class VisualizationBase(ABC):
 
 
         # (width, height)
-        golden_ratio = (5**.5 - 1) / 2
-        silver_ratio = 1/(1 + np.sqrt(2)) 
+        golden_ratio = (5**.5 - 1) / 2    # = 0.61
+        silver_ratio = 1/(1 + np.sqrt(2)) # = 0.41
 
-        self.full_page = (6.3, 6.3*golden_ratio) 
-        self.half_page = (3.15, 3.15*golden_ratio) #
-        self.tri_page = (2.1, 2.1*golden_ratio)
+        self.full_page_default = (6.3, 6.3*0.8) 
+        self.half_page_default = (3.15, 3.15*0.8) 
+        self.tri_page_default = (2.1, 2.1*0.8)
+        self.quarter_page_default = (1.57, 1.57*0.8)
+
+        self.full_page_square = (6.3, 6.3) 
+        self.half_page_square = (3.15, 3.15) 
+        self.tri_page_square = (2.1, 2.1)
+        self.quarter_page_square = (1.57, 1.57)
+
+        self.full_page_silver = (6.3, 6.3*silver_ratio) 
+        self.half_page_silver = (3.15, 3.15*silver_ratio) #
+        self.tri_page_silver = (2.1, 2.1*silver_ratio)
+        self.quarter_page_silver = (1.57, 1.57*silver_ratio)
+
+        self.full_page_golden = (6.3, 6.3*golden_ratio) 
+        self.half_page_golden = (3.15, 3.15*golden_ratio) #
+        self.tri_page_golden = (2.1, 2.1*golden_ratio)
+        self.quarter_page_golden = (1.57, 1.57*golden_ratio)
 
         # AAS textwidth is 6.5
+        self.AIAA_half_page = (3.25, 3.25*golden_ratio) #
+        self.AIAA_half_page_heuristic = (4, 4*golden_ratio) #
         if formatting_style == 'AIAA':
             self.AIAA_full_page = (6.5, 6.5*golden_ratio)
 
@@ -74,15 +92,9 @@ class VisualizationBase(ABC):
         figsize = kwargs.get('fig_size', self.fig_size)
         fig = plt.figure(num=None, figsize=figsize)
         ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlabel(r'$x$ ('+unit+r')')
-        ax.set_ylabel(r'$y$ ('+unit+r')')
-        ax.set_zlabel(r'$z$ ('+unit+r')')
-        # ax.xaxis.set_major_locator(plt.MaxNLocator(6))
-        # ax.yaxis.set_major_locator(plt.MaxNLocator(6))
-        # ax.zaxis.set_major_locator(plt.MaxNLocator(6))
-        # ax.tick_params(labelsize=10)
-        ax.legend(prop={'size': 10})
-        ax.get_legend().remove()
+        # ax.set_xlabel(r'$x$ ('+unit+r')')
+        # ax.set_ylabel(r'$y$ ('+unit+r')')
+        # ax.set_zlabel(r'$z$ ('+unit+r')')
         return fig, ax
 
     def newFig(self, fig_size=None):
@@ -94,11 +106,10 @@ class VisualizationBase(ABC):
 
     def save(self, fig, name):
         #If the name is an absolute path -- save to the path
-        plt.tight_layout()
         if os.path.isabs(name):
             try:
                 plt.figure(fig.number)
-                plt.savefig(name, bbox_inches='tight')
+                plt.savefig(name)
             except Exception as e:
                 print("Couldn't save " + name)
                 print(e)
@@ -111,7 +122,7 @@ class VisualizationBase(ABC):
         filename =  os.path.basename(name)
         os.makedirs(directory, exist_ok=True)
         try:
-            plt.savefig(directory+"/" + filename, bbox_inches='tight')
+            plt.savefig(directory+"/" + filename, pad_inches=0.1)
         except:
             print("Couldn't save " + filename)
 
