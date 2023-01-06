@@ -3,6 +3,7 @@ from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
 from GravNN.Support.transformations import cart2sph, project_acceleration
 from GravNN.Trajectories import PlanesDist, SurfaceDist, RandomAsteroidDist
 from GravNN.Networks.utils import _get_loss_fcn
+from GravNN.Networks.Losses import get_loss_fcn
 from GravNN.Networks.Data import DataSet
 
 import numpy as np
@@ -34,6 +35,7 @@ class PlanesExperiment:
 
         self.percent_error_acc = None
         self.percent_error_pot = None
+        self.loss_fcn_list = ['rms', 'percent', 'angle', 'magnitude']
 
 
     def get_train_data(self):
@@ -65,8 +67,8 @@ class PlanesExperiment:
         except:
             dtype = float
         positions = self.x_test.astype(dtype)
-        self.a_pred =  self.model.compute_acceleration(positions)
-        self.u_pred =  self.model.compute_potential(positions)
+        self.a_pred =  self.model.compute_acceleration(positions).astype(float)
+        self.u_pred =  self.model.compute_potential(positions).numpy().astype(float)
 
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):
@@ -85,31 +87,19 @@ class PlanesExperiment:
         self.RMS_acc = RMS(self.a_pred, self.a_test)
         self.RMS_pot = RMS(self.u_pred, self.u_test)
 
-    def compute_loss(self):
-        def compute_errors(y, y_hat):
-            rms_error = np.square(y_hat - y)
-            percent_error = np.linalg.norm(y - y_hat, axis=1) / np.linalg.norm(y, axis=1)*100
-            return rms_error.astype(np.float32), percent_error.astype(np.float32)
-
-        loss_fcn = _get_loss_fcn(self.config['loss_fcn'][0])
-
-        rms_accelerations, percent_accelerations = compute_errors(self.a_test, self.a_pred) 
-        self.loss_acc = np.array([
-            loss_fcn(
-                np.array([rms_accelerations[i]]), 
-                np.array([percent_accelerations[i]])
-                ) 
-            for i in range(len(rms_accelerations)) 
-            ])
-
-        rms_potentials, percent_potentials = compute_errors(self.u_test, self.u_pred) 
-        self.loss_pot = np.array([
-            loss_fcn(
-                np.array([rms_potentials[i]]), 
-                np.array([percent_potentials[i]])
-                ) 
-            for i in range(len(rms_potentials)) 
-            ])
+    def compute_losses(self, loss_fcn_list):
+        losses = {}
+        for loss_key in loss_fcn_list:
+            loss_fcn = get_loss_fcn(loss_key)
+            
+            # Compute loss on acceleration and potential
+            losses.update({
+                f"{loss_fcn.__name__}" : loss_fcn(
+                    self.a_pred, 
+                    self.a_test
+                    )
+                })
+        self.losses = losses
 
     def get_planet_mask(self):
         # Don't recompute this
@@ -131,7 +121,7 @@ class PlanesExperiment:
         self.get_model_data()
         self.compute_percent_error()
         self.compute_RMS()
-        self.compute_loss()
+        self.compute_losses(self.loss_fcn_list)
 
 
 def main():
