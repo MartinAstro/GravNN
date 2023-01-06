@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from GravNN.Networks.Data import DataSet
+from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 plt.rc('text', usetex=True)
 
@@ -49,12 +50,15 @@ def plot(data, planet, log=False, deg_removed=None):
     r = np.linalg.norm(data.raw_data['x_train'], axis=1) / R
     u_train = data.raw_data['u_train'].squeeze()
     u = u_train / np.max(np.abs(u_train))
-    plt.figure()
+    vis = VisualizationBase()
+    plt.rc('font', size=7)
+    vis.fig_size = vis.half_page_default
+    vis.newFig()
     plt.scatter(r, u, alpha=0.5, s=2, label='$U$')
     max_u = np.max(u)
 
     plt.xlabel(f"Planet Radii from Surface [-]")
-    plt.ylabel("Non-Dimensionalized Potential \n $U$ [-]")
+    plt.ylabel("N.D. Potential $\delta U$ [-]")
 
 
 
@@ -72,14 +76,12 @@ def plot(data, planet, log=False, deg_removed=None):
 
     plt.scatter(r, max_u/r**power, alpha=0.5, s=2, label='$\\frac{1}{r^p}$')
     plt.legend()
-    plt.grid()
     plt.tight_layout()
 
-    plt.figure()
+    vis.newFig()
     plt.scatter(r, u*r**power, alpha=0.5, s=2)
-    plt.ylabel("Scaled Non-Dimensionalized Potential \n $U_{\text{NN}} = U r^p$ [-]")
+    plt.ylabel("Scaled N.D. Potential\n $U_{NN} = \delta U * r^p$ [-]")
     plt.xlabel(f"Planet Radii from Surface [-]")
-    plt.grid()
     plt.tight_layout()
 
 
