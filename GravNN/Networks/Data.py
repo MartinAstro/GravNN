@@ -316,7 +316,30 @@ def scale_by_non_dim_potential(data_dict, config):
     # Make u_star approximately equal to value of the potential that must be learned. 
     # If deg_removed == -1: u_brill
     # If deg_removed == 2: u_J2/u_brill
-    u_max = np.max(np.abs(data_dict["u_train"])) 
+    if config.get('fuse_models', [False])[0]:
+        x = data_dict['x_train']
+        r = np.linalg.norm(x, axis=1)
+        u = x[:,2] / r
+
+        a = config['planet'][0].radius
+        mu = config['mu'][0]
+        C20 = config.get('cBar', [np.zeros((3,3))])[0][2,0]
+
+        u_pm = mu/r
+
+        c1 = np.sqrt(15.0/4.0) * np.sqrt(3.0)
+        c2 = np.sqrt(5.0/4.0)
+
+        u_C20 = (a/r)**2*(mu/r)* (u**2*c1 - c2)*C20
+
+        u_analytic = -1.0*(u_pm + u_C20)
+        u_sans_J2 = data_dict["u_train"] - np.reshape(u_analytic, (-1,1))
+        u_max = np.max(np.abs(u_sans_J2)) 
+        # u_max = np.max(np.abs(data_dict["u_train"])) - np.max(np.abs(u_analytic)) 
+
+    else:
+        u_max = np.max(np.abs(data_dict["u_train"])) 
+
     u_star = (u_max / u_brill)*u_brill
 
     t_star = np.sqrt(x_star**2/u_star)
