@@ -5,6 +5,7 @@ import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
 from numba import njit
+# from sigfig import
 
 class SimpleCallback(tf.keras.callbacks.Callback):
     """Simple Callback that prints out loss metrics every 10 epochs and
@@ -13,6 +14,8 @@ class SimpleCallback(tf.keras.callbacks.Callback):
         super().__init__()
         self.batch_size = batch_size
         self.print_interval = print_interval
+        self.N_train_batches = 0
+        self.N_test_batches = 0
 
         self.N_train_samples = 0
         self.epoch_loss = 0.0
@@ -36,6 +39,7 @@ class SimpleCallback(tf.keras.callbacks.Callback):
             self.batch_size)
         self.N_train_samples += self.batch_size
         self.epoch_percent_max = np.max([logs['percent_max'], self.epoch_percent_max])
+        self.N_train_batches += 1
 
     def on_test_batch_end(self, batch, logs=None):
         # 'val_' prefix is not yet appended until after epoch
@@ -47,6 +51,7 @@ class SimpleCallback(tf.keras.callbacks.Callback):
             self.batch_size)
         self.N_val_samples += self.batch_size
         self.epoch_val_percent_max = np.max([logs['percent_max'], self.epoch_val_percent_max])
+        self.N_test_batches +=1
 
     def on_epoch_begin(self,epoch,logs=None):
         self.N_train_samples = 0
@@ -59,13 +64,17 @@ class SimpleCallback(tf.keras.callbacks.Callback):
         self.epoch_val_percent_mean = 0.0
         self.epoch_val_percent_max = 0.0
 
+        self.N_train_batches = 0
+        self.N_test_batches = 0
+
+
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.print_interval == 0:
             print(
                 "Epoch: {} \t Loss: {:.9f} \t Val Loss: {:.9f} \t Time: {:.3f} \t Avg Error: {:.9f}% \t Max Error: {:.9f}%".format(
                     epoch, 
-                    self.epoch_loss, 
-                    self.epoch_val_loss, 
+                    self.epoch_loss / self.N_train_batches, 
+                    self.epoch_val_loss / self.N_test_batches, 
                     time.time() - self.start_time, 
                     self.epoch_val_percent_mean*100.0, 
                     self.epoch_val_percent_max*100.0)
@@ -73,11 +82,11 @@ class SimpleCallback(tf.keras.callbacks.Callback):
             self.start_time = time.time()
         
         # Overwrite batch logs for epoch logs (to be saved in history obj)
-        logs['loss'] = self.epoch_loss
+        logs['loss'] = self.epoch_loss / self.N_train_batches
         logs['percent_mean'] = self.epoch_percent_mean
         logs['percent_max'] = self.epoch_percent_max
 
-        logs['val_loss'] = self.epoch_val_loss
+        logs['val_loss'] = self.epoch_val_loss / self.N_test_batches
         logs['val_percent_mean'] = self.epoch_val_percent_mean
         logs['val_percent_max'] = self.epoch_val_percent_max
 
