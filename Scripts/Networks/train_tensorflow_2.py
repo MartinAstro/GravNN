@@ -14,60 +14,22 @@ def main():
 
     threads = 8
 
-    df_file = "Data/Dataframes/multiFF_hparams.data" 
-    df_file = "Data/Dataframes/multiFF_followup.data" 
-    df_file = "Data/Dataframes/best_10_followup.data" 
-    df_file = "Data/Dataframes/earth_high_alt.data" 
-    df_file = "Data/Dataframes/earth_high_alt3.data" 
-    df_file = "Data/Dataframes/earth_high_alt4.data" 
-    df_file = "Data/Dataframes/new_hparam_search.data" 
-    df_file = "Data/Dataframes/hparams_ll.data" 
-    df_file = "Data/Dataframes/hparams_ll2.data" 
-    df_file = "Data/Dataframes/test_uniform.data" 
-    df_file = "Data/Dataframes/sigma_search.data" 
-    df_file = "Data/Dataframes/alc.data" 
-    df_file = "Data/Dataframes/fourier_search_2.data" 
-    df_file = "Data/Dataframes/high_altitude_behavior.data" 
-    df_file = "Data/Dataframes/eros_PINN_III_temp.data" 
-    df_file = "Data/Dataframes/eros_PINN_III.data" 
-    df_file = "Data/Dataframes/eros_PINN_III_hparams.data" 
-    df_file = "Data/Dataframes/earth_percent_error_test.data" 
-    df_file = "Data/Dataframes/eros_PINN_II_hparams.data" 
+    df_file = "Data/Dataframes/earth_trainable_FF.data" 
 
-    config = get_default_eros_config()
-    # config = get_default_earth_config()
-    # config = get_default_earth_config()
-    config.update(PINN_II())
+    # config = get_default_eros_config()
+    config = get_default_earth_config()
+    # config = get_default_moon_config()
+
+    config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
-    # import numpy as np
-    # import itertools
-    # FF1 = [2**(i) for i in range(-3, 3)]
-    # FF2 = [2**(i) for i in range(-3, 3)]
-    # sigmas = np.array(list(itertools.product(FF1, FF2)))
-
-
     hparams = {
-
-
-        "batch_size" : [2**20],
         "PINN_constraint_fcn" : ['pinn_a'],
 
-        # "N_dist": [50000],
-        # "N_train": [2000],
-        # "N_val": [500],
-        # "epochs" : [5000],
-
-
         "N_dist": [50000],
-        "N_train": [2**11, 2**12, 2**13, 2**14, 2**15],
-        "epochs" : [2**10, 2**11, 2**12, 2**13, 2**14],
-        "num_units": [10, 20, 40, 80],
-        "N_val": [5000],
-
-
-        "learning_rate": [0.001],
-        # "num_units" : [20],
+        "N_train": [10000],
+        "N_val": [500],
+        "epochs" : [5000],
 
         "remove_point_mass" : [False],
         "jit_compile" : [True],
@@ -75,19 +37,33 @@ def main():
         # "jit_compile" : [False],
         # "eager" : [True],
 
-        # "loss_fcns" : [['percent']],
-        # "dropout" : [0.1],
-
-
+        # "dtype" : ['float64'],
         # "dropout" 
         # "activation"
         # "loss_fcns"
 
-        # Features to Investigate
+        # # Features to Investigate
+
+        "learning_rate": [0.01],
+        "deg_removed" : [-1],
+
+        "network_arch" : ["transformer"],
+        "activation": ['tanh'],
+        "batch_size" : [2**10],
+
+        # "network_type": ["siren"],
+        # "learning_rate": [0.0005],
+
         "network_type": ["custom"],
-        "loss_sph" : [False],
-        
-        
+        # "network_type": ["multi"],
+        # "fourier_features" : [10],
+        # "fourier_sigma" : [[1]],
+
+        # "preprocessing" : [[]],
+        # "scale_nn_potential" : [False],
+        # "loss_sph" : [True],
+        # "deg_removed" : [-1],
+                        
         # Investigate Later
         "uniform_volume" : [False],
         # "preprocessing"
@@ -95,10 +71,6 @@ def main():
         # To be completed
         "lr_anneal": ['hold'],
         "beta": [0.001],
-
-
-
-
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
@@ -149,9 +121,11 @@ def run(config):
     # config['sBar'] = [grav_model.S_lm]
 
     # Get data, network, optimizer, and generate model
+    np.random.seed(1234)
+
     data = DataSet(config)
     model = PINNGravityModel(config)
-    np.random.seed(int(os.getpid() % 13))
+    # np.random.seed(int(os.getpid() % 13))
     time.sleep(np.random.uniform(0, 5))#))
 
     # if transfer
