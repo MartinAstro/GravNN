@@ -23,10 +23,11 @@ def rms(y_hat, y):
     return tf.sqrt(tf.reduce_sum(tf.square(dy), axis=1))
 
 def percent(y_hat, y):
-    da = tf.subtract(y_hat[:,0:3], y[:,0:3])
+    #https://github.com/tensorflow/tensorflow/issues/12071
+    da = tf.subtract(y_hat[:,0:3], y[:,0:3]) + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
     da_norm = tf.norm(da, axis=1)
     a_true_norm = tf.norm(y[:,0:3],axis=1)
-    loss_components = da_norm/a_true_norm
+    loss_components = tf.math.divide_no_nan(da_norm,a_true_norm) 
     return loss_components
 
 
