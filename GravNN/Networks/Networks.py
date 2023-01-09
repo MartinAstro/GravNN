@@ -328,7 +328,7 @@ def MultiScaleNet(**kwargs):
         # make a unique fourier feature
         num_features = kwargs['fourier_features'][0]
         freq_decay = kwargs['freq_decay'][0]
-        ff_layer = FourierFeatureLayer(num_features, sigma, 1, freq_decay)(x)
+        ff_layer = TrainableFourierFeatureLayer(num_features, sigma, 1, freq_decay)(x)
         fourier_feature_layers.append(ff_layer)
 
     sub_net_inputs = tf.keras.Input(shape=(fourier_features+1))
@@ -341,7 +341,10 @@ def MultiScaleNet(**kwargs):
         u_nn_outputs.append(u_nn_ff)
     
     u_inputs = tf.concat(u_nn_outputs,1)
-    u_nn = tf.keras.layers.Dense(1, activation='linear', kernel_initializer='glorot_uniform')(u_inputs)
+    u_nn = tf.keras.layers.Dense(1, 
+            activation='linear', 
+            kernel_initializer='glorot_uniform', 
+            dtype=dtype)(u_inputs)
     
     p = compute_p(**kwargs)
     u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
