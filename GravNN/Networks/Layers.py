@@ -302,6 +302,85 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         )
         return config
 
+# Experimental
+class TrainableFourierFeatureLayer(tf.keras.layers.Layer):
+    def __init__(self, fourier_features, fourier_sigma, fourier_scale, freq_decay, **kwargs):
+        super(TrainableFourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
+
+        self.fourier_features = fourier_features
+        self.fourier_sigma = fourier_sigma
+        self.freq_decay = freq_decay
+
+    def build(self, input_shapes):
+        initializer = tf.keras.initializers.RandomNormal(
+            mean=tf.constant(0.0,dtype=self.dtype), 
+            stddev=tf.constant(self.fourier_sigma, dtype=self.dtype),
+            seed=1234)
+        self.B = self.add_weight("B",
+                            shape=[self.fourier_features // 2, 3],
+                            trainable=True, 
+                            initializer=initializer
+                            )
+        self.phi = self.add_weight("phi",
+                            shape=[self.fourier_features // 2, 1],
+                            trainable=True, 
+                            initializer=tf.keras.initializers.Zeros()
+                            )
+
+        super(TrainableFourierFeatureLayer, self).build(input_shapes)
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs) # [4 x N]
+
+        one = tf.constant(1.0, dtype=self.dtype)
+        two = tf.constant(2.0, dtype=self.dtype)
+
+        r = inputs_transpose[0]
+
+        # force geometry to be between 0 - 1
+        s = (inputs_transpose[1] + one) / two
+        t = (inputs_transpose[2] + one) / two
+        u = (inputs_transpose[3] + one) / two
+
+        # project into random fourier space
+        # B [M(10) x 3]
+        v = tf.stack([s, t, u], 0) # [3 x N(1000)]
+        v_proj = self.B@v + self.phi # [M(10) x N(1000)]
+
+        C = tf.constant(2*np.pi, dtype=self.dtype)
+
+
+
+        if self.freq_decay:
+            # # scale by (1/r)^sigma. Takes inspiration from SH (higher frequencies typically decay)
+            # v_sin = tf.pow(r,self.fourier_sigma)*tf.sin(C*v_proj)
+            # v_cos = tf.pow(r,self.fourier_sigma)*tf.cos(C*v_proj)
+            # scale_freq = tf.reduce_mean(self.B, axis=1)
+            scale_freq = tf.reduce_mean(tf.abs(self.B), axis=1)
+            r_scale = tf.map_fn(fn=lambda p: tf.pow(r,p), elems=scale_freq)
+            v_sin = r_scale*tf.sin(C*v_proj)
+            v_cos = r_scale*tf.cos(C*v_proj)
+        else:
+            v_sin = tf.sin(C*v_proj)
+            v_cos = tf.cos(C*v_proj)
+
+        # stack radius and fourier basis together
+        r_feature = tf.reshape(r, shape=(1, -1))
+        features = tf.concat([r_feature, v_sin, v_cos], 0) # [2M x N]
+
+        return tf.transpose(features)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "fourier_features" : self.fourier_features,
+                "fourier_sigma" : self.fourier_sigma,
+                # "B" : self.B
+            }
+        )
+        return config
+
 
 # Legacy
 class PinesAlgorithmLayer(tf.keras.layers.Layer):
