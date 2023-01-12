@@ -93,7 +93,8 @@ def main():
 
 
     plt.savefig("Plots/PINNIII/Eros_extrapolation_IIvIII.pdf")
+    plt.savefig("Plots/PINNIII/Eros_extrapolation_IIvIII.png", dpi=250)
 
-    plt.show()
+    # plt.show()
 if __name__ == "__main__":
     main()

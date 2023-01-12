@@ -71,6 +71,7 @@ def main():
     plt.gca().set_ylim([1E-17, 1E-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/U_with_scale_extrap.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/U_with_scale_extrap.png", pad_inches=0.0, dpi=250)
 
 
 
@@ -94,6 +95,7 @@ def main():
     plt.gca().set_ylim([1E-17, 1E-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/U_without_scale_extrap.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/U_without_scale_extrap.png", pad_inches=0.0, dpi=250)
 
     plt.show()
 if __name__ == "__main__":

@@ -35,11 +35,13 @@ def main():
     plt.gcf().axes[0].set_ylim([1E-2, 1E2])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/Cost_with_Percent_Percent.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/Cost_with_Percent_Percent.png", pad_inches=0.0, dpi=250)
     
     vis.plot_interpolation_rms()
     plt.gcf().axes[0].set_ylim([1E-11, 1E-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/Cost_with_Percent_RMS.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/Cost_with_Percent_RMS.png", pad_inches=0.0, dpi=250)
 
     
 
@@ -65,11 +67,13 @@ def main():
     plt.gcf().axes[0].set_ylim([1E-2, 1E2])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/Cost_without_Percent_Percent.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/Cost_without_Percent_Percent.png", pad_inches=0.0, dpi=250)
 
     vis.plot_interpolation_rms()
     plt.gcf().axes[0].set_ylim([1E-11, 1E-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/Cost_without_Percent_RMS.pdf", pad_inches=0.0)
+    plt.savefig("Plots/PINNIII/Cost_without_Percent_RMS.png", pad_inches=0.0, dpi=250)
 
 
     plt.show()
