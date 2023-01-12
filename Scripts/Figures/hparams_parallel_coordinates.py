@@ -59,11 +59,12 @@ def main():
 
     directory = os.path.dirname(GravNN.__file__)
     # df = pd.read_pickle(directory + "/../Data/Dataframes/test_metrics.data")
-    df = pd.read_pickle(directory + "/../Data/Dataframes/multiFF_hparams_metrics.data")
+    # df = pd.read_pickle(directory + "/../Data/Dataframes/hparams_ll2_metrics.data")
+    df = pd.read_pickle(directory + "/../Data/Dataframes/sigma_search_metrics.data")
 
 
     percent_min = df['percent_mean'].min()
-    percent_max = df['percent_mean'].mean() + df['percent_mean'].std()*2
+    percent_max = 1.0#df['percent_mean'].mean() + df['percent_mean'].std()*2
     labels_dict={
         "rms_mean": {
             "label" :"RMS",
@@ -115,6 +116,9 @@ def main():
         "dropout" : {
             "label" :"dropout",
             },
+        "activation" : {
+            "label" :"Activation",
+            },
         }
     hparams_df = df[labels_dict.keys()]
 
@@ -141,14 +145,14 @@ def main():
             color=hparams_df['percent_mean'],
             colorscale=px.colors.diverging.Tealrose,
             # cmid=7.6,
-            cmax=0.25,
+            cmax=percent_max,
             cmin=hparams_df['percent_mean'].min(),
             ),
         dimensions=dimensions
     ))
 
 
-    DPI_factor = 2
+    DPI_factor = 3
     DPI = 100 # standard DPI for matplotlib
     fig.update_layout(
         # autosize=True,
@@ -157,7 +161,7 @@ def main():
         template='none',
         font={
             'family' : 'serif',
-            'size' : 10*DPI_factor 
+            'size' : 20#*DPI_factor 
         })
     directory = os.path.dirname(GravNN.__file__)
     figure_path = directory + "/../Plots/"
