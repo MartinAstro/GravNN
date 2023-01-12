@@ -94,6 +94,8 @@ def _get_optimizer(name):
         name = "rmsprop"
     elif "sgd" in name.lower():
         name = "sgd"
+    elif "sgd" in name.lower():
+        name = "wadam"
     else:
         pass
 
@@ -103,6 +105,7 @@ def _get_optimizer(name):
         "adadelta": tf.keras.optimizers.Adadelta(),
         "rmsprop": tf.keras.optimizers.RMSprop(),
         "adam": tf.keras.optimizers.Adam(),
+        "wadam": tf.keras.optimizers.experimental.AdamW()
     }[name.lower()]
 
 
