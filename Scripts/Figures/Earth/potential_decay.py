@@ -102,9 +102,11 @@ def main():
     
     plt.figure(1)
     plt.savefig("Plots/PINNIII/Potential_NoScale.pdf")
+    plt.savefig("Plots/PINNIII/Potential_NoScale.png", dpi=300)
 
     plt.figure(2)
     plt.savefig("Plots/PINNIII/Potential_Scale.pdf")
+    plt.savefig("Plots/PINNIII/Potential_Scale.png", dpi=300)
     
 
     plt.show()

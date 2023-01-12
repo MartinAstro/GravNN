@@ -44,17 +44,16 @@ class HistoryVisualizer(VisualizationBase):
         plt.figure()
         self.plot(self.epochs, self.loss, label='loss', **kwargs)
         self.plot(self.epochs, self.val_loss, label='val loss', **kwargs)
+        skip_epochs = kwargs.get("skip_epochs", 20)
+        plt.ylim([None, self.val_loss[skip_epochs]])
         plt.legend()
 
 if __name__ == "__main__":
-    # df = pd.read_pickle("Data/Dataframes/test_metrics.data")
-    # df = pd.read_pickle("Data/Dataframes/multiFF.data")
-    # df, idx = pd.read_pickle('Data/Dataframes/new_hparam_search_metrics.data'), 12 #i = 105 is best
-    df, idx = pd.read_pickle('Data/Dataframes/hparams_ll.data'), -1 #i = 105 is best
+    df, idx = pd.read_pickle('Data/Dataframes/earth_trainable_FF.data'), -1 #i = 105 is best
 
     model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
 
     vis = HistoryVisualizer(model, config)
-    vis.plot_loss(log_y=True)
+    vis.plot_loss(log_y=False)
     plt.show()

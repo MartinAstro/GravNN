@@ -51,10 +51,10 @@ class NetworkOutputExperiment:
 
 def main():
     from GravNN.Networks.Model import load_config_and_model
-    df_file = "Data/Dataframes/earth_high_alt4.data"
+
+    df_file, idx = "Data/Dataframes/earth_high_alt4.data", -4
     df = pd.read_pickle(df_file)
-    i = -1
-    model_id = df.iloc[i]["id"]
+    model_id = df.iloc[idx]["id"]
     config, model = load_config_and_model(model_id, df)
     exp = NetworkOutputExperiment(model, config)
     exp.run()

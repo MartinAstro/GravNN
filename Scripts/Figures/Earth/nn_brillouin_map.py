@@ -13,7 +13,7 @@ from GravNN.Networks.Model import load_config_and_model
 def plot(df, idx, planet, trajectory):
 
     map_vis = MapVisualization('m/s^2')
-    map_vis.fig_size = map_vis.full_page
+    map_vis.fig_size = map_vis.full_page_default
     map_vis.tick_interval = [60, 60]
 
     grav_model = SphericalHarmonics(planet.sh_file,1000,trajectory).load()
@@ -99,14 +99,9 @@ def main():
 
     planet = Earth()
     density_deg = 180
+    df_file, idx = "Data/Dataframes/earth_trainable_FF.data", -1
 
-    df_file ='C:\\Users\\John\\Documents\\Research\\ML_Gravity\\Data\\Dataframes\\pinn_df.data'
-    df_file ='Data/Dataframes/earth_trajectory_v2.data'
-    df_file ='Data/Dataframes/test_metrics.data' # i = 27 is best
-    df_file ='Data/Dataframes/multiFF.data'
-    df_file = "Data/Dataframes/earth_high_alt3_metrics.data"
 
-    idx = -1
     df = pd.read_pickle(df_file)
 
     surface_data = DHGridDist(planet, planet.radius, degree=density_deg)
@@ -115,8 +110,8 @@ def main():
     LEO_data = DHGridDist(planet, planet.radius+420000, degree=density_deg)
     plot(df, idx, planet, LEO_data)
     
-    high_alt_data = DHGridDist(planet, planet.radius*10, degree=density_deg)
-    plot(df, idx, planet, high_alt_data)
+    # high_alt_data = DHGridDist(planet, planet.radius*10, degree=density_deg)
+    # plot(df, idx, planet, high_alt_data)
 
 
     plt.show()
