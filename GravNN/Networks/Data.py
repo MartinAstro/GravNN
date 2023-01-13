@@ -671,53 +671,37 @@ class DataSet():
         onto the device (GPU) and slow calculations."""
         x_train, u_train, a_train, laplace_train, curl_train = train_data
         x_val, u_val, a_val, laplace_val, curl_val = val_data
-        pinn_constraint_fcn = config.get("PINN_constraint_fcn", ["no_pinn"])[0]
+        pinn_constraint_fcn = config.get("PINN_constraint_fcn", ["pinn_00"])[0]
 
-        # Decide to train with potential or not
-        # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint.
-        if pinn_constraint_fcn == "no_pinn":
-            y_train = np.hstack([a_train])
-            y_val = np.hstack([a_val])
+        data = {
+            "acceleration" : a_train,
+            "laplace" : laplace_train,
+            "curl" : curl_train,
+            "potential" : u_train,
+        }
+        val_data = {
+            "acceleration" : a_val,
+            "laplace" : laplace_val,
+            "curl" : curl_val,
+            "potential" : u_val,
+        }
 
-        # Just use acceleration
-        elif pinn_constraint_fcn == "pinn_a" or pinn_constraint_fcn == "pinn_a_ur":
-            y_train = np.hstack([a_train])
-            y_val = np.hstack([a_val])
+        constraint_str = pinn_constraint_fcn.split("_")[1].lower()
+        if "a" not in constraint_str and constraint_str != "00":
+            data.pop("acceleration")
+            val_data.pop("acceleration")
+        if "u" not in constraint_str:
+            data.pop("potential")
+            val_data.pop("potential")
+        if "l" not in constraint_str:
+            data.pop("laplace")
+            val_data.pop("laplace")
+        if "c" not in constraint_str:
+            data.pop("curl")
+            val_data.pop("curl")
 
-        # Just use acceleration
-        elif pinn_constraint_fcn == "pinn_p":
-            y_train = np.hstack([u_train])
-            y_val = np.hstack([u_val])
-
-        # Potential + 2nd order constraints
-        elif pinn_constraint_fcn == "pinn_pl":
-            y_train = np.hstack([u_train, laplace_train])
-            y_val = np.hstack([u_val, laplace_val])
-        elif pinn_constraint_fcn == "pinn_plc":
-            y_train = np.hstack([u_train, laplace_train, curl_train])
-            y_val = np.hstack([u_val, laplace_val, curl_val])
-
-        # Accelerations + 2nd order constraints
-        elif pinn_constraint_fcn == "pinn_al":
-            y_train = np.hstack([a_train, laplace_train])
-            y_val = np.hstack([a_val, laplace_val])
-        elif pinn_constraint_fcn == "pinn_alc":
-            y_train = np.hstack([a_train, laplace_train, curl_train])
-            y_val = np.hstack([a_val, laplace_val, curl_val])
-
-        # Accelerations + Potential + 2nd order constraints
-        elif pinn_constraint_fcn == "pinn_ap":
-            y_train = np.hstack([u_train, a_train])
-            y_val = np.hstack([u_val, a_val])
-        elif pinn_constraint_fcn == "pinn_apl":
-            y_train = np.hstack([u_train, a_train, laplace_train])
-            y_val = np.hstack([u_val, a_val, laplace_val])
-        elif pinn_constraint_fcn == "pinn_aplc":
-            y_train = np.hstack([u_train, a_train, laplace_train, curl_train])
-            y_val = np.hstack([u_val, a_val, laplace_val, curl_val])
-
-        else:
-            exit("No PINN Constraint Selected!")
+        y_train = np.hstack([y for y in data.values()])
+        y_val = np.hstack([y for y in val_data.values()])
 
         batch_size = config.get('batch_size', [len(y_train)])[0]
         dtype = config.get('dtype', [tf.float64])[0]
