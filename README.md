@@ -59,7 +59,7 @@ The Physics-Informed Neural Network Gravity Model attempts to bypass each of the
 </div>
 
 # Read the papers!
-PINN Gravity Model Revisited (Generation III) -- Coming in January!
+[PINN Gravity Model Revisited (Generation III)](https://hanspeterschaub.info/Papers/Martin2023.pdf)
 
 [PINN Gravity Models for Small Bodies (Generation II)](https://link.springer.com/article/10.1007/s10569-022-10101-8)
 
