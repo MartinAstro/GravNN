@@ -103,27 +103,6 @@ class PINNGravityModel(tf.keras.Model):
     def call(self, x, training):
         return self.eval(self.network, x, training)
 
-    def update_w_loss(self, losses, tape):
-        traces = []
-        self.w_loss = tf.constant(1.0, dtype=self.dtype)
-        if tf.math.mod(self._train_counter, tf.constant(100, dtype=tf.int64)) == 0:
-
-            for loss_i in losses.values():
-                jacobian = tape.jacobian(loss_i, self.network.trainable_variables)
-
-                gradients = []
-                for i in range(len(jacobian)-1): #batch size
-                    gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
-
-                J = tf.transpose(tf.concat(gradients, 1))
-
-                K_i = J@tf.transpose(J) # NTK of the values  [NxN]
-                trace_K_i = tf.linalg.trace(K_i)
-                traces.append(trace_K_i)
-            trace_K = tf.reduce_sum(traces)
-            self.w_loss = tf.stack([trace_K/trace for trace in traces],0)
-            tf.print(self.w_loss)
-
     def call_analytic_model(self, x):
         with tf.GradientTape() as tape:
             tape.watch(x)

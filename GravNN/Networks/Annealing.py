@@ -112,3 +112,26 @@ def pinn_APLC_anneal(loss_components, adaptive_const):
     loss_L = loss_components[:,4] * adaptive_const[2]
     loss_C = tf.reduce_sum(loss_components[:,5:8], axis=1) * adaptive_const[3]
     return (loss_res, loss_A, loss_L, loss_C)
+
+
+# ANNEALING V2
+def update_w_loss(w_loss, train_counter, losses, variables, tape):
+    traces = []
+    if tf.math.mod(train_counter, tf.constant(100, dtype=tf.int64)) == 0:
+
+        for loss_i in losses.values():
+            jacobian = tape.jacobian(loss_i, variables)
+
+            gradients = []
+            for i in range(len(jacobian)-1): #batch size
+                gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
+
+            J = tf.transpose(tf.concat(gradients, 1))
+
+            K_i = J@tf.transpose(J) # NTK of the values  [NxN]
+            trace_K_i = tf.linalg.trace(K_i)
+            traces.append(trace_K_i)
+        trace_K = tf.reduce_sum(traces)
+        w_loss = tf.stack([trace_K/trace for trace in traces],0)
+        tf.print(w_loss)
+    return w_loss
