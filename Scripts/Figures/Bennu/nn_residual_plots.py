@@ -64,7 +64,7 @@ def main():
     #df, descriptor = pd.read_pickle("Data/Dataframes/useless_070721_v3.data"), "[0,10000]"# PLC, ALC, APLC
 
     df = df[df['N_train'] == 2500]
-    df = df[df['PINN_constraint_fcn'] != no_pinn]
+    df = df[df['PINN_constraint_fcn'] != pinn_00]
 
     
     test_trajectory = RandomAsteroidDist(planet, [0, planet.radius*3], 20000, grav_file=[model_file])        

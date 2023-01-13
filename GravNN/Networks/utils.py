@@ -171,7 +171,7 @@ def _get_acceleration_nondim_constants(value, config):
 
     # scale tensor + translate tensor
     return {
-        "no_pinn": (
+        "pinn_00": (
             tf.constant([a_s, a_s, a_s], dtype=tf.float32),
             tf.constant([a0, a0, a0], dtype=tf.float32),
         ),  # scaling ignored
@@ -224,7 +224,7 @@ def _get_PI_constraint_all(value):
         list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
     """
     from GravNN.Networks.Constraints import (
-        no_pinn,
+        pinn_00,
         pinn_A,
         pinn_P,
         pinn_PLC,
@@ -235,7 +235,7 @@ def _get_PI_constraint_all(value):
         pinn_APLC,
     )
     from GravNN.Networks.Annealing import (
-        no_pinn_anneal,
+        pinn_00_anneal,
         pinn_A_anneal,
         pinn_P_anneal,
         pinn_AP_anneal,
@@ -254,7 +254,7 @@ def _get_PI_constraint_all(value):
 
     # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
     return {
-        "no_pinn": [no_pinn, no_pinn_anneal, [1.0]],  # scaling ignored
+        "pinn_00": [pinn_00, pinn_00_anneal, [1.0]],  # scaling ignored
         "pinn_a": [pinn_A, pinn_A_anneal, [1.0]],  # scaling ignored
         "pinn_p": [pinn_P, pinn_P_anneal, [1.0]],
         "pinn_pl": [pinn_P, pinn_P_anneal, [1.0, 1.0]],
@@ -277,7 +277,7 @@ def _get_PI_constraint(value):
         list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
     """
     from GravNN.Networks.Constraints import (
-        no_pinn,
+        pinn_00,
         pinn_A,
         pinn_P,
         pinn_PLC,
@@ -296,7 +296,7 @@ def _get_PI_constraint(value):
 
     # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
     return {
-        "no_pinn": no_pinn,
+        "pinn_00": pinn_00,
         "pinn_a": pinn_A,
         "pinn_p": pinn_P,
         "pinn_pl": pinn_P,
@@ -318,7 +318,7 @@ def _get_PI_annealing(value):
         list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
     """
     from GravNN.Networks.Annealing import (
-        no_pinn_anneal,
+        pinn_00_anneal,
         pinn_A_anneal,
         pinn_P_anneal,
         pinn_AP_anneal,
@@ -337,7 +337,7 @@ def _get_PI_annealing(value):
 
     # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
     return {
-        "no_pinn": no_pinn_anneal,
+        "pinn_00": pinn_00_anneal,
         "pinn_a": pinn_A_anneal,
         "pinn_p": pinn_P_anneal,
         "pinn_pl": pinn_P_anneal,
@@ -358,7 +358,7 @@ def _get_PI_adaptive_constants(value):
 
     # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
     return {
-        "no_pinn": [1.0], 
+        "pinn_00": [1.0], 
         "pinn_a": [1.0], 
         "pinn_p": [1.0],
         "pinn_pl": [1.0, 1.0],
@@ -538,9 +538,9 @@ def check_config_combos(config):
     Args:
         config (dict): updated configuration and hyperparameter dictionary with compatable arguments
     """
-    from GravNN.Networks.Constraints import no_pinn
+    from GravNN.Networks.Constraints import pinn_00
 
-    if config["PINN_constraint_fcn"][0] != no_pinn:
+    if config["PINN_constraint_fcn"][0] != pinn_00:
         if config["layers"][0][-1] != 1:
             print(
                 "WARNING: The final layer for a PINN must have one output (the potential, U) -- changing automatically"

@@ -12,7 +12,7 @@ def laplacian(u_xx):
 #     return tf.reduce_sum(tf.linalg.diag_part(u_xx), 1, keepdims=True)
 
 
-def no_pinn(f, x, training):
+def pinn_00(f, x, training):
     u_x = f(x, training=training)
     return u_x
 

@@ -66,7 +66,7 @@ def augment_y_data(a_train, config):
     curl_train = np.zeros((len(a_train),3))
 
     # TODO: Modify which variables are added to the state to speed up training and minimize memory footprint. 
-    if pinn_constraint_fcn == "no_pinn":
+    if pinn_constraint_fcn == "pinn_00":
         y_train = np.hstack([a_train]) 
     # Just use acceleration
     elif pinn_constraint_fcn == "pinn_A":

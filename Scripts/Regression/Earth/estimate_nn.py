@@ -88,7 +88,7 @@ def regress_networks_models_mp(args, pool, df_regressed):
         config = configs[i]
         noise = config['acc_noise'][0]
         num_units = config['num_units'][0]
-        if config['PINN_constraint_fcn'][0].__name__ == "no_pinn":
+        if config['PINN_constraint_fcn'][0].__name__ == "pinn_00":
             nn_df.loc[(noise, num_units, nn_counter)] = config['id'][0]
             nn_counter += 1
         else:
@@ -107,7 +107,7 @@ def generate_mp_args(num_units_list, num_models, noise_list, config):
     for num_units in num_units_list:
         for idx in range(num_models):
             for noise in noise_list:
-                for pinn_constraint in ['no_pinn', 'pinn_A']:
+                for pinn_constraint in ['pinn_00', 'pinn_A']:
                     sub_config= copy.deepcopy(config)
                     sub_config['acc_noise'] = [noise]
                     sub_config['seed'] = [idx]

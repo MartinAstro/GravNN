@@ -21,7 +21,7 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Trajectories import *
 from GravNN.Support.transformations import cart2sph
-from GravNN.Networks.Constraints import no_pinn        
+from GravNN.Networks.Constraints import pinn_00        
 
 
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
@@ -67,7 +67,7 @@ def generate_altitude_curve(sub_df, df, statistic):
         tf.keras.backend.clear_session()
 
         config, model = load_config_and_model(model_id, df)
-        if config['PINN_constraint_fcn'][0] == no_pinn:
+        if config['PINN_constraint_fcn'][0] == pinn_00:
             linestyle = '--'
         else:
             linestyle = '-'

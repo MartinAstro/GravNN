@@ -11,7 +11,7 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import (SphericalHarmonics,
                                                      get_sh_data)
 from GravNN.Networks import utils
-from GravNN.Networks.Constraints import no_pinn, pinn_A
+from GravNN.Networks.Constraints import pinn_00, pinn_A
 from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 from GravNN.Trajectories import DHGridDist
 from GravNN.Visualization.MapVisualization import MapVisualization
@@ -160,7 +160,7 @@ def load_config_and_model(model_id, df_file):
     if 'mixed_precision' not in config:
         config['use_precision'] = [False]
     if 'PINN_constraint_fcn' not in config:
-        config['PINN_constraint_fcn'] = [no_pinn]
+        config['PINN_constraint_fcn'] = [pinn_00]
     if 'dtype' not in config:
         config['dtype'] = [tf.float32]
     if 'dtype' not in config:
