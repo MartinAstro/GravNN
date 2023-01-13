@@ -51,26 +51,26 @@ def laplacian(u_xx):
 
 def pinn_00(f, x, training):
     u_x = f(x, training=training)
-    return u_x
+    return {"acceleration" : u_x}
 
 def pinn_P(f, x, training):
     u = f(x, training=training)
-    return u
+    return {"potential" : u}
 
 def pinn_A(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
         u = f(x, training=training)
-    a_x = -tape.gradient(u, x)
-    return a_x
+    u_x = -tape.gradient(u, x)
+    return {"acceleration" : u_x}
 
 def pinn_AP(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
         u = f(x, training=training)
     u_x = tape.gradient(u, x)
-    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
-    return tf.concat((u, accel), 1)
+    a_x = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+    return {"acceleration" : a_x, "potential" : u}
 
 def pinn_ALC(f, x, training):
     with tf.GradientTape(persistent=False) as g1:
@@ -90,7 +90,7 @@ def pinn_ALC(f, x, training):
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return tf.concat((accel, laplace, curl), 1)
+    return {"acceleration" : accel, "laplace" : laplace, "curl" : curl}
 
 def pinn_APLC(f, x, training):
     with tf.GradientTape(persistent=False) as g1:
@@ -111,31 +111,39 @@ def pinn_APLC(f, x, training):
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
-    return tf.concat((u, accel, laplace, curl), 1)
+    return {"potential" : u, "acceleration" : accel, "laplace" : laplace, "curl" : curl}
 
 
-
-def general_constraint(f, x, training):
-    with tf.GradientTape(persistent=False) as g1:
-        g1.watch(x)
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            u = f(x, training=training)  # shape = (k,) #! evaluate network
-        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
-    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
-
-    laplace = laplacian(u_xx)
-
-    curl_x = tf.math.subtract(u_xx[:, 2, 1], u_xx[:, 1, 2])
-    curl_y = tf.math.subtract(u_xx[:, 0, 2], u_xx[:, 2, 0])
-    curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
-
-    curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-
-    outputs = {
-        "acceleration" : accel,
-        "laplacian" : laplace,
-        "curl" : curl
-    }
-    return outputs
+def format_training_data(y, constraint):
+    y_dict = {}
+    if constraint == "pinn_00":
+        y_dict.update({
+            'acceleration' : y[:,0:3]
+        })
+    if constraint == "pinn_p":
+        y_dict.update({
+            'potential' : y[:,0]
+        })
+    if constraint == "pinn_a":
+        y_dict.update({
+            'acceleration' : y[:,0:3]
+        })
+    if constraint == "pinn_ap":
+        y_dict.update({
+            'potential' : y[:,0],
+            'acceleration' : y[:,1:4]
+        })
+    if constraint == "pinn_alc":
+        y_dict.update({
+            'acceleration' : y[:,0:3],
+            'laplacian' : y[:,4],
+            'curl' : y[:,5:8]
+        })
+    if constraint == "pinn_aplc":
+        y_dict.update({
+            'potential' : y[:,0],
+            'acceleration' : y[:,1:4],
+            'laplacian' : y[:,5],
+            'curl' : y[:,6:9]
+        })
+    return y_dict

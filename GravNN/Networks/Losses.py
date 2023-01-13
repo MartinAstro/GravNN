@@ -11,10 +11,22 @@ def get_loss_fcn(loss_key):
     }[loss_key.lower()]
 
 
-def MetaLoss(y_hat, y, loss_fcn_list):
+def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
     losses = {}
     for loss_fcn in loss_fcn_list:
-        losses.update({loss_fcn.__name__ : loss_fcn(y_hat, y)})
+        for key in y_dict.keys():
+            y_hat = y_hat_dict[key]
+            y = y_dict[key]
+            losses.update({f"{key}_{loss_fcn.__name__}" : loss_fcn(y_hat, y)})
+    
+    # Don't hold onto losses that have zero (percent of laplacian, curl)
+    # This appears to set gradients to zero. 
+    # drop_keys = []
+    # for key,loss in losses.items():
+    #     if tf.math.count_nonzero(loss) == 0:
+    #         drop_keys.append(key)
+    # for key in drop_keys:
+    #     losses.pop(key)
     return losses
 
 

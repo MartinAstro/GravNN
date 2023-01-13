@@ -49,14 +49,15 @@ class PINNGravityModel(tf.keras.Model):
 
     # Initialization Fcns
     def init_physics_information(self):
-        constraint = self.config["PINN_constraint_fcn"][0]
-        self.eval = get_PI_constraint(constraint)
-        self.is_pinn = tf.cast(constraint != pinn_00, tf.bool)
+        self.constraint = self.config["PINN_constraint_fcn"][0]
+        self.eval = get_PI_constraint(self.constraint)
+        self.is_pinn = tf.cast(self.constraint != pinn_00, tf.bool)
 
     def init_loss_fcns(self):
         self.loss_fcn_list = [] 
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
+        self.w_loss = tf.ones(shape=(3,)) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -108,7 +109,15 @@ class PINNGravityModel(tf.keras.Model):
         with tf.GradientTape() as tape:
             tape.watch(x)
             u = self.analytic_model(x)
-        return -tape.gradient(u, x)
+        accel = -tape.gradient(u, x)
+        return {"potential" : u, "acceleration" : accel}
+    
+    def remove_analytic_model(self, x, y_dict, y_hat_dict):
+        y_analytic_dict = self.call_analytic_model(x)
+        for key in y_dict.keys():
+            y_dict[key] -= y_analytic_dict[key]
+            y_hat_dict[key] -= y_analytic_dict[key]
+        return y_dict, y_hat_dict
 
     # Training
     def train_step_fcn(self, data):
@@ -124,21 +133,39 @@ class PINNGravityModel(tf.keras.Model):
         """
  
         x, y = data
+
+        y_dict = format_training_data(y, self.constraint)
+
         with tf.GradientTape(persistent=True) as tape:
-            y_hat = self(x, training=self.training) # [N x (3 or 7)]
-            y_analytic = self.call_analytic_model(x)
-            y = y - y_analytic
-            y_hat = y_hat - y_analytic
+            # with tf.GradientTape(persistent=True) as w_loss_tape:
+            y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
+            y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
             if self.config.get('loss_sph', [False])[0]:
-                    convert_losses_to_sph(x, y, y_hat)
+                convert_losses_to_sph(
+                    x, 
+                    y_dict['acceleration'], 
+                    y_hat_dict['acceleration']
+                    )
 
-            losses = MetaLoss(y_hat, y, self.loss_fcn_list)
-            self.w_loss = tf.constant(1.0, dtype=y_hat.dtype)
+            losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
 
+            # Don't record the gradients associated with
+            # computing adaptive learning rates. 
+            # with tape.stop_recording():    
+            #     self.w_loss = update_w_loss(
+            #         self.w_loss,
+            #         self._train_counter, 
+            #         losses, 
+            #         self.network.trainable_variables, 
+            #         w_loss_tape)
+
+            # self.w_loss = tf.constant(1.0)
             loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
-            loss = tf.reduce_sum(self.w_loss*loss_i)
+            # loss = tf.reduce_sum(self.w_loss*loss_i)
+            loss = tf.reduce_sum(loss_i)
             loss = self.optimizer.get_scaled_loss(loss)
+            # del w_loss_tape
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -160,20 +187,25 @@ class PINNGravityModel(tf.keras.Model):
 
     def test_step_fcn(self, data):
         x, y = data
-        y_hat = self(x, training=self.test_training)
 
-        y_analytic = self.call_analytic_model(x)
-        y = y - y_analytic
-        y_hat = y_hat - y_analytic
+        y_dict = format_training_data(y, self.constraint)
+
+
+        y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
+        y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
         if self.config.get('loss_sph', [False])[0]:
-            convert_losses_to_sph(x, y, y_hat)
+            convert_losses_to_sph(
+                x, 
+                y_dict['acceleration'], 
+                y_hat_dict['acceleration']
+                )
 
-        losses = MetaLoss(y_hat, y, self.loss_fcn_list)
+        losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
         loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
         return {"loss": loss, 
-                "percent_mean": tf.reduce_mean(losses.get('percent',[0])),
-                "percent_max": tf.reduce_max(losses.get('percent',[0])),
+                "percent_mean": tf.reduce_mean(losses.get('acceleration_percent',[0])),
+                "percent_max": tf.reduce_max(losses.get('acceleration_percent',[0])),
                 }
 
     def train(self, data, initialize_optimizer=True):
