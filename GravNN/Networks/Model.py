@@ -8,7 +8,7 @@ import tensorflow as tf
 
 from GravNN.Networks import utils
 from GravNN.Networks.Constraints import *
-from GravNN.Networks.Annealing import update_constant
+from GravNN.Networks.Annealing import *
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Losses import *
 from GravNN.Networks.Schedules import get_schedule
@@ -50,8 +50,8 @@ class PINNGravityModel(tf.keras.Model):
     # Initialization Fcns
     def init_physics_information(self):
         constraint = self.config["PINN_constraint_fcn"][0]
-        self.eval = utils._get_PI_constraint(constraint)
-        self.is_pinn = tf.cast(constraint != no_pinn, tf.bool)
+        self.eval = get_PI_constraint(constraint)
+        self.is_pinn = tf.cast(constraint != pinn_00, tf.bool)
 
     def init_loss_fcns(self):
         self.loss_fcn_list = [] 
@@ -91,9 +91,9 @@ class PINNGravityModel(tf.keras.Model):
             self.test_step = self.wrap_test_step_jit
 
     def init_annealing(self):
-        constants = utils._get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
-        self.scale_loss = utils._get_PI_annealing(self.config['PINN_constraint_fcn'][0]) # anneal function
-        self.calc_adaptive_constant = utils._get_annealing_fcn(self.config["lr_anneal"][0]) # hold, anneal, custom
+        constants = get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
+        self.scale_loss = get_PI_annealing(self.config['PINN_constraint_fcn'][0]) # anneal function
+        self.calc_adaptive_constant = get_annealing_fcn(self.config["lr_anneal"][0]) # hold, anneal, custom
         self.adaptive_constant = tf.Variable(constants, dtype=self.variable_cast, trainable=False)
         self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
 
@@ -439,12 +439,12 @@ def backwards_compatibility(config):
     if float(config["id"][0]) < 2459343.9948726853:
         try:
             if np.isnan(config["PINN_flag"][0]): # nan case
-                config["PINN_constraint_fcn"] = [no_pinn]
+                config["PINN_constraint_fcn"] = [pinn_00]
         except:
             pass
     if float(config["id"][0]) < 2459322.587314815:
         if config["PINN_flag"][0] == "none":
-            config["PINN_constraint_fcn"] = [no_pinn]
+            config["PINN_constraint_fcn"] = [pinn_00]
         elif config["PINN_flag"][0] == "gradient":
             config["PINN_constraint_fcn"] = [pinn_A]
         elif config["PINN_flag"][0] == "laplacian":

@@ -5,6 +5,76 @@ https://www.amcs.upenn.edu/sites/default/files/Understanding%20and%20mitigating%
 
 import tensorflow as tf
 
+
+def get_PI_annealing(value):
+    """Method responsible for getting all variables / methods used in the physics informed constraint.
+
+    Args:
+        value (str): PINN constraint name (i.e. 'pinn_A', 'pinn_aplc', etc)
+
+    Returns:
+        list: PINN constraint function, PINN lr annealing function, PINN lr annealing initial values
+    """
+    from GravNN.Networks.Annealing import (
+        pinn_00_anneal,
+        pinn_A_anneal,
+        pinn_P_anneal,
+        pinn_AP_anneal,
+        pinn_ALC_anneal,
+        pinn_APLC_anneal,
+    )
+
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
+    # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
+    return {
+        "pinn_00": pinn_00_anneal,
+        "pinn_a": pinn_A_anneal,
+        "pinn_p": pinn_P_anneal,
+        "pinn_ap": pinn_AP_anneal,
+        "pinn_alc": pinn_ALC_anneal,
+        "pinn_aplc": pinn_APLC_anneal,
+    }[value.lower()]
+
+def get_PI_adaptive_constants(value):
+    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
+    try:
+        value = value.__name__
+    except:
+        pass
+
+    # -1 values in the PINN lr annealing initial values indicates that the value will not get updated.
+    return {
+        "pinn_00": [1.0], 
+        "pinn_a": [1.0], 
+        "pinn_p": [1.0],
+        "pinn_ap": [1.0, 1.0],
+        "pinn_alc": [1.0, 1.0, 1.0],
+        "pinn_aplc": [1.0, 1.0, 1.0, 1.0],
+    }[value.lower()]
+
+def get_annealing_fcn(name):
+    """Helper function to determine if the annealing learning rates of Wang2020
+    are going to be used
+
+    Args:
+        name (str): key specifying how lr will be annealed
+
+    Returns:
+        function: lr annealing method
+    """
+    from GravNN.Networks.Annealing import update_constant, hold_constant, custom_constant
+    return {
+        "anneal": update_constant,
+        "hold": hold_constant,
+        "custom": custom_constant,
+    }[name.lower()]
+
+
 def log10(x):
     numerator = tf.math.log(x)
     denominator = tf.math.log(tf.constant(10, dtype=numerator.dtype))
@@ -52,7 +122,7 @@ def custom_constant(tape, loss_components, constant_avg, beta, variables):
     new_adaptive_const = constant_avg * tf.subtract(one, beta) + beta * new_constants
     return new_adaptive_const
 
-def no_pinn_anneal(loss_components, adaptive_const):
+def pinn_00_anneal(loss_components, adaptive_const):
     loss_res = loss_components
     return (loss_res,)
 
@@ -67,36 +137,10 @@ def pinn_P_anneal(loss_components, adaptive_const):
     return (loss_res,)
 
 
-def pinn_PL_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[:,0] * adaptive_const[0]
-    loss_L = loss_components[:,1] * adaptive_const[1]
-    return (loss_res, loss_L)
-
-
-def pinn_PLC_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[:,0] * adaptive_const[0]
-    loss_L = loss_components[:,1] * adaptive_const[1]
-    loss_C = tf.reduce_sum(loss_components[:,2:5], axis=1) * adaptive_const[2]
-    return (loss_res, loss_L, loss_C)
-
-
 def pinn_AP_anneal(loss_components, adaptive_const):
     loss_res = loss_components[:,0] * adaptive_const[0]
     loss_A = tf.reduce_sum(loss_components[:,1:4], axis=1) * adaptive_const[1]
     return (loss_res, loss_A)
-
-
-def pinn_AL_anneal(loss_components, adaptive_const):
-    loss_res = tf.reduce_sum(loss_components[:,0:3], axis=1)*adaptive_const[0]
-    loss_bc = loss_components[:,3] * adaptive_const[1]
-    return (loss_res, loss_bc)
-
-
-def pinn_APL_anneal(loss_components, adaptive_const):
-    loss_res = loss_components[:,0] * adaptive_const[0]
-    loss_P = tf.reduce_sum(loss_components[:,1:4], axis=1) * adaptive_const[1]
-    loss_L = loss_components[:,4] * adaptive_const[2]
-    return (loss_res, loss_P, loss_L)
 
 
 def pinn_ALC_anneal(loss_components, adaptive_const):
