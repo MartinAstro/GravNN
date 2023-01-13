@@ -15,7 +15,7 @@ from GravNN.Networks.Losses import *
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import populate_config_objects, configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
-from GravNN.Support.transformations_tf import cart2sph, compute_projection_matrix
+from GravNN.Support.transformations_tf import convert_losses_to_sph
 import GravNN
 
 np.random.seed(1234)
@@ -152,17 +152,7 @@ class PINNGravityModel(tf.keras.Model):
             y_hat = y_hat - y_analytic
 
             if self.config.get('loss_sph', [False])[0]:
-                x_sph = cart2sph(x)
-                BN = compute_projection_matrix(x_sph)
-
-                # x_B = tf.matmul(BN, tf.reshape(x, (-1,3,1))) 
-                # this will give ~[1, 1E-8, 1E-8]
-
-                y_reshape = tf.reshape(y, (-1, 3,1))
-                y_hat_reshape = tf.reshape(y_hat, (-1, 3,1))
-
-                y = tf.matmul(BN, y_reshape)
-                y_hat = tf.matmul(BN, y_hat_reshape)
+                    convert_losses_to_sph(x, y, y_hat)
 
             losses = MetaLoss(y_hat, y, self.loss_fcn_list)
 
@@ -206,13 +196,7 @@ class PINNGravityModel(tf.keras.Model):
         y_hat = y_hat - y_analytic
 
         if self.config.get('loss_sph', [False])[0]:
-            x_sph = cart2sph(x)
-            BN = compute_projection_matrix(x_sph)
-            y = tf.reshape(y, (-1, 3,1))
-            y_hat = tf.reshape(y_hat, (-1, 3,1))
-
-            y = tf.matmul(BN, y)
-            y_hat = tf.matmul(BN, y_hat)
+            convert_losses_to_sph(x, y, y_hat)
 
         losses = MetaLoss(y_hat, y, self.loss_fcn_list)
         loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])

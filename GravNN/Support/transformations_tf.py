@@ -65,55 +65,17 @@ def compute_projection_matrix(X_sphere):
                                     tnp.dot(accelerations[i], theta_hat),
                                     tnp.dot(accelerations[i], phi_hat)])
 
+def convert_losses_to_sph(x, y, y_hat):
+    x_sph = cart2sph(x)
+    BN = compute_projection_matrix(x_sph)
 
-# def cart2sph(carts):
-#     """Converts cartesian coordinates into spherical coordinates. Spherical coordinates should be in degrees.
+    # x_B = tf.matmul(BN, tf.reshape(x, (-1,3,1))) 
+    # this will give ~[1, 1E-8, 1E-8]
 
-#     Args:
-#         carts: [[3xM] formatted as x, y, z]
+    y_reshape = tf.reshape(y, (-1, 3,1))
+    y_hat_reshape = tf.reshape(y_hat, (-1, 3,1))
 
-#     Returns:
-#         [tnp.array]: [[3xM] with r, θ (0,360), Φ (0,180)]
-#     """
-#     spheres = tnp.zeros(carts.shape)#spheres = []
-#     for i in range(0,len(carts)):
-#         X, Y, Z = carts[i]
+    y = tf.matmul(BN, y_reshape)
+    y_hat = tf.matmul(BN, y_hat_reshape)
 
-#         r = tnp.sqrt(X**2 + Y**2 + Z**2)  # r
-#         theta = tnp.arctan2(Y, X) * 180.0 / tnp.pi + 180.0#  [0, 360]
-#         phi = tnp.arctan2(tnp.sqrt(X**2 + Y**2),Z) * 180.0 / tnp.pi   # [0,180]
-
-#         spheres[i] = [r, theta, phi]
-#     return spheres
-
-
-
-# def project_acceleration(positions, accelerations):
-#     """
-#     Uses position spherical coordinate frame and projects acceleration onto said frame. 
-#     (r, theta, phi). 
-
-#     Args:
-#         positions (tnp.array): position in spherical coordinates
-#         accelerations (tnp.array): acceleration in cartesian coordinates
-
-#     Returns:
-#         tnp.array: acceleration in spherical coordinates
-#     """
-#     project_acc = tnp.zeros(accelerations.shape)
-#     for i in range(0, len(positions)):
-#         theta = positions[i,1] * tnp.pi/180.0 - tnp.pi
-#         phi = positions[i,2] * tnp.pi/180.0 
-#         r_hat = tnp.array([tnp.sin(phi)*tnp.cos(theta),
-#                         tnp.sin(phi)*tnp.sin(theta),
-#                         tnp.cos(phi)])
-#         theta_hat = tnp.array([tnp.cos(phi)*tnp.cos(theta),
-#                                 tnp.cos(phi)*tnp.sin(theta), 
-#                                 -tnp.sin(phi)])
-#         phi_hat = tnp.array([-tnp.sin(theta), 
-#                             tnp.cos(theta),
-#                             0.0])
-#         project_acc[i,:] = tnp.array([tnp.dot(accelerations[i], r_hat),
-#                                     tnp.dot(accelerations[i], theta_hat),
-#                                     tnp.dot(accelerations[i], phi_hat)])
-#     return project_acc
+    return y, y_hat
