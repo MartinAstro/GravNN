@@ -110,7 +110,10 @@ class PINNGravityModel(tf.keras.Model):
             tape.watch(x)
             u = self.analytic_model(x)
         accel = -tape.gradient(u, x)
-        return {"potential" : u, "acceleration" : accel}
+        return {
+            "potential" : u, "acceleration" : accel,
+            "laplacian" : tf.zeros_like(u),
+            "curl" : tf.zeros_like(accel)}
     
     def remove_analytic_model(self, x, y_dict, y_hat_dict):
         y_analytic_dict = self.call_analytic_model(x)
