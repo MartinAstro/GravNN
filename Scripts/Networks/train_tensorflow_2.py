@@ -16,9 +16,15 @@ def main():
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        "PINN_constraint_fcn" : ['pinn_a'],
+        "N_dist" : [50000],
+        "N_train" : [45000],
+        "loss_fcns" : [['rms']],
+        # "jit_compile" : [False],
+        # "eager" : [True],
+        "PINN_constraint_fcn" : ['pinn_alc'],
     }
     args = configure_run_args(config, hparams)
+    run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
