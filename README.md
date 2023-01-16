@@ -4,9 +4,11 @@
 
 # Welcome to the GravNN repo!
 
-This repo contains the `GravNN` python package whose purpose is to train Physics-Informed Neural Networks to represent high-fidelity gravity fields. The package itself contains the tensorflow models, physics constraints, hyperparameter configurations, data generators, and visualization tools used in training such models. 
+This repository contains the `GravNN` python package whose purpose is to train Physics-Informed Neural Networks Gravity Models (PINN-GMs). The package itself contains the tensorflow models, physics constraints, hyperparameter configurations, data generators, and visualization tools used in training such models. 
 
 The `Examples` directory provides a set of minimal example scripts that leverage the core components of `GravNN` package to train a PINN and visualize some basic performance metrics. 
+
+> :earth_americas: **If you are only interested in running a PINN gravity model (not training)**: please see the [GravityModel](https://www.github.com/joma5012/GravityModels) repository / pip package which has a collection of pre-trained PINN-GMs available for use alongside other popular gravity models of note. 
 
 The `Scripts` directory provides a collection of python scripts and notebooks which make use of the components in `GravNN` for various research tasks. Given that, please note that this directory is under development and is currently used for exclusively for research -- not production. As such, not all scripts will work out of the box. Future releases will address these issues. If you do want to explore around in spite of this, I recommend starting from `Scripts/Networks/train_tensorflow_2.py` and traversing the GravNN package from there. 
 
@@ -20,9 +22,16 @@ cd GravNN/
 pip install -e .
 ```
 
+# Read the papers!
+[PINN Gravity Model Revisited (Generation III)](https://hanspeterschaub.info/Papers/Martin2023.pdf)
+
+[PINN Gravity Models for Small Bodies (Generation II)](https://link.springer.com/article/10.1007/s10569-022-10101-8)
+
+[PINN Gravity Models for the Earth and Moon (Generation I)](https://link.springer.com/article/10.1007/s10569-022-10069-5)
+
 # Motivation
 
-The Physics-Informed Neural Network Gravity Model (PINN-GM) is an attempt to solve many of the limitations of past gravity representations including the particularly ubiquitous spherical harmonic and polyhedral gravity models (used for planetary and small-body exploration respectively). 
+The Physics-Informed Neural Network Gravity Model (PINN-GM) aims to solve many of the limitations of past gravity representations including the ubiquitous spherical harmonic and polyhedral gravity models (used for planetary and small-body exploration respectively). 
 
 ## Inconveniences of the Spherical Harmonic Gravity Model
 
@@ -55,14 +64,7 @@ As a result of this numerical divergence, many dynamicists turn to an alternativ
 The Physics-Informed Neural Network Gravity Model attempts to bypass each of these challenges. By learning, rather than prescribing, basis functions, the PINN-GM is able to learn the most efficient and compact set of basis functions to represent the problem at hand. This leads to order-of-magnitude faster run-times without making any assumptions about the underlying density distribution of the body. Moreover, the representation remains numerically convergent regardless of operation domain (near or far from the surface). Best of all, the representation is rooted in analytics, using physics-informed constraints to ensure that the learned model is consistent with the governing gravitational differential equations (Laplace's equation, conservative vector field properties, gradient relationships between accelerations and underlying potential, etc.)
 
 <div align="center">
-  <img src="docs/source/_static/PINN-GM-II-v2.png">
+  <img src="docs/source/_static/PINN_v3.png">
 </div>
-
-# Read the papers!
-[PINN Gravity Model Revisited (Generation III)](https://hanspeterschaub.info/Papers/Martin2023.pdf)
-
-[PINN Gravity Models for Small Bodies (Generation II)](https://link.springer.com/article/10.1007/s10569-022-10101-8)
-
-[PINN Gravity Models for the Earth and Moon (Generation I)](https://link.springer.com/article/10.1007/s10569-022-10069-5)
 
 Documentation is coming soon! 
