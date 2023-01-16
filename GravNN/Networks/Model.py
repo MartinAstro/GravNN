@@ -3,7 +3,6 @@ import copy
 import time
 import pickle
 import numpy as np
-from numpy.random.mtrand import laplace
 import pandas as pd
 import tensorflow as tf
 
@@ -13,7 +12,7 @@ from GravNN.Networks.Annealing import update_constant
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Losses import *
 from GravNN.Networks.Schedules import get_schedule
-from GravNN.Networks.utils import populate_config_objects, configure_optimizer
+from GravNN.Networks.utils import configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
 from GravNN.Support.transformations_tf import convert_losses_to_sph
 import GravNN
@@ -48,6 +47,7 @@ class PINNGravityModel(tf.keras.Model):
         self.init_annealing()       
         self.init_training_steps()
 
+    # Initialization Fcns
     def init_physics_information(self):
         constraint = self.config["PINN_constraint_fcn"][0]
         self.eval = utils._get_PI_constraint(constraint)
@@ -100,6 +100,7 @@ class PINNGravityModel(tf.keras.Model):
     def set_training_kwarg(self, training):
         self.training = tf.convert_to_tensor(training, dtype=tf.bool)
 
+    # Model call functions
     def call(self, x, training):
         return self.eval(self.network, x, training)
 
@@ -111,10 +112,10 @@ class PINNGravityModel(tf.keras.Model):
 
     # Training
     def train_step_fcn(self, data):
-        """Method to train the PINN. First computes the loss components which may contain dU, da, dL, dC or some combination of these variables. These component losses are then scaled by the adaptive learning rate (if flag is True), 
-        summed, scaled again (if using mixed precision), the adaptive learning rate is then updated, and then backpropagation
-        occurs.
-
+        """Method to train the PINN. 
+        
+        Computes the loss components which may contain dU, da, dL, dC or some combination of these variables. 
+        
         Args:
             data (tf.Dataset): training data
 
@@ -124,7 +125,6 @@ class PINNGravityModel(tf.keras.Model):
  
         x, y = data
         with tf.GradientTape(persistent=True) as tape:
-            # with tf.GradientTape(persistent=True) as loss_tape:
             y_hat = self(x, training=self.training) # [N x (3 or 7)]
             y_analytic = self.call_analytic_model(x)
             y = y - y_analytic
@@ -134,19 +134,11 @@ class PINNGravityModel(tf.keras.Model):
                     convert_losses_to_sph(x, y, y_hat)
 
             losses = MetaLoss(y_hat, y, self.loss_fcn_list)
-
-            # with loss_tape.stop_recording():    
-            # self.update_w_loss(losses, tape)
             self.w_loss = tf.constant(1.0, dtype=y_hat.dtype)
 
             loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
             loss = tf.reduce_sum(self.w_loss*loss_i)
             loss = self.optimizer.get_scaled_loss(loss)
-        # del loss_tape
-
-            # losses = MetaLoss(y_hat, y, self.loss_fcn_list)
-            # loss = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
-            # loss = self.optimizer.get_scaled_loss(loss)
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -164,7 +156,7 @@ class PINNGravityModel(tf.keras.Model):
             "loss": loss,
             "percent_mean": tf.reduce_mean(losses.get('percent',[0])),
             "percent_max": tf.reduce_max(losses.get('percent',[0])),
-        }  # 'grads' : grad_comp_list}
+        }  
 
     def test_step_fcn(self, data):
         x, y = data
@@ -207,8 +199,6 @@ class PINNGravityModel(tf.keras.Model):
         history.history["time_delta"] = callback.time_delta
 
         return history
-
-
 
     # Post-training API calls 
     @tf.function()
@@ -296,18 +286,8 @@ class PINNGravityModel(tf.keras.Model):
             jacobian = self._nn_acceleration_jacobian(x)
 
         l_star = 1/x_transformer.scale_
-
-        # a_transformer.scale_ = (1 / (l_star / t_star**2))
-        # l_star/t_star**2 = 1/a_transformer.scale_
-        # t_star**2/l_star = a_transformer.scale_
-        # t_star = np.sqrt(a_transformer.scale_*l_star)
-
         t_star = np.sqrt(a_transformer.scale_*l_star)
         jacobian /= t_star**2
-        # x_scale = x_transformer.scale_
-        # u_scale = u_transformer.scale_
-        # scale = x_scale**2/u_scale
-        # jacobian = jacobian*scale
         return jacobian
 
 
@@ -327,37 +307,6 @@ class PINNGravityModel(tf.keras.Model):
     @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def wrap_test_step_njit(self, data):
         return self.test_step_fcn(data)
-
-
-    # private functions
-    @tf.function(jit_compile=True)
-    def _nn_acceleration_output(self, x):
-        a = self.network(x) 
-        return a
-    
-    @tf.function()
-    def _pinn_acceleration_output(self, x):
-        a = pinn_A(self.network, x, training=False)
-        return a
-
-    @tf.function(experimental_relax_shapes=True)
-    def _pinn_acceleration_jacobian(self, x):
-        with tf.GradientTape() as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        jacobian = g1.batch_jacobian(a,x)
-        return jacobian
-        
-    @tf.function(experimental_relax_shapes=True)
-    def _nn_acceleration_jacobian(self,x):
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            a = self.network(x)  # shape = (k,) #! evaluate network
-        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
-        return jacobian
 
 
     # saving
@@ -395,7 +344,7 @@ class PINNGravityModel(tf.keras.Model):
         self.config["PINN_constraint_fcn"] = [self.config["PINN_constraint_fcn"][0]]  # Can't have multiple args in each list
         self.model_size_stats()
 
-    def save(self, df_file=None, custom_data_dir=None, history=None, transformers=None):
+    def save_custom(self, df_file=None, custom_data_dir=None, history=None, transformers=None):
         """Add remaining training / model variables into the configuration dictionary, then
         save the config variables into its own pickled file, and potentially add it to an existing
         dataframe defined by `df_file`.
@@ -446,6 +395,36 @@ class PINNGravityModel(tf.keras.Model):
         if df_file is not None:
             utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
 
+
+    # private functions
+    @tf.function(jit_compile=True)
+    def _nn_acceleration_output(self, x):
+        a = self.network(x) 
+        return a
+    
+    @tf.function()
+    def _pinn_acceleration_output(self, x):
+        a = pinn_A(self.network, x, training=False)
+        return a
+
+    @tf.function(experimental_relax_shapes=True)
+    def _pinn_acceleration_jacobian(self, x):
+        with tf.GradientTape() as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        jacobian = g1.batch_jacobian(a,x)
+        return jacobian
+        
+    @tf.function(experimental_relax_shapes=True)
+    def _nn_acceleration_jacobian(self,x):
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            a = self.network(x)  # shape = (k,) #! evaluate network
+        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
+        return jacobian
 
 def backwards_compatibility(config):
     """Convert old configuration variables to their modern
