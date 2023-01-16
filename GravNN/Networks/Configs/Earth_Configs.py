@@ -21,7 +21,7 @@ def get_default_earth_config():
         "ref_radius" : [Earth().radius],
         "acc_noise": [0.00],
         "basis": [None],
-        "deg_removed": [2],
+        "deg_removed": [-1],
         "mixed_precision": [False],
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_"],
