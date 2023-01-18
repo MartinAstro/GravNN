@@ -8,7 +8,7 @@ This repository contains the `GravNN` python package whose purpose is to train P
 
 The `Examples` directory provides a set of minimal example scripts that leverage the core components of `GravNN` package to train a PINN and visualize some basic performance metrics. 
 
-> :earth_americas: **If you are only interested in running a PINN gravity model (not training)**: please see the [GravityModel](https://www.github.com/joma5012/GravityModels) repository / pip package which has a collection of pre-trained PINN-GMs available for use alongside other popular gravity models of note. 
+> :earth_americas: **If you are only interested in running a PINN gravity model (not training)**: the [GravityModel](https://www.github.com/joma5012/GravityModels) repository will have a collection of pre-trained PINN-GMs available on June of 2023 with the official release of PINN-GM-III. In the meantime the spherical harmonic, polyhedral, and point mass models are currently available. 
 
 The `Scripts` directory provides a collection of python scripts and notebooks which make use of the components in `GravNN` for various research tasks. Given that, please note that this directory is under development and is currently used for exclusively for research -- not production. As such, not all scripts will work out of the box. Future releases will address these issues. If you do want to explore around in spite of this, I recommend starting from `Scripts/Networks/train_tensorflow_2.py` and traversing the GravNN package from there. 
 
@@ -35,7 +35,7 @@ The Physics-Informed Neural Network Gravity Model (PINN-GM) aims to solve many o
 
 ## Inconveniences of the Spherical Harmonic Gravity Model
 
-The spherical harmonic gravity model has garnered widespread adoption for Earth orbiting satellites and mission settings due to its efficient capture of planetary oblateness. Requiring only a low-degree expansions, dynamicists can capture one of the largest global-scale perturbations to high accuracy. The problem, however, is that once planetary oblateness is accounted for other major dynamical perturbations exist:
+The spherical harmonic gravity model has garnered widespread adoption for Earth orbiting satellites and mission settings due to its efficient capture of planetary oblateness. Requiring only a low-degree expansions, dynamicists can capture one of the largest global-scale perturbations to high accuracy. The problem, however, is that once planetary oblateness is accounted for, other major dynamical perturbations exist:
 
 <div align="center">
   <img width=500px src="docs/source/_static/sh_brillouin_2_map.png">
@@ -43,9 +43,9 @@ The spherical harmonic gravity model has garnered widespread adoption for Earth 
 In particular, features like prominent mountain ranges (Himalayas, Andes, etc), boundaries between tectonic plates, and regional hotspots each generate considerable gravitational perturbations. These features are unique in that they are predominately discontinuous, geographically localized features. 
 
 ## Discontinuity + Periodic Basis = Bad Idea
-Spherical harmonics (the 3D analog to a Fourier series) are particularly ill-suited to represent such features. Take for example the famous [Gibbs phenomenon](https://en.wikipedia.org/wiki/Gibbs_phenomenon) -- an attempt to represent a discontinuous square-wave or heaviside function using an infinite of periodic bases. 
+Spherical harmonics (the 3D analog to a Fourier series) are particularly ill-suited to represent such features. Take for example the famous [Gibbs phenomenon](https://en.wikipedia.org/wiki/Gibbs_phenomenon) -- an attempt to represent a discontinuous square-wave or heaviside function using an infinite number of periodic bases. 
 
-An infinite number of sine and cosine harmonics must be superimposed together before these discontinuous features are represented accurate. The same problem exists for the Earth (or other planetary) gravity modelling problems. Despite this, considerable effort has been put forth to generate high-fidelity spherical harmonic models --- some which contain more than 4-million parameters. Rather than continuing to fund efforts and mission to further refine these high-fidelity spherical harmonic model, perhaps a better question to ask is if a better basis function could be used --- one that accommodates the most significant perturbations first without prescribing unnatural geometries onto the problem. 
+An infinite number of sine and cosine harmonics must be superimposed together before these discontinuous features are represented accurately. The same problem exists for the Earth (or other planetary) gravity modelling problems. Despite this, considerable effort has been put forth to generate high-fidelity spherical harmonic models --- some which contain more than 4-million parameters. Rather than continuing to fund efforts and mission to further refine these high-fidelity spherical harmonic model, perhaps a more interesting question to ask is if a better basis function could be used --- one that accommodates the most significant perturbations first without prescribing unnatural geometries onto the problem. 
 
 ## Periodic Bases are Prone to Aliasing
 
