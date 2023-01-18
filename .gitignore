@@ -1,5 +1,11 @@
 GravNN/build/*
-GravNN/Files/*
+GravNN/Files/Ephmerides
+GravNN/Files/GravityModels
+GravNN/Files/Trajectories
+GravNN/Files/ShapeModels/Bennu
+GravNN/Files/ShapeModels/Eros
+GravNN/Files/ShapeModels/Misc
+GravNN/Files/ShapeModels/Toutatis
 GravNN/.idea/
 GravNN/C_Algorithms/.vscode/*
 
