@@ -342,38 +342,6 @@ class PINNGravityModel(tf.keras.Model):
     def wrap_test_step_njit(self, data):
         return self.test_step_fcn(data)
 
-
-    # private functions
-    @tf.function(jit_compile=True)
-    def _nn_acceleration_output(self, x):
-        a = self.network(x)['acceleration']
-        return a
-    
-    @tf.function()
-    def _pinn_acceleration_output(self, x):
-        a = pinn_A(self.network, x, training=False)['acceleration']
-        return a
-
-    @tf.function(experimental_relax_shapes=True)
-    def _pinn_acceleration_jacobian(self, x):
-        with tf.GradientTape() as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        jacobian = g1.batch_jacobian(a,x)
-        return jacobian
-        
-    @tf.function(experimental_relax_shapes=True)
-    def _nn_acceleration_jacobian(self,x):
-        with tf.GradientTape() as g2:
-            g2.watch(x)
-            a = self.network(x)  # shape = (k,) #! evaluate network
-        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
-        return jacobian
-
-
     # saving
     def model_size_stats(self):
         """Method which computes the number of trainable variables in the model as well
@@ -464,12 +432,12 @@ class PINNGravityModel(tf.keras.Model):
     # private functions
     @tf.function(jit_compile=True)
     def _nn_acceleration_output(self, x):
-        a = self.network(x) 
+        a = self.network(x)['acceleration']
         return a
     
     @tf.function()
     def _pinn_acceleration_output(self, x):
-        a = pinn_A(self.network, x, training=False)
+        a = pinn_A(self.network, x, training=False)['acceleration']
         return a
 
     @tf.function(experimental_relax_shapes=True)

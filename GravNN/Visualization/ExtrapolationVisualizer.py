@@ -174,7 +174,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         # plt.scatter3d(x, y, z, alpha=0.2, s=2)
 
 def main():
-    df = pd.read_pickle("Data/Dataframes/high_altitude_behavior.data")
+    df = pd.read_pickle("Data/Dataframes/example_training.data")
 
     model_id = df["id"].values[-1] # with scaling
     config, model = load_config_and_model(model_id, df)
@@ -190,6 +190,6 @@ def main():
     vis.plot_interpolation_rms()
     vis.plot_extrapolation_rms()
 
-
+    plt.show()
 if __name__ == "__main__":
     main()

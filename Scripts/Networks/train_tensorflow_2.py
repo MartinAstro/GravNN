@@ -49,7 +49,7 @@ def run(config):
     model = PINNGravityModel(config)
     history = model.train(data)
 
-    model.save(df_file=None, history=history, transformers=data.transformers)
+    model.save_custom(df_file=None, history=history, transformers=data.transformers)
     return model.config
 
 

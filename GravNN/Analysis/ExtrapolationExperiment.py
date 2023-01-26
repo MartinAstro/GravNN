@@ -135,7 +135,9 @@ class ExtrapolationExperiment:
     def compute_loss(self):
         loss_fcns = self.config.get('loss_fcns', [['rms','percent']])[0]
         loss_list = [get_loss_fcn(loss_key) for loss_key in loss_fcns]
-        losses = MetaLoss(self.test_accelerations, self.predicted_accelerations, loss_list)
+        y_hat = {"accelerations" : self.predicted_accelerations}
+        y = {"accelerations" : self.test_accelerations}
+        losses = MetaLoss(y, y_hat, loss_list)
         self.loss_acc = tf.reduce_sum([tf.reduce_mean(loss) for loss in losses.values()])
 
     def run(self):

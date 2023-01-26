@@ -21,9 +21,12 @@ def main():
         "N_dist": [5000],
         "N_train": [4500],
         "N_val": [500],
-        "epochs" : [5000],
         "batch_size" : [4096],
-        "PINN_constraint_fcn": ["pinn_alc"],
+        "PINN_constraint_fcn": ["pinn_a"],
+
+        # 'trainable_tanh' : [True],
+        # 'tanh_k' : [1.0],
+        # 'tanh_r' : [1.0],
     })
 
 
@@ -53,7 +56,7 @@ def run(config):
     data = DataSet(config)
     model = PINNGravityModel(config)
     history = model.train(data)
-    model.save(df_file=None, history=history, transformers=data.transformers)
+    model.save_custom(df_file=None, history=history, transformers=data.transformers)
 
     # Appends the model config to a perscribed df
     return model.config
