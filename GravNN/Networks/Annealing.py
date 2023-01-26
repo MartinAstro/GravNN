@@ -172,7 +172,7 @@ def update_w_loss(w_loss, train_counter, losses, variables, tape):
 
             J = tf.transpose(tf.concat(gradients, 1))
 
-            K_i = J@tf.transpose(J) # NTK of the values  [NxN]
+            K_i = J@tf.transpose(J) # NTK of the values  [N_weights x N_weights]
             trace_K_i = tf.linalg.trace(K_i)
             traces.append(trace_K_i)
         trace_K = tf.reduce_sum(traces)
