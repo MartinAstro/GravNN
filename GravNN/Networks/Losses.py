@@ -10,29 +10,34 @@ def get_loss_fcn(loss_key):
 
     }[loss_key.lower()]
 
+#https://github.com/tensorflow/tensorflow/issues/12071#issuecomment-420279641
+@tf.custom_gradient
+def norm(x):
+    y = tf.norm(x, axis=1, keepdims=True)
+    def grad(dy):
+        return dy * (x / (y + 1e-16))
+    return y, grad
+
 
 def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
     losses = {}
     for loss_fcn in loss_fcn_list:
-        for key in y_dict.keys():
+        for key in y_hat_dict.keys() & y_dict.keys():
             y_hat = y_hat_dict[key]
             y = y_dict[key]
-            losses.update({f"{key}_{loss_fcn.__name__}" : loss_fcn(y_hat, y)})
-    
+            loss = loss_fcn(y_hat, y)
     # Don't hold onto losses that have zero (percent of laplacian, curl)
-    # This appears to set gradients to zero. 
-    # drop_keys = []
-    # for key,loss in losses.items():
-    #     if tf.math.count_nonzero(loss) == 0:
-    #         drop_keys.append(key)
-    # for key in drop_keys:
-    #     losses.pop(key)
+            if tf.math.count_nonzero(loss) !=0 :
+                loss_name = f"{key}_{loss_fcn.__name__}" 
+                losses.update({loss_name : loss}) 
+
     return losses
 
 
 def rms(y_hat, y):
     dy = y_hat - y
-    return tf.sqrt(tf.reduce_sum(tf.square(dy), axis=1))
+    # return tf.sqrt(norm(dy))
+    return tf.sqrt(tf.reduce_sum(tf.square(dy), axis=1) + tf.constant(1.0e-16, dtype=y.dtype))
 
 def percent(y_hat, y):
     #https://github.com/tensorflow/tensorflow/issues/12071
