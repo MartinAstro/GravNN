@@ -73,7 +73,7 @@ def pinn_AP(f, x, training):
     return {"acceleration" : a_x, "potential" : u}
 
 def pinn_ALC(f, x, training):
-    with tf.GradientTape(persistent=False) as g1:
+    with tf.GradientTape() as g1:
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
@@ -90,10 +90,10 @@ def pinn_ALC(f, x, training):
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return {"acceleration" : accel, "laplace" : laplace, "curl" : curl}
+    return {"acceleration" : accel, "laplacian" : laplace, "curl" : curl}
 
 def pinn_APLC(f, x, training):
-    with tf.GradientTape(persistent=False) as g1:
+    with tf.GradientTape() as g1:
         g1.watch(x)
         with tf.GradientTape() as g2:
             g2.watch(x)
@@ -111,7 +111,7 @@ def pinn_APLC(f, x, training):
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
-    return {"potential" : u, "acceleration" : accel, "laplace" : laplace, "curl" : curl}
+    return {"potential" : u, "acceleration" : accel, "laplacian" : laplace, "curl" : curl}
 
 
 def format_training_data(y, constraint):
@@ -122,7 +122,7 @@ def format_training_data(y, constraint):
         })
     if constraint == "pinn_p":
         y_dict.update({
-            'potential' : y[:,0]
+            'potential' : y[:,0:1]
         })
     if constraint == "pinn_a":
         y_dict.update({
@@ -130,20 +130,20 @@ def format_training_data(y, constraint):
         })
     if constraint == "pinn_ap":
         y_dict.update({
-            'potential' : y[:,0],
+            'potential' : y[:,0:1],
             'acceleration' : y[:,1:4]
         })
     if constraint == "pinn_alc":
         y_dict.update({
             'acceleration' : y[:,0:3],
-            'laplacian' : y[:,4],
-            'curl' : y[:,5:8]
+            'laplacian' : y[:,3:4], # retains (N,1) shape
+            'curl' : y[:,4:7]
         })
     if constraint == "pinn_aplc":
         y_dict.update({
             'potential' : y[:,0],
             'acceleration' : y[:,1:4],
-            'laplacian' : y[:,5],
-            'curl' : y[:,6:9]
+            'laplacian' : y[:,4:5],
+            'curl' : y[:,5:8]
         })
     return y_dict
