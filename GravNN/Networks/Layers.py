@@ -198,8 +198,8 @@ class EnforceBoundaryConditions(tf.keras.layers.Layer):
         self.enforce_bc = kwargs['enforce_bc'][0]
         r_max = kwargs.get('ref_radius_analytic', [np.nan])[0]
         self.trainable_tanh = kwargs.get('trainable_tanh')[0]
-        self.k_init = kwargs.get('tanh_k', [1])[0]
-        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
+        self.k_init = kwargs.get('tanh_k', [1.0])[0]
+        self.r_max = kwargs.get('tanh_r', [r_max])[0]
 
     def build(self, input_shapes):
         self.radius = self.add_weight("radius",
