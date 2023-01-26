@@ -111,13 +111,13 @@ class PINNGravityModel(tf.keras.Model):
             u = self.analytic_model(x)
         accel = -tape.gradient(u, x)
         return {
-            "potential" : u, "acceleration" : accel,
-            "laplacian" : tf.zeros_like(u),
-            "curl" : tf.zeros_like(accel)}
+            "potential" : u, 
+            "acceleration" : accel,
+        }
     
     def remove_analytic_model(self, x, y_dict, y_hat_dict):
         y_analytic_dict = self.call_analytic_model(x)
-        for key in y_dict.keys():
+        for key in y_dict.keys() & y_analytic_dict.keys():
             y_dict[key] -= y_analytic_dict[key]
             y_hat_dict[key] -= y_analytic_dict[key]
         return y_dict, y_hat_dict
@@ -141,34 +141,33 @@ class PINNGravityModel(tf.keras.Model):
 
         with tf.GradientTape(persistent=True) as tape:
             # with tf.GradientTape(persistent=True) as w_loss_tape:
-            y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
-            y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
+                y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
+                y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
-            if self.config.get('loss_sph', [False])[0]:
-                convert_losses_to_sph(
-                    x, 
-                    y_dict['acceleration'], 
-                    y_hat_dict['acceleration']
-                    )
+                if self.config.get('loss_sph', [False])[0]:
+                    convert_losses_to_sph(x, 
+                        y_dict['acceleration'], 
+                        y_hat_dict['acceleration']
+                        )
 
-            losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
+                losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
 
-            # Don't record the gradients associated with
-            # computing adaptive learning rates. 
-            # with tape.stop_recording():    
-            #     self.w_loss = update_w_loss(
-            #         self.w_loss,
-            #         self._train_counter, 
-            #         losses, 
-            #         self.network.trainable_variables, 
-            #         w_loss_tape)
+                # Don't record the gradients associated with
+                # computing adaptive learning rates. 
+                # with tape.stop_recording():    
+                #     self.w_loss = update_w_loss(
+                #         self.w_loss,
+                #         self._train_counter, 
+                #         losses, 
+                #         self.network.trainable_variables, 
+                #         w_loss_tape)
 
-            # self.w_loss = tf.constant(1.0)
-            loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
-            # loss = tf.reduce_sum(self.w_loss*loss_i)
-            loss = tf.reduce_sum(loss_i)
-            loss = self.optimizer.get_scaled_loss(loss)
-            # del w_loss_tape
+                # self.w_loss = tf.constant(1.0)
+                loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
+                # loss = tf.reduce_sum(self.w_loss*loss_i)
+                loss = tf.reduce_sum(loss_i)
+                loss = self.optimizer.get_scaled_loss(loss)
+                # del w_loss_tape
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
@@ -342,6 +341,37 @@ class PINNGravityModel(tf.keras.Model):
     @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def wrap_test_step_njit(self, data):
         return self.test_step_fcn(data)
+
+
+    # private functions
+    @tf.function(jit_compile=True)
+    def _nn_acceleration_output(self, x):
+        a = self.network(x)['acceleration']
+        return a
+    
+    @tf.function()
+    def _pinn_acceleration_output(self, x):
+        a = pinn_A(self.network, x, training=False)['acceleration']
+        return a
+
+    @tf.function(experimental_relax_shapes=True)
+    def _pinn_acceleration_jacobian(self, x):
+        with tf.GradientTape() as g1:
+            g1.watch(x)
+            with tf.GradientTape() as g2:
+                g2.watch(x)
+                u = self.network(x)  # shape = (k,) #! evaluate network
+            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+        jacobian = g1.batch_jacobian(a,x)
+        return jacobian
+        
+    @tf.function(experimental_relax_shapes=True)
+    def _nn_acceleration_jacobian(self,x):
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            a = self.network(x)  # shape = (k,) #! evaluate network
+        jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
+        return jacobian
 
 
     # saving
