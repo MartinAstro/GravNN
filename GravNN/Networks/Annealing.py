@@ -164,15 +164,16 @@ def update_w_loss(w_loss, train_counter, losses, variables, tape):
     if tf.math.mod(train_counter, tf.constant(100, dtype=tf.int64)) == 0:
 
         for loss_i in losses.values():
+            # TODO: This non-deterministically takes up inf RAM. 
             jacobian = tape.jacobian(loss_i, variables)
 
             gradients = []
             for i in range(len(jacobian)-1): #batch size
                 gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
 
-            J = tf.transpose(tf.concat(gradients, 1))
+            J = tf.concat(gradients, 1)
 
-            K_i = J@tf.transpose(J) # NTK of the values  [N_weights x N_weights]
+            K_i = J@tf.transpose(J) # NTK of the values  [N_samples x N_samples]
             trace_K_i = tf.linalg.trace(K_i)
             traces.append(trace_K_i)
         trace_K = tf.reduce_sum(traces)
