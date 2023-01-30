@@ -87,10 +87,6 @@ class InvRLayer(tf.keras.layers.Layer):
 
 
 # postprocessing
-
-
-
-
 class BlendPotentialLayer(tf.keras.layers.Layer):
 
     def __init__(self, dtype, mu, r_max):
@@ -271,6 +267,72 @@ class EnforceBoundaryConditions(tf.keras.layers.Layer):
 
 
 # Experimental
+class LearnedFourierFeatureLayer(tf.keras.layers.Layer):
+    def __init__(self, fourier_features, fourier_sigma, freq_decay, **kwargs):
+        super(LearnedFourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
+        self.fourier_features = fourier_features
+        self.fourier_sigma = fourier_sigma
+
+    def build(self, input_shapes):
+        w_initializer = tf.keras.initializers.RandomNormal(
+            mean=tf.constant(0.0, dtype=self.dtype), 
+            stddev=tf.constant(self.fourier_sigma/4, dtype=self.dtype),
+            seed=1234)
+        b_initializer = tf.keras.initializers.RandomUniform(
+            minval=tf.constant(-1.0, dtype=self.dtype), 
+            maxval=tf.constant(1.0, dtype=self.dtype), 
+            seed=1234)
+        self.W = self.add_weight("W_LFF",
+                            shape=[self.fourier_features, 3],
+                            trainable=True, 
+                            initializer=w_initializer
+                            )
+        self.b = self.add_weight("b_LFF",
+                            shape=[self.fourier_features, 1],
+                            trainable=True, 
+                            initializer=b_initializer
+                            )
+
+        super(LearnedFourierFeatureLayer, self).build(input_shapes)
+
+    def call(self, inputs):
+        inputs_transpose = tf.transpose(inputs) # [4 x N]
+
+        one = tf.constant(1.0, dtype=self.dtype)
+        two = tf.constant(2.0, dtype=self.dtype)
+
+        r = inputs_transpose[0]
+
+        # force geometry to be between 0 - 1
+        s = (inputs_transpose[1] + one) / two
+        t = (inputs_transpose[2] + one) / two
+        u = (inputs_transpose[3] + one) / two
+
+        # project into random fourier space
+        # B [M(10) x 3]
+        v = tf.stack([s, t, u], 0) # [3 x N(1000)]
+        linear = self.W@v + self.b# [M(10) x N(1000)]
+
+        pi = tf.constant(np.pi, dtype=self.dtype)
+        v_activated = tf.sin(pi*linear)
+
+        # stack radius and fourier basis together
+        r_feature = tf.reshape(r, shape=(1, -1))
+        features = tf.concat([r_feature, v_activated], 0) # [2M x N]
+
+        return tf.transpose(features)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "fourier_features" : self.fourier_features,
+                "fourier_sigma" : self.fourier_sigma,
+            }
+        )
+        return config
+
+
 class FourierFeatureLayer(tf.keras.layers.Layer):
     def __init__(self, fourier_features, fourier_sigma, fourier_scale, freq_decay, **kwargs):
         super(FourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
@@ -333,7 +395,6 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         )
         return config
 
-# Experimental
 class TrainableFourierFeatureLayer(tf.keras.layers.Layer):
     def __init__(self, fourier_features, fourier_sigma, fourier_scale, freq_decay, **kwargs):
         super(TrainableFourierFeatureLayer, self).__init__(dtype=kwargs.get('dtype'))
