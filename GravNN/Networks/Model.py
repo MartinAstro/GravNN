@@ -141,7 +141,7 @@ class PINNGravityModel(tf.keras.Model):
         y_dict = format_training_data(y, self.constraint)
 
         with tf.GradientTape(persistent=True) as tape:
-            # with tf.GradientTape(persistent=True) as w_loss_tape:
+            with tf.GradientTape(persistent=True) as w_loss_tape:
                 y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
                 y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
@@ -155,20 +155,20 @@ class PINNGravityModel(tf.keras.Model):
 
                 # Don't record the gradients associated with
                 # computing adaptive learning rates. 
-                # with tape.stop_recording():    
-                #     self.w_loss = update_w_loss(
-                #         self.w_loss,
-                #         self._train_counter, 
-                #         losses, 
-                #         self.network.trainable_variables, 
-                #         w_loss_tape)
+                with tape.stop_recording():    
+                    self.w_loss = update_w_loss(
+                        self.w_loss,
+                        self._train_counter, 
+                        losses, 
+                        self.network.trainable_variables, 
+                        w_loss_tape)
 
                 # self.w_loss = tf.constant(1.0)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
-                # loss = tf.reduce_sum(self.w_loss*loss_i)
+                loss = tf.reduce_sum(self.w_loss*loss_i)
                 loss = tf.reduce_sum(loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
-                # del w_loss_tape
+            del w_loss_tape
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
