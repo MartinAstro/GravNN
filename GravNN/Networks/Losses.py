@@ -15,7 +15,9 @@ def get_loss_fcn(loss_key):
 def norm(x):
     y = tf.norm(x, axis=1, keepdims=True)
     def grad(dy):
-        return dy * (x / (y + 1e-16))
+        #dy has inf's sometimes
+        result = tf.math.multiply_no_nan(dy, (x / (y + tf.constant(1e-16, dtype=y.dtype))))
+        return result
     return y, grad
 
 
@@ -36,14 +38,17 @@ def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
 
 def rms(y_hat, y):
     dy = y_hat - y
-    # return tf.sqrt(norm(dy))
-    return tf.sqrt(tf.reduce_sum(tf.square(dy), axis=1) + tf.constant(1.0e-16, dtype=y.dtype))
+    return tf.sqrt(norm(dy))
+    # return tf.sqrt(tf.reduce_sum(tf.square(dy), axis=1) + tf.constant(1.0e-16, dtype=y.dtype))
 
 def percent(y_hat, y):
     #https://github.com/tensorflow/tensorflow/issues/12071
     da = tf.subtract(y_hat[:,0:3], y[:,0:3]) + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
-    da_norm = tf.norm(da, axis=1)
-    a_true_norm = tf.norm(y[:,0:3],axis=1)
+    da_norm = norm(da)
+    a_true_norm = norm(y[:,0:3])
+    # da = tf.subtract(y_hat[:,0:3], y[:,0:3]) + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
+    # da_norm = tf.norm(da, axis=1)
+    # a_true_norm = tf.norm(y[:,0:3],axis=1)
     loss_components = tf.math.divide_no_nan(da_norm,a_true_norm) 
     return loss_components
 
