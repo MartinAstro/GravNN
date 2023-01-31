@@ -1,0 +1,67 @@
+name: CI-Tests
+
+on:
+  push:
+    branches:    
+      - master
+      - github_actions
+  pull_request:
+
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        # uses: nschloe/action-checkout-with-lfs-cache@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}        
+      - name: Cache pip modules
+        id: cache-pip
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-pip-modules
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }} # cache key is different for each runner
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache gravity files
+        id: cache-gravity-files
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-gravity-files
+        with:
+          path: ~/GravNN/Files/GravityModels/*
+          key: ${{ runner.os }}-gravity-files-
+          restore-keys: |
+            ${{ runner.os }}-gravity-files-
+      - name: Install preliminary packages
+        run: python3 -m venv .venv
+      - name: "Install wheel and conan package"
+        run: source .venv/bin/activate && pip3 install wheel pytest pytest-xdist
+      - name: "Install package"
+        run: source .venv/bin/activate && pip3 install -e .
+      - name: "Run Test"
+        run: |
+          source .venv/bin/activate
+          cd tests && pytest -n 2 --junitxml=junit/test-results.xml
+      - name: Upload pytest test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-results-${{ matrix.python-version }}
+          path: junit/test-results-${{ matrix.python-version }}.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
