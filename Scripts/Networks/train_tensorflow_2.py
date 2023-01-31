@@ -17,11 +17,14 @@ def main():
 
     hparams = {
         "N_dist" : [50000],
-        "N_train" : [45000],
-        "loss_fcns" : [['rms']],
-        # "jit_compile" : [False],
+        "N_train" : [4500],
+        "N_val" : [500],
+        # "loss_fcns" : [['rms']],
+        "layers" : [[3, 20, 20, 20, 3]],
+        "jit_compile" : [False],
         # "eager" : [True],
-        "PINN_constraint_fcn" : ['pinn_alc'],
+        "PINN_constraint_fcn" : ['pinn_a'],
+        "network_arch" : ["convolutional"]
     }
     args = configure_run_args(config, hparams)
     run(*args[0])

@@ -47,6 +47,7 @@ def get_network_fcn(network_type):
         "traditional" : traditional_network,
         "transformer" : transformer_network,
         "transformer_siren" : transformer_network_siren,
+        "convolutional" : convolutional_network,
     }[network_type.lower()]
 
 def get_initalizer_fcn(network_type, seed):
@@ -169,6 +170,60 @@ def transformer_network(inputs, **kwargs):
         if "dropout" in kwargs:
             if kwargs["dropout"][0] != 0.0:
                 x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=get_initalizer_fcn(final_layer_initializer, seed),
+        dtype=dtype,
+    )(x)
+    return outputs
+
+def convolutional_network(inputs, **kwargs):
+    
+
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    final_layer_initializer = kwargs['final_layer_initializer'][0]
+    dtype = kwargs["dtype"][0]
+    transformer_units = layers[1]
+    seed = kwargs['seed'][0]
+
+    x = inputs
+    
+    # x = tf.keras.layers.Dense(
+    #     100,
+    #     activation=activation,
+    #     kernel_initializer=get_initalizer_fcn(initializer, seed),
+    #     dtype=dtype,
+    # )(x)
+
+    x = FourierFeatureLayer(100, 1.0, 1.0, False)(x)
+
+    x =  tf.expand_dims(x, axis=-1)
+
+    x = tf.keras.layers.Conv1D(
+        filters=16, # dimensionality of the output space
+        kernel_size=8,
+        activation=activation
+    )(x)
+    x = tf.keras.layers.AveragePooling1D(pool_size=4)(x)
+
+    x = tf.keras.layers.Conv1D(
+        filters=16, # dimensionality of the output space
+        kernel_size=8,
+        activation=activation
+    )(x)
+    x = tf.keras.layers.AveragePooling1D(pool_size=4)(x)
+
+
+    if "batch_norm" in kwargs:
+        if kwargs["batch_norm"][0]:
+            x = tf.keras.layers.BatchNormalization()(x)
+    if "dropout" in kwargs:
+        if kwargs["dropout"][0] != 0.0:
+            x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    x = tf.keras.layers.Flatten()(x)
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
