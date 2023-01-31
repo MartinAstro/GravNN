@@ -58,7 +58,7 @@ class PINNGravityModel(tf.keras.Model):
         self.loss_fcn_list = [] 
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
-        self.w_loss = tf.ones(shape=(3,)) # adaptive weights for ALC
+        self.w_loss = tf.ones(shape=(3,), dtype=self.dtype) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -166,7 +166,7 @@ class PINNGravityModel(tf.keras.Model):
                 # self.w_loss = tf.constant(1.0)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
                 loss = tf.reduce_sum(self.w_loss*loss_i)
-                loss = tf.reduce_sum(loss_i)
+                # loss = tf.reduce_sum(loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
             del w_loss_tape
 
