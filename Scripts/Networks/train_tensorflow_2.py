@@ -21,13 +21,14 @@ def main():
         "N_val" : [500],
         # "loss_fcns" : [['rms']],
         "layers" : [[3, 20, 20, 20, 3]],
-        "jit_compile" : [False],
+        # "jit_compile" : [False],
+        "epochs" : [5000],
         # "eager" : [True],
         "PINN_constraint_fcn" : ['pinn_a'],
         "network_arch" : ["convolutional"]
     }
     args = configure_run_args(config, hparams)
-    run(*args[0])
+    # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
