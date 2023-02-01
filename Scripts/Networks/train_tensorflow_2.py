@@ -27,8 +27,8 @@ def main():
         "loss_fcns" : [['rms']],
         # "jit_compile" : [False],
         # "eager" : [True],
-        "network_arch" : ['traditional'],
-        "PINN_constraint_fcn" : ['pinn_a'],
+        "PINN_constraint_fcn" : ['pinn_alc'],
+        "epochs" : [5000]
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
