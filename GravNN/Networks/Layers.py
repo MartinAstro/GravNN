@@ -57,9 +57,20 @@ class InvRLayer(tf.keras.layers.Layer):
         config = super().get_config().copy()
         return config
 
+class AddDimension(tf.keras.layers.Layer):
+    def __init__(self, dtype, **kwargs):
+        super(AddDimension, self).__init__(dtype=dtype)
+
+    def call(self, inputs):
+        new_dim = tf.transpose(tf.stack([inputs], axis=0),[1,2,0])
+        return new_dim
+
+    def get_config(self):
+        config = super().get_config().copy()
+        return config
+
 
 # postprocessing
-
 
 
 
