@@ -161,11 +161,13 @@ def pinn_APLC_anneal(loss_components, adaptive_const):
 # ANNEALING V2
 def update_w_loss(w_loss, train_counter, losses, variables, tape):
     traces = []
-    if tf.math.mod(train_counter, tf.constant(100, dtype=tf.int64)) == 0:
+    if tf.math.mod(train_counter, tf.constant(100, dtype=tf.int64)) == 0 and \
+        train_counter > -1:
+        # train_counter > 500:
 
         for loss_i in losses.values():
             # TODO: This non-deterministically takes up inf RAM. 
-            jacobian = tape.jacobian(loss_i, variables)
+            jacobian = tape.jacobian(loss_i[:100], variables)
 
             gradients = []
             for i in range(len(jacobian)-1): #batch size
