@@ -49,7 +49,7 @@ class HistoryVisualizer(VisualizationBase):
         plt.legend()
 
 if __name__ == "__main__":
-    df, idx = pd.read_pickle('Data/Dataframes/earth_trainable_FF.data'), -1 #i = 105 is best
+    df, idx = pd.read_pickle('Data/Dataframes/example.data'), -1 #i = 105 is best
 
     model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
