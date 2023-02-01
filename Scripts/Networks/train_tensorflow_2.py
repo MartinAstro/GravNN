@@ -17,30 +17,21 @@ def main():
 
     hparams = {
         "N_dist" : [50000],
-        "N_train" : [45000],
-        "loss_fcns" : [['percent']],
-
-        "N_dist": [50000],
-        "N_train": [45000],
-        "N_val": [500],
-        "radius_min": [Earth().radius],
-        "radius_max": [Earth().radius + 1.0],
-        "epochs"  :[5000],
-        # "num_units" : [128],
-        # "preprocessing" : [['pines', 'r_inv', 'fourier']],
-        "preprocessing" : [['pines', 'r_inv', 'fourier']],
-        "trainable" : [True],
-        "fourier_sigma" : [[1.0]],
-        "layers" : [[3, 128, 128, 128, 64, 64, 64, 32, 32, 1]],
-        "fourier_features" :[48],
-        # "dropout" : [0.05],
-
+        # "N_train" : [2],
+        # "N_val" : [2],
+        "N_train" : [450],
+        "N_val" : [50],
+        # "learning_rate" : [1E-9], # some discussion that learning rate must be small for dynamics 
+        "num_units" : [10],
+        # "layers" : [[3, 3, 2, 1]],
+        "loss_fcns" : [['rms']],
         # "jit_compile" : [False],
         # "eager" : [True],
         "network_arch" : ['traditional'],
         "PINN_constraint_fcn" : ['pinn_a'],
     }
     args = configure_run_args(config, hparams)
+    # run(*args[0])
     # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
