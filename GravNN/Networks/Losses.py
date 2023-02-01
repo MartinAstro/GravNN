@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-
+from collections import OrderedDict
 def get_loss_fcn(loss_key):
     return { 
         "rms" : rms,
@@ -22,7 +22,7 @@ def norm(x):
 
 
 def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
-    losses = {}
+    losses = OrderedDict()
     for loss_fcn in loss_fcn_list:
         for key in y_hat_dict.keys() & y_dict.keys():
             y_hat = y_hat_dict[key]
@@ -43,7 +43,7 @@ def rms(y_hat, y):
 
 def percent(y_hat, y):
     #https://github.com/tensorflow/tensorflow/issues/12071
-    da = tf.subtract(y_hat[:,0:3], y[:,0:3]) + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
+    da = tf.subtract(y_hat[:,0:3], y[:,0:3])# + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
     da_norm = norm(da)
     a_true_norm = norm(y[:,0:3])
     # da = tf.subtract(y_hat[:,0:3], y[:,0:3]) + tf.constant(1.0e-16, dtype=y.dtype) # if perfectly zero, nan's
