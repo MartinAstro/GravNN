@@ -33,7 +33,8 @@ class TrainingDistributionVisualizer(VisualizationBase):
 
     def plot_polyhedron(self):
         cmap = plt.get_cmap('Greys')
-        tri = Poly3DCollection(self.shape_model.triangles*1000 / self.planet_radius, cmap=cmap, alpha=0.5)
+        tri = Poly3DCollection(self.shape_model.triangles*1000 / self.planet_radius, alpha=1.0)
+        tri.set_facecolor('gray')
         p = plt.gca().add_collection3d(tri)
 
     def plot_3d_scatter(self):
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from GravNN.Networks.Model import load_config_and_model
 
-    df = pd.read_pickle("Data/Dataframes/test.data")
+    df = pd.read_pickle("Data/Dataframes/example.data")
     model_id = df["id"].values[-1] 
     config, model = load_config_and_model(model_id, df)
     vis = TrainingDistributionVisualizer(config)
