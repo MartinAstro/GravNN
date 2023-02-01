@@ -32,7 +32,6 @@ def main():
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
-    # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
