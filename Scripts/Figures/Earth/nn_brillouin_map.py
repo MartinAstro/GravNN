@@ -99,7 +99,7 @@ def main():
 
     planet = Earth()
     density_deg = 180
-    df_file, idx = "Data/Dataframes/earth_trainable_FF.data", -1
+    df_file, idx = "Data/Dataframes/example.data", -1
 
 
     df = pd.read_pickle(df_file)
@@ -107,8 +107,8 @@ def main():
     surface_data = DHGridDist(planet, planet.radius, degree=density_deg)
     plot(df, idx, planet, surface_data)
     
-    LEO_data = DHGridDist(planet, planet.radius+420000, degree=density_deg)
-    plot(df, idx, planet, LEO_data)
+    # LEO_data = DHGridDist(planet, planet.radius+420000, degree=density_deg)
+    # plot(df, idx, planet, LEO_data)
     
     # high_alt_data = DHGridDist(planet, planet.radius*10, degree=density_deg)
     # plot(df, idx, planet, high_alt_data)
