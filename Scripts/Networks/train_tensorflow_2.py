@@ -18,13 +18,24 @@ def main():
     hparams = {
         "N_dist" : [50000],
         "N_train" : [45000],
-        "loss_fcns" : [['rms']],
+        "loss_fcns" : [['percent']],
+
+        "N_dist": [50000],
+        "N_train": [4500],
+        "N_val": [500],
+        "radius_min": [Earth().radius],
+        "radius_max": [Earth().radius + 1000.0],
+        "epochs"  :[5000],
+        # "preprocessing" : [['pines', 'r_inv', 'fourier']],
+        # "fourier_sigma" : [[2.0]],
+        # "fourier_features" :[20],
+
         # "jit_compile" : [False],
         # "eager" : [True],
-        "PINN_constraint_fcn" : ['pinn_alc'],
+        "PINN_constraint_fcn" : ['pinn_a'],
     }
     args = configure_run_args(config, hparams)
-    run(*args[0])
+    # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
