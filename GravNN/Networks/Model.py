@@ -58,7 +58,8 @@ class PINNGravityModel(tf.keras.Model):
         self.loss_fcn_list = [] 
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
-        self.w_loss = tf.ones(shape=(3,), dtype=self.dtype) # adaptive weights for ALC
+        # self.w_loss = tf.ones(shape=(3,), dtype=self.dtype) # adaptive weights for ALC
+        self.w_loss = tf.Variable([1.0, 1.0, 1.0], dtype=self.dtype, trainable=False) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -156,7 +157,7 @@ class PINNGravityModel(tf.keras.Model):
                 # Don't record the gradients associated with
                 # computing adaptive learning rates. 
                 with tape.stop_recording():    
-                    self.w_loss = update_w_loss(
+                    update_w_loss(
                         self.w_loss,
                         self._train_counter, 
                         losses, 

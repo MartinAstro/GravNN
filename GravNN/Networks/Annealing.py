@@ -177,6 +177,7 @@ def update_w_loss(w_loss, train_counter, losses, variables, tape):
             trace_K_i = tf.linalg.trace(K_i)
             traces.append(trace_K_i)
         trace_K = tf.reduce_sum(traces)
-        w_loss = tf.stack([trace_K/trace for trace in traces],0)
+        w_loss_new = tf.stack([trace_K/trace for trace in traces],0)
+        w_loss.assign(w_loss_new)
         tf.print(w_loss)
     return w_loss
