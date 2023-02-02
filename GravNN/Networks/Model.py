@@ -245,6 +245,18 @@ class PINNGravityModel(tf.keras.Model):
         u_output = u_postprocessor(u_network_output)
         return u_output
 
+    def eval_batches(self, fcn, x, batch_size):
+        data = utils.chunks(x, batch_size)
+        y = []
+        for x_batch in data:
+            y_batch = fcn(x_batch)
+            if len(y) == 0:
+                y = y_batch
+            else:
+                y = np.concatenate((y,y_batch), axis=0)
+        return np.array(y).squeeze()
+
+
     @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
     def compute_potential(self, x):
         """Method responsible for returning just the PINN potential.
@@ -316,13 +328,11 @@ class PINNGravityModel(tf.keras.Model):
 
         x = tf.constant(x, dtype=self.variable_cast)
         
-        # data = utils.chunks(x, 131072//2)
-
         if self.is_pinn:
-            jacobian = self._pinn_acceleration_jacobian(x)
+            fcn = self._pinn_acceleration_jacobian(x)
         else:
-            jacobian = self._nn_acceleration_jacobian(x)
-
+            fcn = self._nn_acceleration_jacobian(x)
+        jacobian = self.eval_batches(fcn, x, batch_size)
         l_star = 1/x_transformer.scale_
         t_star = np.sqrt(a_transformer.scale_*l_star)
         jacobian /= t_star**2
