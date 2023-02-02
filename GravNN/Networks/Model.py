@@ -244,6 +244,18 @@ class PINNGravityModel(tf.keras.Model):
         u_output = u_postprocessor(u_network_output)
         return u_output
 
+    def eval_batches(self, fcn, x, batch_size):
+        data = utils.chunks(x, batch_size)
+        y = []
+        for x_batch in data:
+            y_batch = fcn(x_batch)
+            if len(y) == 0:
+                y = y_batch
+            else:
+                y = np.concatenate((y,y_batch), axis=0)
+        return np.array(y).squeeze()
+
+
     def compute_potential(self, x):
         """Method responsible for returning just the PINN potential.
         Use this method if a lightweight TF execution is desired
@@ -267,7 +279,7 @@ class PINNGravityModel(tf.keras.Model):
             u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
-    def compute_acceleration(self, x, batch_size=131072):
+    def compute_acceleration(self, x, batch_size=131072//4):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -282,15 +294,13 @@ class PINNGravityModel(tf.keras.Model):
         a_transformer = self.config["a_transformer"][0]
         x = x_transformer.transform(x)
 
-        x = tf.constant(x, dtype=self.variable_cast)
-        
-        # data = utils.chunks(x, 131072//2)
-
+        # x = tf.constant(x, dtype=self.variable_cast)
         if self.is_pinn:
-            a_pred = self._pinn_acceleration_output(x)
+            fcn = self._pinn_acceleration_output
         else:
-            a_pred = self._nn_acceleration_output(x)
-        a_pred = a_transformer.inverse_transform(a_pred).numpy()
+            fcn = self._nn_acceleration_output
+        a_pred = self.eval_batches(fcn, x, batch_size)
+        a_pred = a_transformer.inverse_transform(a_pred)
 
         return a_pred
 
@@ -312,13 +322,11 @@ class PINNGravityModel(tf.keras.Model):
 
         x = tf.constant(x, dtype=self.variable_cast)
         
-        # data = utils.chunks(x, 131072//2)
-
         if self.is_pinn:
-            jacobian = self._pinn_acceleration_jacobian(x)
+            fcn = self._pinn_acceleration_jacobian(x)
         else:
-            jacobian = self._nn_acceleration_jacobian(x)
-
+            fcn = self._nn_acceleration_jacobian(x)
+        jacobian = self.eval_batches(fcn, x, batch_size)
         l_star = 1/x_transformer.scale_
         t_star = np.sqrt(a_transformer.scale_*l_star)
         jacobian /= t_star**2
