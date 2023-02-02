@@ -98,9 +98,9 @@ def main():
     os.makedirs(directory, exist_ok=True)
 
     planet = Earth()
-    # density_deg = 180
+    density_deg = 180
     # density_deg = 80 # 50000
-    density_deg = 25 # 5000
+    # density_deg = 25 # 5000
     df_file, idx = "Data/Dataframes/example.data", -1
 
 
