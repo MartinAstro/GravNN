@@ -81,6 +81,7 @@ def get_preprocess_args(config):
         "fourier_features" : config.get('fourier_features', [1])[0],
         "fourier_sigma" : config.get('fourier_sigma', [1])[0],
         "fourier_scale" : config.get('fourier_scale', [1])[0],
+        "freq_decay" : config.get('freq_decay', [False])[0]
     }
     return preprocess_args
 
@@ -197,7 +198,13 @@ def convolutional_network(inputs, **kwargs):
         dtype=dtype,
     )(x)
     x = tf.keras.layers.Dense(
-        40,
+        10,
+        activation=activation,
+        kernel_initializer=get_initalizer_fcn(initializer, seed),
+        dtype=dtype,
+    )(x)
+    x = tf.keras.layers.Dense(
+        20,
         activation=activation,
         kernel_initializer=get_initalizer_fcn(initializer, seed),
         dtype=dtype,
@@ -206,20 +213,25 @@ def convolutional_network(inputs, **kwargs):
     # x = FourierFeatureLayer(100, 1.0, 1.0, False)(x)
     # x = tf.keras.layers.Reshape(target_shape=(40, 1))(x)
     x = AddDimension(dtype)(x)
-    # x =  tf.expand_dims(x, axis=-1)
 
     # Number of features to extract
     x = tf.keras.layers.Conv1D(
-        filters=20, # dimensionality of the output space
+        filters=8, # dimensionality of the output space
         kernel_size=3,
         activation=activation,
     )(x)
     # divide number of features by pooling
-    x = tf.keras.layers.AveragePooling1D(pool_size=4)(x)
+    x = tf.keras.layers.AveragePooling1D(pool_size=2)(x)
 
     # subsample again
     x = tf.keras.layers.Conv1D(
-        filters=20, # dimensionality of the output space
+        filters=16, # dimensionality of the output space
+        kernel_size=3,
+        activation=activation
+    )(x)
+
+    x = tf.keras.layers.Conv1D(
+        filters=32, # dimensionality of the output space
         kernel_size=3,
         activation=activation
     )(x)

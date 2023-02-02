@@ -9,7 +9,7 @@ from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Networks.Model import load_config_and_model
-
+from GravNN.Networks.Data import DataSet
 def plot(df, idx, planet, trajectory):
 
     map_vis = MapVisualization('m/s^2')
@@ -51,7 +51,15 @@ def plot(df, idx, planet, trajectory):
     
     plt.subplot(2,1,2)
     map_vis.plot_grid(grid_true.total, vlim=vlim, label=None, new_fig=False)
+    class TrainingTraj:
+        def __init__(self, positions):
+            self.positions = positions
+    
+    positions = DataSet(config).get_raw_data()['x_train']
+    training_traj = TrainingTraj(positions)
+    map_vis.plot_trajectory(training_traj)
     plt.gcf().get_axes()[-2].set_title("True Model")
+
     
 
     plt.figure(figsize=(8,6))

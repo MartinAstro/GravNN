@@ -17,15 +17,29 @@ def main():
 
     hparams = {
         "N_dist" : [50000],
-        "N_train" : [4500],
+        "N_train" : [45000],
         "N_val" : [500],
+        "radius_min": [Earth().radius],
+        "radius_max": [Earth().radius + 1.0],
+        "epochs"  :[5000],
+
         # "loss_fcns" : [['rms']],
-        "layers" : [[3, 20, 20, 20, 3]],
-        # "jit_compile" : [False],
+        "jit_compile" : [False],
         "epochs" : [5000],
-        # "eager" : [True],
+        # "eager" : [True], # saving an eager net causes issues
         "PINN_constraint_fcn" : ['pinn_a'],
-        "network_arch" : ["convolutional"]
+        # "network_arch" : ["convolutional"]
+        # "network_arch" : ["traditional"],
+        # "layers" : [[3, 80, 40, 20, 10, 1]]
+        # "layers" : [[3, 80, 20, 20, 80, 1]]
+        # "layers" : [[3, 20, 20, 20, 20, 1]]
+        "num_units" : [256],
+
+        # "preprocessing" : [['pines', 'r_inv', 'fourier']],
+        # "fourier_features" : [20],
+        # "fourier_sigma" : [[2.0]],
+        # "freq_decay" : [False]
+
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
