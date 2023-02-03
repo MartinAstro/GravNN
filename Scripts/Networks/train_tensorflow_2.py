@@ -26,14 +26,18 @@ def main():
         "radius_min": [Earth().radius],
         "radius_max": [Earth().radius + 1.0],
         "epochs"  :[5000],
-        "num_units" : [128],
+        # "num_units" : [128],
+        # "preprocessing" : [['pines', 'r_inv', 'fourier']],
         "preprocessing" : [['pines', 'r_inv', 'fourier']],
+        "trainable" : [True],
         "fourier_sigma" : [[1.0]],
+        "layers" : [[3, 128, 128, 128, 64, 64, 64, 32, 32, 1]],
         "fourier_features" :[48],
         # "dropout" : [0.05],
 
         # "jit_compile" : [False],
         # "eager" : [True],
+        "network_arch" : ['traditional'],
         "PINN_constraint_fcn" : ['pinn_a'],
     }
     args = configure_run_args(config, hparams)

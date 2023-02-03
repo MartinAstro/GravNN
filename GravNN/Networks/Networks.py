@@ -63,7 +63,7 @@ def get_preprocess_layer_fcn(layer_key):
         "r_normalize" : NormalizeRLayer,
         "r_inv" : InvRLayer,
         "fourier" : FourierFeatureLayer,
-        "learned_fourier" : LearnedFourierFeatureLayer
+        "fourier_simple" : FourierFeatureSimpleLayer
     }[layer_key.lower()]
 
 def get_preprocess_args(config):
@@ -80,7 +80,7 @@ def get_preprocess_args(config):
         "feature_max" : feature_max, 
         "fourier_features" : config.get('fourier_features', [1])[0],
         "fourier_sigma" : config.get('fourier_sigma', [1])[0],
-        "fourier_scale" : config.get('fourier_scale', [1])[0],
+        "trainable" : config.get('trainable', [1])[0],
         "freq_decay" : config.get('freq_decay', [False])[0]
     }
     return preprocess_args
