@@ -184,39 +184,29 @@ def convolutional_network(inputs, **kwargs):
     activation = kwargs["activation"][0]
     initializer = kwargs["initializer"][0]
     final_layer_initializer = kwargs['final_layer_initializer'][0]
+    num_units = kwargs['num_units'][0]
     dtype = kwargs["dtype"][0]
     transformer_units = layers[1]
     seed = kwargs['seed'][0]
 
     x = inputs
-    
+    x = FourierFeatureLayer(100, 1.0, 1.0, False)(x)
+
     # High dimensional representation of the features
     x = tf.keras.layers.Dense(
-        10,
-        activation=activation,
-        kernel_initializer=get_initalizer_fcn(initializer, seed),
-        dtype=dtype,
-    )(x)
-    x = tf.keras.layers.Dense(
-        10,
-        activation=activation,
-        kernel_initializer=get_initalizer_fcn(initializer, seed),
-        dtype=dtype,
-    )(x)
-    x = tf.keras.layers.Dense(
-        20,
+        num_units,
         activation=activation,
         kernel_initializer=get_initalizer_fcn(initializer, seed),
         dtype=dtype,
     )(x)
 
-    # x = FourierFeatureLayer(100, 1.0, 1.0, False)(x)
+
     # x = tf.keras.layers.Reshape(target_shape=(40, 1))(x)
     x = AddDimension(dtype)(x)
 
     # Number of features to extract
     x = tf.keras.layers.Conv1D(
-        filters=8, # dimensionality of the output space
+        filters=128 // 4, # dimensionality of the output space
         kernel_size=3,
         activation=activation,
     )(x)
@@ -225,13 +215,21 @@ def convolutional_network(inputs, **kwargs):
 
     # subsample again
     x = tf.keras.layers.Conv1D(
-        filters=16, # dimensionality of the output space
+        filters=128 // 4, # dimensionality of the output space
         kernel_size=3,
         activation=activation
     )(x)
+    x = tf.keras.layers.AveragePooling1D(pool_size=2)(x)
 
     x = tf.keras.layers.Conv1D(
-        filters=32, # dimensionality of the output space
+        filters=64 // 4, # dimensionality of the output space
+        kernel_size=3,
+        activation=activation
+    )(x)
+    x = tf.keras.layers.AveragePooling1D(pool_size=2)(x)
+
+    x = tf.keras.layers.Conv1D(
+        filters=64 // 4, # dimensionality of the output space
         kernel_size=3,
         activation=activation
     )(x)
@@ -240,13 +238,13 @@ def convolutional_network(inputs, **kwargs):
     # Make 1D vector again
     x = tf.keras.layers.Flatten()(x)
     x = tf.keras.layers.Dense(
-        units=20,
+        units=num_units // 2,
         activation=activation,
         kernel_initializer=get_initalizer_fcn(initializer, seed),
         dtype=dtype,
     )(x)
     x = tf.keras.layers.Dense(
-        units=20,
+        units=num_units // 2,
         activation=activation,
         kernel_initializer=get_initalizer_fcn(initializer, seed),
         dtype=dtype,
@@ -393,6 +391,7 @@ def CustomNet(**kwargs):
     super(tf.keras.Model, model).__init__(dtype=dtype)
 
     print(f"Model Params: {model.count_params()}")
+    print(model.summary())
     return model
 
 def MultiScaleNet(**kwargs):

@@ -24,16 +24,21 @@ def main():
         "epochs"  :[5000],
 
         # "loss_fcns" : [['rms']],
-        "jit_compile" : [False],
+        # "jit_compile" : [False],
         "epochs" : [5000],
         # "eager" : [True], # saving an eager net causes issues
         "PINN_constraint_fcn" : ['pinn_a'],
-        # "network_arch" : ["convolutional"]
+        "network_arch" : ["convolutional"],
         # "network_arch" : ["traditional"],
         # "layers" : [[3, 80, 40, 20, 10, 1]]
         # "layers" : [[3, 80, 20, 20, 80, 1]]
         # "layers" : [[3, 20, 20, 20, 20, 1]]
-        "num_units" : [256],
+        # "num_units" : [256],
+        "num_units" : [128],
+        "preprocessing" : [['pines', 'r_inv', 'fourier']],
+        "fourier_sigma" : [[1.0]],
+        "fourier_features" :[48],
+        "batch_size" : [8192]
 
         # "preprocessing" : [['pines', 'r_inv', 'fourier']],
         # "fourier_features" : [20],
