@@ -481,7 +481,7 @@ class DataSet():
         get_analytic_data_fcn = self.config['gravity_data_fcn'][0]
         
         x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
-            trajectory, grav_file, **self.config
+            trajectory, grav_file, parallel=True, **self.config
         )
 
         # TODO: this is hack b/c extra distribution gets populated with nan sometime

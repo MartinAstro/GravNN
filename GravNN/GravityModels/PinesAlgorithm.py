@@ -95,6 +95,20 @@ def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     return acc
 
 
+@njit(parallel=False, cache=True)
+def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
+    acc = np.zeros(positions.shape)
+    potential = np.zeros((int(len(positions) / 3),))
+    if N == -1:
+        return (acc, potential)
+    for i in range(0, int(len(positions) / 3)):
+        results = compute_acc_thread(
+            positions[3 * i : 3 * (i + 1)], N, mu, a, n1, n2, n1q, n2q, cbar, sbar
+        )
+        acc[3 * i : 3 * (i + 1)] = results[0]
+        potential[i] = results[1]
+    return (acc, potential)
+
 @njit(parallel=True, cache=True)
 def compute_acc_parallel(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
