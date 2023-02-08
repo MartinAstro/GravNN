@@ -3,6 +3,48 @@ import tensorflow as tf
 import numpy as np
 
 # preprocessing
+class PreprocessingLayer(tf.keras.layers.Layer):
+    def __init__(self, min, scale, dtype):
+        super(PreprocessingLayer, self).__init__(dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype)
+        self.scale = tf.constant(scale, dtype=dtype)
+
+    def call(self, inputs):
+        normalized_inputs = tf.math.add(tf.math.multiply(inputs, self.scale), self.min)
+        # normalized_inputs = inputs * self.scale + self.min
+        return normalized_inputs
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "min": self.min,
+                "scale": self.scale,
+            }
+        )
+        return config
+
+class PostprocessingLayer(tf.keras.layers.Layer):
+    def __init__(self, min, scale, dtype):
+        super(PostprocessingLayer, self).__init__(dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype)
+        self.scale = tf.constant(scale, dtype=dtype)
+
+    def call(self, normalized_inputs):
+        inputs = tf.math.divide(tf.subtract(normalized_inputs, self.min), self.scale)
+        # inputs = (normalized_inputs - self.min)/self.scale
+        return inputs
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "min": self.min,
+                "scale": self.scale,
+            }
+        )
+        return config
+
 class Cart2PinesSphLayer(tf.keras.layers.Layer):
     def __init__(self, dtype, **kwargs):
         """Successor to the Cart2SphLayer. The layer takes a

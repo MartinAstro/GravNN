@@ -545,6 +545,22 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
         f"{data_dir}/Networks/{model_id}/network"
     )
     model = PINNGravityModel(config, network)
+
+    x_transformer = config['x_transformer'][0]
+    u_transformer = config['u_transformer'][0]
+    a_transformer = config['a_transformer'][0]
+
+    # TODO: Fix this, it's very counter intuitive. 
+    x_preprocessor = PreprocessingLayer(0.0, x_transformer.scale_, model.dtype) # normalizing layer
+    u_postprocessor = PostprocessingLayer(0.0, u_transformer.scale_, model.dtype) # unnormalize layer
+    a_preprocessor = PreprocessingLayer(0.0, a_transformer.scale_, model.dtype) # normalizing layer
+    a_postprocessor = PostprocessingLayer(0.0, a_transformer.scale_, model.dtype) # unormalizing layer
+
+    model.x_preprocessor = x_preprocessor
+    model.u_postprocessor = u_postprocessor
+    model.a_preprocessor = a_preprocessor
+    model.a_postprocessor = a_postprocessor
+
     optimizer = utils._get_optimizer(config["optimizer"][0])
     model.compile(optimizer=optimizer, loss="mse") 
 
