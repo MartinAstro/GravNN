@@ -58,21 +58,13 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         super(Cart2PinesSphLayer, self).__init__(dtype=dtype)
 
     def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        X = inputs_transpose[0]
-        Y = inputs_transpose[1]
-        Z = inputs_transpose[2]
+        # s = X / r  # sin(beta)
+        # t = Y / r  # sin(gamma)
+        # u = Z / r  # sin(alpha)
 
-        XX = tf.square(X)
-        YY = tf.square(Y)
-        ZZ = tf.square(Z)
-        r = tf.sqrt(tf.reduce_sum([XX, YY, ZZ], 0)) # r
-
-        s = X / r  # sin(beta)
-        t = Y / r  # sin(gamma)
-        u = Z / r  # sin(alpha)
-
-        spheres = tf.stack([r, s, t, u], axis=1)
+        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
+        stu = tf.math.divide(inputs, r)
+        spheres = tf.concat([r, stu], axis=1)
         return spheres
 
     def get_config(self):
@@ -84,15 +76,9 @@ class InvRLayer(tf.keras.layers.Layer):
         super(InvRLayer, self).__init__(dtype=dtype)
 
     def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        r = inputs_transpose[0]
-        s = inputs_transpose[1]
-        t = inputs_transpose[2]
-        u = inputs_transpose[3]
-
-        one = tf.constant(1.0, dtype=r.dtype)
-        r_inv = tf.divide(one, r)
-        spheres = tf.stack([r_inv, s, t, u], axis=1)
+        r = inputs[:,0:1]
+        r_inv = tf.math.reciprocal(r)
+        spheres = tf.concat([r_inv, inputs[:,1:4]], axis=1)
         return spheres
 
     def get_config(self):
@@ -129,7 +115,7 @@ class BlendPotentialLayer(tf.keras.layers.Layer):
     def call(self, u_nn, u_analytic, inputs):
         one = tf.constant(1.0, dtype=u_nn.dtype)
         half = tf.constant(0.5, dtype=u_nn.dtype)
-        r = tf.reshape(inputs[:,0], shape=(-1,1))
+        r = inputs[:,0:1]
         dr = tf.subtract(r,self.radius)
         h = half+half*tf.tanh(self.k*dr)
         u_model = (one - h)*(u_nn + u_analytic) + h*u_analytic  
@@ -161,9 +147,8 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         self.a = radius_non_dim
 
     def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs)
-        r = inputs_transpose[0]
-        u = inputs_transpose[3]
+        r = inputs[:,0:1]
+        u = inputs[:,3:4]
 
         u_pm = self.mu/r
 
@@ -198,8 +183,8 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         self.power = tf.constant(power, dtype=dtype).numpy()
 
     def call(self, features, u_nn):
-        r = features[:,0]
-        r_p = tf.reshape(tf.pow(r, self.power), tf.shape(u_nn))
+        r = features[:,0:1]
+        r_p = tf.pow(r, self.power)
         u = tf.divide(u_nn, r_p)
         return u
 
@@ -262,7 +247,7 @@ class EnforceBoundaryConditions(tf.keras.layers.Layer):
 
         one = tf.constant(1.0, dtype=u_nn.dtype)
         half = tf.constant(0.5, dtype=u_nn.dtype)
-        r = tf.reshape(features[:,0], shape=(-1,1))
+        r = features[:,0:1]
         dr = tf.subtract(r,self.radius)
         h = half+half*tf.tanh(self.k*dr)
         u_model = (one - h)*u_nn + h*u_analytic  
