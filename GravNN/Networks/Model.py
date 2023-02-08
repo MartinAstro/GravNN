@@ -267,7 +267,8 @@ class PINNGravityModel(tf.keras.Model):
             u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
         return u_pred
 
-    def compute_acceleration(self, x, batch_size=131072):
+    @tf.function()
+    def compute_acceleration(self, x):#, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -278,21 +279,16 @@ class PINNGravityModel(tf.keras.Model):
         Returns:
             np.array: PINN generated acceleration
         """
-        x_transformer = self.config["x_transformer"][0]
-        a_transformer = self.config["a_transformer"][0]
-        x = x_transformer.transform(x)
 
-        x = tf.constant(x, dtype=self.variable_cast)
-        
+
         # data = utils.chunks(x, 131072//2)
-
+        x_input = self.x_preprocessor(x)
         if self.is_pinn:
-            a_pred = self._pinn_acceleration_output(x)
+            a_pred = self._pinn_acceleration_output(x_input)
         else:
-            a_pred = self._nn_acceleration_output(x)
-        a_pred = a_transformer.inverse_transform(a_pred).numpy()
+            a_pred = self._nn_acceleration_output(x_input)
+        a = self.a_postprocessor(a_pred)
 
-        return a_pred
 
     def compute_dU_dxdx(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
