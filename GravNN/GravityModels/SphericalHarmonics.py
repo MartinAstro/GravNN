@@ -4,7 +4,7 @@ import numpy as np
 import json
 from numba import njit
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
-from GravNN.GravityModels.PinesAlgorithm import compute_acc_parallel, compute_n_matrices, compute_acc
+from GravNN.GravityModels.PinesAlgorithm import *
 from GravNN.Support.transformations import cart2sph
 from scipy.special import lpmn
 
@@ -64,7 +64,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
 
 class SphericalHarmonics(GravityModelBase):
-    def __init__(self, sh_info, degree, trajectory=None, parallel=False):
+    def __init__(self, sh_info, degree, trajectory=None, parallel=False, jit=True):
         """Spherical Harmonic Gravity Model. Takes in a set of Stokes coefficients and computes
         acceleration and potentials using a non-singular representation (Pines Algorithm).
 
@@ -96,11 +96,11 @@ class SphericalHarmonics(GravityModelBase):
             self.load_regression(sh_info)
 
         self.n1, self.n2, self.n1q, self.n2q = compute_n_matrices(self.degree)
+
         if parallel:
             self.compute_fcn = compute_acc_parallel
         else:
-            self.compute_fcn = compute_acc
-
+            self.compute_fcn = compute_acc_jit
         pass
 
     def generate_full_file_directory(self):
