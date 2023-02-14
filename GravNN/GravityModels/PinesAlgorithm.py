@@ -2,12 +2,9 @@ import numpy as np
 from numba import jit, prange, njit
 
 
-@njit(cache=True)
 def getK(x):
     return 1.0 if (x == 0) else 2.0
 
-
-@njit(cache=True)
 def compute_n_matrices(N):
     n1 = np.ones((N + 2, N + 2)) * np.nan
     n2 = np.ones((N + 2, N + 2)) * np.nan
@@ -36,7 +33,6 @@ def compute_n_matrices(N):
     return n1, n2, n1q, n2q
 
 
-@njit(cache=True)
 def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
     for i in range(0, int(len(positions) / 3)):
@@ -94,8 +90,6 @@ def compute_acceleration(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
         )
     return acc
 
-
-@njit(parallel=False, cache=True)
 def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(positions.shape)
     potential = np.zeros((int(len(positions) / 3),))
@@ -109,22 +103,6 @@ def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
         potential[i] = results[1]
     return (acc, potential)
 
-@njit(parallel=True, cache=True)
-def compute_acc_parallel(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
-    acc = np.zeros(positions.shape)
-    potential = np.zeros((int(len(positions) / 3),))
-    if N == -1:
-        return (acc, potential)
-    for i in prange(0, int(len(positions) / 3)):
-        results = compute_acc_thread(
-            positions[3 * i : 3 * (i + 1)], N, mu, a, n1, n2, n1q, n2q, cbar, sbar
-        )
-        acc[3 * i : 3 * (i + 1)] = results[0]
-        potential[i] = results[1]
-    return (acc, potential)
-
-
-@njit(cache=True)
 def compute_acc_thread(position, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     acc = np.zeros(position.shape)
     potential = 0.0
@@ -188,3 +166,9 @@ def compute_acc_thread(position, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     # because it is used in significantly fewer places and then reconciles the relationship with the
     # produced acceleration.
     return (np.array([a1, a2, a3]) + np.array([s, t, u]) * a4, -potential)
+
+getK = njit(getK, cache=True)
+compute_n_matrices = njit(compute_n_matrices, cache=True)
+compute_acc_jit = njit(compute_acc, parallel=False, cache=True)
+compute_acc_parallel = njit(compute_acc, parallel=True, cache=True)
+compute_acc_thread = njit(compute_acc_thread, cache=True)
