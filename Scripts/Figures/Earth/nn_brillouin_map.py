@@ -33,7 +33,7 @@ def plot(df, idx, planet, trajectory):
     config, model = load_config_and_model(model_id, df)
 
     # The PINN Model
-    a_pred = model.compute_acceleration(trajectory.positions)
+    a_pred = model._compute_acceleration(trajectory.positions)
     grid_pred = Grid(trajectory=trajectory, accelerations=a_pred) 
 
     # If the PINN model includes point mass + J2, remove it

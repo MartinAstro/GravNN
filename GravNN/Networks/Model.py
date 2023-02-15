@@ -253,8 +253,8 @@ class PINNGravityModel(tf.keras.Model):
             if len(y) == 0:
                 y = y_batch
             else:
-                y = np.concatenate((y,y_batch), axis=0)
-        return np.array(y).squeeze()
+                y = tf.concat((y,y_batch), axis=0)
+        return y
 
 
     @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
@@ -286,8 +286,8 @@ class PINNGravityModel(tf.keras.Model):
             return x_input
 
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def compute_acceleration(self, x):#, batch_size=131072):
+    # @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def _compute_acceleration(self, x):#, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
         desired and other outputs are not required.
@@ -303,12 +303,16 @@ class PINNGravityModel(tf.keras.Model):
         # data = utils.chunks(x, 131072//2)
         x_input = self.preprocess(x)
         # if self.is_pinn:
-        a_pred = self._pinn_acceleration_output(x_input)
+        a_pred = self.eval_batches(self._pinn_acceleration_output, x_input, 131072//2)
+        # a_pred = self._pinn_acceleration_output(x_input)
         # else:
         #     a_pred = self._nn_acceleration_output(x_input)
         a = self.postprocess(a_pred)
         return a
 
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    def compute_acceleration(self,x):
+        return self._compute_acceleration(x)#, batch_size=131072):
 
     def compute_dU_dxdx(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
