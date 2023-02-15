@@ -64,7 +64,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
 
 class SphericalHarmonics(GravityModelBase):
-    def __init__(self, sh_info, degree, trajectory=None, parallel=False, jit=True):
+    def __init__(self, sh_info, degree, trajectory=None, parallel=False):
         """Spherical Harmonic Gravity Model. Takes in a set of Stokes coefficients and computes
         acceleration and potentials using a non-singular representation (Pines Algorithm).
 

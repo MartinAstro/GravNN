@@ -172,3 +172,5 @@ compute_n_matrices = njit(compute_n_matrices, cache=True)
 compute_acc_jit = njit(compute_acc, parallel=False, cache=True)
 compute_acc_parallel = njit(compute_acc, parallel=True, cache=True)
 compute_acc_thread = njit(compute_acc_thread, cache=True)
+
+# compute_acc_jit = compute_acc
