@@ -630,7 +630,7 @@ class DataSet():
 
         return (train_tuple, val_tuple, transformers,)
 
-    def generate_tensorflow_dataset(self, x, y, batch_size, dtype=None):
+    def generate_tensorflow_dataset(self, x, y, batch_size, shuffle=True, dtype=None):
         """Function which takes numpy arrays and converts
         them into a tensorflow Dataset -- a much faster
         type for training."""
@@ -647,19 +647,13 @@ class DataSet():
             else:
                 exit("No dtype specified")
 
-        # with tf.device(tf.config.list_logical_devices('GPU')[0].name):
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
-        dataset = dataset.shuffle(len(x), seed=1234)
+        if shuffle:
+            dataset = dataset.shuffle(len(x), seed=1234)
         dataset = dataset.batch(batch_size)
         dataset = dataset.apply(tf.data.experimental.copy_to_device("/gpu:0"))
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
         dataset = dataset.cache()
-
-        # dataset = dataset.apply(tf.data.experimental.prefetch_to_device("/gpu:0"))
-        # for element in dataset:
-        #     print(f'Tensor {element[0]} is on device {element[0].device}')
-
-
 
         # Why Cache is Impt: https://stackoverflow.com/questions/48240573/why-is-tensorflows-tf-data-dataset-shuffle-so-slow
         return dataset
@@ -709,7 +703,7 @@ class DataSet():
             x_train, y_train, batch_size, dtype=dtype
         )
         val_dataset = self.generate_tensorflow_dataset(
-            x_val, y_val, batch_size, dtype=dtype
+            x_val, y_val, batch_size, shuffle=False, dtype=dtype
         )
 
         return dataset, val_dataset
