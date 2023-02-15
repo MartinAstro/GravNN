@@ -286,7 +286,7 @@ class PINNGravityModel(tf.keras.Model):
             return x_input
 
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True, reduce_retracing=True)# reduce_retracing=True)
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def compute_acceleration(self, x):#, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -452,7 +452,7 @@ class PINNGravityModel(tf.keras.Model):
     def _network_potential(self, x, training):
         return self.network(x, training=training)       
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True, reduce_retracing=True)# reduce_retracing=True)
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def _pinn_acceleration_output(self, x):
         x_inputs = x
         with tf.GradientTape(watch_accessed_variables=False) as tape:
