@@ -36,7 +36,8 @@ def set_tf_env_flags():
         + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
     )
     os.environ["TF_GPU_THREAD_MODE"] = "gpu_private"
-    os.environ["TF_XLA_FLAGS"] = "--tf_xla_enable_xla_devices"
+    #https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/jit/flags.cc#L82-L142 list of XLA flags
+    os.environ["TF_XLA_FLAGS"] = "--tf_xla_enable_xla_devices --tf_xla_cpu_global_jit --tf_xla_auto_jit=1"
 
 
 def set_tf_expand_memory():
