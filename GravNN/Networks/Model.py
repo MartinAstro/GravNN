@@ -264,7 +264,17 @@ class PINNGravityModel(tf.keras.Model):
         return u
 
     @tf.function(jit_compile=True)
-    # @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
+    def preprocess(self, x):
+            x_input = self.x_preprocessor(x)
+            return x_input
+
+    @tf.function(jit_compile=True)
+    def postprocess(self, x):
+            x_input = self.a_postprocessor(x)
+            return x_input
+
+
+    @tf.function(jit_compile=False, experimental_relax_shapes=True, reduce_retracing=True)# reduce_retracing=True)
     def compute_acceleration(self, x):#, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -279,12 +289,12 @@ class PINNGravityModel(tf.keras.Model):
 
 
         # data = utils.chunks(x, 131072//2)
-        x_input = self.x_preprocessor(x)
-        if self.is_pinn:
-            a_pred = self._pinn_acceleration_output(x_input)
-        else:
-            a_pred = self._nn_acceleration_output(x_input)
-        a = self.a_postprocessor(a_pred)
+        x_input = self.preprocess(x)
+        # if self.is_pinn:
+        a_pred = self._pinn_acceleration_output(x_input)
+        # else:
+        #     a_pred = self._nn_acceleration_output(x_input)
+        a = self.postprocess(a_pred)
         return a
 
 
@@ -428,10 +438,19 @@ class PINNGravityModel(tf.keras.Model):
         a = pinn_00(self.network,x, training=False)['acceleration']
         return a
     
-    # @tf.function(jit_compile=True)# reduce_retracing=True)
+    @tf.function(jit_compile=True)
+    def _network_potential(self, x, training):
+        return self.network(x, training=training)       
+
+    @tf.function(jit_compile=False, experimental_relax_shapes=True, reduce_retracing=True)# reduce_retracing=True)
     def _pinn_acceleration_output(self, x):
-        a = pinn_A(self.network,x, training=False)['acceleration']
-        return a
+        x_inputs = x
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(x_inputs)
+            u = self._network_potential(x_inputs, training=False)
+            # u = self.network(x, training=False)       
+        u_x = tf.negative(tape.gradient(u, x_inputs))
+        return u_x
 
     @tf.function(experimental_relax_shapes=True)
     def _pinn_acceleration_jacobian(self, x):
