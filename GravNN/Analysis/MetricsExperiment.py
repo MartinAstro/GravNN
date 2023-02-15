@@ -7,11 +7,12 @@ from GravNN.Networks.Losses import *
 from pprint import pprint
 
 class MetricsExperiment:
-    def __init__(self, model, config, points, radius_bounds=None, random_seed=1234):
+    def __init__(self, model, config, points, radius_bounds=None, random_seed=1234, remove_J2=False):
         self.config = config.copy()
         self.model = model
         self.points = points
         self.radius_bounds = radius_bounds
+        self.remove_J2 = remove_J2
 
         if self.radius_bounds is None:
             min_radius = self.config['radius_min'][0]
@@ -54,6 +55,27 @@ class MetricsExperiment:
         self.predicted_accelerations =  self.model.compute_acceleration(positions).astype(float)
         self.predicted_potentials =  self.model.compute_potential(positions).numpy().astype(float)
 
+    def get_J2_data(self):
+        planet = self.config["planet"][0]
+        grav_file = self.config["grav_file"][0]
+
+        trajectory = RandomDist(planet, self.radius_bounds, self.points, **self.config)
+        get_analytic_data_fcn = self.config['gravity_data_fcn'][0]
+        config_mod = self.config.copy()
+        config_mod['max_deg'] = [2]
+        
+        x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
+            trajectory, grav_file, **config_mod
+        )
+
+        if self.remove_J2:
+            # Low Fidelity
+            self.LF_accelerations = a_unscaled
+            self.LF_potentials = u_unscaled
+        else:
+            self.LF_accelerations = np.zeros_like(x_unscaled)
+            self.LF_potentials = np.zeros_like(x_unscaled[:,0:1])
+        
     def compute_losses(self, loss_fcn_list):
         losses = {}
         for loss_key in loss_fcn_list:
@@ -62,8 +84,8 @@ class MetricsExperiment:
             # Compute loss on acceleration and potential
             losses.update({
                 f"{loss_fcn.__name__}" : loss_fcn(
-                    self.predicted_accelerations, 
-                    self.accelerations
+                    self.predicted_accelerations - self.LF_accelerations, 
+                    self.accelerations - self.LF_accelerations
                     )
                 })
         self.losses = losses
@@ -81,6 +103,7 @@ class MetricsExperiment:
     def run(self, loss_fcn_list):
         self.get_data()
         self.get_PINN_data()
+        self.get_J2_data()
         self.compute_losses(loss_fcn_list)
         self.compute_metrics()
 
@@ -98,7 +121,7 @@ class MetricsExperiment:
 
 def main():
     from GravNN.Networks.Model import load_config_and_model
-    df_file = "Data/Dataframes/earth_PINN_III_max.data"
+    df_file = "Data/Dataframes/fourier_features_search.data"
     df_file_new = df_file.split(".data")[0] + "_metrics.data"
     df = pd.read_pickle(df_file)
 
@@ -106,7 +129,7 @@ def main():
         model_id = df.iloc[i]["id"]
         config, model = load_config_and_model(model_id, df)
         config['override'] = [False]
-        metrics_exp = MetricsExperiment(model, config, 50000)
+        metrics_exp = MetricsExperiment(model, config, 50000, remove_J2=True)
         loss_fcn_list = ['rms', 'percent', 'angle', 'magnitude']
         metrics_exp.run(loss_fcn_list)
         pprint(metrics_exp.metrics)
