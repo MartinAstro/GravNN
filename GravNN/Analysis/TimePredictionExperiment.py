@@ -22,10 +22,17 @@ class TimePredictionExperiment:
             x = x.astype(np.float32)
         import tensorflow as tf
         x_tensor = x
+        # x_tensor = tf.constant(x)
         # x_tensor = tf.data.Dataset.from_tensor_slices(x)
-        self.model.compute_acceleration(x_tensor[0:1])
-        self.model.compute_potential(x_tensor[0:1]) 
-        self.model.compute_acceleration(x[0:1]).astype(float)
+        self.model.compute_acceleration(np.array([[1,2,3.]], dtype=np.float32))
+        self.model.compute_potential(np.array([[1,2,3.]], dtype=np.float32)) 
+
+        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='hlo'))
+        # print("\n\n\n")
+        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='optimized_hlo'))
+        # print("\n\n\n")
+        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='optimized_hlo_dot'))
+
         if batch:
             def eval(x):
                 self.model.compute_acceleration(x_tensor)
@@ -33,7 +40,7 @@ class TimePredictionExperiment:
         else:
             def eval(x):
                 for i in range(len(x)):
-                    self.model.compute_acceleration(x_tensor[i:i+1]) 
+                    self.model.compute_acceleration(x_tensor[i:i+1])
                     # self.model.compute_potential(x_tensor[i:i+1]) 
 
         # time calls
@@ -42,14 +49,11 @@ class TimePredictionExperiment:
         dt = time.time() - start
 
         print(f"Time per sample {dt / len(x)}")
-        timer = timeit.Timer(
-            stmt="self.model.compute_acceleration(x)", globals={"self": self, "x": x}
-        )
-        # timer = timeit.Timer(stmt="for i in range(len(x)): self.model.compute_acceleration(x[i:i+1])", globals={"self" : self, "x" : x})
-        number = 100
-        times = np.array(timer.repeat(repeat=5, number=number)) / number
-        print(times)
-        return times
+        # try:
+        #     print(self.model.compute_acceleration.pretty_printed_concrete_signatures())
+        #     print(self.model.compute_potential.pretty_printed_concrete_signatures())
+        # except:
+        #     pass
         return dt / len(x)
 
     def run(self, batch):
@@ -79,11 +83,11 @@ def main():
     # Numba vs No Numba
     # CPU vs GPU
 
-    extrapolation_exp = TimePredictionExperiment(pinn_model, r_max, r_min, 1)
+    extrapolation_exp = TimePredictionExperiment(pinn_model, r_max, r_min, 10000)
     extrapolation_exp.run(batch=False)
 
     sh_model = SphericalHarmonics(config["grav_file"][0], degree=100, parallel=False)
-    extrapolation_exp = TimePredictionExperiment(sh_model, r_max, r_min, 100)
+    extrapolation_exp = TimePredictionExperiment(sh_model, r_max, r_min, 10000)
     extrapolation_exp.run(batch=False)
 
 
