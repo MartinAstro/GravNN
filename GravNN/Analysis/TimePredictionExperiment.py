@@ -1,11 +1,38 @@
 import time
 import numpy as np
+import tensorflow as tf
+
+def print_jit_hlo_signatures(model_fcn, x_sample):
+    print("HLO")
+    print(model_fcn.experimental_get_compiler_ir(x_sample)(stage='hlo'))
+    print("\n\n\n")
+    print("HLO Optimized")
+    print(model_fcn.experimental_get_compiler_ir(x_sample)(stage='optimized_hlo'))
+    print("\n\n\n")
+    print("HLO Optimized Dot")
+    print(model_fcn.experimental_get_compiler_ir(x_sample)(stage='optimized_hlo_dot'))
+
+def print_tf_function_signature(model_fcn):
+    print(model_fcn.pretty_printed_concrete_signatures())
+
+
 class TimePredictionExperiment:
-    def __init__(self, model, r_max, r_min, points):
+    def __init__(self, model, r_max, r_min, points, fcn, input_type):
         self.model = model
         self.points = points
         self.r_min = r_min
         self.r_max = r_max
+        self.fcn = self.initialize_fcn(fcn)
+        self.input_type = input_type
+
+    def initialize_fcn(self, fcn):
+        if fcn == "acceleration": 
+            fcn = self.model.compute_acceleration
+        elif fcn == "potential":
+            fcn = self.model.compute_potential
+        elif fcn == "predict":
+            fcn = self.model.predict
+        return fcn
 
     def get_test_data(self):
         random_unit = np.random.uniform(-1, 1, (self.points, 3))
@@ -14,46 +41,38 @@ class TimePredictionExperiment:
         x_test = random_unit * random_radius
         return x_test
 
-    def time_predictions(self, x, batch):
-        # warm start
+    def enforce_type(self, model, x_input):
         try:
-            x = x.astype(self.model.dtype)
+            x = x_input.astype(model.dtype)
         except:
-            x = x.astype(np.float32)
-        import tensorflow as tf
-        x_tensor = x
-        # x_tensor = tf.constant(x)
-        # x_tensor = tf.data.Dataset.from_tensor_slices(x)
-        self.model.compute_acceleration(np.array([[1,2,3.]], dtype=np.float32))
-        self.model.compute_potential(np.array([[1,2,3.]], dtype=np.float32)) 
+            x = x_input.astype(np.float32)
 
-        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='hlo'))
-        # print("\n\n\n")
-        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='optimized_hlo'))
-        # print("\n\n\n")
-        # print(self.model.compute_acceleration.experimental_get_compiler_ir(x_tensor[0:1])(stage='optimized_hlo_dot'))
+        if self.input_type == "tensor":
+            x = tf.constant(x)
+
+        return x
+
+
+    def time_predictions(self, x_input, batch):
+        x = self.enforce_type(self.model, x_input)
+        self.fcn(x[0:1,:])
 
         if batch:
             def eval(x):
-                self.model.compute_acceleration(x_tensor)
-                # self.model.compute_potential(x_tensor)
+                self.fcn(x)
         else:
             def eval(x):
                 for i in range(len(x)):
-                    self.model.compute_acceleration(x_tensor[i:i+1])
-                    # self.model.compute_potential(x_tensor[i:i+1]) 
+                    self.fcn(x[i:i+1])
+
+        # print_jit_hlo_signatures(self.fcn, x)
+        # print_tf_function_signature(self.model)
 
         # time calls
         start = time.time()
         eval(x)
         dt = time.time() - start
-
         print(f"Time per sample {dt / len(x)}")
-        # try:
-        #     print(self.model.compute_acceleration.pretty_printed_concrete_signatures())
-        #     print(self.model.compute_potential.pretty_printed_concrete_signatures())
-        # except:
-        #     pass
         return dt / len(x)
 
     def run(self, batch):
@@ -64,7 +83,6 @@ class TimePredictionExperiment:
 
 def main():
     import pandas as pd
-
     from GravNN.Analysis.TimePredictionExperiment import \
         TimePredictionExperiment
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
@@ -82,12 +100,13 @@ def main():
     # Batch vs Single
     # Numba vs No Numba
     # CPU vs GPU
+    compute_fcn = "acceleration"
 
-    extrapolation_exp = TimePredictionExperiment(pinn_model, r_max, r_min, 10000)
+    extrapolation_exp = TimePredictionExperiment(pinn_model, r_max, r_min, 10000, compute_fcn, input_type="numpy")
     extrapolation_exp.run(batch=False)
 
     sh_model = SphericalHarmonics(config["grav_file"][0], degree=100, parallel=False)
-    extrapolation_exp = TimePredictionExperiment(sh_model, r_max, r_min, 10000)
+    extrapolation_exp = TimePredictionExperiment(sh_model, r_max, r_min, 10000, compute_fcn, input_type="numpy")
     extrapolation_exp.run(batch=False)
 
 
