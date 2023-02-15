@@ -11,6 +11,7 @@ from GravNN.Networks.Constraints import *
 from GravNN.Networks.Annealing import *
 from GravNN.Networks.Networks import load_network
 from GravNN.Networks.Losses import *
+from GravNN.Networks.Layers import * 
 from GravNN.Networks.Schedules import get_schedule
 from GravNN.Networks.utils import configure_optimizer
 from GravNN.Networks.Callbacks import SimpleCallback
@@ -244,6 +245,7 @@ class PINNGravityModel(tf.keras.Model):
         u_output = u_postprocessor(u_network_output)
         return u_output
 
+    @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
     def compute_potential(self, x):
         """Method responsible for returning just the PINN potential.
         Use this method if a lightweight TF execution is desired
@@ -254,20 +256,15 @@ class PINNGravityModel(tf.keras.Model):
         Returns:
             np.array : PINN generated potential
         """
-        x = copy.deepcopy(x)
-        x_transformer = self.config["x_transformer"][0]
-        u_transformer = self.config["u_transformer"][0]
-        x = x_transformer.transform(x)
-        u_pred = self.network(x)
-        try:
-            u_pred = u_transformer.inverse_transform(u_pred)
-        except:
-            u3_vec = np.zeros(x.shape)
-            u3_vec[:] = u_pred
-            u_pred = u_transformer.inverse_transform(u3_vec)[:,0]
-        return u_pred
 
-    @tf.function()
+        x_input = self.x_preprocessor(x)
+        u_pred = self.network(x_input, training=False)
+        u = self.u_postprocessor(u_pred)
+
+        return u
+
+    @tf.function(jit_compile=True)
+    # @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
     def compute_acceleration(self, x):#, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -288,6 +285,7 @@ class PINNGravityModel(tf.keras.Model):
         else:
             a_pred = self._nn_acceleration_output(x_input)
         a = self.a_postprocessor(a_pred)
+        return a
 
 
     def compute_dU_dxdx(self, x, batch_size=131072):
@@ -426,14 +424,13 @@ class PINNGravityModel(tf.keras.Model):
 
 
     # private functions
-    @tf.function(jit_compile=True)
     def _nn_acceleration_output(self, x):
-        a = self.network(x)['acceleration']
+        a = pinn_00(self.network,x, training=False)['acceleration']
         return a
     
-    @tf.function()
+    # @tf.function(jit_compile=True)# reduce_retracing=True)
     def _pinn_acceleration_output(self, x):
-        a = pinn_A(self.network, x, training=False)['acceleration']
+        a = pinn_A(self.network,x, training=False)['acceleration']
         return a
 
     @tf.function(experimental_relax_shapes=True)

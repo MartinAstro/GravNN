@@ -6,8 +6,8 @@ import numpy as np
 class PreprocessingLayer(tf.keras.layers.Layer):
     def __init__(self, min, scale, dtype):
         super(PreprocessingLayer, self).__init__(dtype=dtype)
-        self.min = tf.constant(min, dtype=dtype)
-        self.scale = tf.constant(scale, dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype).numpy()
+        self.scale = tf.constant(scale, dtype=dtype).numpy()
 
     def call(self, inputs):
         normalized_inputs = tf.math.add(tf.math.multiply(inputs, self.scale), self.min)
@@ -27,8 +27,8 @@ class PreprocessingLayer(tf.keras.layers.Layer):
 class PostprocessingLayer(tf.keras.layers.Layer):
     def __init__(self, min, scale, dtype):
         super(PostprocessingLayer, self).__init__(dtype=dtype)
-        self.min = tf.constant(min, dtype=dtype)
-        self.scale = tf.constant(scale, dtype=dtype)
+        self.min = tf.constant(min, dtype=dtype).numpy()
+        self.scale = tf.constant(scale, dtype=dtype).numpy()
 
     def call(self, normalized_inputs):
         inputs = tf.math.divide(tf.subtract(normalized_inputs, self.min), self.scale)
@@ -146,21 +146,25 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         radius_non_dim = x_transformer.transform(np.array([[radius, 0,0]]))[0,0]
         self.a = radius_non_dim
 
+        self.c1 = np.sqrt(15.0/4.0)*np.sqrt(3.0)
+        self.c2 = np.sqrt(5.0/4.0)
+
+        # ensure proper dtype
+        self.a = tf.constant(self.a, dtype=dtype).numpy()
+        self.mu = tf.constant(self.mu, dtype=dtype).numpy()
+        self.C20 = tf.constant(self.C20, dtype=dtype).numpy()
+        self.c1 = tf.constant(self.c1, dtype=dtype).numpy()
+        self.c2 = tf.constant(self.c2, dtype=dtype).numpy()
+
     def call(self, inputs):
         r = inputs[:,0:1]
         u = inputs[:,3:4]
 
         u_pm = self.mu/r
-
-        c1 = tf.sqrt(tf.constant(15.0/4.0, dtype=self.dtype)) * \
-             tf.sqrt(tf.constant(3.0, dtype=self.dtype))
-        c2 = tf.sqrt(tf.constant(5.0/4.0, dtype=self.dtype))
-
-        u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*c1 - c2)*self.C20
+        u_C20 = (self.a/r)**2*(self.mu/r)* (u**2*self.c1 - self.c2)*self.C20
         potential = tf.negative(u_pm + u_C20)
 
-        u = tf.reshape(potential, (-1,1)) 
-        return u
+        return potential
 
 
     def get_config(self):
