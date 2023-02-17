@@ -59,7 +59,8 @@ class PINNGravityModel(tf.keras.Model):
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
         # self.w_loss = tf.ones(shape=(3,), dtype=self.dtype) # adaptive weights for ALC
-        self.w_loss = tf.Variable([1.0, 1.0, 1.0], dtype=self.dtype, trainable=False) # adaptive weights for ALC
+        constants = list(np.ones((len(self.config['PINN_constraint_fcn'][0].split("_")[1]))))
+        self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -112,10 +113,10 @@ class PINNGravityModel(tf.keras.Model):
             tape.watch(x)
             u = self.analytic_model(x)
         accel = -tape.gradient(u, x)
-        return {
+        return OrderedDict({
             "potential" : u, 
             "acceleration" : accel,
-        }
+        })
     
     def remove_analytic_model(self, x, y_dict, y_hat_dict):
         y_analytic_dict = self.call_analytic_model(x)
@@ -156,13 +157,13 @@ class PINNGravityModel(tf.keras.Model):
 
                 # Don't record the gradients associated with
                 # computing adaptive learning rates. 
-                with tape.stop_recording():    
-                    update_w_loss(
-                        self.w_loss,
-                        self._train_counter, 
-                        losses, 
-                        self.network.trainable_variables, 
-                        w_loss_tape)
+                # with tape.stop_recording():    
+                #     update_w_loss(
+                #         self.w_loss,
+                #         self._train_counter, 
+                #         losses, 
+                #         self.network.trainable_variables, 
+                #         w_loss_tape)
 
                 # self.w_loss = tf.constant(1.0)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
@@ -184,9 +185,10 @@ class PINNGravityModel(tf.keras.Model):
             ])
 
         return {
-            "loss": loss,
-            "percent_mean": tf.reduce_mean(losses.get('percent',[0])),
-            "percent_max": tf.reduce_max(losses.get('percent',[0])),
+            "w_loss": loss,
+            "loss": tf.reduce_sum(loss_i),
+            "percent_mean": tf.reduce_mean(losses.get('acceleration_percent',[0])),
+            "percent_max": tf.reduce_max(losses.get('acceleration_percent',[0])),
         }  
 
     def test_step_fcn(self, data):
