@@ -1,7 +1,7 @@
 """Different Physics Informed constraints that can be used to train the network. """
 
 import tensorflow as tf
-
+from collections import OrderedDict
 
 def get_PI_constraint(value):
     """Method responsible for getting all variables / methods used in the physics informed constraint.
@@ -51,26 +51,26 @@ def laplacian(u_xx):
 
 def pinn_00(f, x, training):
     u_x = f(x, training=training)
-    return {"acceleration" : u_x}
+    return OrderedDict({"acceleration" : u_x})
 
 def pinn_P(f, x, training):
     u = f(x, training=training)
-    return {"potential" : u}
+    return OrderedDict({"potential" : u})
 
 def pinn_A(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
         u = f(x, training=training)
     u_x = -tape.gradient(u, x)
-    return {"acceleration" : u_x}
+    return OrderedDict({"acceleration" : u_x})
 
 def pinn_AP(f, x, training):
     with tf.GradientTape() as tape:
         tape.watch(x)
         u = f(x, training=training)
     u_x = tape.gradient(u, x)
-    a_x = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
-    return {"acceleration" : a_x, "potential" : u}
+    a_x = tf.negative(u_x) # u_x must be first s.t. -1 dtype is inferred
+    return OrderedDict({"acceleration" : a_x, "potential" : u})
 
 def pinn_ALC(f, x, training):
     with tf.GradientTape() as g1:
@@ -90,7 +90,7 @@ def pinn_ALC(f, x, training):
     curl_z = tf.math.subtract(u_xx[:, 1, 0], u_xx[:, 0, 1])
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
-    return {"acceleration" : accel, "laplacian" : laplace, "curl" : curl}
+    return OrderedDict({"acceleration" : accel, "laplacian" : laplace, "curl" : curl})
 
 def pinn_APLC(f, x, training):
     with tf.GradientTape() as g1:
@@ -111,7 +111,7 @@ def pinn_APLC(f, x, training):
 
     curl = tf.stack([curl_x, curl_y, curl_z], axis=1)
 
-    return {"potential" : u, "acceleration" : accel, "laplacian" : laplace, "curl" : curl}
+    return OrderedDict({"potential" : u, "acceleration" : accel, "laplacian" : laplace, "curl" : curl})
 
 
 def format_training_data(y, constraint):
@@ -141,7 +141,7 @@ def format_training_data(y, constraint):
         })
     if constraint == "pinn_aplc":
         y_dict.update({
-            'potential' : y[:,0],
+            'potential' : y[:,0:1],
             'acceleration' : y[:,1:4],
             'laplacian' : y[:,4:5],
             'curl' : y[:,5:8]
