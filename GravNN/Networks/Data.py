@@ -318,8 +318,8 @@ def scale_by_non_dim_potential(data_dict, config):
     # If deg_removed == 2: u_J2/u_brill
     if config.get('fuse_models', [False])[0]:
         x = data_dict['x_train']
-        r = np.linalg.norm(x, axis=1)
-        u = x[:,2] / r
+        r = np.linalg.norm(x, axis=1, keepdims=True)
+        u = x[:,2:] / r
 
         a = config['planet'][0].radius
         mu = config['mu'][0]
@@ -333,7 +333,7 @@ def scale_by_non_dim_potential(data_dict, config):
         u_C20 = (a/r)**2*(mu/r)* (u**2*c1 - c2)*C20
 
         u_analytic = -1.0*(u_pm + u_C20)
-        u_sans_J2 = data_dict["u_train"] - np.reshape(u_analytic, (-1,1))
+        u_sans_J2 = data_dict["u_train"] - u_analytic
         u_max = np.max(np.abs(u_sans_J2)) 
         # u_max = np.max(np.abs(data_dict["u_train"])) - np.max(np.abs(u_analytic)) 
 
@@ -667,24 +667,24 @@ class DataSet():
         x_val, u_val, a_val, laplace_val, curl_val = val_data
         pinn_constraint_fcn = config.get("PINN_constraint_fcn", ["pinn_00"])[0]
 
-        data = {
+        data = OrderedDict({
+            "potential" : u_train,
             "acceleration" : a_train,
             "laplace" : laplace_train,
             "curl" : curl_train,
-            "potential" : u_train,
-        }
-        val_data = {
+        })
+        val_data = OrderedDict({
+            "potential" : u_val,
             "acceleration" : a_val,
             "laplace" : laplace_val,
             "curl" : curl_val,
-            "potential" : u_val,
-        }
+        })
 
         constraint_str = pinn_constraint_fcn.split("_")[1].lower()
         if "a" not in constraint_str and constraint_str != "00":
             data.pop("acceleration")
             val_data.pop("acceleration")
-        if "u" not in constraint_str:
+        if "p" not in constraint_str:
             data.pop("potential")
             val_data.pop("potential")
         if "l" not in constraint_str:
