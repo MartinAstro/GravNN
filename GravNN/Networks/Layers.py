@@ -348,12 +348,12 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
             stddev=tf.constant(self.fourier_sigma, dtype=self.dtype),
             seed=1234)
         self.B = self.add_weight("B",
-                            shape=[self.fourier_features // 2, 3],
+                            shape=[self.fourier_features // 2,],
                             trainable=self.trainable, 
                             initializer=initializer
                             )
         self.phi = self.add_weight("phi",
-                            shape=[self.fourier_features // 2, 1],
+                            shape=[self.fourier_features // 2,],
                             trainable=self.trainable, 
                             initializer=tf.keras.initializers.Zeros()
                             )
@@ -361,45 +361,51 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         super(FourierFeatureLayer, self).build(input_shapes)
 
     def call(self, inputs):
-        inputs_transpose = tf.transpose(inputs) # [4 x N]
-
+        # v_proj = self.B@v + self.phi # [M(10) x N(1000)]
         one = tf.constant(1.0, dtype=self.dtype)
         two = tf.constant(2.0, dtype=self.dtype)
-
-        r = inputs_transpose[0]
-
-        # force geometry to be between 0 - 1
-        s = (inputs_transpose[1] + one) / two
-        t = (inputs_transpose[2] + one) / two
-        u = (inputs_transpose[3] + one) / two
-
-        # project into random fourier space
-        # B [M(10) x 3]
-        v = tf.stack([s, t, u], 0) # [3 x N(1000)]
-        v_proj = self.B@v + self.phi # [M(10) x N(1000)]
-
         C = tf.constant(2*np.pi, dtype=self.dtype)
 
+        r = inputs[:,0:1] # [N x 1]
+        stu = inputs[:,1:4] # [N x 3]
 
+        # force geometry to be between 0 - 1
+        stu_mod = (stu + one) / two
+
+        # project into fourier space
+        v = stu_mod # [N x 3]
+        # v = v@self.frequencies  # [N x 10 (or num fourier features)]
+
+        s = stu_mod[:,0:1]*self.B + self.phi
+        t = stu_mod[:,1:2]*self.B + self.phi
+        u = stu_mod[:,2:3]*self.B + self.phi
 
         if self.freq_decay:
             # # scale by (1/r)^sigma. Takes inspiration from SH (higher frequencies typically decay)
-            # v_sin = tf.pow(r,self.fourier_sigma)*tf.sin(C*v_proj)
-            # v_cos = tf.pow(r,self.fourier_sigma)*tf.cos(C*v_proj)
-            # scale_freq = tf.reduce_mean(self.B, axis=1)
-            scale_freq = tf.reduce_mean(tf.abs(self.B), axis=1)
-            r_scale = tf.map_fn(fn=lambda p: tf.pow(r,p), elems=scale_freq)
-            v_sin = r_scale*tf.sin(C*v_proj)
-            v_cos = r_scale*tf.cos(C*v_proj)
+            r_scale = tf.math.pow(r, self.B) # [N x 10]  
+            s_sin = r_scale*tf.sin(C*s) # [ N x 10] * [N x 10]
+            t_sin = r_scale*tf.sin(C*t) # [ N x 10] * [N x 10]
+            u_sin = r_scale*tf.sin(C*u) # [ N x 10] * [N x 10]
+            s_cos = r_scale*tf.cos(C*s) # [ N x 10] * [N x 10]
+            t_cos = r_scale*tf.cos(C*t) # [ N x 10] * [N x 10]
+            u_cos = r_scale*tf.cos(C*u) # [ N x 10] * [N x 10]
+
+            v_sin = tf.concat([s_sin, t_sin, u_sin], 1)
+            v_cos = tf.concat([s_cos, t_cos, u_cos], 1)
         else:
-            v_sin = tf.sin(C*v_proj)
-            v_cos = tf.cos(C*v_proj)
+            s_sin = tf.sin(C*s) # [ N x 10] * [N x 10]
+            t_sin = tf.sin(C*t) # [ N x 10] * [N x 10]
+            u_sin = tf.sin(C*u) # [ N x 10] * [N x 10]
+            s_cos = tf.cos(C*s) # [ N x 10] * [N x 10]
+            t_cos = tf.cos(C*t) # [ N x 10] * [N x 10]
+            u_cos = tf.cos(C*u) # [ N x 10] * [N x 10]
+
+            v_sin = tf.concat([s_sin, t_sin, u_sin], 1)
+            v_cos = tf.concat([s_cos, t_cos, u_cos], 1)
 
         # stack radius and fourier basis together
-        r_feature = tf.reshape(r, shape=(1, -1))
-        features = tf.concat([r_feature, v_sin, v_cos], 0) # [2M x N]
-
-        return tf.transpose(features)
+        features = tf.concat([r, stu_mod, v_sin, v_cos], 1) # [N x 2M+1]
+        return features
 
     def get_config(self):
         config = super().get_config().copy()
@@ -408,6 +414,72 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
                 "fourier_features" : self.fourier_features,
                 "fourier_sigma" : self.fourier_sigma,
                 "trainable" : self.trainable
+            }
+        )
+        return config
+
+class FourierFeature2NLayer(tf.keras.layers.Layer):
+    def __init__(self, fourier_features, fourier_sigma, freq_decay, trainable, **kwargs):
+        dtype = kwargs.get('dtype')
+        super(FourierFeature2NLayer, self).__init__(dtype=dtype)
+
+        self.fourier_features = fourier_features
+        self.freq_decay = freq_decay
+        self.trainable = trainable
+
+        self.freq = tf.constant([2**i for i in range(0, fourier_features)],dtype=dtype).numpy()
+
+    def call(self, inputs):
+        one = tf.constant(1.0, dtype=self.dtype)
+        two = tf.constant(2.0, dtype=self.dtype)
+        C = tf.constant(2*np.pi, dtype=self.dtype)
+
+        r = inputs[:,0:1] # [N x 1]
+        stu = inputs[:,1:4] # [N x 3]
+
+        # force geometry to be between 0 - 1
+        stu_mod = (stu + one) / two
+
+        # project into fourier space
+        s = stu_mod[:,0:1]*self.freq
+        t = stu_mod[:,1:2]*self.freq
+        u = stu_mod[:,2:3]*self.freq
+
+        if self.freq_decay:
+            # # scale by (1/r)^sigma. Takes inspiration from SH (higher frequencies typically decay)
+            r_scale = tf.math.pow(r, self.freq) # [N x 10]  
+            s_sin = r_scale*tf.sin(C*s) # [ N x 10] * [N x 10]
+            t_sin = r_scale*tf.sin(C*t) # [ N x 10] * [N x 10]
+            u_sin = r_scale*tf.sin(C*u) # [ N x 10] * [N x 10]
+            s_cos = r_scale*tf.cos(C*s) # [ N x 10] * [N x 10]
+            t_cos = r_scale*tf.cos(C*t) # [ N x 10] * [N x 10]
+            u_cos = r_scale*tf.cos(C*u) # [ N x 10] * [N x 10]
+
+            v_sin = tf.concat([s_sin, t_sin, u_sin], 1)
+            v_cos = tf.concat([s_cos, t_cos, u_cos], 1)
+        else:
+            s_sin = tf.sin(C*s) # [ N x 10] * [N x 10]
+            t_sin = tf.sin(C*t) # [ N x 10] * [N x 10]
+            u_sin = tf.sin(C*u) # [ N x 10] * [N x 10]
+            s_cos = tf.cos(C*s) # [ N x 10] * [N x 10]
+            t_cos = tf.cos(C*t) # [ N x 10] * [N x 10]
+            u_cos = tf.cos(C*u) # [ N x 10] * [N x 10]
+
+            v_sin = tf.concat([s_sin, t_sin, u_sin], 1)
+            v_cos = tf.concat([s_cos, t_cos, u_cos], 1)
+
+        # stack radius and fourier basis together
+        features = tf.concat([r, stu_mod, v_sin, v_cos], 1) # [N x 2M+1]
+
+        return features
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "fourier_features" : self.fourier_features,
+                "freq_decay" : self.freq_decay,
+                "trainable" : self.trainable,
             }
         )
         return config

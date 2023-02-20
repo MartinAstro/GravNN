@@ -63,7 +63,8 @@ def get_preprocess_layer_fcn(layer_key):
         "r_normalize" : NormalizeRLayer,
         "r_inv" : InvRLayer,
         "fourier" : FourierFeatureLayer,
-        "fourier_simple" : FourierFeatureSimpleLayer
+        "fourier_simple" : FourierFeatureSimpleLayer,
+        "fourier_2n": FourierFeature2NLayer,
     }[layer_key.lower()]
 
 def get_preprocess_args(config):
