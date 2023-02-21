@@ -10,7 +10,7 @@ The `Examples` directory provides a set of minimal example scripts that leverage
 
 > :earth_americas: **If you are only interested in running a PINN gravity model (not training)**: the [GravityModel](https://www.github.com/joma5012/GravityModels) repository will have a collection of pre-trained PINN-GMs available in June of 2023 with the official release of PINN-GM-III. In the meantime the spherical harmonic, polyhedral, and point mass models are currently available. 
 
-The `Scripts` directory provides a collection of python scripts and notebooks which make use of the components in `GravNN` for various research tasks. Given that, please note that this directory is under development and is currently used for exclusively for research -- not production. As such, not all scripts will work out of the box. Future releases will address these issues. If you do want to explore around in spite of this, I recommend starting from `Scripts/Networks/train_tensorflow_2.py` and traversing the GravNN package from there. 
+The `Scripts` directory provides a collection of python scripts and notebooks which make use of the components in `GravNN` for various research tasks. Given that, please note that this directory is under development and is currently used for exclusively for research -- not production. As such, not all scripts will work out of the box. Future releases will address these issues. If you do want to explore around in spite of this, I recommend starting from `Scripts/Networks/train.py` and traversing the GravNN package from there. 
 
 Enjoy!
 

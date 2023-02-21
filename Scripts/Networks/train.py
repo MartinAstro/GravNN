@@ -21,7 +21,7 @@ def main():
         # "radius_max" : [Earth().radius + 1.0],
         # "N_train" : [2],
         # "N_val" : [2],
-        "N_train" : [45000, 450000],
+        "N_train" : [45000],
         "N_val" : [500],
         # "learning_rate" : [1E-9], # some discussion that learning rate must be small for dynamics 
         # "num_units" : [128],
