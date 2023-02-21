@@ -19,7 +19,7 @@ def get_default_moon_config():
         "radius_max": [Moon().radius + 50000.0],
         "acc_noise": [0.00],
         "basis": [None],
-        "deg_removed": [2],
+        "deg_removed": [-1],
         "mixed_precision": [False],
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_moon_"],
