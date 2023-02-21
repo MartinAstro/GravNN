@@ -197,26 +197,7 @@ def _get_acceleration_nondim_constants(value, config):
     }[value.lower()]
 
 
-def _get_network_fcn(name):
-    """Helper function to initialize the network used in the PINNGravityModel
 
-    Args:
-        name (str): network type (e.g. traditional, sph_traditional, sph_pines_transformer)
-
-    Returns:
-        function: network function
-    """
-    from GravNN.Networks.Networks import (
-        BasicNet,
-        CustomNet,
-        MultiScaleNet,
-    )
-
-    return {
-        "basic": BasicNet,
-        "custom": CustomNet,
-        "multi" : MultiScaleNet,
-    }[name.lower()]
 
 
 def _get_loss_fcn(name):

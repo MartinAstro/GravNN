@@ -2,6 +2,23 @@ import os
 import tensorflow as tf
 from GravNN.Networks import utils
 from GravNN.Networks.Layers import *
+def _get_network_fcn(name):
+    """Helper function to initialize the network used in the PINNGravityModel
+
+    Args:
+        name (str): network type (e.g. traditional, sph_traditional, sph_pines_transformer)
+
+    Returns:
+        function: network function
+    """
+    return {
+        "basic": BasicNet,
+        "custom": CustomNet,
+        "multi" : MultiScaleNet,
+        "separation" : SeparationNet,
+    }[name.lower()]
+
+
 def load_network(config):
     if config["init_file"][0] is not None:
         network = tf.keras.models.load_model(
@@ -11,7 +28,7 @@ def load_network(config):
             + "/network"
         )
     else:
-        network_fcn = utils._get_network_fcn(config["network_type"][0])
+        network_fcn = _get_network_fcn(config["network_type"][0])
         network = network_fcn(**config)
     return network
 
@@ -42,9 +59,11 @@ def compute_p(**kwargs):
     return p
 
 
+
 def get_network_fcn(network_type):
     return {
         "traditional" : traditional_network,
+        "residual" : residual_network,
         "transformer" : transformer_network,
         "transformer_siren" : transformer_network_siren,
     }[network_type.lower()]
@@ -56,16 +75,7 @@ def get_initalizer_fcn(network_type, seed):
         "zeros" : tf.keras.initializers.Zeros(),
     }[network_type.lower()]
 
-def get_preprocess_layer_fcn(layer_key):
-    return {
-        "pines" : Cart2PinesSphLayer,
-        "r_scale" : ScaleRLayer,
-        "r_normalize" : NormalizeRLayer,
-        "r_inv" : InvRLayer,
-        "fourier" : FourierFeatureLayer,
-        "fourier_simple" : FourierFeatureSimpleLayer,
-        "fourier_2n": FourierFeature2NLayer,
-    }[layer_key.lower()]
+
 
 def get_preprocess_args(config):
     ref_radius_max = config.get('ref_radius_max', [1E-3])[0]
@@ -116,6 +126,56 @@ def traditional_network(inputs, **kwargs):
         if "dropout" in kwargs:
             if kwargs["dropout"][0] != 0.0:
                 x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+    outputs = tf.keras.layers.Dense(
+        units=layers[-1],
+        activation="linear",
+        kernel_initializer=get_initalizer_fcn(final_layer_initializer, seed),
+        dtype=dtype,
+    )(x)
+    return outputs
+
+def residual_network(inputs, **kwargs):
+    layers = kwargs["layers"][0]
+    activation = kwargs["activation"][0]
+    initializer = kwargs["initializer"][0]
+    final_layer_initializer = kwargs.get("final_layer_initializer", ['glorot_uniform'])[0]
+    dtype = kwargs["dtype"][0]
+    seed = kwargs['seed'][0]
+
+    encoding_layers = kwargs.get('encoding_layers',[2])[0]
+    x = inputs
+    for i in range(0, encoding_layers):
+        x = tf.keras.layers.Dense(
+            units=layers[1], # default number of params
+            activation=activation,
+            kernel_initializer=get_initalizer_fcn(initializer, seed+i),
+            dtype=dtype,
+        )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+
+    for i in range(1, len(layers)-1):
+        shortcut = x
+        x = tf.keras.layers.Dense(
+            units=layers[i], # default number of params
+            activation=activation,
+            kernel_initializer=get_initalizer_fcn(initializer, seed+i),
+            dtype=dtype,
+        )(x)
+        if "batch_norm" in kwargs:
+            if kwargs["batch_norm"][0]:
+                x = tf.keras.layers.BatchNormalization()(x)
+        if "dropout" in kwargs:
+            if kwargs["dropout"][0] != 0.0:
+                x = tf.keras.layers.Dropout(kwargs["dropout"][0])(x)
+        # skip connection
+        if i % 3 == 0:
+            x = x + shortcut
+    
     outputs = tf.keras.layers.Dense(
         units=layers[-1],
         activation="linear",
@@ -205,7 +265,7 @@ def transformer_network_siren(inputs, **kwargs):
     transformer_units = layers[1]
 
     omega_layer = tf.constant(omega_0, dtype=dtype, shape=(1,layers[2]))
-    omega_layer_inputs = tf.constant(omega_0, dtype=dtype, shape=(1,4))
+    omega_layer_inputs = tf.constant(omega_0, dtype=dtype, shape=(1,64))
 
 
     x = inputs
@@ -297,6 +357,44 @@ def CustomNet(**kwargs):
             features = x 
 
     u_nn = get_network_fcn(kwargs['network_arch'][0])(x, **kwargs)
+
+
+    p = compute_p(**kwargs)
+    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
+    u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
+    u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
+
+    model = tf.keras.Model(inputs=inputs, outputs=u)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
+    return model
+
+def SeparationNet(**kwargs):
+    layers = kwargs["layers"][0]
+    dtype = kwargs["dtype"][0]
+
+    preprocess_args = get_preprocess_args(kwargs)
+    preprocess_layers = get_preprocess_layers(kwargs)
+
+    inputs = tf.keras.Input(shape=(layers[0],),dtype=dtype)
+    x = inputs   
+    for layer in preprocess_layers:
+        x = layer(**preprocess_args)(x)
+        if layer.__name__ == "Cart2PinesSphLayer":
+            features = x 
+
+    # Encode the angles into a network
+    # purposefully exclude r coordinate
+    kwargs_copy = kwargs.copy()
+    kwargs_copy['layers'] = [[-1, 20, 20, 20, 20]]
+    angles_nn = get_network_fcn(kwargs['network_arch'][0])(x[:,1:], **kwargs_copy)
+
+    # fold the r coordinate with the angle nn
+    # this acts as seperation of variable
+    kwargs_copy['layers'] = [[-1, 20, 20, 20, 1]]
+    u_nn_inputs = tf.keras.layers.Concatenate()([x[:,0:1], angles_nn])
+    u_nn = get_network_fcn(kwargs['network_arch'][0])(u_nn_inputs, **kwargs_copy)
 
 
     p = compute_p(**kwargs)

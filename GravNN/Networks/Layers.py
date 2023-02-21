@@ -2,6 +2,17 @@ from asyncio import constants
 import tensorflow as tf
 import numpy as np
 
+def get_preprocess_layer_fcn(layer_key):
+    return {
+        "pines" : Cart2PinesSphLayer,
+        "r_scale" : ScaleRLayer,
+        "r_normalize" : NormalizeRLayer,
+        "r_inv" : InvRLayer,
+        "fourier" : FourierFeatureLayer,
+        "fourier_simple" : FourierFeatureSimpleLayer,
+        "fourier_2n": FourierFeature2NLayer,
+    }[layer_key.lower()]
+
 # preprocessing
 class PreprocessingLayer(tf.keras.layers.Layer):
     def __init__(self, min, scale, dtype):
@@ -425,7 +436,7 @@ class FourierFeature2NLayer(tf.keras.layers.Layer):
 
         self.fourier_features = fourier_features
         self.freq_decay = freq_decay
-        self.trainable = trainable
+        self.trainable = tf.constant(bool(trainable), dtype=tf.bool).numpy()
 
         self.freq = tf.constant([2**i for i in range(0, fourier_features)],dtype=dtype).numpy()
 
