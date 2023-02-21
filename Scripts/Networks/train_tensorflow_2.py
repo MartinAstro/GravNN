@@ -11,22 +11,13 @@ def main():
     threads = 4
 
     df_file = "Data/Dataframes/example.data" 
-    df_file = "Data/Dataframes/fourier_tests_updated.data" 
-    config = get_default_earth_config()
+    # df_file = "Data/Dataframes/fourier_tests_updated.data" 
+    config = get_default_moon_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-<<<<<<< HEAD
         "N_dist" : [50000],
-        # "N_train" : [2],
-        # "N_val" : [2],
-        "N_train" : [450],
-        "N_val" : [50],
-        # "learning_rate" : [1E-9], # some discussion that learning rate must be small for dynamics 
-        "num_units" : [10],
-=======
-        "N_dist" : [1000000],
         # "radius_max" : [Earth().radius + 1.0],
         # "N_train" : [2],
         # "N_val" : [2],
@@ -34,19 +25,14 @@ def main():
         "N_val" : [500],
         # "learning_rate" : [1E-9], # some discussion that learning rate must be small for dynamics 
         # "num_units" : [128],
-        "num_units" : [20, 80],
->>>>>>> 8672f90 (Add main to scripts to call after training loop)
+        "num_units" : [20],
         # "layers" : [[3, 3, 2, 1]],
         "loss_fcns" : [['rms']],
         # "jit_compile" : [False],
         # "eager" : [True],
-<<<<<<< HEAD
-        "PINN_constraint_fcn" : ['pinn_alc'],
-        "epochs" : [5000]
-=======
         "learning_rate" : [0.0001],
-        "dropout" : [0.0, 0.01],
-        "batch_size" : [2**15],
+        "dropout" : [0.0],
+        "batch_size" : [2**16],
         # "activation": ['tanh'],
         # "PINN_constraint_fcn" : ['pinn_alc'],
         # "network_arch" : ["traditional"],
@@ -56,15 +42,14 @@ def main():
         "PINN_constraint_fcn" : ['pinn_a'],
         # "batch_size" : [4096],
         # "trainable_tanh" : [True],
-        "fourier_features" : [2,5,10],
+        "fourier_features" : [3],
         "fourier_sigma" : [2],
-        "freq_decay": [True,False],
+        "freq_decay": [True],
         "epochs" : [5000],
-        "tanh_k" : [1, 1E3],
+        "tanh_k" : [1E3],
         # "tanh_r" : [3],
 
         # "dtype" : ['float64']
->>>>>>> 8672f90 (Add main to scripts to call after training loop)
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
