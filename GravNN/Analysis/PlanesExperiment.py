@@ -1,16 +1,13 @@
-
-from GravNN.GravityModels.Polyhedral import get_poly_data, Polyhedral
-from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import PlanesDist, SurfaceDist, RandomAsteroidDist
-from GravNN.Networks.utils import _get_loss_fcn
-from GravNN.Networks.Losses import get_loss_fcn
-from GravNN.Networks.Data import DataSet
+import os
 
 import numpy as np
-import pandas as pd
+import tensorflow as tf
 import trimesh
-import os
-import GravNN
+
+from GravNN.Networks.Data import DataSet
+from GravNN.Networks.Losses import get_loss_fcn
+from GravNN.Trajectories import PlanesDist
+
 
 class PlanesExperiment:
     def __init__(self, model, config, bounds, samples_1d, **kwargs):
@@ -62,14 +59,14 @@ class PlanesExperiment:
         self.u_test = u
 
     def get_model_data(self):
-        try:
-            dtype = self.model.network.compute_dtype
-        except:
-            dtype = float
+        dtype = self.model.network.compute_dtype
         positions = self.x_test.astype(dtype)
-        self.a_pred =  self.model.compute_acceleration(positions).astype(float)
-        self.u_pred =  self.model.compute_potential(positions).numpy().astype(float)
+        self.a_pred = tf.constant(self.model.compute_acceleration(positions), dtype=dtype)
+        self.u_pred = tf.constant(self.model.compute_potential(positions), dtype)
 
+        self.a_pred = self.a_pred.numpy().astype(float)
+        self.u_pred = self.u_pred.numpy().astype(float)
+        
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):
             diff_mag = np.linalg.norm(x_true - x_hat, axis=1)
@@ -125,11 +122,12 @@ class PlanesExperiment:
 
 
 def main():
-    import pandas as pd
-    from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
     import matplotlib.pyplot as plt
-    from GravNN.Networks.Model import load_config_and_model
+    import pandas as pd
+
     from GravNN.CelestialBodies.Asteroids import Eros
+    from GravNN.Networks.Model import load_config_and_model
+    from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
     df = pd.read_pickle("Data/Dataframes/test.data")
     model_id = df["id"].values[-1] 
     config, model = load_config_and_model(model_id, df)
