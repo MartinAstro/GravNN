@@ -11,7 +11,7 @@ from GravNN.Visualization.MapVisualization import MapVisualization
 from GravNN.Networks.Model import load_config_and_model
 
 
-class BrillouinMapAccelerations:
+class AccMagSortVisualizer:
     def __init__(self, model, config, planet, trajectory):
         self.config = config
         self.model = model
