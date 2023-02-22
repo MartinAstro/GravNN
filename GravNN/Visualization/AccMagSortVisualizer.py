@@ -92,7 +92,7 @@ def main():
 
     surface_data = DHGridDist(planet, planet.radius, degree=density_deg)
     
-    exp = BrillouinMapAccelerations(model, config, planet, surface_data)
+    exp = AccMagSortVisualizer(model, config, planet, surface_data)
     exp.run()
     plt.show()
 
