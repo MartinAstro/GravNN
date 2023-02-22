@@ -16,7 +16,7 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Networks import utils
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Visualization.FigureSupport import nn_pareto_curve, sh_pareto_curve
 

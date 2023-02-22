@@ -14,7 +14,7 @@ from GravNN.Networks import utils
 from GravNN.Networks.Constraints import pinn_00, pinn_A
 from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
 from GravNN.Trajectories import DHGridDist
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 if sys.platform == 'win32':
     physical_devices = tf.config.list_physical_devices('GPU')
@@ -39,7 +39,7 @@ def generate_layer_models(model):
 
 def plot_intermediate_layer(config, model, columns, planet=None):
     mapUnit = 'mGal'
-    map_vis = MapVisualization(mapUnit)
+    map_vis = MapBase(mapUnit)
     #map_vis.save_directory = os.path.abspath('.') +"/Plots/"
     map_vis.fig_size = map_vis.full_page
     plt.rc('text', usetex=False)

@@ -12,7 +12,7 @@ from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 from GravNN.Trajectories import FibonacciDist, RandomDist, DHGridDist
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 import matplotlib.pyplot as plt
 np.random.seed(1234)
 tf.random.set_seed(0)
@@ -43,7 +43,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
 
 def plot_sh_model_map(sh_df, trajectory, grid_true):
-    map_vis = MapVisualization()
+    map_vis = MapBase()
     directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', 'Earth')
     deg_list = []
     for i in range(len(sh_df)):
@@ -63,7 +63,7 @@ def plot_sh_model_map(sh_df, trajectory, grid_true):
 
 
 def plot_nn_model_map(nn_df, trajectory, model_df, grid_true):
-    map_vis = MapVisualization()
+    map_vis = MapBase()
     directory = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', 'Earth')
     for i in range(len(nn_df)):
         row = nn_df.iloc[i]

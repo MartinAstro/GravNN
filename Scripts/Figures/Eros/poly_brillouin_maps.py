@@ -4,7 +4,7 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.FigureSupport import format_potential_as_Nx3
 
 
@@ -12,7 +12,7 @@ def main():
     directory = os.path.abspath(".") + "/Plots/Asteroid/Eros/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization()
+    map_vis = MapBase()
     map_vis.fig_size = map_vis.full_page
 
     planet = Eros()

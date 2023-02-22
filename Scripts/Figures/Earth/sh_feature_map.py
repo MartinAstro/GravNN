@@ -3,7 +3,7 @@ import numpy as np
 
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Trajectories import DHGridDist, ReducedGridDist
@@ -47,7 +47,7 @@ def feature_mask(map_type):
 
     index = np.where(grid_Call_m_C22.total == np.max(grid_Call_m_C22.total))[0]
 
-    map_visualization = MapVisualization()
+    map_visualization = MapBase()
     im = map_visualization.new_map(grid_Call_m_C22.total, cmap='coolwarm')#'binary')#, "Total")
     
     outlier_mask = np.zeros(grid_true.total.shape)

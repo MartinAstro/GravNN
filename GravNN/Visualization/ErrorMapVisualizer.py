@@ -5,10 +5,10 @@ import pandas as pd
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Networks.Model import load_config_and_model
 
-class ErrorMapVisualizer(MapVisualization):
+class ErrorMapVisualizer(MapBase):
     def __init__(self, config, model, sh_deg):
         super().__init__('m/s^2')
         self.config = config
@@ -56,8 +56,6 @@ class ErrorMapVisualizer(MapVisualization):
         plt.subplot(2,1,2)
         self.plot_grid(sh_diff.total, vlim=vlim, label=None, new_fig=False)
         plt.gcf().get_axes()[-2].set_title(f"SH RMS Diff: {np.average(sh_diff.total)}")
-
-
 
     def plot(self, trajectory):
         planet = self.config['planet'][0]

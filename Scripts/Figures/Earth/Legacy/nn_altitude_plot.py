@@ -17,7 +17,7 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Networks import utils
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Plotting import Plotting
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 np.random.seed(1234)

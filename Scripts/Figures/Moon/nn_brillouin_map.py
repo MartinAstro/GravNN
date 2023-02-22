@@ -6,7 +6,7 @@ import pandas as pd
 from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.Trajectories import DHGridDist, ReducedGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 from GravNN.Networks.Model import load_config_and_model
 
@@ -16,7 +16,7 @@ def main():
     directory = os.path.abspath('.') +"/Plots/Moon/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization('mGal')
+    map_vis = MapBase('mGal')
     map_vis.fig_size = map_vis.full_page
     #map_vis.tick_interval = [60, 60]
 

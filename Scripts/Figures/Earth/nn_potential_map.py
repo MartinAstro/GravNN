@@ -10,7 +10,7 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_d
 from GravNN.Trajectories import DHGridDist, RandomDist
 from GravNN.Support.Grid import Grid
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.DataVisualization import DataVisualization
 from GravNN.Support.transformations import cart2sph, sphere2cart, project_acceleration
 
@@ -130,7 +130,7 @@ def main():
     os.makedirs(directory, exist_ok=True)
 
     mapUnit = 'm/s^2'
-    map_vis = MapVisualization(mapUnit, halt_formatting=True)
+    map_vis = MapBase(mapUnit, halt_formatting=True)
     map_vis.fig_size = map_vis.half_page
     data_vis = DataVisualization(mapUnit, halt_formatting=True)
 

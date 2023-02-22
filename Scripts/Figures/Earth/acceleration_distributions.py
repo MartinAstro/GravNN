@@ -5,7 +5,7 @@ import pickle
 
 from GravNN.Support.Grid import Grid
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Trajectories import DHGridDist, ReducedGridDist
@@ -175,7 +175,7 @@ def acceleration_histogram_std():
     grid_C22 = get_grid(2, map_type)
 
     grid_Call_m_C22 = grid_true - grid_C22
-    map_vis = MapVisualization(unit='mGal')
+    map_vis = MapBase(unit='mGal')
     map_vis.fig_size = map_vis.half_page
     map_vis.newFig()
     data = grid_Call_m_C22.total.reshape((-1,))*10000
@@ -206,7 +206,7 @@ def acceleration_histogram_scaled():
     trajectory = DHGridDist(planet, radius_min, degree=density_deg)
 
     grid_transformed = Grid(trajectory, a_transformed)
-    map_vis = MapVisualization(unit='m/s^2')
+    map_vis = MapBase(unit='m/s^2')
     map_vis.fig_size = map_vis.half_page
 
     map_vis.newFig()
@@ -236,7 +236,7 @@ def acceleration_masks():
     # plt.hist(grid_Call_m_C22.total[five_sigma_mask].reshape((-1,)), 100)
     # plt.hist(grid_Call_m_C22.total[five_sigma_mask_compliment].reshape((-1,)), 100)
 
-    map_vis = MapVisualization(unit='m/s^2')
+    map_vis = MapBase(unit='m/s^2')
     map_vis.fig_size = map_vis.half_page
     map_vis.tick_interval = [60,60]
 

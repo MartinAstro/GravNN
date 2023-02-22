@@ -1,5 +1,5 @@
 import os
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
@@ -60,7 +60,7 @@ class Plotting:
             diff = grid_pred - grid_true
 
             mapUnit = "mGal"
-            map_vis = MapVisualization(mapUnit)
+            map_vis = MapBase(mapUnit)
             plt.rc("text", usetex=False)
 
             fig_true, ax = map_vis.plot_grid(grid_true.total, "True Grid [mGal]")

@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from GravNN.Support.transformations import cart2sph, check_fix_radial_precision_errors
 from matplotlib.cm import get_cmap
 
-class MapVisualization(VisualizationBase):
+class MapBase(VisualizationBase):
     def __init__(self, unit='m/s^2', **kwargs):
         """Visualization class responsible for plotting maps of the gravity field.
 

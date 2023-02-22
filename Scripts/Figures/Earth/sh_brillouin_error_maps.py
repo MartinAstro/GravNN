@@ -6,7 +6,7 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     directory = os.path.abspath('.') +"/Plots/ErrorMaps/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization('mGal')
+    map_vis = MapBase('mGal')
     map_vis.fig_size = map_vis.half_page
     map_vis.tick_interval = [60, 60]
 

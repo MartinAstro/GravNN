@@ -7,7 +7,7 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Support.Grid import Grid
 from GravNN.Trajectories import DHGridDist
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 
 def format_potential_as_Nx3(model):
@@ -41,7 +41,7 @@ def main():
     os.makedirs(directory, exist_ok=True)
 
     mapUnit =  "m/s^2"# 'mGal'
-    map_vis = MapVisualization(mapUnit)
+    map_vis = MapBase(mapUnit)
     map_vis.fig_size = map_vis.full_page
     map_vis.plot_grid(grid_true_potential.r, "Potential")
     map_vis.plot_grid(grid_true_accelerations.total, "Accelerations", vlim=[0,10/10000.])#, vlim=[0,10])

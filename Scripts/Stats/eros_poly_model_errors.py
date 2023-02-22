@@ -6,7 +6,7 @@ from GravNN.Support.Grid import Grid
 from GravNN.Support.StateObject import StateObject
 
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 

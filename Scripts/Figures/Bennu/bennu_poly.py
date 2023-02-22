@@ -10,7 +10,7 @@ from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 
 def main():
@@ -39,7 +39,7 @@ def main():
     diff = grid_pred - grid_true
     
     mapUnit = 'mGal'
-    map_vis = MapVisualization(mapUnit)
+    map_vis = MapBase(mapUnit)
     plt.rc('text', usetex=False)
     map_vis.fig_size = (5*4,3.5*4)
     fig, ax = map_vis.newFig()

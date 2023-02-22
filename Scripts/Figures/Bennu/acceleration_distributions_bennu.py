@@ -5,7 +5,7 @@ import pickle
 
 from GravNN.Support.StateObject import StateObject
 from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 
@@ -129,7 +129,7 @@ def acceleration_masks(map_type):
     # plt.hist(state_object_Call_m_C00.total[five_sigma_mask].reshape((-1,)), 100)
     # plt.hist(state_object_Call_m_C00.total[five_sigma_mask_compliment].reshape((-1,)), 100)
 
-    map_vis = MapVisualization(unit='mGal')
+    map_vis = MapBase(unit='mGal')
     plt.rc('text', usetex=False)
 
     layer_stateObject = state_object_true - state_object_C00

@@ -7,12 +7,12 @@ from GravNN.CelestialBodies.Planets import Moon
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Networks.Model import load_config_and_model
 
 def plot(df, idx, planet, trajectory):
 
-    map_vis = MapVisualization('m/s^2')
+    map_vis = MapBase('m/s^2')
     map_vis.fig_size = map_vis.full_page_golden
     map_vis.tick_interval = [60, 60]
 

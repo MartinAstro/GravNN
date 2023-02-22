@@ -5,7 +5,7 @@ from GravNN.CelestialBodies.Planets import Earth, Moon
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
     os.makedirs(directory, exist_ok=True)
 
     mapUnit = 'mGal'
-    map_vis = MapVisualization(mapUnit)
+    map_vis = MapBase(mapUnit)
     map_vis.fig_size = map_vis.full_page
     
     my_cmap = 'viridis'

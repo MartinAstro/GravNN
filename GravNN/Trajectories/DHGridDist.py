@@ -11,7 +11,7 @@ class DHGridDist(TrajectoryBase):
         particular degree harmonic on a 2d image.
 
         This distribution is generally used to produce 2D gravity maps / grids
-        using the MapVisualization module.
+        using the MapBase module.
 
         Args:
             celestial_body (CelestialBody): planet about which the grid will be placed

@@ -20,7 +20,7 @@ from GravNN.Support.Grid import Grid
 from GravNN.Support.transformations import (cart2sph, project_acceleration,
                                             sphere2cart)
 from GravNN.Trajectories import DHGridDist
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 np.random.seed(1234)
 tf.random.set_seed(0)
@@ -60,7 +60,7 @@ def plot_maps(config, model, map_trajectories):
         grid_pred = Grid(trajectory=map_traj, accelerations=acc_pred)
 
         mapUnit = 'mGal'
-        map_vis = MapVisualization(mapUnit)
+        map_vis = MapBase(mapUnit)
         map_vis.tick_interval = [60, 60]
         #plt.rc('text', usetex=False)
         map_vis.fig_size = map_vis.half_page

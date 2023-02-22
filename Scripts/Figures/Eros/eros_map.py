@@ -7,7 +7,7 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Support.Grid import Grid
 from GravNN.Trajectories import DHGridDist
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
 
 
 
-    map_vis = MapVisualization(mapUnit)
+    map_vis = MapBase(mapUnit)
     map_vis.fig_size = map_vis.full_page
     import matplotlib.pylab as pl
     from matplotlib.colors import ListedColormap

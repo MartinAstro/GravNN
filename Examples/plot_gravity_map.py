@@ -4,7 +4,7 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Networks.Model import load_config_and_model
 
 
@@ -36,7 +36,7 @@ def main():
     error_grid = (grid_pred - grid_true)
 
     # Instantiate a plotting class which produces maps from grid objects
-    map_vis = MapVisualization()
+    map_vis = MapBase()
     map_vis.tick_interval = [45,45] # interval for Lat/Long
     map_vis.newFig(fig_size=(6, 6))
     plt.subplot(3,1,1)

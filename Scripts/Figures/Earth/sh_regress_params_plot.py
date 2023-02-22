@@ -3,9 +3,9 @@ import os
 import pickle
 
 import matplotlib.pyplot as plt
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 
-map_vis = MapVisualization()
+map_vis = MapBase()
 
 def plot_1d_curve(df, metric, y_label, size=map_vis.half_page):
     fig, ax = map_vis.newFig(fig_size=map_vis.half_page)

@@ -7,7 +7,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import DHGridDist
 from GravNN.Support.Grid import Grid
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Visualization.MapVisualization import MapVisualization
+from GravNN.Visualization.MapBase import MapBase
 from GravNN.Visualization.FigureSupport import format_potential_as_Nx3, clamp
 from sigfig import round
 
@@ -15,7 +15,7 @@ def main():
     directory = os.path.abspath(".") + "/Plots/Asteroid/Eros/"
     os.makedirs(directory, exist_ok=True)
 
-    map_vis = MapVisualization()
+    map_vis = MapBase()
     map_vis.fig_size = map_vis.half_page
     map_vis.tick_interval = [60, 60]
 
