@@ -172,7 +172,7 @@ class PlanesVisualizer(VisualizationBase):
         self.plot_density_map(self.experiment.x_train)
 
         x = self.experiment.x_test
-        y = self.experiment.losses['percent']
+        y = self.experiment.losses['percent']*100
         cbar_label = "Acceleration Percent Error"
         plt.subplot(2,2,2)
         self.plot_plane(x,y, plane='xy', colorbar_label=cbar_label)
