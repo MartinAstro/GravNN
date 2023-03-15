@@ -307,92 +307,6 @@ class PINNGravityModel(tf.keras.Model):
     def wrap_test_step_njit(self, data):
         return self.test_step_fcn(data)
 
-    # saving
-    def model_size_stats(self):
-        """Method which computes the number of trainable variables in the model as well
-        as the binary size of the saved network and adds it to the configuration dictionary.
-        """
-        size_stats = {
-            "params": [count_nonzero_params(self.network)],
-            "size": [utils.get_gzipped_model_size(self)],
-        }
-        self.config.update(size_stats)
-
-    def prep_save(self):
-        """Method responsible for timestamping the network, adding the training history to the configuration dictionary, and formatting other variables into the configuration dictionary.
-        """
-        timestamp = pd.Timestamp(time.time(), unit="s").round("ms").ctime()
-        time_JD = pd.Timestamp(timestamp).to_julian_date()
-
-        os.makedirs(self.save_dir, exist_ok=True)
-        os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
-        os.makedirs(f"{self.save_dir}/Networks/", exist_ok=True)
-        self.config["timetag"] = timestamp
-        self.config["id"] = [time_JD]
-
-        # dataframe cannot take fcn objects so settle on the names and convert to fcn on load 
-        activation_type = type(self.config["activation"][0])
-        activation_string = self.config["activation"][0] if activation_type == str else self.config["activation"][0].__name__
-        self.config["activation"] = [activation_string]
-        try:
-            self.config["optimizer"] = [self.config["optimizer"][0].__module__]
-        except:
-            pass
-
-        self.config["PINN_constraint_fcn"] = [self.config["PINN_constraint_fcn"][0]]  # Can't have multiple args in each list
-        self.model_size_stats()
-
-    def save_custom(self, df_file=None, custom_data_dir=None, history=None, transformers=None):
-        """Add remaining training / model variables into the configuration dictionary, then
-        save the config variables into its own pickled file, and potentially add it to an existing
-        dataframe defined by `df_file`.
-
-        Args:
-            df_file (str or pd.Dataframe, optional): path to dataframe to which the config variables should
-            be appended or the loaded dataframe itself. Defaults to None.
-        """
-        # add final entries to config dictionary
-        #time.sleep(np.random.randint(0,5)) # Make the process sleep with hopes that it decreases the likelihood that two networks save at the same time TODO: make this a lock instead.
-
-        try:
-            self.history = history
-            self.config["x_transformer"][0] = transformers["x"]
-            self.config["u_transformer"][0] = transformers["u"]
-            self.config["a_transformer"][0] = transformers["a"]
-            self.config["a_bar_transformer"][0] = transformers["a_bar"]
-        except:
-            pass
-
-        # Save network and config information
-        
-        # the default save / load directory is within the GravNN package. 
-        self.save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
-
-        # can specify an alternative save / load directory
-        if custom_data_dir is not None:
-            self.save_dir = custom_data_dir 
-
-        self.prep_save()
-
-        # convert configuration info to dataframe
-        config = dict(sorted(self.config.items(), key=lambda kv: kv[0]))
-        df = pd.DataFrame().from_dict(config).set_index("timetag")
-
-        # save network, history, and config to unique network directory
-        network_id = self.config['id'][0]
-        network_dir = f"{self.save_dir}/Networks/{network_id}/"
-        self.network.save(network_dir + "network")
-        df.to_pickle(network_dir + "config.data")
-
-        with open(network_dir + "history.data", 'wb') as f:
-            pickle.dump(self.history.history,f)
-        del self.history
-
-        # save config to preexisting dataframe if requested
-        if df_file is not None:
-            utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
-
-
     # private functions
     def _nn_acceleration_output(self, x):
         a = pinn_00(self.network,x, training=False)['acceleration']
@@ -431,59 +345,6 @@ class PINNGravityModel(tf.keras.Model):
         jacobian = g2.batch_jacobian(a, x)  # shape = (k,n) #! Calculate first derivative
         return jacobian
 
-def backwards_compatibility(config):
-    """Convert old configuration variables to their modern
-    equivalents such that they can be imported and tested.
-
-    Args:
-        config (dict): old configuration dictionary
-
-    Returns:
-        dict: new configuration dictionary
-    """
-    if float(config["id"][0]) < 2459343.9948726853:
-        try:
-            if np.isnan(config["PINN_flag"][0]): # nan case
-                config["PINN_constraint_fcn"] = [pinn_00]
-        except:
-            pass
-    if float(config["id"][0]) < 2459322.587314815:
-        if config["PINN_flag"][0] == "none":
-            config["PINN_constraint_fcn"] = [pinn_00]
-        elif config["PINN_flag"][0] == "gradient":
-            config["PINN_constraint_fcn"] = [pinn_A]
-        elif config["PINN_flag"][0] == "laplacian":
-            config["PINN_constraint_fcn"] = [pinn_APL]
-        elif config["PINN_flag"][0] == "conservative":
-            config["PINN_constraint_fcn"] = [pinn_APLC]
-    
-        if "class_weight" not in config:
-            config["class_weight"] = [1.0]
-
-        if "dtype" not in config:
-            config["dtype"] = [tf.float32]
-    if float(config['id'][0]) < 2459640.439074074:
-        config['loss_fcn'] = ['rms_summed']
-    if float(config["id"][0]) < 2459628.436423611:
-        # Before this date, it was assumed that data would be drawn with SH if planet, and 
-        # Polyhedral if asteroid. This is no longer true. 
-        if "Planets" in config["planet"][0].__module__:
-            config["gravity_data_fcn"] = [GravNN.GravityModels.SphericalHarmonics.get_sh_data]
-        else:
-            config["gravity_data_fcn"] = [GravNN.GravityModels.Polyhedral.get_poly_data]
-
-    if "eros200700.obj" in config["grav_file"][0]:
-        from GravNN.CelestialBodies.Asteroids import Eros
-        config['grav_file'] = [Eros().obj_200k]
-
-    if "lr_anneal" not in config:
-        config["lr_anneal"] = [False]
-
-    if "mixed_precision" not in config:
-        config["use_precision"] = [False]
-
-    return config
-
 def load_config_and_model(model_id, df_file, custom_data_dir=None):
     """Primary loading function for the networks and their
     configuration information.
@@ -512,7 +373,6 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
             config[key] = list(value.values())
 
     # Reinitialize the model
-    config = backwards_compatibility(config)
     network = tf.keras.models.load_model(
         f"{data_dir}/Networks/{model_id}/network"
     )
@@ -538,8 +398,3 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
 
     return config, model
 
-def count_nonzero_params(model):
-    params = 0
-    for v in model.trainable_variables:
-        params += tf.math.count_nonzero(v)
-    return params.numpy()
