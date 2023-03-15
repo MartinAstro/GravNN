@@ -94,7 +94,7 @@ class PlanesExperiment:
                 f"{loss_fcn.__name__}" : loss_fcn(
                     self.a_pred, 
                     self.a_test
-                    )
+                    ).numpy()
                 })
         self.losses = losses
 
