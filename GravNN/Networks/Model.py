@@ -317,6 +317,7 @@ class PINNGravityModel(tf.keras.Model):
     def compute_acceleration(self,x):
         return self._compute_acceleration(x)#, batch_size=131072):
 
+    @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def compute_dU_dxdx(self, x, batch_size=131072):
         """Method responsible for returning the acceleration from the
         PINN gravity model. Use this if a lightweight TF execution is
@@ -328,20 +329,15 @@ class PINNGravityModel(tf.keras.Model):
         Returns:
             np.array: PINN generated acceleration
         """
-        x_transformer = self.config["x_transformer"][0]
-        a_transformer = self.config["a_transformer"][0]
-        u_transformer = self.config["u_transformer"][0]
-        x = x_transformer.transform(x)
+        x = tf.cast(x, dtype=self.variable_cast)
+        x_input = self.preprocess(x)
+        fcn = self._pinn_acceleration_jacobian
+        jacobian = self.eval_batches(fcn, x_input, batch_size)
+        x_star = self.x_preprocessor.scale
+        a_star = self.a_preprocessor.scale
 
-        x = tf.constant(x, dtype=self.variable_cast)
-        
-        if self.is_pinn:
-            fcn = self._pinn_acceleration_jacobian(x)
-        else:
-            fcn = self._nn_acceleration_jacobian(x)
-        jacobian = self.eval_batches(fcn, x, batch_size)
-        l_star = 1/x_transformer.scale_
-        t_star = np.sqrt(a_transformer.scale_*l_star)
+        l_star = 1/x_star
+        t_star = tf.sqrt(a_star*l_star)
         jacobian /= t_star**2
         return jacobian
 
