@@ -45,13 +45,14 @@ def main():
         "fourier_features" : [3],
         "fourier_sigma" : [2],
         "freq_decay": [True],
-        "epochs" : [5000],
+        "epochs" : [5],
         "tanh_k" : [1E3],
         # "tanh_r" : [3],
 
         # "dtype" : ['float64']
     }
     args = configure_run_args(config, hparams)
+
     # run(*args[0])
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
@@ -68,6 +69,7 @@ def run(config):
 
     from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
+    from GravNN.Networks.Saver import ModelSaver
     from GravNN.Networks.utils import configure_tensorflow
     from GravNN.Networks.utils import populate_config_objects
 
@@ -81,8 +83,8 @@ def run(config):
     data = DataSet(config)
     model = PINNGravityModel(config)
     history = model.train(data)
-
-    model.save_custom(df_file=None, history=history, transformers=data.transformers)
+    saver = ModelSaver(model, history)
+    saver.save(df_file=None)
     return model.config
 
 

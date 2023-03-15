@@ -37,6 +37,7 @@ def run(config):
 
     from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
+    from GravNN.Networks.Saver import ModelSaver
     from GravNN.Networks.utils import configure_tensorflow
     from GravNN.Networks.utils import populate_config_objects
 
@@ -50,8 +51,8 @@ def run(config):
     data = DataSet(config)
     model = PINNGravityModel(config)
     history = model.train(data)
-
-    model.save_custom(df_file=None, history=history, transformers=data.transformers)
+    saver = ModelSaver(model, history)
+    saver.save(df_file=None)
     return model.config
 
 
