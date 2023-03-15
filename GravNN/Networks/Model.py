@@ -58,23 +58,21 @@ class PINNGravityModel(tf.keras.Model):
         self.loss_fcn_list = [] 
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
-        # self.w_loss = tf.ones(shape=(3,), dtype=self.dtype) # adaptive weights for ALC
         constants = list(np.ones((len(self.config['PINN_constraint_fcn'][0].split("_")[1]))))
         self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
         self.test_training = tf.convert_to_tensor(False, dtype=tf.bool)
+        self.network = network
         if network is None:
             self.network = load_network(self.config)
-        else:
-            self.network = network
 
-        idx = -1
-        for i, layer in enumerate(self.network.layers):
+        # Determine layer idx of analytic model 
+        self.analytic_idx = -1
+        for idx, layer in enumerate(self.network.layers):
             if layer.name == 'planetary_oblateness_layer':
-                idx = i
-        self.analytic_idx = idx
+                self.analytic_idx = idx
 
     def init_analytic_model(self):
         self.analytic_model = tf.keras.Model(
@@ -83,16 +81,19 @@ class PINNGravityModel(tf.keras.Model):
             )
 
     def init_training_steps(self):
-        # jacobian ops (needed in LC loss terms) incompatible with XLA
+        # default to XLA compiled training
+        self.train_step = self.wrap_train_step_jit
+        self.test_step = self.wrap_test_step_jit
+
+        # fall back if jacobian ops are needed (LC loss terms)
+        # as they are incompatible with XLA
         if ("L" in self.eval.__name__) or \
            ("C" in self.eval.__name__) or \
            (self.config['init_file'][0] is not None) or \
            (not self.config['jit_compile'][0]):
             self.train_step = self.wrap_train_step_njit
             self.test_step = self.wrap_test_step_njit
-        else:
-            self.train_step = self.wrap_train_step_jit
-            self.test_step = self.wrap_test_step_jit
+
 
     def init_annealing(self):
         constants = get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
@@ -127,17 +128,6 @@ class PINNGravityModel(tf.keras.Model):
 
     # Training
     def train_step_fcn(self, data):
-        """Method to train the PINN. 
-        
-        Computes the loss components which may contain dU, da, dL, dC or some combination of these variables. 
-        
-        Args:
-            data (tf.Dataset): training data
-
-        Returns:
-            dict: dictionary of metrics passed to the callback.
-        """
- 
         x, y = data
 
         y_dict = format_training_data(y, self.constraint)
@@ -165,10 +155,8 @@ class PINNGravityModel(tf.keras.Model):
                 #         self.network.trainable_variables, 
                 #         w_loss_tape)
 
-                # self.w_loss = tf.constant(1.0)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
                 loss = tf.reduce_sum(self.w_loss*loss_i)
-                # loss = tf.reduce_sum(loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
             del w_loss_tape
 
@@ -176,10 +164,6 @@ class PINNGravityModel(tf.keras.Model):
         gradients = self.optimizer.get_unscaled_gradients(gradients)
         del tape
 
-        # The PINN loss doesn't depend on the network's final layer bias, so the gradient is None and throws a warning
-        # a = df/dx = d/dx stuff * (W_final x + b_final) = d stuff/dx * w
-        # loss = a - a_hat
-        # d loss/ d weights = no b_final
         self.optimizer.apply_gradients([
             (grad, var) for (grad, var) in zip(gradients, self.network.trainable_variables) if grad is not None
             ])
@@ -195,8 +179,6 @@ class PINNGravityModel(tf.keras.Model):
         x, y = data
 
         y_dict = format_training_data(y, self.constraint)
-
-
         y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
         y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
@@ -216,10 +198,9 @@ class PINNGravityModel(tf.keras.Model):
 
     def train(self, data, initialize_optimizer=True):
 
+        optimizer = self.optimizer
         if initialize_optimizer:
             optimizer = configure_optimizer(self.config, mixed_precision=False)
-        else:
-            optimizer = self.optimizer
         self.compile(optimizer=optimizer, loss="mse")
         
         # Train network
@@ -262,16 +243,6 @@ class PINNGravityModel(tf.keras.Model):
 
     @tf.function(jit_compile=True, input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)])
     def compute_potential(self, x):
-        """Method responsible for returning just the PINN potential.
-        Use this method if a lightweight TF execution is desired
-
-        Args:
-            x (np.array): Input non-normalized position data (cartesian)
-
-        Returns:
-            np.array : PINN generated potential
-        """
-
         x_input = self.x_preprocessor(x)
         u_pred = self.network(x_input, training=False)
         u = self.u_postprocessor(u_pred)
@@ -291,19 +262,6 @@ class PINNGravityModel(tf.keras.Model):
 
     # @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def _compute_acceleration(self, x):#, batch_size=131072):
-        """Method responsible for returning the acceleration from the
-        PINN gravity model. Use this if a lightweight TF execution is
-        desired and other outputs are not required.
-
-        Args:
-            x (np.array): Input non-normalized position data (cartesian)
-
-        Returns:
-            np.array: PINN generated acceleration
-        """
-
-
-        # data = utils.chunks(x, 131072//2)
         x_input = self.preprocess(x)
         # if self.is_pinn:
         a_pred = self.eval_batches(self._pinn_acceleration_output, x_input, 131072//2)
@@ -319,16 +277,6 @@ class PINNGravityModel(tf.keras.Model):
 
     @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def compute_dU_dxdx(self, x, batch_size=131072):
-        """Method responsible for returning the acceleration from the
-        PINN gravity model. Use this if a lightweight TF execution is
-        desired and other outputs are not required.
-
-        Args:
-            x (np.array): Input non-normalized position data (cartesian)
-
-        Returns:
-            np.array: PINN generated acceleration
-        """
         x = tf.cast(x, dtype=self.variable_cast)
         x_input = self.preprocess(x)
         fcn = self._pinn_acceleration_jacobian
@@ -433,7 +381,6 @@ class PINNGravityModel(tf.keras.Model):
         # save network, history, and config to unique network directory
         network_id = self.config['id'][0]
         network_dir = f"{self.save_dir}/Networks/{network_id}/"
-
         self.network.save(network_dir + "network")
         df.to_pickle(network_dir + "config.data")
 
