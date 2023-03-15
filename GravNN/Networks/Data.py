@@ -710,6 +710,11 @@ class DataSet():
 
         return dataset, val_dataset
 
+    def add_transformers_to_config(self):
+        self.config["x_transformer"] = [self.transformers.get("x",None)]
+        self.config["u_transformer"] = [self.transformers.get("u",None)]
+        self.config["a_transformer"] = [self.transformers.get("a",None)]
+        self.config["a_bar_transformer"] = [self.transformers.get("a_bar",None)]
  
     def from_config(self, config):
         self.config = config
@@ -721,6 +726,9 @@ class DataSet():
         self.train_data = dataset
         self.valid_data = val_dataset
         self.transformers = transformers
+
+        # force transformers into config
+        self.add_transformers_to_config()
 
     def from_raw_data(self, x, a, percent_validation=0.1):
 
