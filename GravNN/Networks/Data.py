@@ -335,7 +335,9 @@ def scale_by_non_dim_potential(data_dict, config):
         u_analytic = -1.0*(u_pm + u_C20)
         u_sans_J2 = data_dict["u_train"] - u_analytic
         u_max = np.max(np.abs(u_sans_J2)) 
-        # u_max = np.max(np.abs(data_dict["u_train"])) - np.max(np.abs(u_analytic)) 
+
+        if u_max == 0.0: # this means that the grav model was point mass
+            u_max = u_brill*0.01 # arbitrarily set to 1 percent of point mass
 
     else:
         u_max = np.max(np.abs(data_dict["u_train"])) 
