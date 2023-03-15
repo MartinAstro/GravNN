@@ -68,13 +68,8 @@ class HistoryVisualizer(VisualizationBase):
         plt.ylim([None, self.val_loss[skip_epochs]])
         plt.legend()
 
-<<<<<<< HEAD
-if __name__ == "__main__":
-    df, idx = pd.read_pickle('Data/Dataframes/big_net_run.data'), -1 #i = 105 is best
-=======
 def main():
-    df, idx = pd.read_pickle('Data/Dataframes/example.data'), -1 #i = 105 is best
->>>>>>> 8672f90 (Add main to scripts to call after training loop)
+    df, idx = pd.read_pickle('Data/Dataframes/eros_point_mass_gen_III.data'), -1 #i = 105 is best
 
     model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
