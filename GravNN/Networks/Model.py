@@ -91,7 +91,10 @@ class PINNGravityModel(tf.keras.Model):
 
 
     def init_annealing(self):
-        self.update_w_fcn = get_annealing_fcn(self.config['lr_anneal'][0])
+        anneal_loss = self.config['lr_anneal'][0]
+        if anneal_loss: # currently not jit compatible
+            self.config['jit_compile'] = [False]
+        self.update_w_fcn = get_annealing_fcn(anneal_loss)
         constraints = self.config['PINN_constraint_fcn'][0].split("_")[1]
         N_constraints = len(constraints)
         N_losses = len(self.config['loss_fcns'][0])
@@ -150,7 +153,7 @@ class PINNGravityModel(tf.keras.Model):
                 # Don't record the gradients associated with
                 # computing adaptive learning rates. 
                 with tape.stop_recording():    
-                    update_w_loss(
+                    self.update_w_fcn(
                         self.w_loss,
                         self._train_counter, 
                         losses, 
