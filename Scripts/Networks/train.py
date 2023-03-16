@@ -12,44 +12,37 @@ def main():
 
     df_file = "Data/Dataframes/example.data" 
     # df_file = "Data/Dataframes/fourier_tests_updated.data" 
-    config = get_default_moon_config()
+    config = get_default_eros_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
         "N_dist" : [50000],
-        # "radius_max" : [Earth().radius + 1.0],
-        # "N_train" : [2],
-        # "N_val" : [2],
-        "N_train" : [45000],
+        "N_train" : [4500],
         "N_val" : [500],
-        # "learning_rate" : [1E-9], # some discussion that learning rate must be small for dynamics 
-        # "num_units" : [128],
         "num_units" : [20],
-        # "layers" : [[3, 3, 2, 1]],
-        "loss_fcns" : [['rms']],
-        # "jit_compile" : [False],
+        
+        "loss_fcns" : [['percent']],#, 'rms']],
+        "jit_compile" : [True],
+        "lr_anneal" : [False],
         # "eager" : [True],
         "learning_rate" : [0.0001],
         "dropout" : [0.0],
         "batch_size" : [2**16],
-        # "activation": ['tanh'],
-        # "PINN_constraint_fcn" : ['pinn_alc'],
+        "epochs" : [10000],
+       
         # "network_arch" : ["traditional"],
-        "preprocessing" : [["pines", "r_inv", "fourier_2n"]],
+        # "preprocessing" : [["pines", "r_inv", "fourier_2n"]],
         # "preprocessing" : [["pines", "r_inv", "fourier"]],
-        # "preprocessing" : [["pines", "r_inv"]],#, "fourier"]],
+        "preprocessing" : [["pines", "r_inv"]],
         "PINN_constraint_fcn" : ['pinn_a'],
-        # "batch_size" : [4096],
+        # "init_file" : [2460020.362463469],
+        # "fourier_features" : [3],
+        # "fourier_sigma" : [2],
+        # "freq_decay": [True],
         # "trainable_tanh" : [True],
-        "fourier_features" : [3],
-        "fourier_sigma" : [2],
-        "freq_decay": [True],
-        "epochs" : [5],
-        "tanh_k" : [1E3],
         # "tanh_r" : [3],
-
-        # "dtype" : ['float64']
+        "tanh_k" : [1E3],
     }
     args = configure_run_args(config, hparams)
 
@@ -85,6 +78,8 @@ def run(config):
     history = model.train(data)
     saver = ModelSaver(model, history)
     saver.save(df_file=None)
+
+    print(f"Model ID: [{model.config['id']}]")
     return model.config
 
 
