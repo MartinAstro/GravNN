@@ -17,7 +17,9 @@ def get_PI_constraint(value):
         pinn_A,
         pinn_P,
         pinn_AP,
+        pinn_AL,
         pinn_ALC,
+        pinn_APL,
         pinn_APLC,
     )
 
@@ -34,7 +36,9 @@ def get_PI_constraint(value):
         "pinn_p": pinn_P,
         "pinn_pl": pinn_P,
         "pinn_ap": pinn_AP,
+        "pinn_al": pinn_AL,
         "pinn_alc": pinn_ALC,
+        "pinn_apl": pinn_APL,
         "pinn_aplc": pinn_APLC,
     }[value.lower()]
 
@@ -71,6 +75,36 @@ def pinn_AP(f, x, training):
     u_x = tape.gradient(u, x)
     a_x = tf.negative(u_x) # u_x must be first s.t. -1 dtype is inferred
     return OrderedDict({"acceleration" : a_x, "potential" : u})
+
+def pinn_AL(f, x, training):
+    with tf.GradientTape() as g1:
+        g1.watch(x)
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
+        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
+
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
+    laplace = laplacian(u_xx)
+
+    return OrderedDict({"acceleration" : accel, "laplacian" : laplace})
+
+def pinn_APL(f, x, training):
+    with tf.GradientTape() as g1:
+        g1.watch(x)
+        with tf.GradientTape() as g2:
+            g2.watch(x)
+            u = f(x, training=training)  # shape = (k,) #! evaluate network
+        u_x = g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
+    u_xx = g1.batch_jacobian(u_x, x, experimental_use_pfor=True)
+
+    accel = tf.multiply(u_x, -1.0) # u_x must be first s.t. -1 dtype is inferred
+
+    laplace = laplacian(u_xx)
+
+    return OrderedDict({"potential" : u, "acceleration" : accel, "laplacian" : laplace})
 
 def pinn_ALC(f, x, training):
     with tf.GradientTape() as g1:
@@ -132,6 +166,11 @@ def format_training_data(y, constraint):
         y_dict.update({
             'potential' : y[:,0:1],
             'acceleration' : y[:,1:4]
+        })
+    if constraint == "pinn_al":
+        y_dict.update({
+            'acceleration' : y[:,0:3],
+            'laplacian' : y[:,3:4], # retains (N,1) shape
         })
     if constraint == "pinn_alc":
         y_dict.update({
