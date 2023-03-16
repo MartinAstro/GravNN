@@ -9,13 +9,13 @@ from GravNN.Trajectories.RandomAsteroidDist import RandomAsteroidDist
 def main():
     # Load a trained gravity PINN
     df = pd.read_pickle("Data/Dataframes/example_training.data")
-    model_id = df["id"].values[0]
+    model_id = df["id"].values[-1]
     config, model = load_config_and_model(model_id, df)
 
     # Generate sample testing data randomly distributed around the asteroid
     planet = Eros()
     trajectory = RandomAsteroidDist(planet, 
-                                   radius_bounds=[0.0, planet.radius*2],
+                                   radius_bounds=[0.0, planet.radius*3],
                                    points=500,
                                    model_file=planet.obj_8k)
     

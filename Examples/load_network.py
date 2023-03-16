@@ -17,7 +17,7 @@ def main():
     config, model = load_config_and_model(model_id, df)
 
     # print an organized summary of hyperparameters and configuration details to the console
-    # print_config(config)
+    print_config(config)
 
     # get the history from the network training and plot
     history = get_history(config['id'][0])

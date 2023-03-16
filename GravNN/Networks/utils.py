@@ -438,8 +438,7 @@ def format_config(config):
     new_config = deepcopy(config)
     new_config['planet'] = [new_config['planet'][0].__class__.__name__]
     new_config['distribution'] = [new_config['distribution'][0].__name__]
-    new_config['network_type'] = [new_config['network_type'][0].__name__]
-    new_config['PINN_constraint_fcn'] = [new_config['PINN_constraint_fcn'][0].__name__]
+    new_config['gravity_data_fcn'] = [new_config['gravity_data_fcn'][0].__name__]
     new_config['x_transformer'] = [new_config['x_transformer'][0].__class__.__name__]
     new_config['a_transformer'] = [new_config['a_transformer'][0].__class__.__name__]
     new_config['u_transformer'] = [new_config['u_transformer'][0].__class__.__name__]
@@ -457,7 +456,7 @@ def print_config(original_config):
         'radius_min', 'radius_max', 'scale_by', 
         'acc_noise', 'override', 'seed' ,
         'x_transformer', 'a_transformer', 'u_transformer', 
-        'a_bar_transformer',
+        'a_bar_transformer','gravity_data_fcn', 'mu', 'mu_non_dim'
         ]
     init(autoreset=True)
 
@@ -466,11 +465,11 @@ def print_config(original_config):
         print(Fore.BLUE +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config.get(key, ['None'])[0])))
         del config[key]
     print("\n")
-    network_keys = ['PINN_constraint_fcn', 'network_type', 'layers', 
+    network_keys = ['PINN_constraint_fcn', 'network_arch', 'layers', 
         'activation', 'epochs',  'learning_rate', 
         'batch_size', 'initializer',
-        'optimizer', 'dropout', 'normalization_strategy', 
-        'mixed_precision', 'init_file', 'id'
+        'optimizer', 'dropout', 
+        'mixed_precision', 'init_file', 'blend_potential', 'final_layer_initializer', 'fuse_models', 'preprocessing', 'scale_nn_potential', 'tanh_k', 'trainable_tanh', 'jit_compile', 'loss_fcns', 'eager', 'enforce_bc'
         ]
     print(Back.RED + Fore.BLACK + "Network Hyperparams")
     for key in network_keys:
@@ -487,13 +486,14 @@ def print_config(original_config):
         del config[key]
     print("\n")
 
-    stats_keys = ['size', 'params', 'time_delta']
+    stats_keys = ['size', 'params']
     print(Back.GREEN + Fore.BLACK + "Statistics")
     for key in stats_keys:
         print(Fore.GREEN +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
         del config[key]
-    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(get_history(config['id'][0])['loss'][-1]))
-    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(get_history(config['id'][0])['val_loss'][-1]))
+    history = get_history(config['id'][0])
+    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(history['loss'][-1]))
+    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(history['val_loss'][-1]))
     print("\n")
 
     print(Back.MAGENTA + Fore.BLACK + "Miscellaneous Hyperparams")

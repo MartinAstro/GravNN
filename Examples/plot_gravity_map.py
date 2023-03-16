@@ -1,17 +1,20 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from GravNN.Analysis.PlanesExperiment import PlanesExperiment
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Trajectories import DHGridDist
-from GravNN.Support.Grid import Grid
-from GravNN.Visualization.MapBase import MapBase
 from GravNN.Networks.Model import load_config_and_model
+from GravNN.Support.Grid import Grid
+from GravNN.Trajectories import DHGridDist
+from GravNN.Visualization.MapBase import MapBase
+from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
 
 def main():
     # Load a PINN Model
     df = pd.read_pickle("Data/Dataframes/example_training.data")
-    model_id = df["id"].values[0]
+    model_id = df["id"].values[-1]
     config, model = load_config_and_model(model_id, df)
 
     # Build a grid of position data at a fix altitude that can be used to produce maps
@@ -32,19 +35,31 @@ def main():
     grid_true = Grid(trajectory=trajectory, accelerations=a_true)
     grid_pred = Grid(trajectory=trajectory, accelerations=a_pred)
 
-    # compute difference
-    error_grid = (grid_pred - grid_true)
+    # compute percent error
+    percent_error_grid = (grid_pred - grid_true) / grid_true * 100
 
     # Instantiate a plotting class which produces maps from grid objects
     map_vis = MapBase()
     map_vis.tick_interval = [45,45] # interval for Lat/Long
     map_vis.newFig(fig_size=(6, 6))
+    vlim = [grid_true.total.min(), grid_true.total.max()]
     plt.subplot(3,1,1)
-    map_vis.plot_grid(grid_true.total, vlim=None, label="True Accel.", new_fig=False)
+    map_vis.plot_grid(grid_true.total, vlim=vlim, label="True Accel.", new_fig=False)
     plt.subplot(3,1,2)
-    map_vis.plot_grid(grid_pred.total, vlim=None, label="Predicted Accel.", new_fig=False)
+    map_vis.plot_grid(grid_pred.total, vlim=vlim, label="Predicted Accel.", new_fig=False)
     plt.subplot(3,1,3)
-    map_vis.plot_grid(error_grid.total, vlim=None, label="Difference", new_fig=False)
+    map_vis.plot_grid(percent_error_grid.total, vlim=[0,100], label="Difference", new_fig=False)
+
+    
+
+    planet = config['planet'][0]
+    radius_bounds = [-planet.radius*3, planet.radius*3]
+    max_percent = 25
+    planes_exp = PlanesExperiment(model, config, radius_bounds, 30)
+    planes_exp.run()
+    vis = PlanesVisualizer(planes_exp)
+    vis.plot(percent_max=max_percent)
+
     plt.show()
 
 if __name__ == "__main__":
