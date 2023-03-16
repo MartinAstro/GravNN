@@ -1,7 +1,4 @@
 import os
-import copy
-import time
-import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -219,16 +216,6 @@ class PINNGravityModel(tf.keras.Model):
 
         return history
 
-    # Post-training API calls 
-    @tf.function()
-    def compute_potential_tf(self, x):
-        x_preprocessor = getattr(self, 'x_preprocessor')
-        u_postprocessor = getattr(self, 'u_postprocessor')
-        x_network_input = x_preprocessor(x) 
-        u_network_output = self.network(x_network_input)
-        u_output = u_postprocessor(u_network_output)
-        return u_output
-
     def eval_batches(self, fcn, x, batch_size):
         data = utils.chunks(x, batch_size)
         y = []
@@ -246,7 +233,6 @@ class PINNGravityModel(tf.keras.Model):
         x_input = self.x_preprocessor(x)
         u_pred = self.network(x_input, training=False)
         u = self.u_postprocessor(u_pred)
-
         return u
 
     @tf.function(jit_compile=True)
@@ -382,16 +368,22 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     u_transformer = config['u_transformer'][0]
     a_transformer = config['a_transformer'][0]
 
-    # TODO: Fix this, it's very counter intuitive. 
-    x_preprocessor = PreprocessingLayer(0.0, x_transformer.scale_, model.dtype) # normalizing layer
-    u_postprocessor = PostprocessingLayer(0.0, u_transformer.scale_, model.dtype) # unnormalize layer
-    a_preprocessor = PreprocessingLayer(0.0, a_transformer.scale_, model.dtype) # normalizing layer
-    a_postprocessor = PostprocessingLayer(0.0, a_transformer.scale_, model.dtype) # unormalizing layer
-
-    model.x_preprocessor = x_preprocessor
-    model.u_postprocessor = u_postprocessor
-    model.a_preprocessor = a_preprocessor
-    model.a_postprocessor = a_postprocessor
+    model.x_preprocessor = PreprocessingLayer(
+                                x_transformer.min_,
+                                x_transformer.scale_, 
+                                model.dtype) # normalizing layer
+    model.u_postprocessor = PostprocessingLayer(
+                                u_transformer.min_,
+                                u_transformer.scale_, 
+                                model.dtype) # unnormalize layer
+    model.a_preprocessor = PreprocessingLayer(
+                                a_transformer.min_,
+                                a_transformer.scale_, 
+                                model.dtype) # normalizing layer
+    model.a_postprocessor = PostprocessingLayer(
+                                a_transformer.min_,
+                                a_transformer.scale_, 
+                                model.dtype) # unormalizing layer
 
     optimizer = utils._get_optimizer(config["optimizer"][0])
     model.compile(optimizer=optimizer, loss="mse") 

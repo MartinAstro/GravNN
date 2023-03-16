@@ -22,7 +22,6 @@ class PreprocessingLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         normalized_inputs = tf.math.add(tf.math.multiply(inputs, self.scale), self.min)
-        # normalized_inputs = inputs * self.scale + self.min
         return normalized_inputs
 
     def get_config(self):
@@ -43,7 +42,6 @@ class PostprocessingLayer(tf.keras.layers.Layer):
 
     def call(self, normalized_inputs):
         inputs = tf.math.divide(tf.subtract(normalized_inputs, self.min), self.scale)
-        # inputs = (normalized_inputs - self.min)/self.scale
         return inputs
 
     def get_config(self):
