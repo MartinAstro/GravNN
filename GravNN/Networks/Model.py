@@ -55,8 +55,6 @@ class PINNGravityModel(tf.keras.Model):
         self.loss_fcn_list = [] 
         for loss_key in self.config['loss_fcns'][0]:
             self.loss_fcn_list.append(get_loss_fcn(loss_key))
-        constants = list(np.ones((len(self.config['PINN_constraint_fcn'][0].split("_")[1]))))
-        self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False) # adaptive weights for ALC
 
     def init_network(self, network):
         self.training = tf.convert_to_tensor(True, dtype=tf.bool)
@@ -93,11 +91,19 @@ class PINNGravityModel(tf.keras.Model):
 
 
     def init_annealing(self):
-        constants = get_PI_adaptive_constants(self.config['PINN_constraint_fcn'][0])
-        self.scale_loss = get_PI_annealing(self.config['PINN_constraint_fcn'][0]) # anneal function
-        self.calc_adaptive_constant = get_annealing_fcn(self.config["lr_anneal"][0]) # hold, anneal, custom
-        self.adaptive_constant = tf.Variable(constants, dtype=self.variable_cast, trainable=False)
-        self.beta = tf.Variable(self.config.get('beta', [0.0])[0], dtype=self.variable_cast)
+        self.update_w_fcn = get_annealing_fcn(self.config['lr_anneal'][0])
+        constraints = self.config['PINN_constraint_fcn'][0].split("_")[1]
+        N_constraints = len(constraints)
+        N_losses = len(self.config['loss_fcns'][0])
+        N_weights = N_constraints * N_losses
+
+        # Remove weights for percent error on L or C
+        if "percent" in self.config['loss_fcns'][0]:
+            N_weights -= 1 if "l" in constraints else 0
+            N_weights -= 1 if "c" in constraints else 0
+            
+        constants = list(np.ones((N_weights,)))
+        self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False) 
 
     def set_training_kwarg(self, training):
         self.training = tf.convert_to_tensor(training, dtype=tf.bool)
@@ -141,18 +147,18 @@ class PINNGravityModel(tf.keras.Model):
                         )
 
                 losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
-
                 # Don't record the gradients associated with
                 # computing adaptive learning rates. 
-                # with tape.stop_recording():    
-                #     update_w_loss(
-                #         self.w_loss,
-                #         self._train_counter, 
-                #         losses, 
-                #         self.network.trainable_variables, 
-                #         w_loss_tape)
-
+                with tape.stop_recording():    
+                    update_w_loss(
+                        self.w_loss,
+                        self._train_counter, 
+                        losses, 
+                        self.network.trainable_variables, 
+                        w_loss_tape)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
+                # if self._train_counter % 100 == 0:
+                #     tf.print(loss_i)
                 loss = tf.reduce_sum(self.w_loss*loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
             del w_loss_tape
