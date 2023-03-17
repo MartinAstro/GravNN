@@ -139,7 +139,7 @@ class PINNGravityModel(tf.keras.Model):
         y_dict = format_training_data(y, self.constraint)
 
         with tf.GradientTape(persistent=True) as tape:
-            with tf.GradientTape(persistent=True) as w_loss_tape:
+            # with tf.GradientTape(persistent=True) as w_loss_tape:
                 y_hat_dict = self(x, training=self.training) # [N x (3 or 7)]
                 y_dict, y_hat_dict = self.remove_analytic_model(x, y_dict, y_hat_dict)
 
@@ -150,24 +150,27 @@ class PINNGravityModel(tf.keras.Model):
                         )
 
                 losses = MetaLoss(y_hat_dict, y_dict, self.loss_fcn_list)
-                # Don't record the gradients associated with
-                # computing adaptive learning rates. 
-                with tape.stop_recording():    
-                    self.update_w_fcn(
-                        self.w_loss,
-                        self._train_counter, 
-                        losses, 
-                        self.network.trainable_variables, 
-                        w_loss_tape)
                 loss_i = tf.stack([tf.reduce_mean(loss) for loss in losses.values()],0)
-                # if self._train_counter % 100 == 0:
-                #     tf.print(loss_i)
                 loss = tf.reduce_sum(self.w_loss*loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
-            del w_loss_tape
+
+                # select a subset of the losses for w_loss 
+                # update. Needs to be selected within tape
+                # for well defined gradients
+                losses_subset = OrderedDict()
+                for key, values in losses.items():
+                    losses_subset[key] = values[:50,0]
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
+
+        # update the weights 
+        self.update_w_fcn(
+            self.w_loss,
+            self._train_counter, 
+            losses_subset, 
+            self.network.trainable_variables, 
+            tape)
         del tape
 
         self.optimizer.apply_gradients([

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import tensorflow as tf
 
 def get_annealing_fcn(use_anneal):
@@ -21,19 +22,15 @@ def update_w_loss(w_loss, train_counter, losses, variables, tape):
     update_interval = tf.constant(1000, dtype=tf.int64)
     min_start_idx = tf.constant(100, dtype=tf.int64)
     N_samples = tf.constant(50, dtype=tf.int64)
+
     if tf.math.mod(train_counter, update_interval) == 0 and \
         train_counter > min_start_idx:
-
         for loss_i in losses.values():
-            # TODO: This non-deterministically takes up inf RAM. 
-            jacobian = tape.jacobian(loss_i[:N_samples], variables)
-
+            jacobian = tape.jacobian(loss_i, variables) 
             gradients = []
             for i in range(len(jacobian)-1): #batch size
-                gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
-
+                gradients.append(tf.reshape(jacobian[i], (len(jacobian),-1))) # flatten
             J = tf.concat(gradients, 1)
-
             K_i = J@tf.transpose(J) # NTK of the values  [N_samples x N_samples]
             trace_K_i = tf.linalg.trace(K_i)
             traces.append(trace_K_i)
