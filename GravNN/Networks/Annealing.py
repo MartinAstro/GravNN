@@ -29,7 +29,7 @@ def update_w_loss(w_loss, train_counter, losses, variables, tape):
             jacobian = tape.jacobian(loss_i, variables) 
             gradients = []
             for i in range(len(jacobian)-1): #batch size
-                gradients.append(tf.reshape(jacobian[i], (len(jacobian),-1))) # flatten
+                gradients.append(tf.reshape(jacobian[i], (len(jacobian[i]),-1))) # flatten
             J = tf.concat(gradients, 1)
             K_i = J@tf.transpose(J) # NTK of the values  [N_samples x N_samples]
             trace_K_i = tf.linalg.trace(K_i)
