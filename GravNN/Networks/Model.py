@@ -154,12 +154,19 @@ class PINNGravityModel(tf.keras.Model):
                 loss = tf.reduce_sum(self.w_loss*loss_i)
                 loss = self.optimizer.get_scaled_loss(loss)
 
-                # select a subset of the losses for w_loss 
+                # compute a subset of the losses for w_loss 
                 # update. Needs to be selected within tape
-                # for well defined gradients
-                losses_subset = OrderedDict()
-                for key, values in losses.items():
-                    losses_subset[key] = values[:50,0]
+                # for well defined gradients. 
+                # This must be computed separately b/c just
+                # indexing the loss, the jacobian will compute
+                # through the entire loss function which causes
+                # massive spike in RAM. 
+                losses_subset = compute_loss_subset(
+                                     y_hat_dict,
+                                     y_dict,
+                                     self.loss_fcn_list,
+                                     self._train_counter)
+
 
         gradients = tape.gradient(loss, self.network.trainable_variables)
         gradients = self.optimizer.get_unscaled_gradients(gradients)
