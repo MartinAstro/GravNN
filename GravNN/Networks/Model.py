@@ -165,7 +165,7 @@ class PINNGravityModel(tf.keras.Model):
                                      y_hat_dict,
                                      y_dict,
                                      self.loss_fcn_list,
-                                     self._train_counter)
+                                     )
 
 
         gradients = tape.gradient(loss, self.network.trainable_variables)

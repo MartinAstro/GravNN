@@ -23,10 +23,10 @@ def compute_loss_subset(y_hat_dict, y_dict, loss_fcn_list):
         y_hat_dict_subset[key] = values[:batch_size]
 
     y_dict_subset = OrderedDict()
-    for key, values in y_hat_dict.items():
+    for key, values in y_dict.items():
         y_dict_subset[key] = values[:batch_size]
 
-    losses_subset = MetaLoss(y_hat_dict, y_dict, loss_fcn_list)
+    losses_subset = MetaLoss(y_hat_dict_subset, y_dict_subset, loss_fcn_list)
     return losses_subset
 
 def hold_constant(w_loss, train_counter, losses, variables, tape):
@@ -36,7 +36,7 @@ def hold_constant(w_loss, train_counter, losses, variables, tape):
 def update_w_loss(w_loss, train_counter, losses, variables, tape):
     traces = []
     update_interval = tf.constant(1000, dtype=tf.int64)
-    min_start_idx = tf.constant(100, dtype=tf.int64)
+    min_start_idx = tf.constant(10, dtype=tf.int64)
 
     if tf.math.mod(train_counter, update_interval) == 0 and \
         train_counter > min_start_idx:
