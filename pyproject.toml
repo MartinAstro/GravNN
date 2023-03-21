@@ -1,10 +1,10 @@
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F"]
+select = ["E", "F", "COM"]
 ignore = ["F405", "F403"]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F"]
+fixable = ["A", "B", "C", "D", "E", "F", "COM"]
 unfixable = []
 
 # Exclude a variety of commonly ignored directories.
