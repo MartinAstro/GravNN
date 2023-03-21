@@ -1,10 +1,11 @@
 import os
 
-
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Visualization.MapBase import MapBase
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Support.Grid import Grid
+from GravNN.Visualization.MapBase import MapBase
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+
+
 class AsteroidSurfaceVisualizer(VisualizationBase):
     def __init__(self, PINN_model, trajectory, config, **kwargs):
 
@@ -36,10 +37,11 @@ class AsteroidSurfaceVisualizer(VisualizationBase):
         vis.plot_grid(self.grid_error.total, "Percent Error")
 
 def main():
+    import matplotlib.pyplot as plt
     import pandas as pd
+
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Trajectories.SurfaceDHGridDist import SurfaceDHGridDist
-    import matplotlib.pyplot as plt
     df, idx = pd.read_pickle('Data/Dataframes/example.data'), -2 #i = 105 is best
     model_id = df["id"].values[idx]
 
