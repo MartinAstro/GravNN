@@ -18,9 +18,3 @@ repos:
     rev: 23.1.0
     hooks:
     -   id: black
-        args: [--experimental-string-processing]
-# -   repo: https://github.com/PyCQA/isort
-#     rev: 5.12.0
-#     hooks:
-#       - id: isort
-#         name: isort (python)
