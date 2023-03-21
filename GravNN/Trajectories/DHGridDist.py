@@ -1,6 +1,5 @@
 import os
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
 import numpy as np
 
 
@@ -15,7 +14,8 @@ class DHGridDist(TrajectoryBase):
 
         Args:
             celestial_body (CelestialBody): planet about which the grid will be placed
-            radius (float): radius at which the grid should be placed (typically Brillouin)
+            radius (float): radius at which the grid should be placed
+                            (typically Brillouin)
             degree (int): The maximum degree that should be observed
         """
         self.radius = radius
@@ -30,13 +30,8 @@ class DHGridDist(TrajectoryBase):
 
     def generate_full_file_directory(self):
         self.trajectory_name = (
-            os.path.splitext(os.path.basename(__file__))[0]
-            + "/"
-            + self.celestial_body.body_name
-            + "_Deg"
-            + str(self.degree)
-            + "_Rad"
-            + str(self.radius)
+            os.path.splitext(os.path.basename(__file__))[0] +
+            f"/{self.celestial_body.body_name}_Deg{self.degree}_Rad{self.radius}"
         )
         self.file_directory += self.trajectory_name + "/"
         pass
