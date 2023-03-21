@@ -29,7 +29,9 @@ setup(
                     'spicepy',
                     'sphinx',
                     "sphinx_rtd_theme",
-                    "sphinx-gallery"],
+                    "sphinx-gallery",
+                    "pre-commit"
+                    ],
     install_requires=[
                     'numpy == 1.23.0',
                     'matplotlib',
@@ -52,9 +54,8 @@ setup(
                     'spicepy',
                     'sphinx',
                     "sphinx_rtd_theme",
-                    "sphinx-gallery"],
+                    "sphinx-gallery",
+                    "pre-commit"],
     tests_require=['pytest==4.4.1'],
     test_suite='tests',
 )
-
-
