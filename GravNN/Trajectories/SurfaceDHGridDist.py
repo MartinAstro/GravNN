@@ -1,7 +1,10 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 import numpy as np
 import trimesh
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 
 class SurfaceDHGridDist(TrajectoryBase):
     def __init__(self, celestial_body, radius, degree, shape_model, **kwargs):
@@ -26,7 +29,6 @@ class SurfaceDHGridDist(TrajectoryBase):
             + str(self.radius)
         )
         self.file_directory += self.trajectory_name + "/"
-
 
     def load_shape_model(self, shape_file):
         filename, file_extension = os.path.splitext(shape_file)
@@ -60,12 +62,14 @@ class SurfaceDHGridDist(TrajectoryBase):
         brill_positions = np.transpose(np.array([X, Y, Z]))
 
         # Project the grid down to the surface of the body
+        ray_origins = np.zeros_like(brill_positions)
         intersections, ray_idx, _ = self.shape_model.ray.intersects_location(
-            np.zeros_like(brill_positions), brill_positions
+            ray_origins,
+            brill_positions,
         )
         # the intersections aren't in order of the input arrays
         # sort based on ray order
         intersections = intersections[np.argsort(ray_idx)]
-        self.positions = intersections*1000
+        self.positions = intersections * 1000
 
-        return intersections*1000
+        return intersections * 1000
