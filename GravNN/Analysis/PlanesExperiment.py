@@ -23,6 +23,9 @@ class PlanesExperiment:
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = np.array([-max_radius, max_radius])
 
+        if kwargs.get("remove_error", True):
+            self.config["acc_noise"] = [0.0]
+
         # attributes to be populated in run()
         self.a_test = None
         self.u_test = None
@@ -137,23 +140,37 @@ def main():
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
-    df = pd.read_pickle("Data/Dataframes/test.data")
+    df = pd.read_pickle("Data/Dataframes/example.data")
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(model_id, df)
 
     planet = config["planet"][0]
-    planes_exp = PlanesExperiment(model, config, [-planet.radius, planet.radius], 30)
+    points = 30
+    radius_bounds = [-planet.radius, planet.radius]
+    planes_exp = PlanesExperiment(
+        model,
+        config,
+        radius_bounds,
+        points,
+        remove_error=True,
+    )
     planes_exp.run()
 
     vis = PlanesVisualizer(planes_exp)
-    vis.plot(percent_max=10)
+    vis.plot(percent_max=10, annotate_stats=True)
 
     radius_bounds = [-10 * planet.radius, 10 * planet.radius]
-    planes_exp = PlanesExperiment(model, config, radius_bounds, 30)
+    planes_exp = PlanesExperiment(
+        model,
+        config,
+        radius_bounds,
+        points,
+        remove_error=True,
+    )
     planes_exp.run()
 
     vis = PlanesVisualizer(planes_exp)
-    vis.plot(percent_max=10)
+    vis.plot(percent_max=10, annotate_stats=True)
 
     plt.show()
 
