@@ -140,37 +140,38 @@ def main():
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
-    df = pd.read_pickle("Data/Dataframes/example.data")
-    model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
+    df = pd.read_pickle("Data/Dataframes/LR_Anneal_With_Noise_032223.data")
+    for i in range(1, 5):
+        model_id = df["id"].values[-i]
+        config, model = load_config_and_model(model_id, df)
 
-    planet = config["planet"][0]
-    points = 30
-    radius_bounds = [-planet.radius, planet.radius]
-    planes_exp = PlanesExperiment(
-        model,
-        config,
-        radius_bounds,
-        points,
-        remove_error=True,
-    )
-    planes_exp.run()
+        planet = config["planet"][0]
+        points = 30
+        radius_bounds = [-3 * planet.radius, 3 * planet.radius]
+        planes_exp = PlanesExperiment(
+            model,
+            config,
+            radius_bounds,
+            points,
+            remove_error=True,
+        )
+        planes_exp.run()
 
-    vis = PlanesVisualizer(planes_exp)
-    vis.plot(percent_max=10, annotate_stats=True)
+        vis = PlanesVisualizer(planes_exp)
+        vis.plot(percent_max=10, annotate_stats=True)
 
-    radius_bounds = [-10 * planet.radius, 10 * planet.radius]
-    planes_exp = PlanesExperiment(
-        model,
-        config,
-        radius_bounds,
-        points,
-        remove_error=True,
-    )
-    planes_exp.run()
+        radius_bounds = [-10 * planet.radius, 10 * planet.radius]
+        planes_exp = PlanesExperiment(
+            model,
+            config,
+            radius_bounds,
+            points,
+            remove_error=True,
+        )
+        planes_exp.run()
 
-    vis = PlanesVisualizer(planes_exp)
-    vis.plot(percent_max=10, annotate_stats=True)
+        vis = PlanesVisualizer(planes_exp)
+        vis.plot(percent_max=10, annotate_stats=True)
 
     plt.show()
 

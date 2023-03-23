@@ -142,6 +142,7 @@ class PlanesVisualizer(VisualizationBase):
             stat_str,
             xy=(0.25, 0.1),
             xycoords="axes fraction",
+            bbox=dict(boxstyle="round", fc="w"),
         )
 
     def plot_plane(
