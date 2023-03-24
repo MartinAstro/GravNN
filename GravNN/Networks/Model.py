@@ -136,10 +136,11 @@ class PINNGravityModel(tf.keras.Model):
         )
 
     def remove_analytic_model(self, x, y_dict, y_hat_dict):
-        y_analytic_dict = self.call_analytic_model(x)
-        for key in y_dict.keys() & y_analytic_dict.keys():
-            y_dict[key] -= y_analytic_dict[key]
-            y_hat_dict[key] -= y_analytic_dict[key]
+        if self.config["fuse_models"][0]:
+            y_analytic_dict = self.call_analytic_model(x)
+            for key in y_dict.keys() & y_analytic_dict.keys():
+                y_dict[key] -= y_analytic_dict[key]
+                y_hat_dict[key] -= y_analytic_dict[key]
         return y_dict, y_hat_dict
 
     # Training
