@@ -522,43 +522,6 @@ class DataSet:
             **self.config,
         )
 
-        # TODO: this is hack b/c extra distribution gets populated with nan sometime
-        if "extra_distribution" in self.config:
-            if np.isnan(self.config["extra_distribution"][0]):
-                self.config.pop("extra_distribution")
-        # TODO: this is hack b/c gets populated with nan sometime
-        # - this is when a dataframe which adds the column and populates rows w/o as nan
-        if "augment_data_config" in self.config:
-            try:
-                if np.isnan(self.config["augment_data_config"][0]):
-                    self.config.pop("augment_data_config")
-            except Exception:
-                if self.config["augment_data_config"][0]:  # if not an empty dictionary
-                    self.config.pop("augment_data_config")
-
-        if "extra_distribution" in self.config:
-            extra_radius_bounds = [
-                self.config["extra_radius_min"][0],
-                self.config["extra_radius_max"][0],
-            ]
-            extra_N_dist = self.config["extra_N_dist"][0]
-
-            extra_trajectory = self.config["extra_distribution"][0](
-                planet,
-                extra_radius_bounds,
-                extra_N_dist,
-                **self.config,
-            )
-            (
-                extra_x_unscaled,
-                extra_a_unscaled,
-                extra_u_unscaled,
-            ) = get_analytic_data_fcn(
-                extra_trajectory,
-                grav_file,
-                **self.config,
-            )
-
         # This condition is for meant to correct for when gravity models didn't always
         # have the proper sign of the potential.
         # TODO: This should be removed prior to production.
@@ -580,32 +543,6 @@ class DataSet:
             self.config["N_val"][0],
             random_state=self.config.get("seed", [42])[0],
         )
-
-        if "extra_distribution" in self.config:
-            self.config["extra_N_train"][0] = int(self.config["extra_N_train"][0])
-            self.config["extra_N_val"][0] = int(self.config["extra_N_val"][0])
-            (
-                extra_x_train,
-                extra_a_train,
-                extra_u_train,
-                extra_x_val,
-                extra_a_val,
-                extra_u_val,
-            ) = training_validation_split(
-                extra_x_unscaled,
-                extra_a_unscaled,
-                extra_u_unscaled,
-                self.config["extra_N_train"][0],
-                self.config["extra_N_val"][0],
-            )
-
-            x_train = np.concatenate([x_train, extra_x_train])
-            a_train = np.concatenate([a_train, extra_a_train])
-            u_train = np.concatenate([u_train, extra_u_train])
-
-            x_val = np.concatenate([x_val, extra_x_val])
-            a_val = np.concatenate([a_val, extra_a_val])
-            u_val = np.concatenate([u_val, extra_u_val])
 
         data_dict = {
             "x_train": x_train,
