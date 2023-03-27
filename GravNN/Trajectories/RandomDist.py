@@ -48,7 +48,8 @@ class RandomDist(TrajectoryBase):
 
             if isinstance(self.model_file, list):
                 self.model_file = self.model_file[0]
-        filename, file_extension = os.path.splitext(self.model_file)
+        _, file_extension = os.path.splitext(self.model_file)
+        self.filename = os.path.basename(self.model_file)
         self.shape_model = trimesh.load_mesh(
             self.model_file,
             file_type=file_extension[1:],
@@ -103,12 +104,35 @@ class RandomDist(TrajectoryBase):
         return np.transpose(np.array([X, Y, Z]))  # [N x 3]
 
     def identify_interior_points(self, positions):
-        mask = np.full((len(positions),), False)
+        # Necessary to cap memory footprint
+        N = len(positions)
+        step = 50000
+        mask = np.full((N,), False)
         rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
-        mask = rayObject.contains_points(positions / 1e3)
+        for i in range(0, N, step):
+            end_idx = (i // step + 1) * step
+            position_subset = positions[i:end_idx] / 1e3
+            mask[i:end_idx] = rayObject.contains_points(position_subset)
+            print(i / N)
         return mask
 
+    def assess_skip_condition(self):
+        """These bodies shapes are currently spheres so there
+        should be no interior points
+        """
+        exceptions = [
+            "Earth.obj",
+            "Moon.obj",
+        ]
+        if self.filename in exceptions:
+            return True
+
+        return False
+
     def recursively_remove_interior_points(self, positions):
+        if self.assess_skip_condition():
+            return positions
+
         mask = self.identify_interior_points(positions)
         interior_points = np.sum(mask)
         print(f"Remaining Points: {interior_points}")
