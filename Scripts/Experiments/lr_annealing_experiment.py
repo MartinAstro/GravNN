@@ -1,3 +1,4 @@
+import copy
 import os
 from pprint import pprint
 
@@ -19,7 +20,7 @@ def main():
         "N_val": [5000],
         "num_units": [20],
         "loss_fcns": [["percent", "rms"]],
-        "jit_compile": [True],
+        "jit_compile": [False],
         "lr_anneal": [False],
         "eager": [False],
         "learning_rate": [0.0001],
@@ -54,23 +55,22 @@ def main():
         PINN_A_AL_hparams,
         PINN_A_AL_anneal_hparams,
     ]
+    hparams_noise = copy.deepcopy(hparams)
     df_file = "Data/Dataframes/LR_Anneal_No_Noise_032423.data"
     configs = []
     for hparam in hparams:
         args = configure_run_args(config, hparam)
         config_output = run(*args[0])
         configs.append(config_output)
-
     save_training(df_file, configs)
 
-    df_file = "Data/Dataframes/LR_Anneal_With_Noise_032423.data"
+    df_file = "Data/Dataframes/LR_Anneal_With_Noise_032623.data"
     configs = []
-    for hparam in hparams:
+    for hparam in hparams_noise:
         hparam["acc_noise"] = [0.1]
         args = configure_run_args(config, hparam)
         config_output = run(*args[0])
         configs.append(config_output)
-
     save_training(df_file, configs)
 
 
