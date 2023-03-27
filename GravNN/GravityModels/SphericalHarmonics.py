@@ -1,12 +1,11 @@
 import csv
-import os, sys
-import numpy as np
 import json
-from numba import njit
+import os
+
+import numpy as np
+
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.GravityModels.PinesAlgorithm import *
-from GravNN.Support.transformations import cart2sph
-from scipy.special import lpmn
 
 
 def make_2D_array(lis):
@@ -21,7 +20,7 @@ def make_2D_array(lis):
     return arr
 
 
-def get_normalization(l, m):
+def get_normalization(l, m):  # noqa: E741
     N = np.zeros((l + 1, l + 1))
     for i in range(0, l + 1):
         for j in range(0, i + 1):
@@ -30,28 +29,35 @@ def get_normalization(l, m):
             else:
                 N[i, j] = np.sqrt(
                     (2 * (2 * i + 1) * np.math.factorial(i - j))
-                    / (np.math.factorial(i + j))
+                    / (np.math.factorial(i + j)),
                 )
     return N
 
 
 def get_sh_data(trajectory, gravity_file, **kwargs):
-
     override = bool(kwargs.get("override", [False])[0])
-
+    parallel = kwargs.get("parallel", False)
     try:
         max_deg = int(kwargs["max_deg"][0])
         deg_removed = int(kwargs["deg_removed"][0])
-    except:
+    except Exception:
         max_deg = int(kwargs["max_deg"])
         deg_removed = int(kwargs["deg_removed"])
 
-    Call_r0_gm = SphericalHarmonics(gravity_file, degree=max_deg, trajectory=trajectory)
+    Call_r0_gm = SphericalHarmonics(
+        gravity_file,
+        degree=max_deg,
+        trajectory=trajectory,
+        parallel=parallel,
+    )
     accelerations = Call_r0_gm.load(override=override).accelerations
     potentials = Call_r0_gm.potentials
 
     Clm_r0_gm = SphericalHarmonics(
-        gravity_file, degree=deg_removed, trajectory=trajectory
+        gravity_file,
+        degree=deg_removed,
+        trajectory=trajectory,
+        parallel=parallel,
     )
     accelerations_Clm = Clm_r0_gm.load(override=override).accelerations
     potentials_Clm = Clm_r0_gm.potentials
@@ -65,13 +71,15 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
 class SphericalHarmonics(GravityModelBase):
     def __init__(self, sh_info, degree, trajectory=None, parallel=False):
-        """Spherical Harmonic Gravity Model. Takes in a set of Stokes coefficients and computes
-        acceleration and potentials using a non-singular representation (Pines Algorithm).
+        """Spherical Harmonic Gravity Model. Takes in a set of Stokes coefficients and
+        computes acceleration and potentials using a non-singular representation
+        (Pines Algorithm).
 
         Args:
             sh_info (str): path to spherical harmonic coefficients (Stokes coefficients)
             degree (int): maximum degree of the spherical harmonic expansions
-            trajectory (TrajectoryBase, optional): Trajectory / distribution for which the gravity measurements should be produced. Defaults to None.
+            trajectory (TrajectoryBase, optional): Trajectory / distribution for which
+            the gravity measurements should be produced. Defaults to None.
         """
         super().__init__()
 
@@ -150,9 +158,10 @@ class SphericalHarmonics(GravityModelBase):
             firstRow = next(gravReader)
             clmList = []
             slmList = []
-            # Currently do not take the mu and radius values provided by the gravity file.
+            # Currently do not take the mu and radius values
+            # provided by the gravity file.
             try:
-                valCurr = int(firstRow[0])
+                int(firstRow[0])
             except ValueError:
                 self.mu = float(firstRow[1])
                 self.radEquator = float(firstRow[0])
@@ -163,9 +172,9 @@ class SphericalHarmonics(GravityModelBase):
             for gravRow in gravReader:
                 # TODO: Check if this results in correct behavior
                 if self.degree is not None:
-                    if (
-                        int(float(gravRow[0])) > self.degree + 2
-                    ):  # if loading coefficients beyond the maximum desired (+2 for purposes of the algorithm)
+                    # if loading coefficients beyond the maximum desired
+                    # (+2 for purposes of the algorithm)
+                    if int(float(gravRow[0])) > self.degree + 2:
                         break
                 while int(float(gravRow[0])) > currDeg:
                     if len(clmRow) < currDeg + 1:
@@ -224,14 +233,15 @@ class SphericalHarmonics(GravityModelBase):
         )
 
         self.accelerations = np.reshape(
-            np.array(accelerations), (int(len(np.array(accelerations)) / 3), 3)
+            np.array(accelerations),
+            (int(len(np.array(accelerations)) / 3), 3),
         )
         self.potentials = potentials
 
         return self.potentials
 
     def compute_acceleration(self, positions=None):
-        "Compute the acceleration for an existing trajectory or provided set of positions"
+        "Compute the acceleration for an existing trajectory or set of positions"
         if positions is None:
             positions = self.trajectory.positions
 
@@ -251,7 +261,8 @@ class SphericalHarmonics(GravityModelBase):
         )
 
         self.accelerations = np.reshape(
-            np.array(accelerations), (int(len(np.array(accelerations)) / 3), 3)
+            np.array(accelerations),
+            (int(len(np.array(accelerations)) / 3), 3),
         )
         self.potentials = potentials
         return self.accelerations
@@ -259,7 +270,6 @@ class SphericalHarmonics(GravityModelBase):
 
 if __name__ == "__main__":
     from GravNN.CelestialBodies.Planets import Earth
-    from GravNN.Trajectories import FibonacciDist
 
     planet = Earth()
     # traj = FibonacciDist(planet, planet.radius, 1000)
