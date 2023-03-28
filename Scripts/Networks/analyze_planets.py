@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from GravNN.Analysis.PlanetAnalyzer import PlanetAnalyzer
-from GravNN.CelestialBodies.Planets import Earth, Moon
+from GravNN.CelestialBodies.Planets import Earth
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.script_utils import save_analysis
 from GravNN.Trajectories import FibonacciDist
@@ -13,10 +13,9 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 
 def analyze(idx, df, planet, analyze_altitude, test_trajectories, points):
-    from GravNN.Networks.script_utils import get_altitude_list
-    from GravNN.Networks.utils import configure_tensorflow
+    import tensorflow as tf
 
-    tf = configure_tensorflow()
+    from GravNN.Networks.script_utils import get_altitude_list
 
     if idx >= len(df):
         return (None, None)
@@ -43,8 +42,11 @@ def main():
     df_file = "Data/Dataframes/earth_trajectory_v2.data"
     planet = Earth()
 
-    df_file = "Data/Dataframes/moon_traditional_nn_df.data"
-    planet = Moon()
+    df_file = "Data/Dataframes/earth_revisited_032723.data"
+    planet = Earth()
+
+    # df_file = "Data/Dataframes/moon_traditional_nn_df.data"
+    # planet = Moon()
 
     threads = 1
     analyze_altitude = False
