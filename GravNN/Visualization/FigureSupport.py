@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 
 def get_vlim_bounds(dist, sigma):
@@ -25,17 +24,12 @@ def format_potential_as_Nx3(u):
 
 
 def sh_pareto_curve(
-    file_name,
-    max_deg=None,
+    sh_df,
     log=True,
     sigma=2,
     metric="mean",
     label="MRSE",
 ):
-    sh_df = pd.read_pickle(file_name)
-    if max_deg is not None:
-        sh_df = sh_df.loc[:max_deg]
-
     plot_fcn = plt.semilogx if log else plt.plot
 
     params = sh_df.index * (sh_df.index + 1)
@@ -47,39 +41,29 @@ def sh_pareto_curve(
     plot_fcn(params, sh_sigma, label=label + r"($\mathcal{F}$)")
     plot_fcn(params, sh_sigma_c, label=label + r"($\mathcal{C}$)")
 
-    if "percent" not in file_name:
-        plt.ylabel("MRSE [m/s$^2$]")
-        ax = plt.gca()
-        ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0), useMathText=True)
-    else:
-        plt.ylabel("Percent Error")
-
+    ax = plt.gca()
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0), useMathText=True)
+    plt.ylabel("MRSE [m/s$^2$]")
     plt.xlabel("Parameters")
 
 
 def nn_pareto_curve(
-    file_name,
+    df,
     orbit_name,
-    radius_max=None,
     linestyle=None,
     marker=None,
     log=True,
     sigma=2,
     metric="mean",
 ):
-    nn_df = pd.read_pickle(file_name)
-    if radius_max is not None:
-        sub_df = nn_df[nn_df["radius_max"] == radius_max].sort_values(by="params")
-    else:
-        sub_df = nn_df
     plt.gca().set_prop_cycle(None)
 
     plot_fcn = plt.semilogx if log else plt.plot
 
-    params = sub_df.params
-    df_rse = sub_df[orbit_name + "_rse_" + metric]
-    df_sigma = sub_df[orbit_name + "_sigma_" + str(sigma) + "_" + metric]
-    df_sigma_c = sub_df[orbit_name + "_sigma_" + str(sigma) + "_c_" + metric]
+    params = df.params
+    df_rse = df[orbit_name + "_rse_" + metric]
+    df_sigma = df[orbit_name + "_sigma_" + str(sigma) + "_" + metric]
+    df_sigma_c = df[orbit_name + "_sigma_" + str(sigma) + "_c_" + metric]
 
     plot_fcn(params, df_rse, linestyle=linestyle, marker=marker)
     plot_fcn(params, df_sigma, linestyle=linestyle, marker=marker)
