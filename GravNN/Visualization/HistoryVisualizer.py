@@ -71,11 +71,8 @@ class HistoryVisualizer(VisualizationBase):
 
 
 def main():
-    df, idx = (
-        pd.read_pickle("Data/Dataframes/fourier_tests_032323.data"),
-        -1,
-    )  # i = 105 is best
-
+    df = pd.read_pickle("Data/Dataframes/earth_revisited_032723.data")
+    idx = -1
     model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
 
