@@ -1,17 +1,19 @@
+import itertools
 import os
 import pickle
-import zipfile
 import tempfile
-import itertools
-from colorama.ansi import Back
-import pandas as pd
-from colorama import Fore, init, deinit
+import zipfile
 from copy import deepcopy
-from GravNN.Trajectories import ExponentialDist, GaussianDist
+
+import pandas as pd
+from colorama import Fore, deinit, init
+from colorama.ansi import Back
+
 import GravNN
 
+
 def configure_tensorflow(hparams):
-    """Custom tensorflow import that configures proper flags, path settings, 
+    """Custom tensorflow import that configures proper flags, path settings,
     seeds, etc.
 
     Returns:
@@ -20,9 +22,9 @@ def configure_tensorflow(hparams):
     set_tf_env_flags()
     tf = set_tf_expand_memory()
     tf.keras.backend.clear_session()
-    tf.random.set_seed(hparams['seed'][0])
-    tf.config.run_functions_eagerly(hparams['eager'][0])
-    mixed_precision = set_mixed_precision() if hparams['mixed_precision'][0] else None
+    tf.random.set_seed(hparams["seed"][0])
+    tf.config.run_functions_eagerly(hparams["eager"][0])
+    mixed_precision = set_mixed_precision() if hparams["mixed_precision"][0] else None
 
     return tf, mixed_precision
 
@@ -33,11 +35,15 @@ def set_tf_env_flags():
 
     os.environ["PATH"] += (
         os.pathsep
-        + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
+        + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\"
+        + "extras\\CUPTI\\lib64"
     )
     os.environ["TF_GPU_THREAD_MODE"] = "gpu_private"
-    #https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/jit/flags.cc#L82-L142 list of XLA flags
-    os.environ["TF_XLA_FLAGS"] = "--tf_xla_enable_xla_devices --tf_xla_cpu_global_jit --tf_xla_auto_jit=1"
+    # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/jit/flags.cc
+    # #L82-L142 list of XLA flags
+    os.environ[
+        "TF_XLA_FLAGS"
+    ] = "--tf_xla_enable_xla_devices --tf_xla_cpu_global_jit --tf_xla_auto_jit=1"
 
 
 def set_tf_expand_memory():
@@ -47,6 +53,7 @@ def set_tf_expand_memory():
         module: Tensorflow as tf
     """
     import sys
+
     import tensorflow as tf
 
     if sys.platform == "win32":
@@ -57,11 +64,12 @@ def set_tf_expand_memory():
 
 
 def set_mixed_precision():
-    """Method used to configure mixed precision settings. This allows for faster training times
-    for non-physics informed neural networks.
+    """Method used to configure mixed precision settings. This allows for faster
+    training times for non-physics informed neural networks.
 
-    .. warn:: Do not configure mixed precision when training PINNs. Because gradients of the network
-    are embedded within the loss function, the cruder precision can cause convergence issues.
+    .. warn:: Do not configure mixed precision when training PINNs. Because gradients
+    of the network are embedded within the loss function, the cruder precision can cause
+     convergence issues.
 
     Returns:
         module: mixed precision module
@@ -110,96 +118,6 @@ def _get_optimizer(name):
     }[name.lower()]
 
 
-def _get_acceleration_nondim_constants(value, config):
-    """Method responsible how much to scale the values passed for the loss function
-
-    Note that the length of returned list will correspond to the number of loss terms used to train the network.
-    e.g. if the network is trained with the potential and acceleration the list will be [u, a1, a2, a3] rather than
-    [a1,a2,a3].
-
-    .. todo:: Confirm proper scaling of the L and C values.
-
-    Args:
-        value (str): PINN constraint type
-        config (dict): dictionary containing hyperparameter and configuration variables
-
-    Returns:
-        tf.constant: tensor of values used to scale the loss function into the appropriate [-1,1] range.
-    """
-    import tensorflow as tf
-
-    # Backwards compatibility (if the value is a function -- take the name of the function then select corresponding values)
-    try:
-        value = value.__name__
-    except:
-        pass
-
-    a_bar_s = config["a_bar_transformer"][0].scale_
-    a_bar_0 = config["a_bar_transformer"][0].min_
-
-    a0 = a_bar_0
-    a_s = a_bar_s
-
-    u_xx_s = config["u_transformer"][0].scale_
-    u_xx_0 = config["u_transformer"][0].min_
-
-    x_s = config["x_transformer"][0].scale_
-    x_0 = config["x_transformer"][0].min_
-
-    l_s = x_s ** 2
-    c_s = x_s ** 2
-
-    l_s = 1.0
-    c_s = 1.0
-
-    # scale tensor + translate tensor
-    return {
-        "pinn_00": (
-            tf.constant([a_s, a_s, a_s], dtype=tf.float32),
-            tf.constant([a0, a0, a0], dtype=tf.float32),
-        ),  # scaling ignored
-        "pinn_a": (
-            tf.constant([a_s, a_s, a_s], dtype=tf.float32),
-            tf.constant([a0, a0, a0], dtype=tf.float32),
-        ),  # scaling ignored
-        "pinn_p": (
-            tf.constant([1.0], dtype=tf.float32),
-            tf.constant([0.0], dtype=tf.float32),
-        ),
-        "pinn_pl": (
-            tf.constant([1.0, l_s], dtype=tf.float32),
-            tf.constant([0.0, 0.0], dtype=tf.float32),
-        ),
-        "pinn_plc": (
-            tf.constant([1.0, l_s, c_s, c_s, c_s], dtype=tf.float32),
-            tf.constant([0.0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32),
-        ),
-        "pinn_ap": (
-            tf.constant([1.0, a_s, a_s, a_s], dtype=tf.float32),
-            tf.constant([0.0, a0, a0, a0], dtype=tf.float32),
-        ),
-        "pinn_al": (
-            tf.constant([a_s, a_s, a_s, l_s], dtype=tf.float32),
-            tf.constant([a0, a0, a0, 0.0], dtype=tf.float32),
-        ),
-        "pinn_alc": (
-            tf.constant([a_s, a_s, a_s, l_s, c_s, c_s, c_s], dtype=tf.float32),
-            tf.constant([a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32),
-        ),
-        "pinn_apl": (
-            tf.constant([1.0, a_s, a_s, a_s, l_s], dtype=tf.float32),
-            tf.constant([0.0, a0, a0, a0, 0.0], dtype=tf.float32),
-        ),
-        "pinn_aplc": (
-            tf.constant([1.0, a_s, a_s, a_s, l_s, c_s, c_s, c_s], dtype=tf.float32),
-            tf.constant([0.0, a0, a0, a0, 0.0, 0.0, 0.0, 0.0], dtype=tf.float32),
-        ),
-    }[value.lower()]
-
-
-
-
-
 def _get_loss_fcn(name):
     """Helper function to initialize the network loss function
 
@@ -210,31 +128,31 @@ def _get_loss_fcn(name):
         function: network function
     """
     from GravNN.Networks.Losses import (
-        max_loss,
-        percent_summed_loss,
-        rms_summed_loss,
-        percent_rms_summed_loss,
-        percent_avg_loss,
-        rms_avg_loss,
-        percent_rms_avg_loss,
         avg_percent_summed_rms_loss,
         avg_percent_summed_rms_max_error_loss,
-        weighted_mean_percent_loss
+        max_loss,
+        percent_avg_loss,
+        percent_rms_avg_loss,
+        percent_rms_summed_loss,
+        percent_summed_loss,
+        rms_avg_loss,
+        rms_summed_loss,
+        weighted_mean_percent_loss,
     )
 
     return {
-        'max' : max_loss,
+        "max": max_loss,
         "percent_summed": percent_summed_loss,
         "rms_summed": rms_summed_loss,
         "percent_rms_summed": percent_rms_summed_loss,
-        "percent_avg" : percent_avg_loss,
+        "percent_avg": percent_avg_loss,
         "rms_avg": rms_avg_loss,
-        'percent_rms_avg' : percent_rms_avg_loss,
-        'avg_percent_summed_rms' : avg_percent_summed_rms_loss,
-        "avg_percent_summed_rms_max_error" : avg_percent_summed_rms_max_error_loss,
-        'weighted_mean_percent' : weighted_mean_percent_loss
-
+        "percent_rms_avg": percent_rms_avg_loss,
+        "avg_percent_summed_rms": avg_percent_summed_rms_loss,
+        "avg_percent_summed_rms_max_error": avg_percent_summed_rms_max_error_loss,
+        "weighted_mean_percent": weighted_mean_percent_loss,
     }[name.lower()]
+
 
 def _get_tf_dtype(name):
     import tensorflow as tf
@@ -245,8 +163,9 @@ def _get_tf_dtype(name):
 
 
 def populate_config_objects(config):
-    """Primary helper function used to convert any strings within the hyperparameter config dictionary
-    into the necessary tensorflow objects that will be used in the PINNGravityModel
+    """Primary helper function used to convert any strings within the hyperparameter
+    config dictionary into the necessary tensorflow objects that will be used in the
+    PINNGravityModel
 
     Args:
         hparams (dict): dictionary of hyperparameters to overload in the config
@@ -255,8 +174,7 @@ def populate_config_objects(config):
     Returns:
         dict: updated configuration dictionary with proper tensorflow objects
     """
-    # config["PINN_constraint_fcn"] = _get_PI_constraint(config["PINN_constraint_fcn"][0])
-    # config["network_type"] = [_get_network_fcn(config["network_type"][0])]
+
     config["dtype"] = [_get_tf_dtype(config["dtype"][0])]
 
     if "num_units" in config:
@@ -307,7 +225,7 @@ def configure_run_args(config, hparams):
         print("--- Starting trial: %d" % session_num)
         print({key: value for key, value in hparam_inst.items()})
 
-        # load the hparams into the config 
+        # load the hparams into the config
         for key, value in hparam_inst.items():
             config[key] = [value]
 
@@ -337,35 +255,39 @@ def get_gzipped_model_size(model):
 
 
 def check_config_combos(config):
-    """Helper function used to check if any configurations are incompatible and change them.
-    The most prominent error being the number of output nodes exist in a network (must be 1 if PINN gravity
-    model).
-
+    """Helper function used to check if any configurations are incompatible and change
+    them. The most prominent error being the number of output nodes exist in a network
+    (must be 1 if PINN gravity model).
     Args:
-        config (dict): updated configuration and hyperparameter dictionary with compatable arguments
+        config (dict): updated configuration and hyperparameter dictionary with
+        compatable arguments
     """
     from GravNN.Networks.Constraints import pinn_00
 
     if config["PINN_constraint_fcn"][0] != pinn_00:
         if config["layers"][0][-1] != 1:
             print(
-                "WARNING: The final layer for a PINN must have one output (the potential, U) -- changing automatically"
+                "WARNING: The final layer for a PINN must have one output \
+                    (the potential, U) -- changing automatically",
             )
             config["layers"][0][-1] = 1
     else:
         if config["layers"][0][-1] != 3:
             config["layers"][0][-1] = 3
             print(
-                "WARNING: The final layer for a traditional network must have three outputs (the acceleration vector, a) -- changing automatically"
+                "WARNING: The final layer for a traditional network must have three \
+                    outputs (the acceleration vector, a) -- changing automatically",
             )
     if config["network_type"][0].__class__.__name__ == "InceptionNet":
         assert (
             len(config["layers"][0][1]) != 0
-        ), "Inception network requires layers with multiple sizes, i.e. [[3, [3,7,11], [3,7,11], 1]]"
+        ), "Inception network requires layers with multiple sizes, i.e. [[3, [3,7,11], \
+            [3,7,11], 1]]"
 
 
 def save_df_row(dictionary, df_file):
-    """Utility function used to save a configuration / hyperparameter dictionary into a dataframe
+    """Utility function used to save a configuration / hyperparameter dictionary into a
+     dataframe
 
     Args:
         dictionary (dict): configuration / hyperparameter dictionary
@@ -379,7 +301,7 @@ def save_df_row(dictionary, df_file):
         df_all = pd.read_pickle(df_file)
         df_all = df_all.append(df)
         df_all.to_pickle(df_file)
-    except:
+    except Exception:
         df.to_pickle(df_file)
 
 
@@ -405,9 +327,9 @@ def update_df_row(model_id, df_file, entries, save=True):
 
     Args:
         model_id (float): Timetag for model within dataframe
-        df_file (any): Either the path used to load the df (slow) or the df itself (fast)
+        df_file (any): Either the path used to load the df (slow) or df itself (fast)
         entries (series): The series to update in the df
-        save (bool, optional): Save the dataframe immediately after updating (slow). Defaults to True.
+        save (bool, optional): Save the dataframe immediately after updating (slow).
 
     Returns:
         DataFrame: The updated dataframe
@@ -416,7 +338,7 @@ def update_df_row(model_id, df_file, entries, save=True):
         original_df = pd.read_pickle(df_file)
     else:
         original_df = df_file
-    timestamp = pd.to_datetime(model_id, unit="D", origin="julian").round("s").ctime()
+    timestamp = pd.to_datetime(model_id, unit="D", origin="julian").to_julian_date()
     entries.update({"timetag": [timestamp]})
     dictionary = dict(sorted(entries.items(), key=lambda kv: kv[0]))
     df = pd.DataFrame.from_dict(dictionary).set_index("timetag")
@@ -429,85 +351,164 @@ def update_df_row(model_id, df_file, entries, save=True):
 
 def get_history(model_id):
     network_dir = os.path.dirname(GravNN.__file__) + f"/../Data/Networks/{model_id}/"
-    with open(network_dir + "history.data", 'rb') as f:
+    with open(network_dir + "history.data", "rb") as f:
         history = pickle.load(f)
     return history
 
 
 def format_config(config):
     new_config = deepcopy(config)
-    new_config['planet'] = [new_config['planet'][0].__class__.__name__]
-    new_config['distribution'] = [new_config['distribution'][0].__name__]
-    new_config['gravity_data_fcn'] = [new_config['gravity_data_fcn'][0].__name__]
-    new_config['x_transformer'] = [new_config['x_transformer'][0].__class__.__name__]
-    new_config['a_transformer'] = [new_config['a_transformer'][0].__class__.__name__]
-    new_config['u_transformer'] = [new_config['u_transformer'][0].__class__.__name__]
-    new_config['a_bar_transformer'] = [new_config['a_bar_transformer'][0].__class__.__name__]
-    new_config['dummy_transformer'] = [new_config['dummy_transformer'][0].__class__.__name__]
-    new_config['grav_file'] = [new_config['grav_file'][0].split("/")[-1]]
-    new_config['deg_removed'] = [new_config.get('deg_removed', ['None'])[0]]
-    new_config['remove_point_mass'] = [new_config.get('remove_point_mass', ['None'])[0]]
+    new_config["planet"] = [new_config["planet"][0].__class__.__name__]
+    new_config["distribution"] = [new_config["distribution"][0].__name__]
+    new_config["gravity_data_fcn"] = [new_config["gravity_data_fcn"][0].__name__]
+    new_config["x_transformer"] = [new_config["x_transformer"][0].__class__.__name__]
+    new_config["a_transformer"] = [new_config["a_transformer"][0].__class__.__name__]
+    new_config["u_transformer"] = [new_config["u_transformer"][0].__class__.__name__]
+    new_config["a_bar_transformer"] = [
+        new_config["a_bar_transformer"][0].__class__.__name__,
+    ]
+    new_config["dummy_transformer"] = [
+        new_config["dummy_transformer"][0].__class__.__name__,
+    ]
+    new_config["grav_file"] = [new_config["grav_file"][0].split("/")[-1]]
+    new_config["deg_removed"] = [new_config.get("deg_removed", ["None"])[0]]
+    new_config["remove_point_mass"] = [new_config.get("remove_point_mass", ["None"])[0]]
     return new_config
+
 
 def print_config(original_config):
     config = format_config(original_config)
-    data_keys = ['planet', 'distribution', 'grav_file',  'deg_removed', 'remove_point_mass',
-        'N_dist', 'N_train', 'N_val', 
-        'radius_min', 'radius_max', 'scale_by', 
-        'acc_noise', 'override', 'seed' ,
-        'x_transformer', 'a_transformer', 'u_transformer', 
-        'a_bar_transformer','gravity_data_fcn', 'mu', 'mu_non_dim'
-        ]
+    data_keys = [
+        "planet",
+        "distribution",
+        "grav_file",
+        "deg_removed",
+        "remove_point_mass",
+        "N_dist",
+        "N_train",
+        "N_val",
+        "radius_min",
+        "radius_max",
+        "scale_by",
+        "acc_noise",
+        "override",
+        "seed",
+        "x_transformer",
+        "a_transformer",
+        "u_transformer",
+        "a_bar_transformer",
+        "gravity_data_fcn",
+        "mu",
+        "mu_non_dim",
+    ]
     init(autoreset=True)
 
     print(Back.BLUE + Fore.BLACK + "Data Hyperparams")
     for key in data_keys:
-        print(Fore.BLUE +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config.get(key, ['None'])[0])))
+        print(
+            Fore.BLUE
+            + "{:<20}\t".format(key)
+            + Fore.WHITE
+            + " {:<15}".format(str(config.get(key, ["None"])[0])),
+        )
         del config[key]
     print("\n")
-    network_keys = ['PINN_constraint_fcn', 'network_arch', 'layers', 
-        'activation', 'epochs',  'learning_rate', 
-        'batch_size', 'initializer',
-        'optimizer', 'dropout', 
-        'mixed_precision', 'init_file', 'blend_potential', 'final_layer_initializer', 'fuse_models', 'preprocessing', 'scale_nn_potential', 'tanh_k', 'trainable_tanh', 'jit_compile', 'loss_fcns', 'eager', 'enforce_bc'
-        ]
+    network_keys = [
+        "PINN_constraint_fcn",
+        "network_arch",
+        "layers",
+        "activation",
+        "epochs",
+        "learning_rate",
+        "batch_size",
+        "initializer",
+        "optimizer",
+        "dropout",
+        "mixed_precision",
+        "init_file",
+        "blend_potential",
+        "final_layer_initializer",
+        "fuse_models",
+        "preprocessing",
+        "scale_nn_potential",
+        "tanh_k",
+        "trainable_tanh",
+        "jit_compile",
+        "loss_fcns",
+        "eager",
+        "enforce_bc",
+    ]
     print(Back.RED + Fore.BLACK + "Network Hyperparams")
     for key in network_keys:
-        print(Fore.RED + "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        print(
+            Fore.RED
+            + "{:<20}\t".format(key)
+            + Fore.WHITE
+            + " {:<15}".format(str(config[key][0])),
+        )
         del config[key]
     print("\n")
 
-    scheduler_keys = ['schedule_type', 'lr_anneal', 'min_delta', 
-        'min_lr', 'patience', 'decay_rate', 'beta'
-        ]
+    scheduler_keys = [
+        "schedule_type",
+        "lr_anneal",
+        "min_delta",
+        "min_lr",
+        "patience",
+        "decay_rate",
+        "beta",
+    ]
     print(Back.YELLOW + Fore.BLACK + "Learning Rate Scheduler Hyperparams")
     for key in scheduler_keys:
-        print(Fore.YELLOW +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        print(
+            Fore.YELLOW
+            + "{:<20}\t".format(key)
+            + Fore.WHITE
+            + " {:<15}".format(str(config[key][0])),
+        )
         del config[key]
     print("\n")
 
-    stats_keys = ['size', 'params']
+    stats_keys = ["size", "params"]
     print(Back.GREEN + Fore.BLACK + "Statistics")
     for key in stats_keys:
-        print(Fore.GREEN +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        print(
+            Fore.GREEN
+            + "{:<20}\t".format(key)
+            + Fore.WHITE
+            + " {:<15}".format(str(config[key][0])),
+        )
         del config[key]
-    history = get_history(config['id'][0])
-    print(Fore.GREEN + "{:<20}\t".format("Final Loss") + Fore.WHITE + "{:<20}".format(history['loss'][-1]))
-    print(Fore.GREEN + "{:<20}\t".format("Final Val Loss") + Fore.WHITE + "{:<20}".format(history['val_loss'][-1]))
+    history = get_history(config["id"][0])
+    print(
+        Fore.GREEN
+        + "{:<20}\t".format("Final Loss")
+        + Fore.WHITE
+        + "{:<20}".format(history["loss"][-1]),
+    )
+    print(
+        Fore.GREEN
+        + "{:<20}\t".format("Final Val Loss")
+        + Fore.WHITE
+        + "{:<20}".format(history["val_loss"][-1]),
+    )
     print("\n")
 
     print(Back.MAGENTA + Fore.BLACK + "Miscellaneous Hyperparams")
-    for key,value in config.items():
-        if key == 'history':
+    for key, value in config.items():
+        if key == "history":
             continue
-        print(Fore.MAGENTA +  "{:<20}\t".format(key) + Fore.WHITE + " {:<15}".format(str(config[key][0])))
+        print(
+            Fore.MAGENTA
+            + "{:<20}\t".format(key)
+            + Fore.WHITE
+            + " {:<15}".format(str(config[key][0])),
+        )
 
     deinit()
-
-
 
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, lst.shape[0], n):
-        yield lst[i:i + n]
+        yield lst[i : i + n]
