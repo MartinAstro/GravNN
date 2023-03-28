@@ -56,19 +56,19 @@ def diff_map_and_stats(
 
     # This ensures the same features are being evaluated independent of what degree is
     # taken off at beginning
-    one_sigma_mask, one_sigma_mask_compliment = sigma_mask(state_obj_true.total, 1)
-    two_sigma_mask, two_sigma_mask_compliment = sigma_mask(state_obj_true.total, 2)
-    three_sigma_mask, three_sigma_mask_compliment = sigma_mask(state_obj_true.total, 3)
+    sigma_1_mask, sigma_1_mask_compliment = sigma_mask(state_obj_true.total, 1)
+    sigma_2_mask, sigma_2_mask_compliment = sigma_mask(state_obj_true.total, 2)
+    sigma_3_mask, sigma_3_mask_compliment = sigma_mask(state_obj_true.total, 3)
 
     rse_stats = mean_std_median(diff.total, prefix=name + "_rse", stat_types=stat_types)
 
     args = [
-        (one_sigma_mask, "sigma_1"),
-        (one_sigma_mask_compliment, "sigma_1_c"),
-        (two_sigma_mask, "sigma_2"),
-        (two_sigma_mask_compliment, "sigma_2_c"),
-        (three_sigma_mask, "sigma_3"),
-        (three_sigma_mask_compliment, "sigma_3_c"),
+        (sigma_1_mask, "sigma_1"),
+        (sigma_1_mask_compliment, "sigma_1_c"),
+        (sigma_2_mask, "sigma_2"),
+        (sigma_2_mask_compliment, "sigma_2_c"),
+        (sigma_3_mask, "sigma_3"),
+        (sigma_3_mask_compliment, "sigma_3_c"),
     ]
 
     results = {}
