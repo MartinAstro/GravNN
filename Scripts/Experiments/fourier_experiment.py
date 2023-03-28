@@ -21,7 +21,7 @@ def main():
         "N_dist": [50000],
         "N_train": [4500],
         "N_val": [500],
-        "num_units": [80],
+        "num_units": [40],
         "loss_fcns": [["percent", "rms"]],
         "jit_compile": [True],
         "lr_anneal": [False],
