@@ -25,7 +25,7 @@ def analyze(idx, df, planet, analyze_altitude, test_trajectories, points):
     config, model = load_config_and_model(model_id, df)
 
     analyzer = PlanetAnalyzer(model, config)
-    rse_entries = analyzer.compute_rse_stats(test_trajectories, percent=True)
+    rse_entries = analyzer.compute_rse_stats(test_trajectories, percent=False)
 
     if analyze_altitude:
         sh_stats_df, altitudes = get_altitude_list(planet)
@@ -48,10 +48,13 @@ def main():
     # df_file = "Data/Dataframes/moon_traditional_nn_df.data"
     # planet = Moon()
 
-    threads = 1
+    threads = 4
     analyze_altitude = False
     points = 250000  # 64800
-    test_trajectories = {"Brillouin": FibonacciDist(planet, planet.radius, points)}
+
+    df_name_truth = "Brillouin"  # deg removed 2
+    df_name_truth = "Brillouin_deg_n1"  # no deg removed
+    test_trajectories = {df_name_truth: FibonacciDist(planet, planet.radius, points)}
 
     df = pd.read_pickle(df_file)
 

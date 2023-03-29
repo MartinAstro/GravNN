@@ -1,5 +1,6 @@
 import os
 import pickle
+import pprint
 
 import numpy as np
 import pandas as pd
@@ -226,7 +227,7 @@ class PlanetAnalyzer:
             stats.update(analytic_neighbors)
             df = pd.DataFrame().from_dict(stats).set_index("alt")
             df_all = df_all.append(df)
-        print(df_all)
+        pprint(df_all)
 
         df_all.to_pickle(
             os.path.dirname(GravNN.__file__)
