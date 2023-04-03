@@ -54,20 +54,20 @@ def main():
     data = DataSet(data_config=config)
 
     R = planet.radius
-    r = np.linalg.norm(data.raw_data["x_train"], axis=1) / R
+    r_mag = np.linalg.norm(data.raw_data["x_train"], axis=1)
+    r_mag_norm = r_mag / R
     a_train = data.raw_data["a_train"].squeeze()
 
-    plot_acceleration_components(r, a_train)
-
-    x_sph = cart2sph(data.raw_data["x_train"].squeeze())
-    BN = compute_projection_matrix(x_sph)
+    plot_acceleration_components(r_mag_norm, a_train)
 
     # x_B = tf.matmul(BN, tf.reshape(x, (-1,3,1)))
     # this will give ~[1, 1E-8, 1E-8]
 
+    x_sph = cart2sph(data.raw_data["x_train"].squeeze())
+    BN = compute_projection_matrix(x_sph)
     a_sph = np.reshape(a_train, (-1, 3, 1))
     a_sph_B = np.matmul(BN, a_sph).squeeze()
-    plot_acceleration_components(r, a_sph_B)
+    plot_acceleration_components(r_mag_norm, a_sph_B)
 
     plt.show()
 
