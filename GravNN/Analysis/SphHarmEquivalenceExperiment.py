@@ -1,12 +1,13 @@
 import os
 import pickle
-import pprint
+from pprint import pprint
 
 import numpy as np
 import pandas as pd
 
 import GravNN
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.StateObject import StateObject
 from GravNN.Support.Statistics import mean_std_median, sigma_mask
 from GravNN.Trajectories import FibonacciDist
@@ -98,7 +99,10 @@ class SphHarmEquivalenceExperiment:
         self.a_transformer = config["a_transformer"][0]
         self.planet = config["planet"][0]
         self.body_type = "Planet"
-        self.truth_df = pd.read_pickle(truth_file)
+
+        self.truth_df = truth_file
+        if not isinstance(truth_file, pd.DataFrame):
+            self.truth_df = pd.read_pickle(truth_file)
 
     def compute_nearest_analytic(self, name, map_stats):
         # Compute nearest SH degree
@@ -137,7 +141,7 @@ class SphHarmEquivalenceExperiment:
     def compute_alt_stats(self, points):
         df_all = pd.DataFrame()
 
-        altitudes = self.truth_df.index  # TODO: confirm this
+        altitudes = self.truth_df.index
         for alt in altitudes:
             trajectory = FibonacciDist(self.planet, self.planet.radius + alt, points)
             model_file = trajectory.celestial_body.sh_file
@@ -157,9 +161,8 @@ class SphHarmEquivalenceExperiment:
             # Check for the nearest SH in altitude
             keys = [
                 "rse_mean",
-                "rse_median",
-                "sigma_1_mean",
-                "sigma_1_c_mean",
+                # "sigma_1_mean",
+                # "sigma_1_c_mean",
                 "sigma_2_mean",
                 "sigma_2_c_mean",
                 "sigma_3_mean",
@@ -168,7 +171,7 @@ class SphHarmEquivalenceExperiment:
             analytic_neighbors = {}
             df_alt = self.truth_df.loc[alt]
             for key in keys:
-                nearest_sh = nearest_analytic(df_alt[key], stats[f"{key}"])
+                nearest_sh = nearest_analytic(df_alt["param_" + key], stats[f"{key}"])
                 analytic_neighbors.update({f"param_{key}": [nearest_sh]})
 
             stats.update(analytic_neighbors)
@@ -176,11 +179,18 @@ class SphHarmEquivalenceExperiment:
             df_all = df_all.append(df)
         pprint(df_all)
 
-        df_all.to_pickle(
-            os.path.dirname(GravNN.__file__)
-            + "/../Data/Networks/{model_id}/rse_alt.data",
-        )
+        rse_path = f"/../Data/Networks/{model_id}/rse_alt.data"
+        df_all.to_pickle(os.path.dirname(GravNN.__file__) + rse_path)
         return df_all
 
-    def run(self):
-        self.compute_alt_stats()
+    def run(self, points=5000000):
+        self.compute_alt_stats(points)
+
+
+if __name__ == "__main__":
+    df = pd.read_pickle("Data/Dataframes/earth_trainable_FF.data")
+    truth_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude.data")
+    model_id = df.id[-1]
+    config, model = load_config_and_model(model_id, df)
+    exp = SphHarmEquivalenceExperiment(model, config, truth_df)
+    exp.run(points=500)
