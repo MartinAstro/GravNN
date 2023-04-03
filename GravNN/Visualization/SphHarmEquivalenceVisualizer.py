@@ -148,10 +148,6 @@ def extract_sub_df(trajectory, df):
 
 
 if __name__ == "__main__":
-    # trad_df = pd.read_pickle("Data/Dataframes/traditional_nn_df.data")
-    # pinn_df = pd.read_pickle("Data/Dataframes/pinn_df.data")
-    # df = pd.concat([trad_df, pinn_df])
-
     df = pd.read_pickle("Data/Dataframes/earth_trainable_FF.data")
 
     # Compute the equivalent SH for a specified model
@@ -162,8 +158,6 @@ if __name__ == "__main__":
     #     exp.run()
 
     sub_df = df.iloc[-1:]
-    # for all models in the dataframe, visualize the SH equivalent vs altitude
-    # sub_df = extract_sub_df(RandomDist, df)
     vis = SphHarmEquivalenceVisualizer(sub_df)
     vis.plot(sub_df, statistic="param_rse_mean", legend=True)
     plt.show()
