@@ -22,6 +22,18 @@ class PINN_m_C22:
         return PINN_acc - SH_acc
 
 
+class PINN_p_C22:
+    def __init__(self, PINN, sh_info, max_deg):
+        self.model = PINN
+        self.SH_model = SphericalHarmonics(sh_info, max_deg)
+        self.max_deg = max_deg
+
+    def compute_acceleration(self, x):
+        PINN_acc = self.model.compute_acceleration(x)
+        SH_acc = self.SH_model.compute_acceleration(x)
+        return PINN_acc + SH_acc
+
+
 def nearest_analytic(map_stat_series, value):
     i = 0
     if value < map_stat_series.iloc[i]:
@@ -89,31 +101,52 @@ def compute_stats(
 
 
 class CompactnessExperiment:
-    def __init__(self, model, config, truth_file):
+    def __init__(self, nn_df, remove_deg=-1):
         """Analysis class used to evaluate the performance of a PINN gravity model
         trained on a celestial body typically modeled with spherical harmonics.
 
         The class is responsible for determining the closest spherical harmonic degree
         equivalent given the networks mean RSE both at the Brillouin sphere and at a
         specified altitude.
-
-        Args:
-            model (PINNGravityModel): compiled keras model containing network
-            config (dict): hyperparameter and configuration dictionary for model
         """
-        self.config = config
-        self.model = model
-        self.x_transformer = config["x_transformer"][0]
-        self.u_transformer = config["u_transformer"][0]
-        self.a_transformer = config["a_transformer"][0]
-        self.planet = config["planet"][0]
-        self.body_type = "Planet"
+        self.nn_df = nn_df
+        self.remove_deg = remove_deg
 
-        self.truth_df = truth_file
-        if not isinstance(truth_file, pd.DataFrame):
-            self.truth_df = pd.read_pickle(truth_file)
+    def get_sh_truth(self, config):
+        files = {
+            "Earth": {
+                "2": "Data/Dataframes/sh_stats_Brillouin.data",
+                "-1": "Data/Dataframes/sh_stats_Brillouin_deg_n1.data",
+            },
+            "Moon": {
+                "2": "Data/Dataframes/sh_stats_moon_Brillouin.data",
+            },
+        }
 
-    def compute_nearest_analytic(self, name, map_stats):
+        # load in the truth SH file if it exists
+        planet = config["planet"][0]
+        try:
+            sh_file_path = files[planet.__class__.__name__][str(self.remove_deg)]
+            self.sh_df = pd.read_pickle(sh_file_path)
+        except Exception as e:
+            raise (e)
+
+    def configure_model(self, model, config):
+        planet = config["planet"][0]
+        pinn_deg_removed = config["deg_removed"][0]  # -1 or 2 most likely
+        planet = config["planet"][0]
+        if pinn_deg_removed == -1 and self.remove_deg == -1:
+            self.model = model
+        elif pinn_deg_removed == -1 and self.remove_deg == 2:
+            self.model = PINN_m_C22(model, planet.sh_file, 2)
+        elif pinn_deg_removed == 2 and self.remove_deg == 2:
+            self.model = model
+        elif pinn_deg_removed == 2 and self.remove_deg == -1:
+            self.model = PINN_p_C22(model, planet.sh_file, 2)
+        else:
+            raise Exception(f"Remove Degree {self.remove_deg} is not supported!")
+
+    def compute_nearest_analytic(self, map_stats):
         # Compute nearest SH degree
         keys = [
             "rse_mean",
@@ -133,8 +166,8 @@ class CompactnessExperiment:
         ]
         param_stats = {}
         for key in keys:
-            entry_key = f"{name}_param_{key}"
-            entry_value = nearest_analytic(self.truth_df[key], map_stats[key])
+            entry_key = f"param_{key}"
+            entry_value = nearest_analytic(self.sh_df[key], map_stats[key])
             param_stats.update(
                 {
                     entry_key: [entry_value],
@@ -143,55 +176,50 @@ class CompactnessExperiment:
 
         return param_stats
 
-    def compute_rse_stats(self, test_trajectories, percent=False):
+    def compute_rse_stats(self, config, traj, percent=False):
         stats = {}
 
-        for traj_name, traj_data in test_trajectories.items():
-            # SH Data and NN Data
-            x, acc_sh, u = get_sh_data(
-                traj_data,
-                self.config["grav_file"][0],
-                **self.config,
-            )
-            acc_pinn = self.model.compute_acceleration(x)
+        # Force get_sh_data to use the requested deg removed
+        config.update({"deg_removed": [self.remove_deg]})
 
-            state_obj_true = StateObject(trajectory=traj_data, accelerations=acc_sh)
-            state_obj_pred = StateObject(trajectory=traj_data, accelerations=acc_pinn)
+        # Get SH data
+        x, acc_sh, u = get_sh_data(
+            traj,
+            config["grav_file"][0],
+            **config,
+        )
+        acc_pinn = self.model.compute_acceleration(x)
 
-            # Generate map statistics on sets A, F, and C (2 and 3 sigma)
-            stats = compute_stats(state_obj_true, state_obj_pred)
+        state_obj_true = StateObject(trajectory=traj, accelerations=acc_sh)
+        state_obj_pred = StateObject(trajectory=traj, accelerations=acc_pinn)
 
-            # Calculate the spherical harmonic degree that yields approximately
-            # the same statistics
-            analytic_neighbors = self.compute_nearest_analytic(traj_name, stats)
-            stats.update(analytic_neighbors)
+        # Generate map statistics on sets A, F, and C (2 and 3 sigma)
+        stats = compute_stats(state_obj_true, state_obj_pred)
+
+        # Calculate the spherical harmonic degree that yields approximately
+        # the same statistics
+        analytic_neighbors = self.compute_nearest_analytic(stats)
+        stats.update(analytic_neighbors)
+
         return stats
 
-    def run(self, test_trajectories):
-        stats = self.compute_rse_stats(test_trajectories)
-        return stats
+    def run(self, planet, radius, points):
+        # For every model in the dataframe, compute error on
+        # a Fibbonacci grid
+        for idx in range(len(self.nn_df)):
+            model_id = self.nn_df.id.values[idx]
+            config, model = load_config_and_model(model_id, self.nn_df)
+            self.configure_model(model, config)
+            self.get_sh_truth(config)
+            traj = FibonacciDist(planet, radius, points)
+            stats = self.compute_rse_stats(config, traj)
+            self.nn_df = update_df_row(model_id, self.nn_df, stats, False)
 
 
 if __name__ == "__main__":
     df_name = "Data/Dataframes/earth_PINN_III_FF_040423.data"
     df = pd.read_pickle(df_name)
-    # truth_df = pd.read_pickle("Data/Dataframes/sh_stats_Brillouin_deg_n1.data")
-    truth_df = pd.read_pickle("Data/Dataframes/sh_stats_Brillouin.data")
-
     planet = Earth()
-    df_name_truth = "Brillouin_deg_n1"  # no deg removed
-    test_trajectories = {
-        df_name_truth: FibonacciDist(planet, planet.radius, points=50000),
-    }
 
-    for idx in range(len(df)):
-        model_id = df.id.values[idx]
-        planet = df.planet.values[idx]
-
-        config, model = load_config_and_model(model_id, df)
-        config["deg_removed"] = [2]
-        PINN_m_C22_model = PINN_m_C22(model, planet.sh_file, 2)
-        exp = CompactnessExperiment(PINN_m_C22_model, config, truth_df)
-        stats = exp.run(test_trajectories)
-        df = update_df_row(model_id, df, stats, save=False)
-    df.to_pickle(df_name)
+    exp = CompactnessExperiment(df, 2)
+    exp.run(planet, planet.radius, points=50000)
