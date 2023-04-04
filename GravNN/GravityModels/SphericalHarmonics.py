@@ -269,6 +269,8 @@ class SphericalHarmonics(GravityModelBase):
 
 
 if __name__ == "__main__":
+    import time
+
     from GravNN.CelestialBodies.Planets import Earth
 
     planet = Earth()
@@ -278,8 +280,20 @@ if __name__ == "__main__":
     # acc = grav_model.accelerations
     # pot = grav_model.potentials
 
-    grav_model = SphericalHarmonics(planet.sh_file, 13)
-    print(grav_model.compute_acceleration([[Earth().radius, 0, 0]]))
+    # grav_model = SphericalHarmonics(planet.sh_file, 13)
+    # print(grav_model.compute_acceleration([[Earth().radius, 0, 0]]))
     # grav_model.load(override=True)
     # acc = grav_model.accelerations
     # pot = grav_model.potentials
+
+    N = 10000
+    x = planet.radius * np.random.normal(2, 0.05, size=(N, 3))
+    grav_model = SphericalHarmonics(planet.sh_file, 1000, parallel=False)
+    start = time.time()
+    grav_model.compute_acceleration(x)
+    print((time.time() - start) / N)
+
+    grav_model = SphericalHarmonics(planet.sh_file, 1000, parallel=True)
+    start = time.time()
+    grav_model.compute_acceleration(x)
+    print((time.time() - start) / N)
