@@ -3,6 +3,7 @@ import os
 import numpy as np
 import trimesh
 
+from GravNN.Support.PathTransformations import make_windows_path_posix
 from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
@@ -48,6 +49,10 @@ class RandomDist(TrajectoryBase):
 
             if isinstance(self.model_file, list):
                 self.model_file = self.model_file[0]
+
+        # If the file was saved on windows but we are running on mac, load the mac path.
+        self.model_file = make_windows_path_posix(self.model_file)
+
         _, file_extension = os.path.splitext(self.model_file)
         self.filename = os.path.basename(self.model_file)
         self.shape_model = trimesh.load_mesh(
