@@ -355,6 +355,10 @@ def BasicNet(**kwargs):
     return model
 
 
+# Necessary for backwards compatibility
+TraditionalNet = BasicNet
+
+
 def CustomNet(**kwargs):
     layers = kwargs["layers"][0]
     dtype = kwargs["dtype"][0]
