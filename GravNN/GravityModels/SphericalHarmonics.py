@@ -105,11 +105,11 @@ class SphericalHarmonics(GravityModelBase):
 
         self.n1, self.n2, self.n1q, self.n2q = compute_n_matrices(self.degree)
 
-        if parallel:
-            self.compute_fcn = compute_acc_parallel
-        else:
-            self.compute_fcn = compute_acc_jit
-        pass
+        # if parallel:
+        #     self.compute_fcn = compute_acc_parallel
+        # else:
+        #     self.compute_fcn = compute_acc_jit
+        # pass
 
     def generate_full_file_directory(self):
         self.file_directory += (
@@ -247,7 +247,7 @@ class SphericalHarmonics(GravityModelBase):
 
         positions = np.reshape(positions, (len(positions) * 3))
 
-        accelerations, potentials = self.compute_fcn(
+        accelerations, potentials = compute_acc(
             positions,
             self.degree,
             self.mu,
