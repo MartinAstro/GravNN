@@ -1,19 +1,23 @@
+import multiprocessing as mp
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import trimesh
-from GravNN.GravityModels.GravityModelBase import GravityModelBase
-from GravNN.CelestialBodies.Asteroids import Bennu, Eros
-from GravNN.GravityModels.PointMass import PointMass
+from numba import njit  # , range
 
-from numba import jit, njit, prange
+from GravNN.CelestialBodies.Asteroids import Eros
+from GravNN.GravityModels.GravityModelBase import GravityModelBase
+from GravNN.GravityModels.PointMass import PointMass
+from GravNN.Support.PathTransformations import make_windows_path_posix
 from GravNN.Support.ProgressBar import ProgressBar
 
 
 def get_poly_data(trajectory, obj_file, **kwargs):
     override = bool(kwargs.get("override", [False])[0])
     remove_point_mass = bool(kwargs.get("remove_point_mass", [False])[0])
+
+    obj_file = make_windows_path_posix(obj_file)
 
     poly_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
     poly_r0_gm.load(override=override)
@@ -22,7 +26,8 @@ def get_poly_data(trajectory, obj_file, **kwargs):
     a = poly_r0_gm.accelerations
     u = np.array([poly_r0_gm.potentials]).transpose()  # potential (N x 1)
 
-    # TODO: Determine if this is valuable -- how do dynamics and representation change inside brillouin sphere
+    # TODO: Determine if this is valuable -- how do dynamics and representation change
+    # inside brillouin sphere
     if remove_point_mass:
         point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
         point_mass_r0_gm.load(override=override)
@@ -35,13 +40,17 @@ def get_poly_data(trajectory, obj_file, **kwargs):
     return x, a, u
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True, parallel=False)
 def compute_edge_dyads(
-    vertices, faces, edges_unique, face_adjacency_edges, face_normals, face_adjacency
+    vertices,
+    faces,
+    edges_unique,
+    face_adjacency_edges,
+    face_normals,
+    face_adjacency,
 ):
     edge_dyads = np.zeros((len(edges_unique), 3, 3))  # In order of unique edges
-    for i in prange(len(edges_unique)):
-        
+    for i in range(len(edges_unique)):
         P1 = vertices[edges_unique[i][0]]
         P2 = vertices[edges_unique[i][1]]
 
@@ -89,10 +98,10 @@ def compute_edge_dyads(
     return edge_dyads
 
 
-# @njit(cache=True, parallel=True)
+@njit(cache=True, parallel=False)
 def compute_facet_dyads(face_normals):
     facet_dyads = np.zeros((len(face_normals), 3, 3))
-    for i in prange(len(face_normals)):
+    for i in range(len(face_normals)):
         facet_normal = face_normals[i]
         facet_dyads[i] = np.outer(facet_normal, facet_normal)
     return facet_dyads
@@ -139,19 +148,17 @@ def GetLe(r_scaled, vertices, edges_unique, edge_idx):
     return np.log((R0 + R1 + Re) / (R0 + R1 - Re))
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True, parallel=False)
 def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
     acc = np.zeros((3,))
     pot = 0.0
-    for i in prange(len(faces)):
+    for i in range(len(faces)):
         r0 = vertices[faces[i][0]]
-        r1 = vertices[faces[i][1]]
-        r2 = vertices[faces[i][2]]
-        r_middle = (r0 + r1 + r2)/3.0
-        r0m = r_middle - point_scaled
+        vertices[faces[i][1]]
+        vertices[faces[i][2]]
 
         r_e = r0 - point_scaled
-        r_f = r_e # Page 11
+        r_f = r_e  # Page 11
 
         wf = GetPerformanceFactor(point_scaled, vertices, faces, i)
         F = facet_dyads[i]
@@ -161,17 +168,17 @@ def facet_acc_loop(point_scaled, vertices, faces, facet_dyads):
     return acc, pot
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True, parallel=False)
 def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
     acc = np.zeros((3,))
     pot = 0.0
-    for i in prange(len(edges_unique)):
+    for i in range(len(edges_unique)):
         r0 = vertices[edges_unique[i][0]]
         r1 = vertices[edges_unique[i][1]]
 
         # Page 12 implies that r_e can be any point on edge e or its infinite extension
         r_middle = (r0 + r1) / 2
-        
+
         r_e = r_middle - point_scaled
 
         Le = GetLe(point_scaled, vertices, edges_unique, i)
@@ -185,14 +192,16 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
 
 class Polyhedral(GravityModelBase):
     def __init__(self, celestial_body, obj_file, trajectory=None):
-        """Polyhedral gravity model based on work from Werner and Scheeres (https://link.springer.com/article/10.1007/BF00053511)
-        The model computes the accelerations from a constant density polyhedral shape model which is often a reasonable approximation for
-        small bodies.
+        """Polyhedral gravity model based on work from Werner and Scheeres
+        (https://link.springer.com/article/10.1007/BF00053511)
+        The model computes the accelerations from a constant density polyhedral shape
+        model which is often a reasonable approximation for small bodies.
 
         Args:
-            celestial_body (CelestialBody): Body from which gravity measurements are produced
+            celestial_body (CelestialBody): Body for gravity calc
             obj_file (str): path to shape model of the body
-            trajectory (TrajectoryBase, optional): Trajectory / distribution for which the gravity measurements should be computed. Defaults to None.
+            trajectory (TrajectoryBase, optional): Trajectory / distribution for which
+                the gravity measurements should be computed. Defaults to None.
         """
         super().__init__()
         self.obj_file = obj_file
@@ -228,7 +237,8 @@ class Polyhedral(GravityModelBase):
     def find_vertex(self, value_1, idx_1, value_2, idx_2):
         for i in range(len(self.vertices)):
             if np.isclose(self.mesh.vertices[i][idx_1], value_1) and np.isclose(
-                self.mesh.vertices[i][idx_2], value_2
+                self.mesh.vertices[i][idx_2],
+                value_2,
             ):
                 return i
 
@@ -283,25 +293,25 @@ class Polyhedral(GravityModelBase):
 
     # Bulk function
     def compute_acceleration(self, positions=None, pbar=True):
-        "Compute the acceleration for an existing trajectory or provided set of positions"
+        "Compute the acceleration for an existing trajectory or provided positions"
         if positions is None:
             positions = self.trajectory.positions
 
-        bar = ProgressBar(positions.shape[0], enable=pbar)
+        # bar = ProgressBar(positions.shape[0], enable=pbar)
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
-        for i in range(len(self.accelerations)):
-            self.accelerations[i], self.potentials[i] = self.compute_values(
-                positions[i]
-            )
-            bar.update(i)
-        bar.markComplete()
-        bar.close()
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            results = pool.map(self.compute_values, positions)
+
+        for i, result in enumerate(results):
+            self.accelerations[i] = result[0]
+            self.potentials[i] = result[1]
+
         return self.accelerations
 
     def compute_potential(self, positions=None):
-        "Compute the potential for an existing trajectory or provided set of positions"
+        "Compute the potential for an existing trajectory or provided positions"
         if positions is None:
             positions = self.trajectory.positions
 
@@ -311,7 +321,7 @@ class Polyhedral(GravityModelBase):
 
         for i in range(len(self.accelerations)):
             self.accelerations[i], self.potentials[i] = self.compute_values(
-                positions[i]
+                positions[i],
             )
             bar.update(i)
         bar.markComplete()
@@ -325,10 +335,16 @@ class Polyhedral(GravityModelBase):
         pot = 0.0
 
         acc_facet, pot_facet = facet_acc_loop(
-            point_scaled, self.mesh.vertices, self.mesh.faces, self.facet_dyads
+            point_scaled,
+            self.mesh.vertices,
+            self.mesh.faces,
+            self.facet_dyads,
         )
         acc_edge, pot_edge = edge_acc_loop(
-            point_scaled, self.mesh.vertices, self.mesh.edges_unique, self.edge_dyads
+            point_scaled,
+            self.mesh.vertices,
+            self.mesh.edges_unique,
+            self.edge_dyads,
         )
 
         acc = acc_facet + acc_edge  # signs taken care of in loop
@@ -336,10 +352,11 @@ class Polyhedral(GravityModelBase):
 
         pot = pot_edge + pot_facet  # signs taken care of in loop
         pot *= (
-            1.0 / 2.0 * G * self.density * self.scaleFactor ** 2
+            1.0 / 2.0 * G * self.density * self.scaleFactor**2
         )  # [km^2/s^2] - > [m^2/s^2]
 
-        # the paper gives delta U, not a. Given that a is already standard, we are going to negate U
+        # the paper gives delta U, not a.
+        # Given that a is already standard, we are going to negate U
         return acc, -pot
 
 
@@ -373,6 +390,13 @@ def main():
     timeList.append(stop)
     print(stop)
 
+    position = np.ones((1024, 3)) * 1e4  # Must be in meters
+    start = time.time()
+    poly_model.compute_acceleration(position)
+    stop = time.time() - start
+    timeList.append(stop)
+    print(stop)
+
     # position = np.ones((512,3))*1E4# Must be in meters
     # start = time.time()
     # poly_model.compute_acceleration(position)
@@ -392,46 +416,70 @@ def main():
 
 def test_energy_conservation():
     from scipy.integrate import solve_ivp
-    from GravNN.Support.transformations import cart2sph, invert_projection
+
     asteroid = Eros()
     poly_model = Polyhedral(asteroid, asteroid.obj_8k)
-    def fun(x,y,IC=None):
+
+    def fun(x, y, IC=None):
         "Return the first-order system"
         # print(x)
         R, V = y[0:3], y[3:6]
-        r = np.linalg.norm(R)
-        a = poly_model.compute_acceleration(R.reshape((1,3)), pbar=False)
+        np.linalg.norm(R)
+        a = poly_model.compute_acceleration(R.reshape((1, 3)), pbar=False)
         dxdt = np.hstack((V, a.reshape((3,))))
         return dxdt.reshape((6,))
-    
-    T = 1000
-    state = np.array([-6.36256532e+02, -4.58656092e+04,  1.31640352e+04,  3.17126984e-01, -1.12030801e+00, -3.38751010e+00])
 
-    sol = solve_ivp(fun, [0, T], state.reshape((-1,)), t_eval=None, events=None, atol=1e-12, rtol=1e-12)
+    T = 1000
+    state = np.array(
+        [
+            -6.36256532e02,
+            -4.58656092e04,
+            1.31640352e04,
+            3.17126984e-01,
+            -1.12030801e00,
+            -3.38751010e00,
+        ],
+    )
+
+    sol = solve_ivp(
+        fun,
+        [0, T],
+        state.reshape((-1,)),
+        t_eval=None,
+        events=None,
+        atol=1e-12,
+        rtol=1e-12,
+    )
 
     from OrbitalElements.orbitalPlotting import plot_orbit_3d
-    plot_orbit_3d(sol.y,save=False)
-    # sol = solve_ivp(fun, [0, T], state.reshape((-1,)), t_eval=None, events=None, atol=1e-14, rtol=1e-14)
+
+    plot_orbit_3d(sol.y, save=False)
+    # sol = solve_ivp(
+    #     fun,
+    #     [0, T],
+    #     state.reshape((-1,)),
+    #     t_eval=None,
+    #     events=None,
+    #     atol=1e-14,
+    #     rtol=1e-14,
+    # )
     rVec = sol.y[0:3, :]
     vVec = sol.y[3:6, :]
     hVec = np.cross(rVec.T, vVec.T)
     h_norm = np.linalg.norm(hVec, axis=1)
 
-    KE = 1./2.*1*np.linalg.norm(vVec, axis=0)**2
+    KE = 1.0 / 2.0 * 1 * np.linalg.norm(vVec, axis=0) ** 2
     U = poly_model.compute_potential(rVec.T)
 
     energy = KE + U
 
-
     plt.figure()
-    plt.subplot(2,1,1)
-    plt.plot(np.linspace(0, T, len(h_norm)), h_norm, label='orbit')
-    plt.subplot(2,1,2)
-    plt.plot(np.linspace(0, T, len(h_norm)), energy, label='orbit')
+    plt.subplot(2, 1, 1)
+    plt.plot(np.linspace(0, T, len(h_norm)), h_norm, label="orbit")
+    plt.subplot(2, 1, 2)
+    plt.plot(np.linspace(0, T, len(h_norm)), energy, label="orbit")
     plt.show()
 
-
-    
 
 if __name__ == "__main__":
     main()
