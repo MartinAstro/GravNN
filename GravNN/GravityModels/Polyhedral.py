@@ -1,3 +1,4 @@
+import copy
 import multiprocessing as mp
 import os
 
@@ -190,6 +191,15 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
     return acc, pot
 
 
+class Mesh:
+    def __init__(self, trimesh):
+        self.vertices = copy.deepcopy(np.array(trimesh.vertices))
+        self.faces = copy.deepcopy(np.array(trimesh.faces, dtype=np.int32))
+        self.edges_unique = copy.deepcopy(
+            np.array(trimesh.edges_unique, dtype=np.int32),
+        )
+
+
 class Polyhedral(GravityModelBase):
     def __init__(self, celestial_body, obj_file, trajectory=None):
         """Polyhedral gravity model based on work from Werner and Scheeres
@@ -223,6 +233,21 @@ class Polyhedral(GravityModelBase):
             self.mesh.face_normals,
             self.mesh.face_adjacency,
         )
+        self.reduce_mesh_memory()
+        self.get_available_cores()
+
+    def get_available_cores(self):
+        try:
+            int(os.environ["SLURM_JOB_NUM_NODES"])
+            cores_per_nodes = int(os.environ["SLURM_JOB_CPUS_PER_NODE"].split("(")[0])
+            processes = cores_per_nodes
+        except Exception:
+            processes = mp.cpu_count()
+        self.processes = processes
+
+    def reduce_mesh_memory(self):
+        smaller_mesh = Mesh(self.mesh)
+        self.mesh = smaller_mesh
 
     def generate_full_file_directory(self):
         self.file_directory += (
@@ -301,7 +326,7 @@ class Polyhedral(GravityModelBase):
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+        with mp.Pool(processes=self.processes) as pool:
             results = pool.map(self.compute_values, positions)
 
         for i, result in enumerate(results):
@@ -315,17 +340,17 @@ class Polyhedral(GravityModelBase):
         if positions is None:
             positions = self.trajectory.positions
 
-        bar = ProgressBar(positions.shape[0], enable=True)
+        ProgressBar(positions.shape[0], enable=True)
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
-        for i in range(len(self.accelerations)):
-            self.accelerations[i], self.potentials[i] = self.compute_values(
-                positions[i],
-            )
-            bar.update(i)
-        bar.markComplete()
-        bar.close()
+        with mp.Pool(processes=self.processes) as pool:
+            results = pool.map(self.compute_values, positions)
+
+        for i, result in enumerate(results):
+            self.accelerations[i] = result[0]
+            self.potentials[i] = result[1]
+
         return self.potentials
 
     def compute_values(self, position):
@@ -365,7 +390,7 @@ def main():
 
     start = time.time()
     asteroid = Eros()
-    poly_model = Polyhedral(asteroid, asteroid.obj_8k)
+    poly_model = Polyhedral(asteroid, asteroid.obj_200k)
     print(time.time() - start)
 
     timeList = []
