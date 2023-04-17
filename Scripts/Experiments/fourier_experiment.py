@@ -12,15 +12,14 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 def main():
     threads = 4
 
-    df_file = "Data/Dataframes/fourier_experiment_032323.data"
     config = get_default_eros_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
         "N_dist": [50000],
-        "N_train": [4500],
-        "N_val": [500],
+        "N_train": [45000],
+        "N_val": [5000],
         "num_units": [40],
         "loss_fcns": [["percent", "rms"]],
         "jit_compile": [True],
@@ -28,20 +27,45 @@ def main():
         "eager": [False],
         "learning_rate": [0.0001],
         "dropout": [0.0],
-        "batch_size": [4500],
-        "epochs": [5000],
+        "batch_size": [45000],
+        "epochs": [10000],
         "acc_noise": [0.0],
         "preprocessing": [["pines", "r_inv", "fourier"]],
         "PINN_constraint_fcn": ["pinn_a"],
-        "fourier_features": [5, 10],
-        "fourier_sigma": [1, 2, 4],
-        "shared_freq": [False, True],
-        "shared_offset": [False, True],
-        "trainable": [False, True],
+        "tanh_r": [10],  # point mass should have minimal role
         "tanh_k": [1e3],
+        "fuse_model": [True],
     }
-    args = configure_run_args(config, hparams)
 
+    fourier_hparams = {
+        "fourier_features": [5, 10, 20],
+        "fourier_sigma": [1],
+        "shared_freq": [False],
+        "shared_offset": [False],
+        "trainable": [False],
+    }
+
+    hparams.update(fourier_hparams)
+
+    df_file = "Data/Dataframes/fourier_experiment_not_trainable_032523.data"
+    args = configure_run_args(config, hparams)
+    with mp.Pool(threads) as pool:
+        results = pool.starmap_async(run, args)
+        configs = results.get()
+    save_training(df_file, configs)
+
+    hparams.update({"trainable": [True]})
+    df_file = "Data/Dataframes/fourier_experiment_trainable_032523.data"
+    args = configure_run_args(config, hparams)
+    with mp.Pool(threads) as pool:
+        results = pool.starmap_async(run, args)
+        configs = results.get()
+    save_training(df_file, configs)
+
+    hparams.update({"shared_freq": [True]})
+    hparams.update({"shared_offset": [True]})
+    df_file = "Data/Dataframes/fourier_experiment_trainable_shared_032523.data"
+    args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
