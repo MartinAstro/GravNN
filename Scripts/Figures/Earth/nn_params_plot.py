@@ -55,9 +55,7 @@ def journal_compactness():
         "Data/Dataframes/sh_stats_Brillouin.data",
         max_deg=None,
     )
-    sh_pareto_curve(
-        df,
-    )
+    sh_pareto_curve(df)
     plt.legend()
     vis.save(fig, "Brill_Params.pdf")
 
