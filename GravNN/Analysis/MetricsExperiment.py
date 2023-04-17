@@ -5,6 +5,7 @@ import pandas as pd
 from DataInterface import DataInterface
 
 from GravNN.Networks.Losses import *
+from GravNN.Networks.Model import load_config_and_model
 
 
 class MetricsExperiment(DataInterface):
@@ -73,13 +74,9 @@ class MetricsExperiment(DataInterface):
         return df
 
 
-def main():
-    from GravNN.Networks.Model import load_config_and_model
-
-    df_file = "Data/Dataframes/LR_Anneal_No_Noise_032223.data"
-    df_file = "Data/Dataframes/LR_Anneal_With_Noise_032223.data"
-    df_file_new = df_file.split(".data")[0] + "_metrics.data"
-    df = pd.read_pickle(df_file)
+def main(df_path):
+    df_file_new = df_path.split(".data")[0] + "_metrics.data"
+    df = pd.read_pickle(df_path)
 
     for i in range(len(df)):
         model_id = df.iloc[i]["id"]
@@ -89,18 +86,17 @@ def main():
         metrics_exp = MetricsExperiment(model, config, 50000, remove_J2=False)
         loss_fcn_list = ["rms", "percent", "angle", "magnitude"]
         metrics_exp.run(loss_fcn_list)
-        print(
-            f"{df.PINN_constraint_fcn.iloc[i]} \t \
-                {df.lr_anneal.iloc[i]} \t \
-                {df.epochs.iloc[i]}",
-        )
         pprint(metrics_exp.metrics)
         df = metrics_exp.save_metrics_in_df(df, i)
 
     df.to_pickle(df_file_new)
 
-    # plt.show()
-
 
 if __name__ == "__main__":
-    main()
+    # main("Data/Dataframes/fourier_experiment_not_trainable_032523.data")
+    # main("Data/Dataframes/fourier_experiment_trainable_032523.data")
+    # main("Data/Dataframes/fourier_experiment_trainable_shared_032523.data")
+    main("Data/Dataframes/eros_PINN_I_032823.data")
+    # main("Data/Dataframes/eros_PINN_II_032823.data")
+    main("Data/Dataframes/eros_PINN_III_040423.data")
+    # main("Data/Dataframes/example.data")
