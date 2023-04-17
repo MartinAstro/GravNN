@@ -407,7 +407,11 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         stu_cos = tf.concat([s_cos, t_cos, u_cos], axis=1)
 
         # stack radius and fourier basis together
-        features = tf.concat([r, s, t, u, stu_sin, stu_cos], 1)  # [N x 2M+1]
+        if self.sine_and_cosine:
+            features = tf.concat([r, s, t, u, stu_sin, stu_cos], 1)  # [N x 2M+1]
+        else:
+            features = tf.concat([r, s, t, u, stu_sin], 1)  # [N x 2M+1]
+
         return features
 
     def get_config(self):
