@@ -189,7 +189,7 @@ class SphHarmEquivalenceExperiment:
 
 if __name__ == "__main__":
     df = pd.read_pickle("Data/Dataframes/earth_trainable_FF.data")
-    truth_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude.data")
+    truth_df = pd.read_pickle("Data/Dataframes/sh_stats_earth_altitude_v2.data")
     model_id = df.id[-1]
     config, model = load_config_and_model(model_id, df)
     exp = SphHarmEquivalenceExperiment(model, config, truth_df)
