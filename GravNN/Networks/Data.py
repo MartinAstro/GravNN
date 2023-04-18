@@ -507,12 +507,20 @@ class DataSet:
         N_dist = self.config["N_dist"][0]
         grav_file = self.config["grav_file"][0]
 
-        trajectory = self.config["distribution"][0](
-            planet,
-            radius_bounds,
-            N_dist,
-            **self.config,
-        )
+        distribution = self.config["distribution"][0]
+        if distribution.__name__ == "SurfaceDist":
+            trajectory = distribution(
+                planet,
+                self.config["grav_file"][0],
+                **self.config,
+            )
+        else:
+            trajectory = distribution(
+                planet,
+                radius_bounds,
+                N_dist,
+                **self.config,
+            )
         get_analytic_data_fcn = self.config["gravity_data_fcn"][0]
 
         x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
