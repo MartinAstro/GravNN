@@ -1,12 +1,15 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 import numpy as np
 import trimesh
 
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 
 class SurfaceDist(TrajectoryBase):
-    def __init__(self, celestial_body, obj_file):
-        """Distribution that generates samples from the center of each facet of a shape model.
+    def __init__(self, celestial_body, obj_file, **kwargs):
+        """Distribution that generates samples from the center of each facet of a
+        shape model.
 
         Args:
             celestial_body (CelestialBody): body from which points will be sampled
