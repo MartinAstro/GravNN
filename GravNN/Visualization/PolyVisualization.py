@@ -6,6 +6,7 @@ import trimesh
 from matplotlib import cm
 from matplotlib.colors import Normalize, SymLogNorm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from sklearn.preprocessing import MinMaxScaler
 
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
@@ -24,6 +25,11 @@ class PolyVisualization(VisualizationBase):
         vlim=None,
         log=False,
         cbar=True,
+        cmap="RdYlGn",
+        percent=False,
+        min_percent=0,
+        max_percent=1,
+        alpha=0.4,
         surface_colors=True,
     ):
         fig, ax = self.new3DFig()
@@ -32,18 +38,30 @@ class PolyVisualization(VisualizationBase):
         mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
 
         if surface_colors and accelerations is not None:
-            cmap = plt.get_cmap("bwr")
+            cmap = plt.get_cmap(cmap).reversed()
             tri = Poly3DCollection(
                 mesh.triangles * 1000,
                 cmap=cmap,
-                alpha=0.4,
+                alpha=alpha,
                 # shade=True,
             )
 
             x = np.linalg.norm(accelerations, axis=1)
 
-            # Normalize the color from 0 - 1
-            x_normal = (x - x.min()) / (x.max() - x.min())
+            if percent:
+                # Clip the values to prescribed range
+                x_normal = np.clip(x / 100, min_percent, max_percent)
+                x_min = 0
+                x_max = np.max(x_normal) * 100
+
+                # scale the clipped values to 0 - 1
+                scaler = MinMaxScaler((0, 1))
+                x_normal = scaler.fit_transform(x_normal.reshape((-1, 1))).flatten()
+            else:
+                # Normalize the color from 0 - 1
+                x_normal = (x - x.min()) / (x.max() - x.min())
+                x_min = np.min(x)
+                x_max = np.max(x)
             mesh.visual.face_colors = cmap(x_normal)
 
             # place color on the collection
@@ -54,7 +72,7 @@ class PolyVisualization(VisualizationBase):
             tri = Poly3DCollection(
                 mesh.triangles * 1000,
                 cmap=cmap,
-                alpha=0.4,
+                alpha=alpha,
                 # shade=True,
             )
 
@@ -66,8 +84,8 @@ class PolyVisualization(VisualizationBase):
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim)
 
         if cbar and accelerations is not None:
-            vlim_min = np.min(x)
-            vlim_max = np.max(x)
+            vlim_min = x_min
+            vlim_max = x_max
             if log:
                 norm = SymLogNorm(linthresh=1e-4, vmin=vlim_min, vmax=vlim_max)
             else:
@@ -102,5 +120,5 @@ if __name__ == "__main__":
     acc = gravity_model.accelerations
 
     vis = PolyVisualization()
-    vis.plot_polyhedron(planet.obj_8k, acc)
+    vis.plot_polyhedron(planet.obj_8k, acc, cmap="bwr")
     plt.show()
