@@ -10,6 +10,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage.filters import gaussian_filter
 from scipy.stats import gaussian_kde
 
+from GravNN.Support.PathTransformations import make_windows_path_posix
+from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
@@ -61,13 +63,28 @@ class PlanesVisualizer(VisualizationBase):
             self.model_file = config.get("shape_model", [grav_file])[0]
             filename, file_extension = os.path.splitext(self.model_file)
             self.shape_model = trimesh.load_mesh(
-                self.model_file,
+                make_windows_path_posix(self.model_file),
                 file_type=file_extension[1:],
             )
-            distances = self.shape_model.nearest.signed_distance(
-                self.experiment.x_test / 1e3,
-            )
-            self.interior_mask = distances > 0
+
+            N = len(self.experiment.x_test)
+            step = 5000
+            mask = np.full((N,), False)
+            pbar = ProgressBar(N, True)
+            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+            for i in range(0, N, step):
+                end_idx = (i // step + 1) * step
+                position_subset = self.experiment.x_test[i:end_idx] / 1e3
+                mask[i:end_idx] = rayObject.contains_points(position_subset)
+                pbar.update(i)
+            pbar.close()
+            self.interior_mask = mask
+
+            # original
+            # distances = self.shape_model.nearest.signed_distance(
+            #     self.experiment.x_test / 1e3,
+            # )
+            # self.interior_mask = distances > 0
 
     def set_SRP_contour(self, a_srp):
         self.r_srp = np.sqrt(self.planet.mu / a_srp)
@@ -154,6 +171,9 @@ class PlanesVisualizer(VisualizationBase):
         colorbar_label=None,
         srp_sphere=False,
         annotate_stats=False,
+        labels=True,
+        ticks=True,
+        cbar=True,
     ):
         mask = self.plane_mask(plane)
         idx_start, idx_end = self.get_plane_idx(plane)
@@ -184,19 +204,30 @@ class PlanesVisualizer(VisualizationBase):
             vmax=self.max,
         )
 
+        plt.gca().set_xlabel(plane[0])
+        plt.gca().set_ylabel(plane[1])
+
+        if not labels:
+            plt.gca().set_xlabel("")
+            plt.gca().set_ylabel("")
+
+        if not ticks:
+            plt.gca().set_xticks([])
+            plt.gca().set_yticks([])
+            plt.gca().set_xticklabels("")
+            plt.gca().set_yticklabels("")
+
         if annotate_stats:
             self.annotate(z)
 
         ax = plt.gca()
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        cBar = plt.colorbar(im, cax=cax)
+        if cbar:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cBar = plt.colorbar(im, cax=cax)
 
-        # cbar = plt.colorbar(fraction=0.15,)
-        cBar.set_label(colorbar_label)
-        plt.sca(plt.gcf().axes[0])
-        plt.xlabel(plane[0])
-        plt.ylabel(plane[1])
+            # cbar = plt.colorbar(fraction=0.15,)
+            cBar.set_label(colorbar_label)
 
         if srp_sphere:
             circ = matplotlib.patches.Circle(
@@ -206,6 +237,8 @@ class PlanesVisualizer(VisualizationBase):
                 edgecolor="white",
             )
             plt.gca().add_patch(circ)
+
+        return im
 
     def plot(self, percent_max=100, **kwargs):
         self.max = percent_max
