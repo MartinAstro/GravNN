@@ -326,8 +326,11 @@ class Polyhedral(GravityModelBase):
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
-        with mp.Pool(processes=self.processes) as pool:
-            results = pool.map(self.compute_values, positions)
+        if len(positions) == 1:
+            results = map(self.compute_values, positions)
+        else:
+            with mp.Pool(processes=self.processes) as pool:
+                results = pool.map(self.compute_values, positions)
 
         for i, result in enumerate(results):
             self.accelerations[i] = result[0]
@@ -344,8 +347,11 @@ class Polyhedral(GravityModelBase):
         self.accelerations = np.zeros(positions.shape)
         self.potentials = np.zeros(len(positions))
 
-        with mp.Pool(processes=self.processes) as pool:
-            results = pool.map(self.compute_values, positions)
+        if len(positions) == 1:
+            results = map(self.compute_values, positions)
+        else:
+            with mp.Pool(processes=self.processes) as pool:
+                results = pool.map(self.compute_values, positions)
 
         for i, result in enumerate(results):
             self.accelerations[i] = result[0]
