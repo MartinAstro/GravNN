@@ -282,7 +282,6 @@ class PINNGravityModel(tf.keras.Model):
         x_input = self.a_postprocessor(x)
         return x_input
 
-    # @tf.function(jit_compile=False, experimental_relax_shapes=True)
     def _compute_acceleration(self, x):  # , batch_size=131072):
         x_input = self.preprocess(x)
         # if self.is_pinn:
@@ -293,11 +292,11 @@ class PINNGravityModel(tf.keras.Model):
         a = self.postprocess(a_pred)
         return a
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def compute_acceleration(self, x):
         return self._compute_acceleration(x)  # , batch_size=131072):
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def compute_dU_dxdx(self, x, batch_size=131072):
         x = tf.cast(x, dtype=self.variable_cast)
         x_input = self.preprocess(x)
@@ -316,7 +315,7 @@ class PINNGravityModel(tf.keras.Model):
     def wrap_train_step_jit(self, data):
         return self.train_step_fcn(data)
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def wrap_train_step_njit(self, data):
         return self.train_step_fcn(data)
 
@@ -324,7 +323,7 @@ class PINNGravityModel(tf.keras.Model):
     def wrap_test_step_jit(self, data):
         return self.test_step_fcn(data)
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def wrap_test_step_njit(self, data):
         return self.test_step_fcn(data)
 
@@ -337,7 +336,7 @@ class PINNGravityModel(tf.keras.Model):
     def _network_potential(self, x, training):
         return self.network(x, training=training)
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def _pinn_acceleration_output(self, x):
         x_inputs = x
         with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -347,7 +346,7 @@ class PINNGravityModel(tf.keras.Model):
         u_x = tf.negative(tape.gradient(u, x_inputs))
         return u_x
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(reduce_retracing=True)
     def _pinn_acceleration_jacobian(self, x):
         with tf.GradientTape() as g1:
             g1.watch(x)
@@ -358,7 +357,7 @@ class PINNGravityModel(tf.keras.Model):
         jacobian = g1.batch_jacobian(a, x)
         return jacobian
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(reduce_retracing=True)
     def _nn_acceleration_jacobian(self, x):
         with tf.GradientTape() as g2:
             g2.watch(x)
