@@ -9,6 +9,7 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 
 from GravNN.Networks.Constraints import *
+from GravNN.Support.PathTransformations import make_windows_path_posix
 
 
 def print_stats(data, name):
@@ -511,7 +512,7 @@ class DataSet:
         if distribution.__name__ == "SurfaceDist":
             trajectory = distribution(
                 planet,
-                self.config["grav_file"][0],
+                make_windows_path_posix(self.config["grav_file"][0]),
                 **self.config,
             )
         else:
