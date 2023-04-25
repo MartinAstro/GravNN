@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import trimesh
-from matplotlib import cm
+from matplotlib import cm, ticker
 from matplotlib.colors import Normalize, SymLogNorm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from sklearn.preprocessing import MinMaxScaler
@@ -26,6 +26,7 @@ class PolyVisualization(VisualizationBase):
         log=False,
         cbar=True,
         cmap="RdYlGn",
+        cmap_reverse=True,
         percent=False,
         min_percent=0,
         max_percent=1,
@@ -38,7 +39,9 @@ class PolyVisualization(VisualizationBase):
         mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
 
         if surface_colors and accelerations is not None:
-            cmap = plt.get_cmap(cmap).reversed()
+            cmap = plt.get_cmap(cmap)
+            if cmap_reverse:
+                cmap = cmap.reversed()
             tri = Poly3DCollection(
                 mesh.triangles * 1000,
                 cmap=cmap,
@@ -75,6 +78,11 @@ class PolyVisualization(VisualizationBase):
                 alpha=alpha,
                 # shade=True,
             )
+            mesh.visual.face_colors = cmap(np.zeros((len(mesh.triangles),)) + 0.5)
+
+            # place color on the collection
+            tri.set_facecolor(mesh.visual.face_colors / 255)
+            tri.set_edgecolor(mesh.visual.face_colors / 255)
 
         ax.add_collection3d(tri)
         min_lim = np.min(mesh.vertices * 1000)
@@ -92,14 +100,23 @@ class PolyVisualization(VisualizationBase):
                 norm = Normalize(vmin=vlim_min, vmax=vlim_max)
 
             arg = cm.ScalarMappable(norm=norm, cmap=cmap)
+
+            cbformat = ticker.ScalarFormatter()
+            cbformat.set_scientific("%.2e")
+            cbformat.set_useMathText(True)
+            cbformat.set_powerlimits((-2, 2))
+
             cBar = plt.colorbar(
                 arg,
-                pad=0.20,
-                fraction=0.15,
+                pad=0.05,
+                fraction=0.10,
                 norm=norm,
+                orientation="horizontal",
+                format=cbformat,
             )  # ticks=ticks,boundaries=vlim,
+
             if label is not None:
-                cBar.ax.set_ylabel(label)
+                cBar.ax.set_xlabel(label)
 
         return fig, ax
 
