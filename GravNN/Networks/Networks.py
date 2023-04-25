@@ -52,6 +52,11 @@ def compute_p(**kwargs):
             p += 1 if mu != 0.0 else 0  # if mu is known (for planets and asteroids)
             p += 2 if C20 != 0.0 else 0  # if C20 is known (for planets, not asteroids)
 
+        # if there is no analytic model, then look if any degrees are
+        elif not fuse_models and kwargs.get("deg_removed")[0] != -1:
+            lr = kwargs.get("deg_removed")[0]
+            p = lr + 2
+
     return p
 
 
