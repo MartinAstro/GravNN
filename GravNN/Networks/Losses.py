@@ -57,7 +57,8 @@ def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
 
 def rms(y_hat, y):
     dy = y_hat - y
-    return tf.sqrt(norm(dy))
+    rms = norm(dy)
+    return rms
 
 
 def percent(y_hat, y):
