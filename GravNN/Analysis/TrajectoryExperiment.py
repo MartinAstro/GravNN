@@ -1,154 +1,155 @@
-import os
+import time
 
-from numpy.lib.polynomial import poly
-from scipy.integrate import solve_bvp, solve_ivp
-import numpy as np
-from GravNN.Support.transformations import invert_projection, cart2sph
-import GravNN
 import matplotlib.pyplot as plt
 import numpy as np
-import trimesh
-from FrozenOrbits.boundary_conditions import *
-from FrozenOrbits.bvp import solve_bvp_pos_problem
-from FrozenOrbits.coordinate_transforms import *
-from FrozenOrbits.gravity_models import pinnGravityModel, polyhedralGravityModel
-from FrozenOrbits.ivp import solve_ivp_pos_problem
-from FrozenOrbits.LPE import LPE
-import OrbitalElements.orbitalPlotting as op
-from FrozenOrbits.utils import (
-    check_solution_validity,
-    compute_period,
-    get_energy,
-    get_initial_orbit_guess,
-    get_S_matrix,
-    get_solution_metrics,
-    sample_safe_trad_OE,
-    Solution
-)
-from FrozenOrbits.visualization import plot_1d_solutions, plot_3d_solutions
+import pandas as pd
+from scipy.integrate import solve_ivp
+
 from GravNN.CelestialBodies.Asteroids import Eros
-from scipy.integrate import solve_bvp
-
-from OrbitalElements.orbitalPlotting import plot1d
-
+from GravNN.GravityModels.HeterogeneousPoly import HeterogeneousPoly
+from GravNN.GravityModels.PointMass import PointMass
+from GravNN.GravityModels.Polyhedral import Polyhedral
+from GravNN.Networks.Model import load_config_and_model
+from GravNN.Support.ProgressBar import ProgressBar
 
 
 class TrajectoryExperiment:
-    def __init__(self, test_grav_model, truth_grav_model, radius_bounds, t_mesh_density=100, random_seed=1234, x0=None):
-        self.radius_bounds = radius_bounds
-        self.positions = None
-        self.test_accelerations = None
-        self.test_potentials = None
-
-        self.predicted_accelerations = None
-        self.predicted_potentials = None
-
-        self.percent_error_acc = None
-        self.percent_error_pot = None
-       
-        self.test_grav_model = test_grav_model
-        self.truth_grav_model = truth_grav_model
-
+    def __init__(
+        self,
+        true_grav_model,
+        initial_state,
+        period,
+        t_mesh_density=100,
+        random_seed=1234,
+        x0=None,
+    ):
+        self.true_model = true_grav_model
         self.t_mesh_density = t_mesh_density
-        self.x0 = x0
+        self.period = period
+        self.x0 = initial_state
+        self.test_models = []
         np.random.seed(random_seed)
 
-    def generate_initial_condition(self):
-        # Set the initial conditions and dynamics via OE
-        if self.x0 is not None:
-            trad_OE = cart2oe_tf(self.x0.reshape((1,6)), self.truth_grav_model.planet.mu).numpy()
-        else:
-            trad_OE = sample_safe_trad_OE(self.radius_bounds[0], self.radius_bounds[1])
-        T = compute_period(self.truth_grav_model.planet.mu, trad_OE[0, 0])
-        x0  = np.hstack(oe2cart_tf(trad_OE, self.truth_grav_model.planet.mu))
-        t_mesh = np.linspace(0, T, self.t_mesh_density)
-        return x0, t_mesh
-        
+    def add_test_model(self, model, label, color):
+        self.test_models.append(
+            {
+                "model": model,
+                "label": label,
+                "color": color,
+            },
+        )
+
     def generate_trajectory(self, model, X0, t_eval):
-        def fun(x,y,IC=None):
+        def fun(t, y, IC=None):
             "Return the first-order system"
             R = np.array([y[0:3]])
             V = np.array([y[3:6]])
             a = model.compute_acceleration(R)
             dxdt = np.hstack((V, a)).squeeze()
+
+            if t > t_eval[fun.t_eval_idx]:
+                fun.elapsed_time.append(time.time() - fun.start_time)
+                fun.pbar.update(t_eval[fun.t_eval_idx])
+                fun.t_eval_idx += 1
             return dxdt
-        
-        sol = solve_ivp(fun, [0, t_eval[-1]], X0.reshape((-1,)), t_eval=t_eval, atol=1e-8, rtol=1e-10)
-        return sol
 
-    def compute_accelerations(self):
-        true_acc = self.truth_grav_model.compute_acceleration(self.true_sol.y[0:3,:])
-        test_acc = self.test_grav_model.compute_acceleration(self.true_sol.y[0:3,:])
-        return true_acc, test_acc
+        fun.t_eval_idx = 0
+        fun.elapsed_time = []
+        fun.pbar = ProgressBar(t_eval[-1], True)
+        fun.start_time = time.time()
 
-    def compute_potentials(self):
-        true_pot = self.truth_grav_model.compute_potential(self.true_sol.y[0:3,:])
-        test_pot = self.test_grav_model.compute_potential(self.true_sol.y[0:3,:])
-        return true_pot, test_pot
+        sol = solve_ivp(
+            fun,
+            [0, t_eval[-1]],
+            X0.reshape((-1,)),
+            t_eval=t_eval,
+            atol=1e-8,
+            rtol=1e-10,
+        )
+        fun.elapsed_time.append(time.time() - fun.start_time)
+        fun.pbar.update(t_eval[-1])
+        fun.pbar.close()
+        return sol, fun.elapsed_time
 
-    def diff_and_error(self, true, test):
-        diff = np.linalg.norm(true - test, axis=-1)
-        percent_error = diff/np.linalg.norm(true, axis=-1) * 100
-        return diff, percent_error
+    def compute_differences(self):
+        for i, model_dict in enumerate(self.test_models):
+            test_sol = model_dict["solution"]
 
-    def difference_trajectories(self):
-        return Solution(self.test_sol.y - self.true_sol.y, self.t_mesh)
+            dy = test_sol.y - self.true_sol.y
+            dr = np.linalg.norm(dy, axis=0)
+
+            self.test_models[i].update({"pos_diff": dr})
 
     def run(self):
-        self.x0, self.t_mesh = self.generate_initial_condition()
+        self.t_mesh = np.linspace(0, self.period, self.t_mesh_density, endpoint=True)
 
         # Generate trajectories using the true and test grav models
-        self.true_sol = self.generate_trajectory(self.truth_grav_model, self.x0, self.t_mesh)
-        self.test_sol = self.generate_trajectory(self.test_grav_model, self.x0, self.t_mesh)
-        self.diff_sol = self.difference_trajectories()
+        self.true_sol, self.elapsed_time = self.generate_trajectory(
+            self.true_model,
+            self.x0,
+            self.t_mesh,
+        )
 
-        # Evaluate the accelerations and potentials along the trajectory from the true
-        # trajectory 
-        self.true_acc, self.test_acc = self.compute_accelerations()
-        self.true_pot, self.test_pot = self.compute_potentials()
+        # generate trajectories for all test models
+        for i, model_dict in enumerate(self.test_models):
+            model = model_dict["model"]
 
-        # Differences and error (1D)
-        self.diff_acc, self.error_acc = self.diff_and_error(self.true_acc, self.test_acc)
-        self.diff_pot, self.error_pot = self.diff_and_error(self.true_pot, self.test_pot)
+            sol, elapsed_time = self.generate_trajectory(
+                model,
+                self.x0,
+                self.t_mesh,
+            )
+            self.test_models[i].update({"solution": sol, "elapsed_time": elapsed_time})
 
-
+        self.compute_differences()
 
 
 def main():
-
-    from GravNN.Visualization.TrajectoryVisualizer import TrajectoryVisualizer
     planet = Eros()
-    min_radius = planet.radius * 5
-    max_radius = planet.radius * 7
 
-    # Load in the gravity model
-    pinn_model = pinnGravityModel(
-        os.path.dirname(GravNN.__file__) + "/../Data/Dataframes/eros_pinn_III_030822.data"
-    )  
-    poly_model = polyhedralGravityModel(planet, planet.obj_8k)
+    init_state = np.array(
+        [
+            4.61513747e04,
+            8.12741755e04,
+            -1.00860719e04,
+            8.49819800e-01,
+            -1.49764060e00,
+            2.47435298e00,
+        ],
+    )
 
-    init_state = np.array([
-        4.61513747e+04, 
-        8.12741755e+04, 
-        -1.00860719e+04, 
-        8.49819800e-01,
-        -1.49764060e+00,
-        2.47435298e+00
-        ])
+    true_model = HeterogeneousPoly(planet, planet.obj_8k)
 
-    experiment = TrajectoryExperiment(pinn_model, poly_model, [min_radius, max_radius], x0=init_state)
+    mass_1 = Eros()
+    mass_1.mu = planet.mu / 10
+    r_offset_1 = [planet.radius / 3, 0, 0]
+
+    mass_2 = Eros()
+    mass_2.mu = -planet.mu / 10
+    r_offset_2 = [-planet.radius / 3, 0, 0]
+
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
+
+    true_model.add_point_mass(point_mass_1, r_offset_1)
+    true_model.add_point_mass(point_mass_2, r_offset_2)
+
+    test_poly_model = Polyhedral(planet, planet.obj_8k)
+
+    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    model_id = df.id.values[-1]
+    config, test_pinn_model = load_config_and_model(model_id, df)
+
+    experiment = TrajectoryExperiment(
+        true_model,
+        initial_state=init_state,
+        period=24 * 3600,  # 24 * 3600,
+    )
+    experiment.add_test_model(test_poly_model, "Poly", "r")
+    experiment.add_test_model(test_pinn_model, "PINN", "g")
     experiment.run()
-    vis = TrajectoryVisualizer(experiment, shape_model=planet.obj_8k)
-    vis.plot_trajectories()
-    vis.plot_trajectory_error()
-    vis.plot_acceleration_differences()
-    vis.plot_potential_differences()   
-    vis.plot_trajectory_differences()
-    vis.plot_trajectories_1d()
+
     plt.show()
-
-
-
 
 
 if __name__ == "__main__":
