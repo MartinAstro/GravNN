@@ -110,8 +110,8 @@ class PINNGravityModel(tf.keras.Model):
             N_weights -= 1 if "c" in constraints else 0
 
         # Remove weights for RMS part of A constraint
-        if "rms" in self.config["loss_fcns"][0]:
-            N_weights -= 1 if "a" in constraints else 0
+        # if "rms" in self.config["loss_fcns"][0]:
+        #     N_weights -= 1 if "a" in constraints else 0
 
         constants = list(np.ones((N_weights,)))
         self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False)
