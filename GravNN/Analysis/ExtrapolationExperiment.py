@@ -38,7 +38,6 @@ class ExtrapolationExperiment:
     def get_train_data(self):
         data = DataSet(self.config)
         x_train = data.raw_data["x_train"]
-        data.raw_data["a_train"]
         train_r_COM = cart2sph(x_train)[:, 0]
 
         # sort
