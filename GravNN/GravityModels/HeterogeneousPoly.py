@@ -88,16 +88,17 @@ class HeterogeneousPoly(Polyhedral):
         self.accelerations = a_poly
         self.potentials = u_poly
 
-    def compute_acceleration(self, x):
+    def compute_acceleration(self, x=None):
         a_poly = super().compute_acceleration(x)
 
         for i in range(len(self.point_mass_list)):
-            r_offset = self.offset_list[i]
+            r_offset = np.array(self.offset_list[i]).reshape((-1, 3))
             x_pm = x - r_offset
             a_pm = self.point_mass_list[i].compute_acceleration(x_pm)
             a_poly += a_pm
+        return a_poly
 
-    def compute_potentials(self, x):
+    def compute_potentials(self, x=None):
         u_poly = super().compute_potential(x)
 
         for i in range(len(self.point_mass_list)):
@@ -105,6 +106,7 @@ class HeterogeneousPoly(Polyhedral):
             x_pm = x - r_offset
             u_pm = self.point_mass_list[i].compute_potential(x_pm)
             u_poly += u_pm
+        return u_poly
 
 
 if __name__ == "__main__":
