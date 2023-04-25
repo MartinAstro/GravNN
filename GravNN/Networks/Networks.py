@@ -34,8 +34,8 @@ def compute_p(**kwargs):
     # if np.any(deg_removed == [0,1]): power = 3
     # elif power = deg_removed + 2
 
-    fuse_models = kwargs.get("fuse_models")
-    scale_potential = kwargs.get("scale_nn_potential")
+    fuse_models = kwargs.get("fuse_models")[0]
+    scale_potential = kwargs.get("scale_nn_potential")[0]
 
     if not scale_potential:
         return 0  # don't scale, regardless of circumstance
