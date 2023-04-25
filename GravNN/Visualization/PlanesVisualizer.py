@@ -80,12 +80,6 @@ class PlanesVisualizer(VisualizationBase):
             pbar.close()
             self.interior_mask = mask
 
-            # original
-            # distances = self.shape_model.nearest.signed_distance(
-            #     self.experiment.x_test / 1e3,
-            # )
-            # self.interior_mask = distances > 0
-
     def set_SRP_contour(self, a_srp):
         self.r_srp = np.sqrt(self.planet.mu / a_srp)
 
