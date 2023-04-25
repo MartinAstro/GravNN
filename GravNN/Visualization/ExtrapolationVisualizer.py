@@ -154,32 +154,6 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
 
-    def plot_scatter_error(self):
-        import OrbitalElements.orbitalPlotting as op
-
-        print(len(self.experiment.losses["percent"][: self.max_idx]))
-        error = np.clip(self.experiment.losses["percent"][: self.max_idx], 0, 10)
-        error = self.experiment.losses["percent"][: self.max_idx]
-        scale = np.max(error) - np.min(error)
-        colors = plt.cm.RdYlGn(1 - ((error - np.min(error)) / scale))
-        op.plot3d(
-            self.experiment.positions[: self.max_idx].T,
-            cVec=colors,
-            obj_file=self.experiment.config["grav_file"][0],
-            plot_type="scatter",
-            alpha=0.2,
-        )
-
-        # self.new3DFig()
-        # x = (self.r / self.radius)
-
-        # scale = np.max(diff_acc_mag_percent) - np.min(diff_acc_mag_percent)
-        # colors = plt.cm.RdYlGn(1 - \
-        #   ((diff_acc_mag_percent  - np.min(diff_acc_mag_percent)) / scale))
-        # training_bounds = self.training_bounds / self.radius
-        # x, y, z = self.experiment.positions
-        # plt.scatter3d(x, y, z, alpha=0.2, s=2)
-
 
 def main():
     # df = pd.read_pickle("Data/Dataframes/LR_Anneal_With_Noise_032223.data")
