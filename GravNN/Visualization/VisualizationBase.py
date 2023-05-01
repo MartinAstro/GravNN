@@ -175,5 +175,7 @@ class VisualizationBase(ABC):
         os.makedirs(directory, exist_ok=True)
         try:
             plt.savefig(directory + "/" + filename)
+            filename = filename.replace(".pdf", ".png")
+            plt.savefig(directory + "/" + filename, dpi=250)
         except Exception as e:
             print(f"Couldn't save {filename}\n {e}")

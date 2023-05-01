@@ -74,7 +74,7 @@ def main():
         annotate=False,
     )
     vis.fig_size = (vis.w_half, vis.w_half)
-    vis.plot_extrapolation_rms(plot_std=False)
+    vis.plot_extrapolation_rms(plot_std=False, plot_max=False)
     plt.gca().set_ylim([1e-17, 1e-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/U_with_scale_extrap.pdf", pad_inches=0.0)
@@ -99,7 +99,7 @@ def main():
         annotate=False,
     )
     vis.fig_size = (vis.w_half, vis.w_half)
-    vis.plot_extrapolation_rms(plot_std=False)
+    vis.plot_extrapolation_rms(plot_std=False, plot_max=False)
     plt.gca().set_ylim([1e-17, 1e-3])
     plt.tight_layout()
     plt.savefig("Plots/PINNIII/U_without_scale_extrap.pdf", pad_inches=0.0)
