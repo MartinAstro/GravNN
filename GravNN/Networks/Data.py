@@ -9,6 +9,7 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 
 from GravNN.Networks.Constraints import *
+from GravNN.Preprocessors.DummyScaler import DummyScaler
 from GravNN.Support.PathTransformations import make_windows_path_posix
 
 
@@ -404,10 +405,11 @@ def scale_by_non_dim_potential(data_dict, config):
 
 
 def no_scale(data_dict, config):
-    x_transformer = config["dummy_transformer"][0]
-    a_transformer = config["dummy_transformer"][0]
-    u_transformer = config["dummy_transformer"][0]
-    a_bar_transformer = config["dummy_transformer"][0]
+    dummy_transformer = config.get("dummy_transformer", [DummyScaler()])
+    x_transformer = dummy_transformer
+    a_transformer = dummy_transformer
+    u_transformer = dummy_transformer
+    a_bar_transformer = dummy_transformer
 
     transformers = {
         "x": x_transformer,
@@ -482,8 +484,6 @@ def cart2sph_tf(x, acc_N):
 
 class DataSet:
     def __init__(self, data_config=None):
-        self.config = data_config
-
         # populate these variables
         self.train_data = None
         self.valid_data = None
@@ -491,6 +491,8 @@ class DataSet:
 
         if data_config is not None:
             self.from_config(data_config)
+        else:
+            self.config = {}
 
     def get_raw_data(self):
         """Function responsible for getting the raw training data (without
@@ -588,7 +590,7 @@ class DataSet:
 
         data_dict = add_error(
             data_dict,
-            self.config["acc_noise"][0],
+            self.config.get("acc_noise", [0.0])[0],
         )
 
         # Preprocessing
@@ -771,10 +773,7 @@ class DataSet:
             "u_val": u_val,
         }
 
-        train_data, val_data, transformers = self.get_preprocessed_data(
-            self.config,
-            data_dict,
-        )
+        train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
         dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
 
         self.raw_data = data_dict
