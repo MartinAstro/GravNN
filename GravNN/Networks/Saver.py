@@ -20,7 +20,7 @@ class ModelSaver:
     def __init__(
         self,
         model,
-        history,
+        history=None,
         save_dir=os.path.dirname(GravNN.__file__) + "/../Data",
     ):
         self.config = model.config
@@ -68,9 +68,10 @@ class ModelSaver:
         self.network.save_weights(network_dir + "weights")
 
         # save the training history + delete to reduce memory
-        with open(network_dir + "history.data", "wb") as f:
-            pickle.dump(self.history.history, f)
-        del self.history
+        if self.history is not None:
+            with open(network_dir + "history.data", "wb") as f:
+                pickle.dump(self.history.history, f)
+            del self.history
 
         # convert configuration info to dataframe + save
         config = dict(sorted(self.config.items(), key=lambda kv: kv[0]))
@@ -80,3 +81,5 @@ class ModelSaver:
         # concatenate config to preexisting dataframe if requested
         if df_file is not None:
             utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
+
+        return network_dir
