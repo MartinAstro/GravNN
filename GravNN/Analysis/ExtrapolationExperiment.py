@@ -5,6 +5,7 @@ import trimesh
 
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Losses import *
+from GravNN.Support.batches import batch_function
 from GravNN.Support.transformations import cart2sph
 from GravNN.Trajectories import RandomDist
 
@@ -38,7 +39,6 @@ class ExtrapolationExperiment:
     def get_train_data(self):
         data = DataSet(self.config)
         x_train = data.raw_data["x_train"]
-        data.raw_data["a_train"]
         train_r_COM = cart2sph(x_train)[:, 0]
 
         # sort
@@ -123,7 +123,11 @@ class ExtrapolationExperiment:
         self.test_r_COM = x_sph[self.test_dist_2_COM_idx, 0]
 
         mesh = interpolation_dist.shape_model
-        _, test_r, _ = trimesh.proximity.closest_point(mesh, x / 1000)
+
+        def closest_point_fcn(x):
+            return trimesh.proximity.closest_point(mesh, x)[1]
+
+        test_r = batch_function(closest_point_fcn, (len(x),), x / 1000, 100)
 
         # Sort
         self.test_dist_2_surf_idx = np.argsort(test_r)

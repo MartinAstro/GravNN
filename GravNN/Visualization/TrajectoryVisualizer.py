@@ -1,134 +1,164 @@
-from multiprocessing.sharedctypes import Value
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-from GravNN.Support.transformations import sphere2cart, cart2sph
-import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.pyplot as plt
-import copy
 import os
-import pandas as pd
-import seaborn as sns
-import sigfig
-import GravNN
-import OrbitalElements.orbitalPlotting as op
+
+import matplotlib.pyplot as plt
+import numpy as np
+import trimesh
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+
 
 class TrajectoryVisualizer(VisualizationBase):
-    def __init__(self, experiment, **kwargs):
+    def __init__(self, experiment, obj_file=None, **kwargs):
         super().__init__(**kwargs)
         self.experiment = experiment
-        self.shape_model = kwargs.get("shape_model", 
-                                        os.path.dirname(GravNN.__file__) + 
-                                        "/Files/ShapeModels/Misc/unit_sphere.obj")
-        
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
+        self.mesh = None
+        # plt.rc("lines", linewidth=1)
 
-    def __annotate_metrics(self, values, xy=(0.3, 0.95)):
-        rms_avg = sigfig.round(np.mean(values), sigfigs=2)
-        rms_std = sigfig.round(np.std(values), sigfigs=2)
-        rms_max = sigfig.round(np.max(values), sigfigs=2)
-        metric_str = "%s ± %s (%s)" % (rms_avg, rms_std, rms_max)
-        plt.annotate(metric_str, xy=xy, xycoords='axes fraction')
+        if obj_file is not None:
+            filename, file_extension = os.path.splitext(obj_file)
+            self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
 
-    def __plot_differences_1d(self, value):
-        radii = np.linalg.norm(self.experiment.true_sol.y[0:3,:], axis=0)
-        idx = np.argsort(radii)
-        plt.figure()
-        plt.plot(radii[idx], value[idx])
-        plt.xlabel("Altitude [km]")
+    def plot_position_error(self):
+        # self.newFig(fig_size=(self.w_full, self.h_full / 5))
+        for model_dict in self.experiment.test_models:
+            dr = model_dict["pos_diff"]
+            time = model_dict["solution"].t
+            label = model_dict["label"]
+            color = model_dict["color"]
+            plt.plot(time, dr / 1000.0, label=label, color=color)
 
-    def plot_trajectory_error(self):
-        positions = self.experiment.test_sol.y[0:3,:]
-        acc_percent_error = self.experiment.error_acc
-        scale = np.max(acc_percent_error) - np.min(acc_percent_error)
-        colors = plt.cm.RdYlGn(1 - ((acc_percent_error  - np.min(acc_percent_error)) / scale))   
-        op.plot3d(positions, cVec=colors, obj_file=self.shape_model, plot_type='scatter')
-    
-    def plot_trajectories(self):
-        op.plot3d(self.experiment.true_sol.y[0:3,:], plt.cm.Blues, obj_file=self.shape_model)
-        op.plot3d(self.experiment.test_sol.y[0:3,:], plt.cm.Oranges, obj_file=self.shape_model, new_fig=False)
+        plt.ylabel("$|\Delta r|$ Error [km]")
+        # plt.xlabel("Time [s]")
+        plt.gca().set_xticklabels("")
+        plt.gca().yaxis.tick_right()
+        plt.gca().yaxis.set_label_position("right")
+        # plt.legend()
 
+    def plot_execution_time(self):
+        # self.newFig(fig_size=(self.w_full, self.h_full / 5))
+        for model_dict in self.experiment.test_models:
+            time_real = model_dict["elapsed_time"][1:]
+            time_sim = model_dict["solution"].t[1:]
+            label = model_dict["label"]
+            color = model_dict["color"]
+            plt.semilogy(time_sim, time_real, label=label, color=color)
 
-        
-    def plot_acceleration_differences(self):
-        self.__plot_differences_1d(self.experiment.error_acc)
-        plt.yscale("log")
-        plt.ylabel("Acceleration Percent Error")
+        plt.ylabel("Real Time [s]")
+        plt.xlabel("Simulated Time [s]")
+        plt.gca().yaxis.tick_right()
+        plt.gca().yaxis.set_label_position("right")
+        # plt.legend()
 
-    def plot_potential_differences(self):
-        self.__plot_differences_1d(self.experiment.error_acc)
-        plt.yscale("log")
-        plt.ylabel("Potential Percent Error")
+    def plot_3d_trajectory(self):
+        self.new3DFig(fig_size=(self.w_full / 2, self.w_full / 2))
 
+        true_sol = self.experiment.true_sol
+        X, Y, Z = true_sol.y[0:3]
+        plt.plot(X, Y, Z, label="True", color="black")
+        plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
 
-    def plot_trajectory_differences(self):
-        plt.figure()
-        plt.subplot(3,2,1)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[0])
-        plt.ylabel('x')
-        plt.subplot(3,2,3)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[1])
-        plt.ylabel('y')
-        plt.subplot(3,2,5)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[2])
-        plt.ylabel('z')
+        for model_dict in self.experiment.test_models:
+            sol = model_dict["solution"]
+            X, Y, Z = sol.y[0:3]
+            label = model_dict["label"]
+            color = model_dict["color"]
+            plt.plot(X, Y, Z, label=label, color=color)
 
-        plt.subplot(3,2,2)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[3])
-        plt.ylabel('vx')
-        plt.subplot(3,2,4)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[4])
-        plt.ylabel('vy')
-        plt.subplot(3,2,6)
-        plt.plot(self.experiment.t_mesh, self.experiment.diff_sol.y[5])
-        plt.ylabel('vz')
-        plt.suptitle("Trajectory Differences [m]")
-
-    def plot_trajectories_1d(self):
-        plt.figure()
-        plt.subplot(3,2,1)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[0])
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[0])
-        plt.ylabel('x')
-        plt.subplot(3,2,3)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[1])
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[1])
-        plt.ylabel('y')
-        plt.subplot(3,2,5)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[2])
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[2])
-        plt.ylabel('z')
-
-        plt.subplot(3,2,2)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[3])
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[3])
-        plt.ylabel('vx')
-        plt.subplot(3,2,4)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[4])
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[4])
-        plt.ylabel('vy')
-        plt.subplot(3,2,6)
-        plt.plot(self.experiment.t_mesh, self.experiment.true_sol.y[5], label='True')
-        plt.plot(self.experiment.t_mesh, self.experiment.test_sol.y[5], label='Test')
         plt.legend()
-        plt.ylabel('vz')
-        plt.suptitle("Trajectories [m]")
+        # plt.gca().set_xlabel("X [m]")
+        # plt.gca().set_ylabel("Y [m]")
+        # plt.gca().set_zlabel("Z [m]")
+
+        plt.gca().set_xticklabels("")
+        plt.gca().set_yticklabels("")
+        plt.gca().set_zticklabels("")
+
+        min_lim = np.min(sol.y[0:3])
+        max_lim = np.max(sol.y[0:3])
+        plt.gca().axes.set_xlim3d(left=min_lim, right=max_lim)
+        plt.gca().axes.set_ylim3d(bottom=min_lim, top=max_lim)
+        plt.gca().axes.set_zlim3d(bottom=min_lim, top=max_lim)
+
+        plt.gca().set_box_aspect((1, 1, 1))
+        plt.gca().view_init(elev=35, azim=235, roll=0)
+
+        if self.mesh is not None:
+            tri = Poly3DCollection(
+                self.mesh.triangles * 1000,
+                cmap=plt.get_cmap("Greys"),
+                alpha=0.4,
+                # shade=True,
+            )
+
+            plt.gca().add_collection3d(tri)
+
+    def plot(self):
+        self.newFig((self.w_full / 2, self.w_full / 2))
+        plt.subplot2grid((2, 1), (0, 0))
+        self.plot_position_error()
+        plt.subplot2grid((2, 1), (1, 0))
+        self.plot_execution_time()
+
+        self.plot_3d_trajectory()
 
 
+if __name__ == "__main__":
+    import pandas as pd
 
-    def plot_scatter_error(self):
-        import OrbitalElements.orbitalPlotting as op
-        print(len(self.experiment.percent_error_acc[:self.max_idx]))
-        error = np.clip(self.experiment.percent_error_acc[:self.max_idx], 0, 10)
-        error = self.experiment.percent_error_acc[:self.max_idx]
-        scale = np.max(error) - np.min(error)
-        colors = plt.cm.RdYlGn(1 - ((error  - np.min(error)) / scale))   
-        op.plot3d(self.experiment.positions[:self.max_idx].T, cVec=colors, obj_file=self.experiment.config['grav_file'][0], plot_type='scatter', alpha=0.2)
+    from GravNN.Analysis.TrajectoryExperiment import TrajectoryExperiment
+    from GravNN.CelestialBodies.Asteroids import Eros
+    from GravNN.GravityModels.HeterogeneousPoly import HeterogeneousPoly
+    from GravNN.GravityModels.PointMass import PointMass
+    from GravNN.GravityModels.Polyhedral import Polyhedral
+    from GravNN.Networks.Model import load_config_and_model
 
-        # self.new3DFig()
-        # x = (self.r / self.radius)
+    planet = Eros()
 
-        # scale = np.max(diff_acc_mag_percent) - np.min(diff_acc_mag_percent)
-        # colors = plt.cm.RdYlGn(1 - ((diff_acc_mag_percent  - np.min(diff_acc_mag_percent)) / scale))  
-        # training_bounds = self.training_bounds / self.radius
-        # x, y, z = self.experiment.positions
-        # plt.scatter3d(x, y, z, alpha=0.2, s=2)
+    init_state = np.array(
+        [
+            -10800.002,
+            15273.506,
+            10800.00,
+            -2.383735,
+            -3.371111,
+            2.3837354,
+        ],
+    )
+
+    true_model = HeterogeneousPoly(planet, planet.obj_8k)
+
+    mass_1 = Eros()
+    mass_1.mu = planet.mu / 10
+    r_offset_1 = [planet.radius / 3, 0, 0]
+
+    mass_2 = Eros()
+    mass_2.mu = -planet.mu / 10
+    r_offset_2 = [-planet.radius / 3, 0, 0]
+
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
+
+    true_model.add_point_mass(point_mass_1, r_offset_1)
+    true_model.add_point_mass(point_mass_2, r_offset_2)
+
+    test_poly_model = Polyhedral(planet, planet.obj_8k)
+
+    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    model_id = df.id.values[-1]
+    config, test_pinn_model = load_config_and_model(model_id, df)
+
+    experiment = TrajectoryExperiment(
+        true_model,
+        initial_state=init_state,
+        period=1 * 24 * 3600,  # 24 * 3600,
+    )
+    experiment.add_test_model(test_poly_model, "Poly", "r")
+    experiment.add_test_model(test_pinn_model, "PINN", "g")
+    experiment.run()
+
+    vis = TrajectoryVisualizer(experiment, obj_file=planet.obj_8k)
+    vis.plot()
+
+    plt.show()

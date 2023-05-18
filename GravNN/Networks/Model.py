@@ -3,6 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
+# tf.config.run_functions_eagerly(True)
 import GravNN
 from GravNN.Networks import utils
 from GravNN.Networks.Annealing import *
@@ -110,8 +111,8 @@ class PINNGravityModel(tf.keras.Model):
             N_weights -= 1 if "c" in constraints else 0
 
         # Remove weights for RMS part of A constraint
-        if "rms" in self.config["loss_fcns"][0]:
-            N_weights -= 1 if "a" in constraints else 0
+        # if "rms" in self.config["loss_fcns"][0]:
+        #     N_weights -= 1 if "a" in constraints else 0
 
         constants = list(np.ones((N_weights,)))
         self.w_loss = tf.Variable(constants, dtype=self.dtype, trainable=False)
@@ -231,12 +232,15 @@ class PINNGravityModel(tf.keras.Model):
 
     def train(self, data, initialize_optimizer=True):
         optimizer = self.optimizer
-        if initialize_optimizer:
+        if initialize_optimizer and optimizer is None:
             optimizer = configure_optimizer(self.config, mixed_precision=False)
-        self.compile(optimizer=optimizer, loss="mse")
+            self.compile(optimizer=optimizer, loss="mse")
 
         # Train network
-        callback = SimpleCallback(self.config["batch_size"][0], print_interval=10)
+        callback = SimpleCallback(
+            self.config["batch_size"][0],
+            print_interval=self.config.get("print_interval", [10])[0],
+        )
         schedule = get_schedule(self.config)
 
         history = self.fit(
@@ -250,6 +254,23 @@ class PINNGravityModel(tf.keras.Model):
         history.history["time_delta"] = callback.time_delta
 
         return history
+
+    # JIT wrappers
+    @tf.function(jit_compile=True, reduce_retracing=True)
+    def wrap_train_step_jit(self, data):
+        return self.train_step_fcn(data)
+
+    @tf.function(jit_compile=False, reduce_retracing=True)
+    def wrap_train_step_njit(self, data):
+        return self.train_step_fcn(data)
+
+    @tf.function(jit_compile=True, reduce_retracing=True)
+    def wrap_test_step_jit(self, data):
+        return self.test_step_fcn(data)
+
+    @tf.function(jit_compile=False, reduce_retracing=True)
+    def wrap_test_step_njit(self, data):
+        return self.test_step_fcn(data)
 
     def eval_batches(self, fcn, x, batch_size):
         data = utils.chunks(x, batch_size)
@@ -272,7 +293,7 @@ class PINNGravityModel(tf.keras.Model):
         u = self.u_postprocessor(u_pred)
         return u
 
-    @tf.function(jit_compile=True)
+    # @tf.function(jit_compile=True)
     def preprocess(self, x):
         x_input = self.x_preprocessor(x)
         return x_input
@@ -282,53 +303,38 @@ class PINNGravityModel(tf.keras.Model):
         x_input = self.a_postprocessor(x)
         return x_input
 
-    # @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def _compute_acceleration(self, x):  # , batch_size=131072):
+    @tf.function(jit_compile=False, reduce_retracing=True)
+    def compute_acceleration(self, x):
+        return self._compute_acceleration(x)
+
+    @tf.function(jit_compile=False, reduce_retracing=True)
+    def compute_dU_dxdx(self, x):
+        return self._compute_dU_dxdx(x)
+
+    # private functions
+    def _compute_acceleration(self, x):
         x_input = self.preprocess(x)
-        # if self.is_pinn:
-        a_pred = self.eval_batches(self._pinn_acceleration_output, x_input, 131072 // 2)
-        # a_pred = self._pinn_acceleration_output(x_input)
-        # else:
-        #     a_pred = self._nn_acceleration_output(x_input)
+        # fcn = self._pinn_acceleration_output
+        # a_pred = self.eval_batches(fcn, x_input, 131072 // 2)
+        fcn = self._pinn_acceleration_output
+        a_pred = self.eval_batches(fcn, x_input, 131072 // 2)
         a = self.postprocess(a_pred)
         return a
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def compute_acceleration(self, x):
-        return self._compute_acceleration(x)  # , batch_size=131072):
-
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def compute_dU_dxdx(self, x, batch_size=131072):
+    def _compute_dU_dxdx(self, x):
         x = tf.cast(x, dtype=self.variable_cast)
         x_input = self.preprocess(x)
         fcn = self._pinn_acceleration_jacobian
-        jacobian = self.eval_batches(fcn, x_input, batch_size)
-        x_star = self.x_preprocessor.scale
-        a_star = self.a_preprocessor.scale
+        jacobian = self.eval_batches(fcn, x_input, 131072 // 2)
+        # jacobian = self._pinn_acceleration_jacobian(x_input)
+        x_star = tf.cast(self.x_preprocessor.scale, dtype=self.variable_cast)
+        a_star = tf.cast(self.a_preprocessor.scale, dtype=self.variable_cast)
 
         l_star = 1 / x_star
         t_star = tf.sqrt(a_star * l_star)
         jacobian /= t_star**2
         return jacobian
 
-    # JIT wrappers
-    @tf.function(jit_compile=True)
-    def wrap_train_step_jit(self, data):
-        return self.train_step_fcn(data)
-
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_train_step_njit(self, data):
-        return self.train_step_fcn(data)
-
-    @tf.function(jit_compile=True)
-    def wrap_test_step_jit(self, data):
-        return self.test_step_fcn(data)
-
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
-    def wrap_test_step_njit(self, data):
-        return self.test_step_fcn(data)
-
-    # private functions
     def _nn_acceleration_output(self, x):
         a = pinn_00(self.network, x, training=False)["acceleration"]
         return a
@@ -337,28 +343,32 @@ class PINNGravityModel(tf.keras.Model):
     def _network_potential(self, x, training):
         return self.network(x, training=training)
 
-    @tf.function(jit_compile=False, experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def _pinn_acceleration_output(self, x):
         x_inputs = x
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(x_inputs)
             u = self._network_potential(x_inputs, training=False)
-            # u = self.network(x, training=False)
         u_x = tf.negative(tape.gradient(u, x_inputs))
         return u_x
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(jit_compile=False, reduce_retracing=True)
     def _pinn_acceleration_jacobian(self, x):
-        with tf.GradientTape() as g1:
-            g1.watch(x)
-            with tf.GradientTape() as g2:
-                g2.watch(x)
-                u = self.network(x)  # shape = (k,) #! evaluate network
-            a = -g2.gradient(u, x)  # shape = (k,n) #! Calculate first derivative
-        jacobian = g1.batch_jacobian(a, x)
+        x_inputs = x
+        with tf.GradientTape(watch_accessed_variables=False) as g1:
+            g1.watch(x_inputs)
+            with tf.GradientTape(watch_accessed_variables=False) as g2:
+                g2.watch(x_inputs)
+                u = self.network(
+                    x_inputs,
+                    training=False,
+                )  # shape = (k,) #! evaluate network
+            # shape = (k,n) #! Calculate first derivative
+            a = tf.negative(g2.gradient(u, x_inputs))
+        jacobian = g1.batch_jacobian(a, x_inputs)
         return jacobian
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def _nn_acceleration_jacobian(self, x):
         with tf.GradientTape() as g2:
             g2.watch(x)
@@ -367,7 +377,13 @@ class PINNGravityModel(tf.keras.Model):
         return jacobian
 
 
-def load_config_and_model(model_id, df_file, custom_data_dir=None):
+def load_config_and_model(
+    model_id,
+    df_file,
+    custom_data_dir=None,
+    custom_dtype=None,
+    only_weights=False,
+):
     """Primary loading function for the networks and their
     configuration information.
 
@@ -405,11 +421,21 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
     for key in drop_keys:
         config.pop(key)
 
-    # Reinitialize the model
-    network = tf.keras.models.load_model(
-        f"{data_dir}/Networks/{model_id}/network",
-    )
-    model = PINNGravityModel(config, network)
+    # Change model dtype if specified
+    if custom_dtype is not None:
+        config["dtype"] = [custom_dtype]
+
+    if only_weights:
+        model = PINNGravityModel(config)
+        model.network.load_weights(
+            f"{data_dir}/Networks/{model_id}/weights",
+        )
+    else:
+        # Reinitialize the model
+        network = tf.keras.models.load_model(
+            f"{data_dir}/Networks/{model_id}/network",
+        )
+        model = PINNGravityModel(config, network)
 
     x_transformer = config["x_transformer"][0]
     u_transformer = config["u_transformer"][0]
@@ -436,7 +462,10 @@ def load_config_and_model(model_id, df_file, custom_data_dir=None):
         model.dtype,
     )  # unormalizing layer
 
-    optimizer = utils._get_optimizer(config["optimizer"][0])
+    optimizer = configure_optimizer(
+        config,
+        None,
+    )
     model.compile(optimizer=optimizer, loss="mse")
 
     return config, model

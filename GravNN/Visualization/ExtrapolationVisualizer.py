@@ -53,15 +53,19 @@ class ExtrapolationVisualizer(VisualizationBase):
         ax = plt.twinx()
         plt.hist(x, 50, alpha=0.2)
         plt.ylabel("Frequency")
+        ax.grid(False)
         ax.set_zorder(1)
 
     def plot(self, x, value, **kwargs):
         # compute trend lines
         def get_rolling_lines(data):
             df = pd.DataFrame(data=data, index=None)
-            avg = df.rolling(50, 25).mean()
-            std = df.rolling(50, 25).std()
-            max = df.rolling(10, 10).max()
+            avg_window = kwargs.get("avg_window", 50)
+            std_window = kwargs.get("std_window", 50)
+            max_window = kwargs.get("max_window", 10)
+            avg = df.rolling(avg_window, 25).mean()
+            std = df.rolling(std_window, 25).std()
+            max = df.rolling(max_window, 10).max()
             return avg, std, max
 
         # sort entries
@@ -70,14 +74,15 @@ class ExtrapolationVisualizer(VisualizationBase):
 
         self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
-        self.plot_fcn(x, avg_line, label=label)
+        self.plot_fcn(x, avg_line, label=label, color="gray")
 
         if kwargs.get("plot_std", True):
             y_std_upper = np.squeeze(avg_line + 1 * std_line)
             y_std_lower = np.squeeze(avg_line - 1 * std_line)
             plt.fill_between(x, y_std_lower, y_std_upper, color="C0", alpha=0.5)
 
-        self.plot_fcn(x, max_line, color="red")
+        if kwargs.get("plot_max", True):
+            self.plot_fcn(x, max_line, color="red")
 
         training_bounds = self.training_bounds / self.radius
         plt.vlines(training_bounds[0], ymin=0, ymax=np.max(value), color="green")
@@ -148,32 +153,6 @@ class ExtrapolationVisualizer(VisualizationBase):
         )
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
-
-    def plot_scatter_error(self):
-        import OrbitalElements.orbitalPlotting as op
-
-        print(len(self.experiment.losses["percent"][: self.max_idx]))
-        error = np.clip(self.experiment.losses["percent"][: self.max_idx], 0, 10)
-        error = self.experiment.losses["percent"][: self.max_idx]
-        scale = np.max(error) - np.min(error)
-        colors = plt.cm.RdYlGn(1 - ((error - np.min(error)) / scale))
-        op.plot3d(
-            self.experiment.positions[: self.max_idx].T,
-            cVec=colors,
-            obj_file=self.experiment.config["grav_file"][0],
-            plot_type="scatter",
-            alpha=0.2,
-        )
-
-        # self.new3DFig()
-        # x = (self.r / self.radius)
-
-        # scale = np.max(diff_acc_mag_percent) - np.min(diff_acc_mag_percent)
-        # colors = plt.cm.RdYlGn(1 - \
-        #   ((diff_acc_mag_percent  - np.min(diff_acc_mag_percent)) / scale))
-        # training_bounds = self.training_bounds / self.radius
-        # x, y, z = self.experiment.positions
-        # plt.scatter3d(x, y, z, alpha=0.2, s=2)
 
 
 def main():

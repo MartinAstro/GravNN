@@ -37,8 +37,10 @@ def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
             loss_name = loss_fcn.__name__
             laplacian_or_curl = key == "laplacian" or key == "curl"
             invalid_percent = loss_name == "percent" and laplacian_or_curl
-            biased_rms = loss_name == "rms" and (key == "acceleration")
-            if invalid_percent or biased_rms:
+
+            # When using ALC loss, only train with percent error on RMS + RMS on L and C
+            # biased_rms = loss_name == "rms" and (key == "acceleration")
+            if invalid_percent:  #  or biased_rms:
                 continue
 
             y_hat = y_hat_dict[key]
@@ -55,7 +57,8 @@ def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
 
 def rms(y_hat, y):
     dy = y_hat - y
-    return tf.sqrt(norm(dy))
+    rms = norm(dy)
+    return rms
 
 
 def percent(y_hat, y):

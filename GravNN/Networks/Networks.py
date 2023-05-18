@@ -34,8 +34,8 @@ def compute_p(**kwargs):
     # if np.any(deg_removed == [0,1]): power = 3
     # elif power = deg_removed + 2
 
-    fuse_models = kwargs.get("fuse_models")
-    scale_potential = kwargs.get("scale_nn_potential")
+    fuse_models = kwargs.get("fuse_models")[0]
+    scale_potential = kwargs.get("scale_nn_potential")[0]
 
     if not scale_potential:
         return 0  # don't scale, regardless of circumstance
@@ -51,6 +51,11 @@ def compute_p(**kwargs):
 
             p += 1 if mu != 0.0 else 0  # if mu is known (for planets and asteroids)
             p += 2 if C20 != 0.0 else 0  # if C20 is known (for planets, not asteroids)
+
+        # if there is no analytic model, then look if any degrees are
+        elif not fuse_models and kwargs.get("deg_removed")[0] != -1:
+            lr = kwargs.get("deg_removed")[0]
+            p = lr + 2
 
     return p
 

@@ -10,61 +10,62 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 
 def main():
-    threads = 4
-
-    config = get_default_eros_config()
+    threads = 2
+    config = get_default_earth_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
-
+    df_file = "Data/Dataframes/earth_loss_fcn_experiment.data"
     hparams = {
-        "N_dist": [50000],
-        "N_train": [45000],
-        "N_val": [5000],
-        "num_units": [40],
-        "loss_fcns": [["percent", "rms"]],
+        "N_dist": [10000],
+        "N_train": [5000],
+        "N_val": [1000],
+        "num_units": [20],
+        "radius_max": [Earth().radius * 15],
+        "loss_fcns": [["rms"], ["percent"]],
         "jit_compile": [True],
         "lr_anneal": [False],
         "eager": [False],
-        "learning_rate": [0.0001],
+        "learning_rate": [0.001],
         "dropout": [0.0],
-        "batch_size": [45000],
-        "epochs": [10000],
+        "batch_size": [2**18],
+        "epochs": [5000],
         "acc_noise": [0.0],
-        "preprocessing": [["pines", "r_inv", "fourier"]],
+        "preprocessing": [["pines", "r_inv"]],
         "PINN_constraint_fcn": ["pinn_a"],
-        "tanh_r": [10],  # point mass should have minimal role
-        "tanh_k": [1e3],
-        "fuse_model": [True],
-    }
-
-    fourier_hparams = {
-        "fourier_features": [5, 10, 20],
-        "fourier_sigma": [1],
-        "shared_freq": [False],
-        "shared_offset": [False],
+        # "final_layer_initializer": ["glorot_uniform"],
+        "scale_nn_potential": [False],
         "trainable": [False],
+        "fuse_models": [False],
+        "deg_removed": [2],
+        "enforce_bc": [False],
     }
-
-    hparams.update(fourier_hparams)
-
-    df_file = "Data/Dataframes/fourier_experiment_not_trainable_032523.data"
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
     save_training(df_file, configs)
 
-    hparams.update({"trainable": [True]})
-    df_file = "Data/Dataframes/fourier_experiment_trainable_032523.data"
+    df_file = "Data/Dataframes/earth_scaled_potential_experiment.data"
+    hparams.update(
+        {
+            "scale_nn_potential": [False, True],
+            "loss_fcns": [["percent"]],
+        },
+    )
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)
         configs = results.get()
     save_training(df_file, configs)
 
-    hparams.update({"shared_freq": [True]})
-    hparams.update({"shared_offset": [True]})
-    df_file = "Data/Dataframes/fourier_experiment_trainable_shared_032523.data"
+    df_file = "Data/Dataframes/earth_boundary_conditions_experiment.data"
+    hparams.update(
+        {
+            "scale_nn_potential": [True],
+            "loss_fcns": [["percent"]],
+            "enforce_bc": [True, False],
+        },
+    )
     args = configure_run_args(config, hparams)
     with mp.Pool(threads) as pool:
         results = pool.starmap_async(run, args)

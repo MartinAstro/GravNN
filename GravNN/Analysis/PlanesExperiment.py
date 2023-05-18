@@ -64,11 +64,11 @@ class PlanesExperiment:
     def get_model_data(self):
         dtype = self.model.network.compute_dtype
         positions = self.x_test.astype(dtype)
-        self.a_pred = tf.constant(
+        self.a_pred = tf.cast(
             self.model.compute_acceleration(positions),
             dtype=dtype,
         )
-        self.u_pred = tf.constant(self.model.compute_potential(positions), dtype)
+        self.u_pred = tf.cast(self.model.compute_potential(positions), dtype)
 
         self.a_pred = self.a_pred.numpy().astype(float)
         self.u_pred = self.u_pred.numpy().astype(float)
@@ -118,10 +118,18 @@ class PlanesExperiment:
                 self.model_file,
                 file_type=file_extension[1:],
             )
-            distances = self.shape_model.nearest.signed_distance(
-                self.x_test / 1e3,
-            )
-            self.interior_mask = distances > 0
+
+            N = len(self.x_test)
+            step = 50000
+            self.interior_mask = np.full((N,), False)
+            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+            for i in range(0, N, step):
+                end_idx = (i // step + 1) * step
+                position_subset = self.x_test[i:end_idx] / 1e3
+                self.interior_mask[i:end_idx] = rayObject.contains_points(
+                    position_subset,
+                )
+                print(i / N)
         return self.interior_mask
 
     def run(self):
@@ -140,38 +148,24 @@ def main():
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
-    df = pd.read_pickle("Data/Dataframes/LR_Anneal_With_Noise_032223.data")
-    for i in range(1, 5):
-        model_id = df["id"].values[-i]
-        config, model = load_config_and_model(model_id, df)
+    df = pd.read_pickle("Data/Dataframes/eros_constant_poly.data")
+    model_id = df["id"].values[-1]
+    config, model = load_config_and_model(model_id, df)
 
-        planet = config["planet"][0]
-        points = 30
-        radius_bounds = [-3 * planet.radius, 3 * planet.radius]
-        planes_exp = PlanesExperiment(
-            model,
-            config,
-            radius_bounds,
-            points,
-            remove_error=True,
-        )
-        planes_exp.run()
+    planet = config["planet"][0]
+    points = 100
+    radius_bounds = [-2 * planet.radius, 2 * planet.radius]
+    planes_exp = PlanesExperiment(
+        model,
+        config,
+        radius_bounds,
+        points,
+        remove_error=True,
+    )
+    planes_exp.run()
 
-        vis = PlanesVisualizer(planes_exp)
-        vis.plot(percent_max=10, annotate_stats=True)
-
-        radius_bounds = [-10 * planet.radius, 10 * planet.radius]
-        planes_exp = PlanesExperiment(
-            model,
-            config,
-            radius_bounds,
-            points,
-            remove_error=True,
-        )
-        planes_exp.run()
-
-        vis = PlanesVisualizer(planes_exp)
-        vis.plot(percent_max=10, annotate_stats=True)
+    vis = PlanesVisualizer(planes_exp)
+    vis.plot(percent_max=10, annotate_stats=True)
 
     plt.show()
 

@@ -8,8 +8,8 @@ def all_plots(df, directory, v_min, v_max):
     vis = Heatmap3DVisualizer(df)
     query = "num_units == 10"
     vis.plot(
-        x="epochs",
-        y="N_train",
+        x="Epochs",
+        y="Samples",
         z="percent_mean",
         vmin=v_min,
         vmax=v_max,
@@ -19,8 +19,8 @@ def all_plots(df, directory, v_min, v_max):
 
     query = "num_units == 20"
     vis.plot(
-        x="epochs",
-        y="N_train",
+        x="Epochs",
+        y="Samples",
         z="percent_mean",
         vmin=v_min,
         vmax=v_max,
@@ -30,8 +30,8 @@ def all_plots(df, directory, v_min, v_max):
 
     query = "num_units == 40"
     vis.plot(
-        x="epochs",
-        y="N_train",
+        x="Epochs",
+        y="Samples",
         z="percent_mean",
         vmin=v_min,
         vmax=v_max,
@@ -41,8 +41,8 @@ def all_plots(df, directory, v_min, v_max):
 
     query = "num_units == 80"
     vis.plot(
-        x="epochs",
-        y="N_train",
+        x="Epochs",
+        y="Samples",
         z="percent_mean",
         vmin=v_min,
         vmax=v_max,
@@ -54,6 +54,7 @@ def all_plots(df, directory, v_min, v_max):
 def PINN_III():
     df_file = "Data/Dataframes/eros_PINN_III_hparams_metrics.data"
     df = pd.read_pickle(df_file)
+    df = df.rename(columns={"epochs": "Epochs", "N_train": "Samples"})
 
     df.percent_mean = df.percent_mean.astype(float)
     df.percent_mean = df.percent_mean * 100
@@ -68,6 +69,7 @@ def PINN_III():
 def PINN_II():
     df_file = "Data/Dataframes/eros_PINN_II_hparams_metrics.data"
     df = pd.read_pickle(df_file)
+    df = df.rename(columns={"epochs": "Epochs", "N_train": "Samples"})
     df.percent_mean = df.percent_mean * 100
 
     df_file_PINN_III = "Data/Dataframes/eros_PINN_III_hparams_metrics.data"

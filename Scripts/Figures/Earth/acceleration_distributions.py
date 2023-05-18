@@ -28,8 +28,17 @@ def calculate_entropy(data, max=100):
 
 def std_masks(grid, sigma):
     max_value = np.mean(grid.total) + sigma * np.std(grid.total)
-    sigma_mask = np.where(grid.total > max_value)
-    sigma_mask_compliment = np.where(grid.total < max_value)
+    min_value = np.mean(grid.total) - sigma * np.std(grid.total)
+    sigma_mask = np.where(
+        np.logical_or(grid.total > max_value, grid.total < min_value),
+    )
+    sigma_mask_compliment = np.where(
+        np.logical_or(grid.total < max_value, grid.total > min_value),
+    )
+
+    # max_value = np.mean(grid.total) + sigma * np.std(grid.total)
+    # sigma_mask = np.where(grid.total > max_value)
+    # sigma_mask_compliment = np.where(grid.total < max_value)
     return sigma_mask, sigma_mask_compliment
 
 
@@ -100,13 +109,25 @@ def acceleration_cumsum():
         y0 += sorted_data[i]
         y[i] = y0
 
+    # Cumulative counts:
+
     plt.figure()
-    plt.subplot(2, 1, 1)
+    plt.subplot(3, 1, 1)
+    plt.step(sorted_data, np.arange(sorted_data.size) / len(sorted_data))
+    plt.vlines(da_mean, 0, 1, colors="black")
+    plt.vlines(da_mean + 1 * sigma, 0, 1, colors="r")
+    plt.vlines(da_mean + 2 * sigma, 0, 1, colors="g")
+    plt.vlines(da_mean + 3 * sigma, 0, 1, colors="y")
+    # plt.plot(x, y / y0)
+    plt.ylabel("Cumulative Percentage of Data")
+    plt.xlabel("Magnitude")
+
+    plt.subplot(3, 1, 2)
     plt.plot(x, y)
     plt.ylabel("Cumulative Sum")
     plt.xlabel("Data Number")
 
-    plt.subplot(2, 1, 2)
+    plt.subplot(3, 1, 3)
     plt.plot(x, np.gradient(y))
     plt.vlines(sigma_1_idx, 0, np.max(np.gradient(y)), colors="r", label="1STD")
     plt.vlines(sigma_2_idx, 0, np.max(np.gradient(y)), colors="g", label="2STD")
@@ -206,9 +227,9 @@ os.makedirs(directory, exist_ok=True)
 
 
 def main():
-    acceleration_magnitude_histogram()
-    acceleration_histogram_std()
-    acceleration_histogram_scaled()
+    # acceleration_magnitude_histogram()
+    # acceleration_histogram_std()
+    # acceleration_histogram_scaled()
     acceleration_cumsum()
     map_as_sigmas()
 

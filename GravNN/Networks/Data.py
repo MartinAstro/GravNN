@@ -9,6 +9,8 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 
 from GravNN.Networks.Constraints import *
+from GravNN.Preprocessors.DummyScaler import DummyScaler
+from GravNN.Support.PathTransformations import make_windows_path_posix
 
 
 def print_stats(data, name):
@@ -403,10 +405,11 @@ def scale_by_non_dim_potential(data_dict, config):
 
 
 def no_scale(data_dict, config):
-    x_transformer = config["dummy_transformer"][0]
-    a_transformer = config["dummy_transformer"][0]
-    u_transformer = config["dummy_transformer"][0]
-    a_bar_transformer = config["dummy_transformer"][0]
+    dummy_transformer = config.get("dummy_transformer", [DummyScaler()])
+    x_transformer = dummy_transformer
+    a_transformer = dummy_transformer
+    u_transformer = dummy_transformer
+    a_bar_transformer = dummy_transformer
 
     transformers = {
         "x": x_transformer,
@@ -481,8 +484,6 @@ def cart2sph_tf(x, acc_N):
 
 class DataSet:
     def __init__(self, data_config=None):
-        self.config = data_config
-
         # populate these variables
         self.train_data = None
         self.valid_data = None
@@ -490,6 +491,8 @@ class DataSet:
 
         if data_config is not None:
             self.from_config(data_config)
+        else:
+            self.config = {}
 
     def get_raw_data(self):
         """Function responsible for getting the raw training data (without
@@ -507,12 +510,20 @@ class DataSet:
         N_dist = self.config["N_dist"][0]
         grav_file = self.config["grav_file"][0]
 
-        trajectory = self.config["distribution"][0](
-            planet,
-            radius_bounds,
-            N_dist,
-            **self.config,
-        )
+        distribution = self.config["distribution"][0]
+        if distribution.__name__ == "SurfaceDist":
+            trajectory = distribution(
+                planet,
+                make_windows_path_posix(self.config["grav_file"][0]),
+                **self.config,
+            )
+        else:
+            trajectory = distribution(
+                planet,
+                radius_bounds,
+                N_dist,
+                **self.config,
+            )
         get_analytic_data_fcn = self.config["gravity_data_fcn"][0]
 
         x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
@@ -579,7 +590,7 @@ class DataSet:
 
         data_dict = add_error(
             data_dict,
-            self.config["acc_noise"][0],
+            self.config.get("acc_noise", [0.0])[0],
         )
 
         # Preprocessing
@@ -736,8 +747,8 @@ class DataSet:
         self.add_transformers_to_config()
 
     def from_raw_data(self, x, a, percent_validation=0.1):
-        N_train = int(len(x) * (1.0 - percent_validation))
-        N_val = int(len(x) * percent_validation)
+        N_train = int(np.round(len(x) * (1.0 - percent_validation)))
+        N_val = int(np.round(len(x) * percent_validation))
         x_train, x_val = single_training_validation_split(
             x,
             N_train,
@@ -762,10 +773,7 @@ class DataSet:
             "u_val": u_val,
         }
 
-        train_data, val_data, transformers = self.get_preprocessed_data(
-            self.config,
-            data_dict,
-        )
+        train_data, val_data, transformers = self.get_preprocessed_data(data_dict)
         dataset, val_dataset = self.configure_dataset(train_data, val_data, self.config)
 
         self.raw_data = data_dict

@@ -1,3 +1,5 @@
+import time
+
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Trajectories import RandomDist, SurfaceDist
@@ -46,8 +48,9 @@ def main():
     # trajectory = RandomAsteroidDist(planet, [0, planet.radius], points=20000, model_file=model_file)
     # gravity_model = Polyhedral(planet, model_file, trajectory=trajectory).load()
 
-    # trajectory = RandomAsteroidDist(planet, [planet.radius, planet.radius*3], points=20000, model_file=model_file)
-    # gravity_model = Polyhedral(planet, model_file, trajectory=trajectory).load()
+    # trajectories = generate_near_orbit_trajectories(sampling_inteval=60 * 10)
+    # for trajectory in trajectories:
+    #     Polyhedral(planet, model_file, trajectory=trajectory).load()
 
     # trajectories = generate_near_orbit_trajectories(sampling_inteval=60*10)
     # for trajectory in trajectories:

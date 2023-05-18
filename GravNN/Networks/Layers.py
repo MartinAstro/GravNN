@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
+from GravNN.Networks.Losses import norm
+
 
 def get_preprocess_layer_fcn(layer_key):
     return {
@@ -10,6 +12,33 @@ def get_preprocess_layer_fcn(layer_key):
         "r_inv": InvRLayer,
         "fourier": FourierFeatureLayer,
     }[layer_key.lower()]
+
+
+# helper functions
+def blend(x, y, z, k, x_ref):
+    dr = tf.subtract(x, x_ref)
+    h = 0.5 + 0.5 * tf.tanh(k * dr)
+    output = (1.0 - h) * y + h * z
+    return output
+
+
+def r_inv_star(r, r_ref=1.0):
+    r_inv_external = tf.math.reciprocal_no_nan(r)
+
+    # # linear approx
+    # m = 1.0 / r_ref**2
+    # b = 2.0 / r_ref
+    # r_inv_internal = -m * r + b
+
+    # # quadratic approx
+    a = 1.0 / r_ref**3
+    b = -3.0 / r_ref**2
+    c = 3.0 / r_ref
+    r_inv_internal = a * r**2 + b * r + c
+
+    r_inv_star = tf.where(r > r_ref, r_inv_external, r_inv_internal)
+    # r_inv_star = r_inv_external
+    return r_inv_star
 
 
 # preprocessing
@@ -72,8 +101,8 @@ class Cart2PinesSphLayer(tf.keras.layers.Layer):
         # t = Y / r  # sin(gamma)
         # u = Z / r  # sin(alpha)
 
-        r = tf.linalg.norm(inputs, axis=1, keepdims=True)
-        stu = tf.math.divide(inputs, r)
+        r = norm(inputs)
+        stu = tf.math.divide_no_nan(inputs, r)
         spheres = tf.concat([r, stu], axis=1)
         return spheres
 
@@ -88,8 +117,8 @@ class InvRLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         r = inputs[:, 0:1]
-        r_inv = tf.math.reciprocal(r)
-        spheres = tf.concat([r_inv, inputs[:, 1:4]], axis=1)
+        r_output = r_inv_star(r)
+        spheres = tf.concat([r_output, inputs[:, 1:4]], axis=1)
         return spheres
 
     def get_config(self):
@@ -115,17 +144,13 @@ class BlendPotentialLayer(tf.keras.layers.Layer):
             "k",
             shape=[1],
             trainable=True,
-            initializer=tf.keras.initializers.Constant(value=1),
+            initializer=tf.keras.initializers.Constant(value=1.0),
         )
         super(BlendPotentialLayer, self).build(input_shapes)
 
     def call(self, u_nn, u_analytic, inputs):
-        one = tf.constant(1.0, dtype=u_nn.dtype)
-        half = tf.constant(0.5, dtype=u_nn.dtype)
         r = inputs[:, 0:1]
-        dr = tf.subtract(r, self.radius)
-        h = half + half * tf.tanh(self.k * dr)
-        u_model = (one - h) * (u_nn + u_analytic) + h * u_analytic
+        u_model = blend(r, u_nn + u_analytic, u_analytic, self.k, self.radius)
         return u_model
 
     def get_config(self):
@@ -151,8 +176,10 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         # compute reference radius
         radius = kwargs["planet"][0].radius
         x_transformer = kwargs["x_transformer"][0]
-        radius_non_dim = x_transformer.transform(np.array([[radius, 0, 0]]))[0, 0]
-        self.a = radius_non_dim
+        min_radius = kwargs.get("ref_radius_min", [0.0])[0]
+        radius_non_dim = x_transformer.transform(np.array([[radius, 0, 0]]))
+        self.a = radius_non_dim[0, 0]
+        self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
 
         self.c1 = np.sqrt(15.0 / 4.0) * np.sqrt(3.0)
         self.c2 = np.sqrt(5.0 / 4.0)
@@ -168,13 +195,50 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
         r = inputs[:, 0:1]
         u = inputs[:, 3:4]
 
-        u_pm = self.mu / r
-        u_C20 = (
-            (self.a / r) ** 2 * (self.mu / r) * (u**2 * self.c1 - self.c2) * self.C20
-        )
-        potential = tf.negative(u_pm + u_C20)
+        # Compute constant density assumption
 
-        return potential
+        # Compute the potential at the Brillouin sphere
+        u_pm_brill = self.mu / self.a
+        u_C20_brill = (
+            (self.a / self.a) ** 2
+            * u_pm_brill
+            * (u**2 * self.c1 - self.c2)
+            * self.C20
+        )
+        tf.negative(u_pm_brill + u_C20_brill)
+
+        # Compute the potential in three regions:
+        # - external (r > R)
+        # - transition (r < R && r > R_min)
+        # - internal (r < R_min)
+
+        # External
+        # This is a SH solution
+        r_inv = r_inv_star(r)
+        u_pm_external = self.mu * r_inv
+        u_C20 = (
+            (self.a * r_inv) ** 2
+            * u_pm_external
+            * (u**2 * self.c1 - self.c2)
+            * self.C20
+        )
+        u_analytic_external = tf.negative(u_pm_external + u_C20)
+
+        # # Transition: Assume mass decreases as 2 cylinders
+        # trans_volume = 2.0 * r * (np.pi * self.min_radius**2)
+        # full_volume = 4.0 / 3.0 * np.pi * self.a**3
+        # u_trans = tf.negative(G_sigma * (full_volume - trans_volume) / r)
+
+        # # Internal
+        # internal_volume = 4.0 / 3.0 * np.pi * r**3
+        # u_internal = tf.negative(G_sigma * internal_volume / r)
+
+        # Blend the regions as necessary
+        # u_analytic = blend(r, u_trans, u_analytic_external, 1.0, 1.0)
+
+        u_analytic = u_analytic_external
+
+        return u_analytic
 
     def get_config(self):
         config = super().get_config().copy()
@@ -198,9 +262,10 @@ class ScaleNNPotential(tf.keras.layers.Layer):
 
     def call(self, features, u_nn):
         r = features[:, 0:1]
-        r_p = tf.pow(r, self.power)
-        u = tf.divide(u_nn, r_p)
-        return u
+        r_inv = r_inv_star(r)
+        r_p_inv = tf.pow(r_inv, self.power)
+        u_scaled = u_nn * r_p_inv
+        return u_scaled
 
     def get_config(self):
         config = super().get_config().copy()
@@ -407,7 +472,11 @@ class FourierFeatureLayer(tf.keras.layers.Layer):
         stu_cos = tf.concat([s_cos, t_cos, u_cos], axis=1)
 
         # stack radius and fourier basis together
-        features = tf.concat([r, s, t, u, stu_sin, stu_cos], 1)  # [N x 2M+1]
+        if self.sine_and_cosine:
+            features = tf.concat([r, s, t, u, stu_sin, stu_cos], 1)  # [N x 2M+1]
+        else:
+            features = tf.concat([r, s, t, u, stu_sin], 1)  # [N x 2M+1]
+
         return features
 
     def get_config(self):
