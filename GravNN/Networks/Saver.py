@@ -41,7 +41,7 @@ class ModelSaver:
         }
         self.config.update(size_stats)
 
-    def save(self, df_file=None, custom_data_dir=None):
+    def save(self, df_file=None):
         """Add remaining training / model variables into the configuration dictionary,
         then save the config variables into its own pickled file, and potentially add
         it to an existing dataframe defined by `df_file`.
