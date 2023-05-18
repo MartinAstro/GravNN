@@ -316,7 +316,8 @@ class PINNGravityModel(tf.keras.Model):
         x_input = self.preprocess(x)
         # fcn = self._pinn_acceleration_output
         # a_pred = self.eval_batches(fcn, x_input, 131072 // 2)
-        a_pred = self._pinn_acceleration_output(x_input)
+        fcn = self._pinn_acceleration_output
+        a_pred = self.eval_batches(fcn, x_input, 131072 // 2)
         a = self.postprocess(a_pred)
         return a
 
