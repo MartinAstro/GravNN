@@ -747,8 +747,8 @@ class DataSet:
         self.add_transformers_to_config()
 
     def from_raw_data(self, x, a, percent_validation=0.1):
-        N_train = int(len(x) * (1.0 - percent_validation))
-        N_val = int(len(x) * percent_validation)
+        N_train = int(np.round(len(x) * (1.0 - percent_validation)))
+        N_val = int(np.round(len(x) * percent_validation))
         x_train, x_val = single_training_validation_split(
             x,
             N_train,
