@@ -111,7 +111,7 @@ class RandomDist(TrajectoryBase):
     def identify_interior_points(self, positions):
         # Necessary to cap memory footprint
         N = len(positions)
-        step = 50000
+        step = 500
         mask = np.full((N,), False)
         rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
         for i in range(0, N, step):
