@@ -118,10 +118,18 @@ class PlanesExperiment:
                 self.model_file,
                 file_type=file_extension[1:],
             )
-            distances = self.shape_model.nearest.signed_distance(
-                self.x_test / 1e3,
-            )
-            self.interior_mask = distances > 0
+
+            N = len(self.x_test)
+            step = 50000
+            self.interior_mask = np.full((N,), False)
+            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+            for i in range(0, N, step):
+                end_idx = (i // step + 1) * step
+                position_subset = self.x_test[i:end_idx] / 1e3
+                self.interior_mask[i:end_idx] = rayObject.contains_points(
+                    position_subset,
+                )
+                print(i / N)
         return self.interior_mask
 
     def run(self):
