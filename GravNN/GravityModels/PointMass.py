@@ -1,17 +1,17 @@
 import os
 
 import numpy as np
-from GravNN.GravityModels.GravityModelBase import GravityModelBase
+
 from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Support.transformations import cart2sph, invert_projection
+from GravNN.GravityModels.GravityModelBase import GravityModelBase
+from GravNN.Support.transformations import cart2sph
 
 
 def get_pm_data(trajectory, gravity_file, **kwargs):
-
     # Handle cases where the keyword wasn't properly wrapped as a list []
     override = bool(kwargs.get("override", [False])[0])
 
-    point_mass_r0_gm = PointMass(kwargs['planet'][0], trajectory=trajectory)
+    point_mass_r0_gm = PointMass(kwargs["planet"][0], trajectory=trajectory)
     accelerations = point_mass_r0_gm.load(override=override).accelerations
     potentials = point_mass_r0_gm.potentials
 
@@ -21,6 +21,7 @@ def get_pm_data(trajectory, gravity_file, **kwargs):
 
     return x, a, u
 
+
 class PointMass(GravityModelBase):
     def __init__(self, celestial_body, trajectory=None):
         """Gravity model that only produces accelerations and potentials
@@ -28,7 +29,8 @@ class PointMass(GravityModelBase):
 
         Args:
             celestial_body (CelestialBody): body used to generate gravity measurements
-            trajectory (TrajectoryBase, optional): trajectory for which gravity measurements must be produced. Defaults to None.
+            trajectory (TrajectoryBase, optional): trajectory for which gravity
+            measurements must be produced. Defaults to None.
         """
         super().__init__()
         self.configure(trajectory)
@@ -43,17 +45,15 @@ class PointMass(GravityModelBase):
         pass
 
     def compute_acceleration(self, positions=None):
-        "Compute the acceleration for an existing trajectory or provided set of positions"
+        """Compute the acceleration for an existing trajectory or provided
+        set of positions"""
         if positions is None:
             positions = self.trajectory.positions
 
-        positions = cart2sph(positions)
         self.accelerations = np.zeros(positions.shape)
         for i in range(len(self.accelerations)):
             self.accelerations[i] = self.compute_acceleration_value(positions[i])
 
-        # accelerations are in spherical coordinates in the hill frame. Need to change to inertial frame
-        self.accelerations = invert_projection(positions, self.accelerations)
         return self.accelerations
 
     def compute_potential(self, positions=None):
@@ -73,9 +73,32 @@ class PointMass(GravityModelBase):
         # U = -mu/r
         # dU/dx = mu/r^2
         # a = -dU/dx = -mu/r^2
-        return np.array(
-            [-self.mu / position[0] ** 2, 0, 0]
+        return (
+            -self.mu * position / np.linalg.norm(position, axis=0) ** 3
         )  # [a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
+
+    def compute_dfdx(self, positions):
+        """Compute gradient of the acceleration"""
+        x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
+        r = np.linalg.norm(positions, axis=1)
+
+        def diag(x, r):
+            return self.mu * (3.0 * x**2 - r**2) / (r**2) ** (5.0 / 2.0)
+            # return -self.mu * (1.0 / r**3 - 3.0 * x**2 / r**5)
+
+        def off_diag(i, j, r):
+            return self.mu * (3.0 * i * j / (r**2) ** (5.0 / 2.0))
+            # return self.mu * (3.0 * i * j / r**5)
+
+        dfdx = np.block(
+            [
+                [diag(x, r), off_diag(x, y, r), off_diag(x, z, r)],
+                [off_diag(y, x, r), diag(y, r), off_diag(y, z, r)],
+                [off_diag(z, x, r), off_diag(z, y, r), diag(z, r)],
+            ],
+        )
+
+        return dfdx
 
     def compute_potential_value(self, position):
         return -self.mu / position[0]
