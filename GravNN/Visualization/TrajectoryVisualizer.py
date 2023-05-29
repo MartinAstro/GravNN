@@ -27,7 +27,7 @@ class TrajectoryVisualizer(VisualizationBase):
             time = model_dict["solution"].t
             label = model_dict["label"]
             color = model_dict["color"]
-            plt.plot(time, dr / 1000.0, label=label, color=color)
+            plt.semilogy(time, dr / 1000.0, label=label, color=color)
 
         plt.ylabel("$|\Delta r|$ Error [km]")
         # plt.xlabel("Time [s]")
