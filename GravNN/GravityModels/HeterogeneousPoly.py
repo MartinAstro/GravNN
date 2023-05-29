@@ -54,6 +54,59 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
     return x, a, u
 
 
+def get_hetero_poly_symmetric_data(trajectory, obj_file, **kwargs):
+    override = bool(kwargs.get("override", [False])[0])
+    remove_point_mass = bool(kwargs.get("remove_point_mass", [False])[0])
+
+    obj_file = make_windows_path_posix(obj_file)
+
+    poly_r0_gm = HeterogeneousPoly(
+        trajectory.celestial_body,
+        obj_file,
+        trajectory=trajectory,
+    )
+
+    # Force the following mass inhomogeneity
+    mass_0 = copy.deepcopy(trajectory.celestial_body)
+    mass_0.mu = 2 * mass_0.mu / 20
+    r_offset_0 = [0, 0, 0]
+
+    mass_1 = copy.deepcopy(trajectory.celestial_body)
+    mass_1.mu = mass_1.mu / 20
+    r_offset_1 = [mass_1.radius / 3, 0, 0]
+
+    mass_2 = copy.deepcopy(trajectory.celestial_body)
+    mass_2.mu = mass_2.mu / 20
+    r_offset_2 = [-mass_2.radius / 3, 0, 0]
+
+    point_mass_0 = PointMass(mass_0, trajectory)
+    point_mass_1 = PointMass(mass_1, trajectory)
+    point_mass_2 = PointMass(mass_2, trajectory)
+
+    poly_r0_gm.add_point_mass(point_mass_0, r_offset_0)
+    poly_r0_gm.add_point_mass(point_mass_1, r_offset_1)
+    poly_r0_gm.add_point_mass(point_mass_2, r_offset_2)
+
+    poly_r0_gm.load(override=override)
+
+    x = poly_r0_gm.positions  # position (N x 3)
+    a = poly_r0_gm.accelerations
+    u = np.array([poly_r0_gm.potentials]).transpose()  # potential (N x 1)
+
+    # TODO: Determine if this is valuable -- how do dynamics and representation change
+    # inside brillouin sphere
+    if remove_point_mass:
+        point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
+        point_mass_r0_gm.load(override=override)
+        a_pm = point_mass_r0_gm.accelerations
+        u_pm = np.array([point_mass_r0_gm.potentials]).transpose()
+
+        a = a - a_pm
+        u = u - u_pm
+
+    return x, a, u
+
+
 class HeterogeneousPoly(Polyhedral):
     def __init__(self, celestial_body, obj_file, trajectory=None):
         super().__init__(celestial_body, obj_file, trajectory)
@@ -127,15 +180,15 @@ if __name__ == "__main__":
     gravity_model = HeterogeneousPoly(planet, planet.obj_8k, traj)
 
     mass_1 = Eros()
-    mass_1.mu = planet.mu / 10
-    r_offset_1 = [planet.radius / 3, 0, 0]
+    mass_1.mu = mass_1.mu / 10
+    r_offset_1 = [mass_1.radius / 3, 0, 0]
 
     mass_2 = Eros()
-    mass_2.mu = -planet.mu / 10
-    r_offset_2 = [-planet.radius / 3, 0, 0]
+    mass_2.mu = -mass_2.mu / 10
+    r_offset_2 = [-mass_2.radius / 3, 0, 0]
 
-    point_mass_1 = PointMass(mass_1, traj)
-    point_mass_2 = PointMass(mass_2, traj)
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
 
     gravity_model.add_point_mass(point_mass_1, r_offset_1)
     gravity_model.add_point_mass(point_mass_2, r_offset_2)
