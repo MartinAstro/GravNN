@@ -33,8 +33,9 @@ def run(config, model, radius_bounds, max_percent):
     planes_exp = PlanesExperiment(model, config, radius_bounds, 200)
     planes_exp.run()
     vis = CustomPlanesVisualizer(planes_exp)
-    vis.fig_size = vis.half_page_default
+    vis.fig_size = (vis.w_half, vis.w_half)
     vis.plot(percent_max=max_percent)
+    return vis
 
 
 def main():
@@ -53,15 +54,15 @@ def main():
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(model_id, df)
     config["grav_file"] = [planet.obj_8k]  # plot with simpler obj file
-    run(config, model, radius_bounds, max_percent)
-    plt.savefig("Plots/PINNII/Eros_Planes.pdf")
+    vis = run(config, model, radius_bounds, max_percent)
+    vis.save(plt.gcf(), "PINNII/Eros_Planes.pdf")
 
     # PINN III
     model_id = df["id"].values[-2]
     config, model = load_config_and_model(model_id, df)
     config["grav_file"] = [planet.obj_8k]
-    run(config, model, radius_bounds, max_percent)
-    plt.savefig("Plots/PINNIII/Eros_Planes.pdf")
+    vis = run(config, model, radius_bounds, max_percent)
+    vis.save(plt.gcf(), "PINNIII/Eros_Planes.pdf")
 
     plt.show()
 
