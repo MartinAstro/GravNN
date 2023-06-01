@@ -90,7 +90,7 @@ class VisualizationBase(ABC):
         if formatting_style == "AIAA":
             self.AIAA_full_page = (6.5, 6.5 * self.golden_ratio)
 
-        # Set default figure size
+        # Set default figure size (width, height)
         self.fig_size = self.full_page_golden
 
         # default figure styling

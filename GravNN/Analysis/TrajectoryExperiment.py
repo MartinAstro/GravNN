@@ -21,7 +21,6 @@ class TrajectoryExperiment:
         period,
         t_mesh_density=100,
         random_seed=1234,
-        x0=None,
     ):
         self.true_model = true_grav_model
         self.t_mesh_density = t_mesh_density
@@ -76,9 +75,9 @@ class TrajectoryExperiment:
             test_sol = model_dict["solution"]
 
             dy = test_sol.y - self.true_sol.y
-            dr = np.linalg.norm(dy, axis=0)
+            dX = np.linalg.norm(dy, axis=0)
 
-            self.test_models[i].update({"pos_diff": dr})
+            self.test_models[i].update({"pos_diff": dX})
 
     def run(self):
         self.t_mesh = np.linspace(0, self.period, self.t_mesh_density, endpoint=True)

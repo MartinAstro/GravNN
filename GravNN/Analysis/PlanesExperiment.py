@@ -62,7 +62,10 @@ class PlanesExperiment:
         self.u_test = u
 
     def get_model_data(self):
-        dtype = self.model.network.compute_dtype
+        try:
+            dtype = self.model.network.compute_dtype
+        except Exception:
+            dtype = float
         positions = self.x_test.astype(dtype)
         self.a_pred = tf.cast(
             self.model.compute_acceleration(positions),

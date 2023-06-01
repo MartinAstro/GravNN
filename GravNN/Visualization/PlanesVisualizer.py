@@ -168,6 +168,7 @@ class PlanesVisualizer(VisualizationBase):
         labels=True,
         ticks=True,
         cbar=True,
+        cmap=cm.jet,
     ):
         mask = self.plane_mask(plane)
         idx_start, idx_end = self.get_plane_idx(plane)
@@ -193,7 +194,7 @@ class PlanesVisualizer(VisualizationBase):
             z.reshape((N, N)),
             extent=[min_x_0, max_x_0, min_x_1, max_x_1],
             origin="lower",
-            cmap=cm.jet,
+            cmap=cmap,
             vmin=0,
             vmax=self.max,
         )

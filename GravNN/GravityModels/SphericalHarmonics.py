@@ -219,7 +219,7 @@ class SphericalHarmonics(GravityModelBase):
 
         positions = np.reshape(positions, (len(positions) * 3))
 
-        accelerations, potentials = self.compute_fcn(
+        accelerations, potentials = compute_acc(
             positions,
             self.degree,
             self.mu,

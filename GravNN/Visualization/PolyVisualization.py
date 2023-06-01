@@ -60,6 +60,11 @@ class PolyVisualization(VisualizationBase):
                 # scale the clipped values to 0 - 1
                 scaler = MinMaxScaler((0, 1))
                 x_normal = scaler.fit_transform(x_normal.reshape((-1, 1))).flatten()
+
+                # If all values exceed the clip bounds, ensure scalar forces to 1 rather
+                # than 0.
+                if np.all(x_normal == 0.0):
+                    x_normal = np.ones_like(x_normal)
             else:
                 # Normalize the color from 0 - 1
                 x_normal = (x - x.min()) / (x.max() - x.min())

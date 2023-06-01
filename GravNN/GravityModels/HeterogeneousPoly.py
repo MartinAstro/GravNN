@@ -68,7 +68,7 @@ def get_hetero_poly_symmetric_data(trajectory, obj_file, **kwargs):
 
     # Force the following mass inhomogeneity
     mass_0 = copy.deepcopy(trajectory.celestial_body)
-    mass_0.mu = 2 * mass_0.mu / 20
+    mass_0.mu = -2 * mass_0.mu / 20
     r_offset_0 = [0, 0, 0]
 
     mass_1 = copy.deepcopy(trajectory.celestial_body)

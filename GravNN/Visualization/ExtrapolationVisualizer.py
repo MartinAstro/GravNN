@@ -72,7 +72,8 @@ class ExtrapolationVisualizer(VisualizationBase):
         avg_line, std_line, max_line = get_rolling_lines(value)
         label = kwargs.get("label", None)
 
-        self.newFig()
+        if kwargs.get("new_fig", True):
+            self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
         self.plot_fcn(x, avg_line, label=label, color="gray")
 

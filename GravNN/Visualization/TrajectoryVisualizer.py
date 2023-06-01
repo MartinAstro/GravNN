@@ -51,8 +51,9 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().yaxis.set_label_position("right")
         # plt.legend()
 
-    def plot_3d_trajectory(self):
-        self.new3DFig(fig_size=(self.w_full / 2, self.w_full / 2))
+    def plot_3d_trajectory(self, new_fig=True):
+        if new_fig:
+            self.new3DFig(fig_size=(self.w_full / 2, self.w_full / 2))
 
         true_sol = self.experiment.true_sol
         X, Y, Z = true_sol.y[0:3]
