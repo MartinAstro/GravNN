@@ -145,12 +145,12 @@ class HeterogeneousPoly(Polyhedral):
         if positions is None:
             positions = self.trajectory.positions
 
-        a_poly = super().compute_acceleration(positions)
+        a_poly = super().compute_acceleration(positions.reshape((-1, 3)))
 
         for i in range(len(self.point_mass_list)):
             r_offset = np.array(self.offset_list[i]).reshape((-1, 3))
             x_pm = positions - r_offset
-            a_pm = self.point_mass_list[i].compute_acceleration(x_pm)
+            a_pm = self.point_mass_list[i].compute_acceleration(x_pm.reshape((-1, 3)))
             a_poly += a_pm
         return a_poly
 
