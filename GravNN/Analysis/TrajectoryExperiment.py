@@ -29,12 +29,13 @@ class TrajectoryExperiment:
         self.test_models = []
         np.random.seed(random_seed)
 
-    def add_test_model(self, model, label, color):
+    def add_test_model(self, model, label, color, linestyle="-"):
         self.test_models.append(
             {
                 "model": model,
                 "label": label,
                 "color": color,
+                "linestyle": linestyle,
             },
         )
 

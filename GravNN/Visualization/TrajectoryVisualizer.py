@@ -65,7 +65,8 @@ class TrajectoryVisualizer(VisualizationBase):
             X, Y, Z = sol.y[0:3]
             label = model_dict["label"]
             color = model_dict["color"]
-            plt.plot(X, Y, Z, label=label, color=color)
+            linestyle = model_dict["linestyle"]
+            plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
 
         plt.legend()
         # plt.gca().set_xlabel("X [m]")
