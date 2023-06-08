@@ -60,32 +60,11 @@ def get_hetero_poly_symmetric_data(trajectory, obj_file, **kwargs):
 
     obj_file = make_windows_path_posix(obj_file)
 
-    poly_r0_gm = HeterogeneousPoly(
+    poly_r0_gm = generate_heterogeneous_sym_model(
         trajectory.celestial_body,
         obj_file,
         trajectory=trajectory,
     )
-
-    # Force the following mass inhomogeneity
-    mass_0 = copy.deepcopy(trajectory.celestial_body)
-    mass_0.mu = -2 * mass_0.mu / 20
-    r_offset_0 = [0, 0, 0]
-
-    mass_1 = copy.deepcopy(trajectory.celestial_body)
-    mass_1.mu = mass_1.mu / 20
-    r_offset_1 = [mass_1.radius / 3, 0, 0]
-
-    mass_2 = copy.deepcopy(trajectory.celestial_body)
-    mass_2.mu = mass_2.mu / 20
-    r_offset_2 = [-mass_2.radius / 3, 0, 0]
-
-    point_mass_0 = PointMass(mass_0, trajectory)
-    point_mass_1 = PointMass(mass_1, trajectory)
-    point_mass_2 = PointMass(mass_2, trajectory)
-
-    poly_r0_gm.add_point_mass(point_mass_0, r_offset_0)
-    poly_r0_gm.add_point_mass(point_mass_1, r_offset_1)
-    poly_r0_gm.add_point_mass(point_mass_2, r_offset_2)
 
     poly_r0_gm.load(override=override)
 
@@ -204,3 +183,30 @@ if __name__ == "__main__":
     vis.plot_polyhedron(planet.obj_8k, gravity_model.a_poly, cmap="bwr")
 
     plt.show()
+
+
+def generate_heterogeneous_sym_model(planet, shape_model, trajectory=None):
+    poly_r0_gm = HeterogeneousPoly(planet, shape_model, trajectory=trajectory)
+
+    # Force the following mass inhomogeneity
+    mass_0 = copy.deepcopy(planet)
+    mass_0.mu = -2 * mass_0.mu / 20
+    r_offset_0 = [0, 0, 0]
+
+    mass_1 = copy.deepcopy(planet)
+    mass_1.mu = mass_1.mu / 20
+    r_offset_1 = [mass_1.radius / 2, 0, 0]
+
+    mass_2 = copy.deepcopy(planet)
+    mass_2.mu = mass_2.mu / 20
+    r_offset_2 = [-mass_2.radius / 2, 0, 0]
+
+    point_mass_0 = PointMass(mass_0)
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
+
+    poly_r0_gm.add_point_mass(point_mass_0, r_offset_0)
+    poly_r0_gm.add_point_mass(point_mass_1, r_offset_1)
+    poly_r0_gm.add_point_mass(point_mass_2, r_offset_2)
+
+    return poly_r0_gm
