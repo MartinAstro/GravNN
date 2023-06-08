@@ -20,6 +20,7 @@ class TrajectoryExperiment:
         initial_state,
         period,
         t_mesh_density=100,
+        pbar=True,
         random_seed=1234,
     ):
         self.true_model = true_grav_model
@@ -27,6 +28,7 @@ class TrajectoryExperiment:
         self.period = period
         self.x0 = initial_state
         self.test_models = []
+        self.pbar = False
         np.random.seed(random_seed)
 
     def add_test_model(self, model, label, color, linestyle="-"):
@@ -55,7 +57,7 @@ class TrajectoryExperiment:
 
         fun.t_eval_idx = 0
         fun.elapsed_time = []
-        fun.pbar = ProgressBar(t_eval[-1], True)
+        fun.pbar = ProgressBar(t_eval[-1], self.pbar)
         fun.start_time = time.time()
 
         sol = solve_ivp(
@@ -63,7 +65,7 @@ class TrajectoryExperiment:
             [0, t_eval[-1]],
             X0.reshape((-1,)),
             t_eval=t_eval,
-            atol=1e-8,
+            atol=1e-10,
             rtol=1e-10,
         )
         fun.elapsed_time.append(time.time() - fun.start_time)

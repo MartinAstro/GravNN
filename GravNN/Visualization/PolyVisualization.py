@@ -32,6 +32,7 @@ class PolyVisualization(VisualizationBase):
         max_percent=1,
         alpha=0.4,
         surface_colors=True,
+        cbar_orientation="horizontal",
     ):
         fig, ax = self.new3DFig()
 
@@ -116,7 +117,7 @@ class PolyVisualization(VisualizationBase):
                 pad=0.05,
                 fraction=0.10,
                 norm=norm,
-                orientation="horizontal",
+                orientation=cbar_orientation,
                 format=cbformat,
             )  # ticks=ticks,boundaries=vlim,
 
