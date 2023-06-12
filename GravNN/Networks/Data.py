@@ -352,6 +352,8 @@ def scale_by_non_dim_potential(data_dict, config):
 
     else:
         u_max = np.max(np.abs(data_dict["u_train"]))
+        if u_max == 0.0:  # i.e. not specified
+            u_max = u_brill
 
     u_star = (u_max / u_brill) * u_brill
 

@@ -20,7 +20,7 @@ class TrajectoryExperiment:
         initial_state,
         period,
         t_mesh_density=100,
-        pbar=True,
+        pbar=False,
         random_seed=1234,
     ):
         self.true_model = true_grav_model
@@ -28,7 +28,7 @@ class TrajectoryExperiment:
         self.period = period
         self.x0 = initial_state
         self.test_models = []
-        self.pbar = False
+        self.pbar = pbar
         np.random.seed(random_seed)
 
     def add_test_model(self, model, label, color, linestyle="-"):

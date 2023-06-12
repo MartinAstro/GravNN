@@ -6,6 +6,7 @@ import trimesh
 
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Losses import get_loss_fcn
+from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories import PlanesDist
 
 
@@ -86,12 +87,19 @@ class PlanesExperiment:
         self.percent_error_acc = percent_error(self.a_pred, self.a_test)
         self.percent_error_pot = percent_error(self.u_pred, self.u_test)
 
+        # nan out interior
+        self.percent_error_acc[self.interior_mask] = np.nan
+        self.percent_error_pot[self.interior_mask] = np.nan
+
     def compute_RMS(self):
         def RMS(x_hat, x_true):
             return np.sqrt(np.sum(np.square(x_true - x_hat), axis=1))
 
         self.RMS_acc = RMS(self.a_pred, self.a_test)
         self.RMS_pot = RMS(self.u_pred, self.u_test)
+
+        self.RMS_acc[self.interior_mask] = np.nan
+        self.RMS_pot[self.interior_mask] = np.nan
 
     def compute_losses(self, loss_fcn_list):
         losses = {}
@@ -123,22 +131,24 @@ class PlanesExperiment:
             )
 
             N = len(self.x_test)
-            step = 50000
-            self.interior_mask = np.full((N,), False)
+            step = 5000
+            mask = np.full((N,), False)
+            pbar = ProgressBar(N, True)
             rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
             for i in range(0, N, step):
                 end_idx = (i // step + 1) * step
                 position_subset = self.x_test[i:end_idx] / 1e3
-                self.interior_mask[i:end_idx] = rayObject.contains_points(
-                    position_subset,
-                )
-                print(i / N)
-        return self.interior_mask
+                mask[i:end_idx] = rayObject.contains_points(position_subset)
+                pbar.update(i)
+            pbar.close()
+            self.interior_mask = mask
+            return mask
 
     def run(self):
         self.get_train_data()
         self.get_test_data()
         self.get_model_data()
+        self.get_planet_mask()
         self.compute_percent_error()
         self.compute_RMS()
         self.compute_losses(self.loss_fcn_list)

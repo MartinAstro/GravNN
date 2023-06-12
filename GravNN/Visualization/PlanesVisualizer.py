@@ -23,7 +23,7 @@ class PlanesVisualizer(VisualizationBase):
         self.radius = self.experiment.config["planet"][0].radius
         self.training_bounds = np.array(self.experiment.training_bounds)
         self.planet = experiment.config["planet"][0]
-        self.interior_mask = None
+        self.interior_mask = self.experiment.interior_mask
 
     def plane_mask(self, plane):
         mask = np.array([False, False, False])

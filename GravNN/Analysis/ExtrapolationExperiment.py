@@ -139,16 +139,16 @@ class ExtrapolationExperiment:
 
     def get_PINN_data(self):
         positions = self.positions
-        self.predicted_accelerations = (
-            self.model.compute_acceleration(
-                positions,
-            )
-            .numpy()
-            .astype(float)
-        )
-        self.predicted_potentials = (
-            self.model.compute_potential(positions).numpy().astype(float)
-        )
+        pred_acc = self.model.compute_acceleration(positions)
+        pred_pot = self.model.compute_potential(positions)
+        try:
+            pred_acc = pred_acc.numpy().astype(float)
+            pred_pot = pred_pot.numpy().astype(float)
+        except Exception:
+            pass
+
+        self.predicted_potentials = pred_pot
+        self.predicted_accelerations = pred_acc
 
     def compute_losses(self, loss_fcn_list):
         losses = {}

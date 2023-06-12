@@ -138,8 +138,11 @@ def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
         sbar=sbar,
     )
     positions_Nx3 = positions.reshape((-1, 3))
-    with mp.Pool(processes=mp.cpu_count()) as pool:
-        results = pool.map(compute_acc_partial, positions_Nx3)
+    if len(positions_Nx3) == 1:
+        results = [compute_acc_partial(positions_Nx3[0])]
+    else:
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            results = pool.map(compute_acc_partial, positions_Nx3)
 
     for i, result in enumerate(results):
         acc_output = result[0]
