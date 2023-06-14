@@ -1,4 +1,5 @@
 import copy
+import os
 
 import numpy as np
 
@@ -96,6 +97,15 @@ class HeterogeneousPoly(Polyhedral):
     def add_point_mass(self, point_mass, r_offset):
         self.point_mass_list.append(point_mass)
         self.offset_list.append(r_offset)
+
+    def generate_full_file_directory(self):
+        self.file_directory += (
+            os.path.splitext(os.path.basename(__file__))[0]
+            + "_"
+            + os.path.basename(self.obj_file).split(".")[0]
+            + "/"
+        )
+        pass
 
     def load(self, override=False):
         # get homoegenous poly accelerations

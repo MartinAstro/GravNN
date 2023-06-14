@@ -1,5 +1,4 @@
 import copy
-import copy
 import multiprocessing as mp
 import os
 
@@ -12,7 +11,6 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.GravityModels.PointMass import PointMass
 from GravNN.Support.PathTransformations import make_windows_path_posix
-from GravNN.Support.ProgressBar import ProgressBar
 
 
 def get_poly_data(trajectory, obj_file, **kwargs):
@@ -190,15 +188,6 @@ def edge_acc_loop(point_scaled, vertices, edges_unique, edge_dyads):
         pot += Le * np.dot(r_e, np.dot(E, r_e))
 
     return acc, pot
-
-
-class Mesh:
-    def __init__(self, trimesh):
-        self.vertices = copy.deepcopy(np.array(trimesh.vertices))
-        self.faces = copy.deepcopy(np.array(trimesh.faces, dtype=np.int32))
-        self.edges_unique = copy.deepcopy(
-            np.array(trimesh.edges_unique, dtype=np.int32),
-        )
 
 
 class Mesh:
