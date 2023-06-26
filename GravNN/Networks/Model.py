@@ -283,14 +283,20 @@ class PINNGravityModel(tf.keras.Model):
                 y = tf.concat((y, y_batch), axis=0)
         return y
 
-    @tf.function(
-        jit_compile=True,
-        input_signature=[tf.TensorSpec(shape=(None, 3), dtype=tf.float32)],
-    )
+    @tf.function(jit_compile=False, reduce_retracing=True)
     def compute_potential(self, x):
         x_input = self.x_preprocessor(x)
         u_pred = self.network(x_input, training=False)
         u = self.u_postprocessor(u_pred)
+        return u
+
+    @tf.function(jit_compile=False, reduce_retracing=True)
+    def compute_disturbing_potential(self, x):
+        x_input = self.x_preprocessor(x)
+        u_pred = self.network(x_input, training=False)
+        u_analytic = self.analytic_model(x_input)
+        u_dist = u_pred - u_analytic
+        u = self.u_postprocessor(u_dist)
         return u
 
     # @tf.function(jit_compile=True)
