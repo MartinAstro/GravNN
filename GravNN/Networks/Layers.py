@@ -37,7 +37,7 @@ def r_inv_star(r, r_ref=1.0):
     r_inv_internal = a * r**2 + b * r + c
 
     r_inv_star = tf.where(r > r_ref, r_inv_external, r_inv_internal)
-    # r_inv_star = r_inv_external
+    r_inv_star = r_inv_external
     return r_inv_star
 
 
