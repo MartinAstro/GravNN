@@ -6,6 +6,7 @@ import trimesh
 
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Losses import get_loss_fcn
+from GravNN.Support.PathTransformations import make_windows_path_posix
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories import PlanesDist
 
@@ -124,6 +125,7 @@ class PlanesExperiment:
             grav_file = self.config.get("grav_file", [None])[0]
             # planets have shape model (sphere currently)
             self.model_file = self.config.get("shape_model", [grav_file])[0]
+            self.model_file = make_windows_path_posix(self.model_file)
             filename, file_extension = os.path.splitext(self.model_file)
             self.shape_model = trimesh.load_mesh(
                 self.model_file,
