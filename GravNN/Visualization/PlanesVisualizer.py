@@ -169,6 +169,10 @@ class PlanesVisualizer(VisualizationBase):
         ticks=True,
         cbar=True,
         cmap=cm.jet,
+        cbar_gs=None,
+        z_min=1e-3,
+        log=False,
+        contour=False,
     ):
         mask = self.plane_mask(plane)
         idx_start, idx_end = self.get_plane_idx(plane)
@@ -190,14 +194,34 @@ class PlanesVisualizer(VisualizationBase):
 
         N = np.sqrt(len(z)).astype(int)
 
+        if log:
+            norm = matplotlib.colors.LogNorm(vmin=z_min, vmax=self.max)
+        else:
+            norm = matplotlib.colors.Normalize(vmin=0, vmax=self.max)
+
         im = plt.imshow(
             z.reshape((N, N)),
             extent=[min_x_0, max_x_0, min_x_1, max_x_1],
             origin="lower",
             cmap=cmap,
-            vmin=0,
-            vmax=self.max,
+            # vmin=0,
+            # vmax=self.max,
+            norm=norm,
         )
+
+        if contour:
+            zm = np.ma.masked_invalid(z)
+            cntr = plt.gca().contour(
+                zm.reshape((N, N)),
+                levels=np.logspace(z_min, self.max, 5),
+                norm=norm,
+                # cmap=cmap,
+                extent=[min_x_0, max_x_0, min_x_1, max_x_1],
+                colors="k",
+                linewidths=0.5,
+            )
+
+            plt.clabel(cntr, inline=True, fontsize=8, fmt="%1.0e")
 
         plt.gca().set_xlabel(plane[0])
         plt.gca().set_ylabel(plane[1])
@@ -215,11 +239,15 @@ class PlanesVisualizer(VisualizationBase):
         if annotate_stats:
             self.annotate(z)
 
-        ax = plt.gca()
         if cbar:
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            cBar = plt.colorbar(im, cax=cax)
+            if cbar_gs is None:
+                ax = plt.gca()
+                divider = make_axes_locatable(ax)
+                cbar_gs = divider.append_axes("right", size="5%", pad=0.05)
+            else:
+                pass
+
+            cBar = plt.colorbar(im, cax=plt.subplot(cbar_gs))
 
             # cbar = plt.colorbar(fraction=0.15,)
             cBar.set_label(colorbar_label)
