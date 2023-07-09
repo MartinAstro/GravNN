@@ -381,7 +381,7 @@ def CustomNet(**kwargs):
     u_nn = get_network_fcn(kwargs["network_arch"][0])(x, **kwargs)
 
     p = compute_p(**kwargs)
-    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_analytic = AnalyticModelLayer(**kwargs)(features)
     u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
     u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
     u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
@@ -419,7 +419,7 @@ def SeparationNet(**kwargs):
     u_nn = get_network_fcn(kwargs["network_arch"][0])(u_nn_inputs, **kwargs_copy)
 
     p = compute_p(**kwargs)
-    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_analytic = AnalyticModelLayer(**kwargs)(features)
     u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
     u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
     u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
@@ -471,7 +471,7 @@ def MultiScaleNet(**kwargs):
     )(u_inputs)
 
     p = compute_p(**kwargs)
-    u_analytic = PlanetaryOblatenessLayer(**kwargs)(features)
+    u_analytic = AnalyticModelLayer(**kwargs)(features)
     u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
     u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
     u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)

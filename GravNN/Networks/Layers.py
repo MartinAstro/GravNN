@@ -22,6 +22,13 @@ def blend(x, y, z, k, x_ref):
     return output
 
 
+def r_safety_set(r):
+    r_inv = tf.math.divide_no_nan(1.0, r)
+    r_inv_cap = tf.clip_by_value(r_inv, 0.0, 1.0)
+    r_cap = tf.clip_by_value(r, 0.0, 1.0)
+    return r_cap, r_inv_cap
+
+
 def r_inv_star(r, r_ref=1.0):
     r_inv_external = tf.math.reciprocal_no_nan(r)
 
@@ -37,7 +44,7 @@ def r_inv_star(r, r_ref=1.0):
     r_inv_internal = a * r**2 + b * r + c
 
     r_inv_star = tf.where(r > r_ref, r_inv_external, r_inv_internal)
-    r_inv_star = r_inv_external
+    # r_inv_star = r_inv_external
     return r_inv_star
 
 
@@ -117,8 +124,8 @@ class InvRLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         r = inputs[:, 0:1]
-        r_output = r_inv_star(r)
-        spheres = tf.concat([r_output, inputs[:, 1:4]], axis=1)
+        r_cap, r_inv_cap = r_safety_set(r)
+        spheres = tf.concat([r_inv_cap, inputs[:, 1:4], r_cap], axis=1)
         return spheres
 
     def get_config(self):
@@ -127,47 +134,10 @@ class InvRLayer(tf.keras.layers.Layer):
 
 
 # postprocessing
-class BlendPotentialLayer(tf.keras.layers.Layer):
-    def __init__(self, dtype, mu, r_max):
-        super(BlendPotentialLayer, self).__init__(dtype=dtype)
-        self.mu = tf.constant(mu, dtype=dtype).numpy()
-        self.r_max = tf.constant(r_max, dtype=dtype).numpy()
-
-    def build(self, input_shapes):
-        self.radius = self.add_weight(
-            "radius",
-            shape=[1],
-            trainable=True,
-            initializer=tf.keras.initializers.Constant(value=self.r_max),
-        )
-        self.k = self.add_weight(
-            "k",
-            shape=[1],
-            trainable=True,
-            initializer=tf.keras.initializers.Constant(value=1.0),
-        )
-        super(BlendPotentialLayer, self).build(input_shapes)
-
-    def call(self, u_nn, u_analytic, inputs):
-        r = inputs[:, 0:1]
-        u_model = blend(r, u_nn + u_analytic, u_analytic, self.k, self.radius)
-        return u_model
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "mu": self.mu,
-                "r_max": self.r_max,
-            },
-        )
-        return config
-
-
-class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
+class AnalyticModelLayer(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
         dtype = kwargs.get("dtype")[0]
-        super(PlanetaryOblatenessLayer, self).__init__(dtype=dtype)
+        super(AnalyticModelLayer, self).__init__(dtype=dtype)
 
         # defaults to zero
         self.mu = kwargs.get("mu_non_dim", [0.0])[0]
@@ -197,46 +167,35 @@ class PlanetaryOblatenessLayer(tf.keras.layers.Layer):
 
         # Compute constant density assumption
 
-        # Compute the potential at the Brillouin sphere
-        u_pm_brill = self.mu / self.a
-        u_C20_brill = (
-            (self.a / self.a) ** 2
-            * u_pm_brill
-            * (u**2 * self.c1 - self.c2)
-            * self.C20
-        )
-        tf.negative(u_pm_brill + u_C20_brill)
-
-        # Compute the potential in three regions:
-        # - external (r > R)
-        # - transition (r < R && r > R_min)
-        # - internal (r < R_min)
-
         # External
         # This is a SH solution
-        r_inv = r_inv_star(r)
-        u_pm_external = self.mu * r_inv
+        # r_inv = r_inv_star(r)
+
+        r_cap, r_inv_cap = r_safety_set(r)
+
+        # Compute point mass approximation assuming
+        u_pm_external = self.mu * r_inv_cap
         u_C20 = (
-            (self.a * r_inv) ** 2
+            (self.a * r_inv_cap) ** 2
             * u_pm_external
             * (u**2 * self.c1 - self.c2)
             * self.C20
         )
-        u_analytic_external = tf.negative(u_pm_external + u_C20)
+        u_external_full = tf.negative(u_pm_external + u_C20)
 
-        # # Transition: Assume mass decreases as 2 cylinders
-        # trans_volume = 2.0 * r * (np.pi * self.min_radius**2)
-        # full_volume = 4.0 / 3.0 * np.pi * self.a**3
-        # u_trans = tf.negative(G_sigma * (full_volume - trans_volume) / r)
+        # Transition potential
 
-        # # Internal
+        # makes derivative 1/x instead of 1/x^2
+        u_external_mod = u_external_full * r_cap**0.5 / r_cap
+        # u_external_mod = u_external_full * tf.math.log(r_cap)/tf.math.log(10.0)
+
+        u_external = tf.where(r > 1.0, u_external_full, u_external_mod)
+        u_analytic = u_external
+
+        # Internal potential
         # internal_volume = 4.0 / 3.0 * np.pi * r**3
         # u_internal = tf.negative(G_sigma * internal_volume / r)
-
-        # Blend the regions as necessary
-        # u_analytic = blend(r, u_trans, u_analytic_external, 1.0, 1.0)
-
-        u_analytic = u_analytic_external
+        # u_analytic = tf.where(r < self.min_radius, u_internal, u_external)
 
         return u_analytic
 
@@ -262,10 +221,27 @@ class ScaleNNPotential(tf.keras.layers.Layer):
 
     def call(self, features, u_nn):
         r = features[:, 0:1]
-        r_inv = r_inv_star(r)
-        r_p_inv = tf.pow(r_inv, self.power)
-        u_scaled = u_nn * r_p_inv
-        return u_scaled
+        # r_inv = r_inv_star(r)
+        r_cap, r_inv_cap = r_safety_set(r)
+        # r_p = tf.pow(r_cap, self.power)
+        r_inv = tf.math.divide_no_nan(1.0, r)
+
+        # r_pm1_inv = tf.pow(r_inv, self.power-3)
+        r_pm1_inv = tf.pow(r_inv, self.power - 0.5)
+        r_p_inv_cap = tf.pow(r_inv_cap, self.power)
+
+        u_scaled_exterior = u_nn * r_p_inv_cap
+        u_scaled_interior = (
+            u_nn * r_pm1_inv
+        )  #  * r_cap  # the potential decays linearly   # * r_p
+
+        # only scale for radii above brillouin sphere
+        u_final = tf.where(r > 1.0, u_scaled_exterior, u_scaled_interior)
+
+        # u_final = u_nn*tf.pow(tf.math.divide_no_nan(1.0, r), self.power)
+        # u_final = u_scaled
+        # u_final = u_nn
+        return u_final
 
     def get_config(self):
         config = super().get_config().copy()
