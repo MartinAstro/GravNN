@@ -293,7 +293,7 @@ def save_df_row(dictionary, df_file):
         dictionary (dict): configuration / hyperparameter dictionary
         df_file (str): path to existing dataframe
     """
-    directory = os.path.abspath(".") + "/Data/Dataframes/"
+    directory = os.path.dirname(df_file)
     os.makedirs(directory, exist_ok=True)
     dictionary = dict(sorted(dictionary.items(), key=lambda kv: kv[0]))
     df = pd.DataFrame().from_dict(dictionary).set_index("timetag")
@@ -301,8 +301,10 @@ def save_df_row(dictionary, df_file):
         df_all = pd.read_pickle(df_file)
         df_all = df_all.append(df)
         df_all.to_pickle(df_file)
+        print("Saved to existing dataframe:", df_file)
     except Exception:
         df.to_pickle(df_file)
+        print("Saved to new dataframe:", df_file)
 
 
 def get_df_row(model_id, df_file):
@@ -512,3 +514,25 @@ def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, lst.shape[0], n):
         yield lst[i : i + n]
+
+
+def get_absolute_path(file_path, make_path=False):
+    # Check if the file path is absolute
+    if os.path.isabs(file_path):
+        abs_path = file_path
+    else:
+        # Check if the path was relative and convert it to absolute path
+        abs_path = os.path.abspath(file_path)
+
+    # Check if the file path is just a filename
+    if not os.path.exists(abs_path):
+        # Assuming the file is in the relative path
+        relative_path = os.path.join(os.getcwd(), file_path)
+        if os.path.exists(relative_path):
+            abs_path = relative_path
+        else:
+            if make_path is False:
+                raise FileNotFoundError(f"The file '{file_path}' does not exist.")
+            else:
+                os.makedirs(abs_path, exist_ok=True)
+    return abs_path

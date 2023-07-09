@@ -71,7 +71,7 @@ class PINNGravityModel(tf.keras.Model):
         # Determine layer idx of analytic model
         self.analytic_idx = -1
         for idx, layer in enumerate(self.network.layers):
-            if layer.name == "planetary_oblateness_layer":
+            if layer.name == "analytic_model_layer":
                 self.analytic_idx = idx
 
     def init_analytic_model(self):
@@ -385,7 +385,6 @@ class PINNGravityModel(tf.keras.Model):
 def load_config_and_model(
     model_id,
     df_file,
-    custom_data_dir=None,
     custom_dtype=None,
     only_weights=False,
 ):
@@ -400,15 +399,24 @@ def load_config_and_model(
     Returns:
         tuple: configuration/hyperparameter dictionary, compiled PINNGravityModel
     """
-    data_dir = f"{os.path.dirname(GravNN.__file__)}/../Data/"
-    if custom_data_dir is not None:
-        data_dir = custom_data_dir
 
+    # RESOLVE PATHS
+    # assume model is saved in GravNN/Data/ directory
+    data_dir = f"{os.path.dirname(GravNN.__file__)}/../Data"
+
+    # LOAD CONFIG
     # Get the configuration data specified model_id
     if type(df_file) == str:
+        # If there is a /Data/ dir that is within the df_path, use it.
+        if "/Data/" in df_file and os.path.isabs(df_file):
+            data_dir = df_file.split("/Data/")[0] + "/Data"
+            df_file_basename = os.path.basename(df_file)
+
         # If the config dataframe hasn't been loaded
-        df_file_path = f"{data_dir}/Dataframes/{df_file}"
+        df_file_path = f"{data_dir}/Dataframes/{df_file_basename}"
+        print("Loading from: ", df_file_path)
         config = utils.get_df_row(model_id, df_file_path)
+
     else:
         # If the config dataframe has already been loaded
         config = df_file[model_id == df_file["id"]].to_dict()
@@ -432,8 +440,9 @@ def load_config_and_model(
 
     if only_weights:
         model = PINNGravityModel(config)
+        weights_save_dir = config["save_dir"][0]
         model.network.load_weights(
-            f"{data_dir}/Networks/{model_id}/weights",
+            f"{weights_save_dir}/Networks/{model_id}/weights",
         )
     else:
         # Reinitialize the model

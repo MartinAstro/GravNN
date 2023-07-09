@@ -21,12 +21,10 @@ class ModelSaver:
         self,
         model,
         history=None,
-        save_dir=os.path.dirname(GravNN.__file__) + "/../Data",
     ):
         self.config = model.config
         self.network = model.network
         self.history = history
-        self.save_dir = save_dir
 
         # saving
 
@@ -51,6 +49,19 @@ class ModelSaver:
             config variables should be appended or the loaded dataframe itself.
             Defaults to None.
         """
+
+        # assume save dir is GravNN/Data
+        self.save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
+
+        if type(df_file) == str:
+            df_file_basename = os.path.basename(df_file)
+
+            # unless there is a /Data/ dir that is within the df_path
+            if "/Data/" in df_file and os.path.isabs(df_file):
+                self.save_dir = df_file.split("/Data/")[0] + "/Data"
+        else:
+            df_file_basename = ""
+
         self.model_size_stats()
 
         # ensure that the id is unique by using pid in id
@@ -59,6 +70,7 @@ class ModelSaver:
         )
         self.config["id"] = [model_id]
         self.config["timetag"] = [model_id]
+        self.config["save_dir"] = [self.save_dir]
 
         # Save the network
         os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
@@ -79,7 +91,11 @@ class ModelSaver:
         df.to_pickle(network_dir + "config.data")
 
         # concatenate config to preexisting dataframe if requested
+        save_path = f"{self.save_dir}/Dataframes/{df_file_basename}"
         if df_file is not None:
-            utils.save_df_row(self.config, f"{self.save_dir}/Dataframes/{df_file}")
+            utils.save_df_row(
+                self.config,
+                save_path,
+            )
 
         return network_dir
