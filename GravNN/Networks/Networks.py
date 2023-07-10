@@ -381,8 +381,9 @@ def CustomNet(**kwargs):
     u_nn = get_network_fcn(kwargs["network_arch"][0])(x, **kwargs)
 
     p = compute_p(**kwargs)
-    u_analytic = AnalyticModelLayer(**kwargs)(features)
-    u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn)
+    exp = ExponentLayer(**kwargs)(features)
+    u_analytic = AnalyticModelLayer(**kwargs)(features, exp)
+    u_nn_scaled = ScaleNNPotential(p, **kwargs)(features, u_nn, exp)
     u_fused = FuseModels(**kwargs)(u_nn_scaled, u_analytic)
     u = EnforceBoundaryConditions(**kwargs)(features, u_fused, u_analytic)
 

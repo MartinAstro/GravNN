@@ -29,17 +29,28 @@ def r_safety_set(r, clip=1.0):
     return r_cap, r_inv_cap
 
 
-def blend_smooth(r, f, g, r_ref=1.0, k=1.0):
-    phi = smooth_step(r, r_ref, k)
-    return phi * f + (1.0 - phi) * g
+def linear_map(r, a, b):
+    return (r - a) / (b - a)
 
 
-def smooth_step(r, r_ref, k):
-    phi = -2 * tf.pow((r - r_ref) / k, 3) + 3 * tf.pow((r - r_ref) / k, 2)
-    dr = r - r_ref
-    phi = tf.where(dr < 0.0, 0.0, phi)
-    phi = tf.where(dr < 1.0, phi, 1.0)
+def smooth_step(r, r_ref_min, r_ref_max):
+    x = linear_map(r, r_ref_min, r_ref_max)
+    x = tf.clip_by_value(x, 0.0, 1.0)
+    phi = 3 * tf.pow(x, 2) - 2 * tf.pow(x, 3)
+
+    # phi is only valid in the domain of x = [0, 1]
+    # phi = tf.where(x > 1.0, 1.0, phi)
+    # phi = tf.where(x < 0.0, 0.0, phi)
+    # phi = tf.where(phi < 0.0, 0.0, phi)
+    # phi = tf.where(phi > 1.0, 1.0, phi)
     return phi
+
+
+def blend_smooth(r, f, g, r_ref_min=0.0, r_ref_max=1.0):
+    # when phi = 0.0, exclusively use f
+    # when phi = 1.0, exclusively use g
+    phi = smooth_step(r, r_ref_min, r_ref_max)
+    return (1.0 - phi) * f + phi * g
 
 
 # preprocessing
@@ -127,6 +138,35 @@ class InvRLayer(tf.keras.layers.Layer):
         return config
 
 
+class ExponentLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        dtype = kwargs.get("dtype")[0]
+        super(ExponentLayer, self).__init__(dtype=dtype)
+        exponent = kwargs.get("exponent", [0.25])[0]
+        self.exponent_init = tf.constant(exponent, dtype=dtype).numpy()
+
+    def build(self, input_shapes):
+        self.exponent = self.add_weight(
+            "exponent_analytic",
+            shape=[1],
+            trainable=True,
+            initializer=tf.keras.initializers.Constant(value=self.exponent_init),
+        )
+        super(ExponentLayer, self).build(input_shapes)
+
+    def call(self, features):
+        return self.exponent
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "exponent": self.exponent_init,
+            },
+        )
+        return config
+
+
 # postprocessing
 class AnalyticModelLayer(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -142,6 +182,7 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         x_transformer = kwargs["x_transformer"][0]
         min_radius = kwargs.get("ref_radius_min", [0.0])[0]
         radius_non_dim = x_transformer.transform(np.array([[radius, 0, 0]]))
+
         self.a = radius_non_dim[0, 0]
         self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
 
@@ -155,11 +196,12 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         self.c1 = tf.constant(self.c1, dtype=dtype).numpy()
         self.c2 = tf.constant(self.c2, dtype=dtype).numpy()
 
-    def call(self, inputs):
+    def call(self, inputs, exponent):
         r = inputs[:, 0:1]
         u = inputs[:, 3:4]
 
         r_cap, r_inv_cap = r_safety_set(r)
+        tf.math.divide_no_nan(1.0, r)
         r_min = self.min_radius
 
         # External
@@ -176,10 +218,13 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         # Transition potential (between R and R_min)
         # Potential should still be increasing, but at a slower rate.
         def u_transition_fcn(r_ref):
-            return u_external_full * r_cap**0.25 / r_cap
+            return u_external_full * r_cap**exponent / r_cap
 
         u_transition = u_transition_fcn(r_cap)
         u_external = tf.where(r > 1.0, u_external_full, u_transition)
+        # u_external = blend_smooth(
+        #   r, u_transition, u_external_full, r_ref_min=1-0.5, r_ref_max=1+0.5
+        # )
 
         # Internal potential (necessary for COM constraint)
         # at this point, the potential should be decreasing
@@ -224,27 +269,26 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         min_radius = kwargs.get("ref_radius_min", [0.0])[0]
         self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
 
-    def call(self, features, u_nn):
+    def call(self, features, u_nn, exponent):
         r = features[:, 0:1]
         r_cap, r_inv_cap = r_safety_set(r)
         r_inv = tf.math.divide_no_nan(1.0, r)
 
         # scale the external potential down to correct order of mag
-        r_p_inv_cap = tf.pow(r_inv_cap, self.power)
-        u_scaled_exterior = u_nn * r_p_inv_cap
-
         # scale the transition potential down slightly less
-        # interior_power_decay = 1.0 - 0.10
-        r_pm1_inv = tf.pow(r_inv, self.power - 0.25)  # - interior_power_decay)
-        # r_pm1_inv = tf.pow(r_inv, 1.0-0.5)
-        # r_pm1_inv_cap = tf.clip_by_value(r_pm1_inv, 0.0, 2.0)
-        u_scaled_transition = u_nn * r_pm1_inv
-        u_exterior_mod = tf.where(r > 1.0, u_scaled_exterior, u_scaled_transition)
+        r_scale_external = tf.pow(r_inv, self.power)
+        r_scale_transition = tf.pow(r_inv, self.power - exponent)
+        r_scale = tf.where(r < 1.0, r_scale_transition, r_scale_external)
+        # r_scale = blend_smooth(
+        #   r, r_scale_transition, r_scale_external, r_ref_min=1-0.5, r_ref_max=1+0.5
+        # )
+        u_scaled = u_nn * r_scale
+        # u_scaled = u_nn
 
         # scale the interior
         r_sq = tf.pow(r_cap, 2.0)
         u_interior_scaled = u_nn * r_sq
-        u_final = tf.where(r > self.min_radius, u_exterior_mod, u_interior_scaled)
+        u_final = tf.where(r > self.min_radius, u_scaled, u_interior_scaled)
         return u_final
 
     def get_config(self):
@@ -252,6 +296,7 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         config.update(
             {
                 "power": self.power,
+                "min_radius": self.min_radius,
             },
         )
         return config
