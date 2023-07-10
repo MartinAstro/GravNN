@@ -22,30 +22,24 @@ def blend(x, y, z, k, x_ref):
     return output
 
 
-def r_safety_set(r):
+def r_safety_set(r, clip=1.0):
     r_inv = tf.math.divide_no_nan(1.0, r)
-    r_inv_cap = tf.clip_by_value(r_inv, 0.0, 1.0)
-    r_cap = tf.clip_by_value(r, 0.0, 1.0)
+    r_inv_cap = tf.clip_by_value(r_inv, 0.0, clip)
+    r_cap = tf.clip_by_value(r, 0.0, clip)
     return r_cap, r_inv_cap
 
 
-def r_inv_star(r, r_ref=1.0):
-    r_inv_external = tf.math.reciprocal_no_nan(r)
+def blend_smooth(r, f, g, r_ref=1.0, k=1.0):
+    phi = smooth_step(r, r_ref, k)
+    return phi * f + (1.0 - phi) * g
 
-    # # linear approx
-    # m = 1.0 / r_ref**2
-    # b = 2.0 / r_ref
-    # r_inv_internal = -m * r + b
 
-    # # quadratic approx
-    a = 1.0 / r_ref**3
-    b = -3.0 / r_ref**2
-    c = 3.0 / r_ref
-    r_inv_internal = a * r**2 + b * r + c
-
-    r_inv_star = tf.where(r > r_ref, r_inv_external, r_inv_internal)
-    # r_inv_star = r_inv_external
-    return r_inv_star
+def smooth_step(r, r_ref, k):
+    phi = -2 * tf.pow((r - r_ref) / k, 3) + 3 * tf.pow((r - r_ref) / k, 2)
+    dr = r - r_ref
+    phi = tf.where(dr < 0.0, 0.0, phi)
+    phi = tf.where(dr < 1.0, phi, 1.0)
+    return phi
 
 
 # preprocessing
@@ -165,14 +159,10 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         r = inputs[:, 0:1]
         u = inputs[:, 3:4]
 
-        # Compute constant density assumption
+        r_cap, r_inv_cap = r_safety_set(r)
+        r_min = self.min_radius
 
         # External
-        # This is a SH solution
-        # r_inv = r_inv_star(r)
-
-        r_cap, r_inv_cap = r_safety_set(r)
-
         # Compute point mass approximation assuming
         u_pm_external = self.mu * r_inv_cap
         u_C20 = (
@@ -183,20 +173,32 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         )
         u_external_full = tf.negative(u_pm_external + u_C20)
 
-        # Transition potential
+        # Transition potential (between R and R_min)
+        # Potential should still be increasing, but at a slower rate.
+        def u_transition_fcn(r_ref):
+            return u_external_full * r_cap**0.25 / r_cap
 
-        # makes derivative 1/x instead of 1/x^2
-        u_external_mod = u_external_full * r_cap**0.5 / r_cap
-        # u_external_mod = u_external_full * tf.math.log(r_cap)/tf.math.log(10.0)
+        u_transition = u_transition_fcn(r_cap)
+        u_external = tf.where(r > 1.0, u_external_full, u_transition)
 
-        u_external = tf.where(r > 1.0, u_external_full, u_external_mod)
-        u_analytic = u_external
+        # Internal potential (necessary for COM constraint)
+        # at this point, the potential should be decreasing
+        # Compute G_sigma to ensure continuity between external and internal potential
+        def volume(r_ref):
+            return 4.0 / 3.0 * np.pi * r_ref**3
 
-        # Internal potential
-        # internal_volume = 4.0 / 3.0 * np.pi * r**3
-        # u_internal = tf.negative(G_sigma * internal_volume / r)
-        # u_analytic = tf.where(r < self.min_radius, u_internal, u_external)
+        V_internal = volume(r_min)
+        u_min_radius = V_internal / r_min
 
+        # compute the coefficient to ensure continuity
+        u_transition_r_min = u_transition_fcn(r_min)
+        G_sigma = tf.abs(u_transition_r_min / u_min_radius)
+
+        internal_volume = volume(r)
+        u_internal = tf.negative(G_sigma * internal_volume / r_cap)
+        u_analytic = tf.where(r_cap < r_min, u_internal, u_external)
+
+        # u_analytic = u_external
         return u_analytic
 
     def get_config(self):
@@ -206,6 +208,7 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
                 "mu": self.mu,
                 "a": self.a,
                 "C20": self.C20,
+                "min_radius": self.min_radius,
             },
         )
         return config
@@ -218,29 +221,30 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         dtype = kwargs["dtype"][0]
         super(ScaleNNPotential, self).__init__(dtype=dtype)
         self.power = tf.constant(power, dtype=dtype).numpy()
+        min_radius = kwargs.get("ref_radius_min", [0.0])[0]
+        self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
 
     def call(self, features, u_nn):
         r = features[:, 0:1]
-        # r_inv = r_inv_star(r)
         r_cap, r_inv_cap = r_safety_set(r)
-        # r_p = tf.pow(r_cap, self.power)
         r_inv = tf.math.divide_no_nan(1.0, r)
 
-        # r_pm1_inv = tf.pow(r_inv, self.power-3)
-        r_pm1_inv = tf.pow(r_inv, self.power - 0.5)
+        # scale the external potential down to correct order of mag
         r_p_inv_cap = tf.pow(r_inv_cap, self.power)
-
         u_scaled_exterior = u_nn * r_p_inv_cap
-        u_scaled_interior = (
-            u_nn * r_pm1_inv
-        )  #  * r_cap  # the potential decays linearly   # * r_p
 
-        # only scale for radii above brillouin sphere
-        u_final = tf.where(r > 1.0, u_scaled_exterior, u_scaled_interior)
+        # scale the transition potential down slightly less
+        # interior_power_decay = 1.0 - 0.10
+        r_pm1_inv = tf.pow(r_inv, self.power - 0.25)  # - interior_power_decay)
+        # r_pm1_inv = tf.pow(r_inv, 1.0-0.5)
+        # r_pm1_inv_cap = tf.clip_by_value(r_pm1_inv, 0.0, 2.0)
+        u_scaled_transition = u_nn * r_pm1_inv
+        u_exterior_mod = tf.where(r > 1.0, u_scaled_exterior, u_scaled_transition)
 
-        # u_final = u_nn*tf.pow(tf.math.divide_no_nan(1.0, r), self.power)
-        # u_final = u_scaled
-        # u_final = u_nn
+        # scale the interior
+        r_sq = tf.pow(r_cap, 2.0)
+        u_interior_scaled = u_nn * r_sq
+        u_final = tf.where(r > self.min_radius, u_exterior_mod, u_interior_scaled)
         return u_final
 
     def get_config(self):
