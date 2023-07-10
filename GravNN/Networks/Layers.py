@@ -130,7 +130,13 @@ class InvRLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         r = inputs[:, 0:1]
         r_cap, r_inv_cap = r_safety_set(r)
+
+        # r_inv = tf.math.divide_no_nan(1.0, r)
+        # r_cap = tf.clip_by_value(r, 0.0, 3.0)
+        # r_inv_cap = tf.clip_by_value(r_inv, 0.0, 3.0)
+
         spheres = tf.concat([r_inv_cap, inputs[:, 1:4], r_cap], axis=1)
+        # spheres = tf.concat([tf.math.divide_no_nan(1.0,r), inputs[:, 1:4]], axis=1)
         return spheres
 
     def get_config(self):
@@ -176,6 +182,9 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         # defaults to zero
         self.mu = kwargs.get("mu_non_dim", [0.0])[0]
         self.C20 = kwargs.get("cBar", [np.zeros((3, 3))])[0][2, 0]
+        self.use_transition_potential = kwargs.get("use_transition_potential", [True])[
+            0
+        ]
 
         # compute reference radius
         radius = kwargs["planet"][0].radius
@@ -195,20 +204,27 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         self.C20 = tf.constant(self.C20, dtype=dtype).numpy()
         self.c1 = tf.constant(self.c1, dtype=dtype).numpy()
         self.c2 = tf.constant(self.c2, dtype=dtype).numpy()
+        self.use_transition_potential = tf.constant(
+            self.use_transition_potential,
+            dtype=tf.bool,
+        ).numpy()
 
     def call(self, inputs, exponent):
         r = inputs[:, 0:1]
         u = inputs[:, 3:4]
 
         r_cap, r_inv_cap = r_safety_set(r)
-        tf.math.divide_no_nan(1.0, r)
         r_min = self.min_radius
 
         # External
         # Compute point mass approximation assuming
-        u_pm_external = self.mu * r_inv_cap
+        r_inv_pm = tf.math.divide_no_nan(1.0, r)
+        if self.use_transition_potential:
+            r_inv_pm = r_inv_cap
+
+        u_pm_external = self.mu * r_inv_pm
         u_C20 = (
-            (self.a * r_inv_cap) ** 2
+            (self.a * r_inv_pm) ** 2
             * u_pm_external
             * (u**2 * self.c1 - self.c2)
             * self.C20
@@ -222,6 +238,10 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
 
         u_transition = u_transition_fcn(r_cap)
         u_external = tf.where(r > 1.0, u_external_full, u_transition)
+
+        if not self.use_transition_potential:
+            u_external = u_external_full
+
         # u_external = blend_smooth(
         #   r, u_transition, u_external_full, r_ref_min=1-0.5, r_ref_max=1+0.5
         # )
@@ -254,6 +274,7 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
                 "a": self.a,
                 "C20": self.C20,
                 "min_radius": self.min_radius,
+                "use_transition_potential": self.use_transition_potential,
             },
         )
         return config
@@ -265,9 +286,14 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         This ensures that U_NN typically stays on the order of 1E0"""
         dtype = kwargs["dtype"][0]
         super(ScaleNNPotential, self).__init__(dtype=dtype)
-        self.power = tf.constant(power, dtype=dtype).numpy()
         min_radius = kwargs.get("ref_radius_min", [0.0])[0]
+        use_transition_potential = kwargs.get("use_transition_potential", [True])[0]
+        self.power = tf.constant(power, dtype=dtype).numpy()
         self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
+        self.use_transition_potential = tf.constant(
+            use_transition_potential,
+            dtype=tf.bool,
+        ).numpy()
 
     def call(self, features, u_nn, exponent):
         r = features[:, 0:1]
@@ -279,6 +305,9 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         r_scale_external = tf.pow(r_inv, self.power)
         r_scale_transition = tf.pow(r_inv, self.power - exponent)
         r_scale = tf.where(r < 1.0, r_scale_transition, r_scale_external)
+
+        if not self.use_transition_potential:
+            r_scale = r_scale_external
         # r_scale = blend_smooth(
         #   r, r_scale_transition, r_scale_external, r_ref_min=1-0.5, r_ref_max=1+0.5
         # )
@@ -297,6 +326,7 @@ class ScaleNNPotential(tf.keras.layers.Layer):
             {
                 "power": self.power,
                 "min_radius": self.min_radius,
+                "use_transition_potential": self.use_transition_potential,
             },
         )
         return config
