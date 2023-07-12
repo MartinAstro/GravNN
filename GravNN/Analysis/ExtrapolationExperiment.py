@@ -11,7 +11,7 @@ from GravNN.Trajectories import RandomDist
 
 
 class ExtrapolationExperiment:
-    def __init__(self, model, config, points, random_seed=1234):
+    def __init__(self, model, config, points, random_seed=1234, **kwargs):
         self.config = config
         self.model = model
         self.points = points
@@ -22,6 +22,7 @@ class ExtrapolationExperiment:
         extra_max_radius = np.nan_to_num(self.config.get("extra_radius_max", [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config["radius_min"][0], max_radius]
+        self.omit_train_data = kwargs.get("omit_train_data", False)
 
         # attributes to be populated in run()
         self.positions = None
@@ -177,7 +178,8 @@ class ExtrapolationExperiment:
         )
 
     def run(self):
-        self.get_train_data()
+        if not self.omit_train_data:
+            self.get_train_data()
         self.get_test_data()
         self.get_PINN_data()
         self.compute_losses(self.loss_fcn_list)

@@ -440,7 +440,17 @@ def load_config_and_model(
 
     if only_weights:
         model = PINNGravityModel(config)
-        weights_save_dir = config["save_dir"][0]
+        weights_save_dir = config.get("save_dir", [data_dir])[0]
+        # attempt to find the weights_save_dir with the installed GravNN dir
+        if "/projects/joma5012" in weights_save_dir:
+            weights_save_dir_parts = weights_save_dir.split(
+                "/projects/joma5012/GravNN/",
+            )
+
+            weights_save_dir = (
+                os.path.dirname(GravNN.__file__) + "/../.." + weights_save_dir_parts[-1]
+            )
+
         model.network.load_weights(
             f"{weights_save_dir}/Networks/{model_id}/weights",
         )

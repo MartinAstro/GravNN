@@ -273,6 +273,8 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
                 "mu": self.mu,
                 "a": self.a,
                 "C20": self.C20,
+                "c1": self.c1,
+                "c2": self.c2,
                 "min_radius": self.min_radius,
                 "use_transition_potential": self.use_transition_potential,
             },

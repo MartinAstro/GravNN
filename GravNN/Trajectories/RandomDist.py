@@ -36,6 +36,8 @@ class RandomDist(TrajectoryBase):
         except Exception:
             # asteroids grav_file is the shape model
             grav_file = kwargs.get("grav_file", [None])[0]
+            if grav_file is not None:
+                grav_file = make_windows_path_posix(grav_file)
 
             # planets have shape model (sphere currently)
             self.model_file = kwargs.get("shape_model", [grav_file])

@@ -244,10 +244,9 @@ class PlanesVisualizer(VisualizationBase):
                 ax = plt.gca()
                 divider = make_axes_locatable(ax)
                 cbar_gs = divider.append_axes("right", size="5%", pad=0.05)
+                cBar = plt.colorbar(im, cax=cbar_gs)
             else:
-                pass
-
-            cBar = plt.colorbar(im, cax=plt.subplot(cbar_gs))
+                cBar = plt.colorbar(im, cax=plt.subplot(cbar_gs))
 
             # cbar = plt.colorbar(fraction=0.15,)
             cBar.set_label(colorbar_label)

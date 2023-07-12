@@ -24,6 +24,7 @@ class PlanesExperiment:
         extra_max_radius = self.config.get("extra_radius_max", [0])[0]
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = np.array([-max_radius, max_radius])
+        self.omit_train_data = kwargs.get("omit_train_data", False)
 
         if kwargs.get("remove_error", True):
             self.config["acc_noise"] = [0.0]
@@ -133,7 +134,7 @@ class PlanesExperiment:
             )
 
             N = len(self.x_test)
-            step = 5000
+            step = 100
             mask = np.full((N,), False)
             pbar = ProgressBar(N, True)
             rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
@@ -147,7 +148,9 @@ class PlanesExperiment:
             return mask
 
     def run(self):
-        self.get_train_data()
+        if not self.omit_train_data:
+            print("INCLUDING TRAIN")
+            self.get_train_data()
         self.get_test_data()
         self.get_model_data()
         self.get_planet_mask()
