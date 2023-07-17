@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import GravNN
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.utils import get_history
 from GravNN.Visualization.VisualizationBase import VisualizationBase
@@ -71,7 +72,8 @@ class HistoryVisualizer(VisualizationBase):
 
 
 def main():
-    df = pd.read_pickle("Data/Dataframes/earth_revisited_032723.data")
+    gravnn_dir = os.path.dirname(GravNN.__file__) + "/../"
+    df = pd.read_pickle(gravnn_dir + "Data/Dataframes/eros_poly_071023_small_BS.data")
     idx = -1
     model_id = df["id"].values[idx]
     config, model = load_config_and_model(model_id, df)
