@@ -85,7 +85,7 @@ class Heatmap3DVisualizer(VisualizationBase):
         plt.rc("font", size=7.0)
         self.fig_size = (self.w_tri, self.w_tri)
 
-    def plot(self, x, y, z, query=None, vmin=None, vmax=None, **kwargs):
+    def plot(self, x, y, z, query=None, vmin=None, vmax=None, base2=True, **kwargs):
         if kwargs.get("newFig", True):
             fig, ax = self.new3DFig()
             ax.set_xlabel(None)
@@ -101,11 +101,20 @@ class Heatmap3DVisualizer(VisualizationBase):
 
         df_stacked = data_df.stack()
         index = np.array(df_stacked.index.tolist()).astype(float)
-        x_data, y_data = np.log2(index[:, 0]), np.log2(index[:, 1])
+
+        x_data, y_data = index[:, 0], index[:, 1]
+        if base2:
+            x_data, y_data = np.log2(x_data), np.log2(y_data)
+
+        dx = np.diff(np.unique(x_data))[0]
+        dy = np.diff(np.unique(y_data))[0]
+        if base2:
+            dx = np.ones_like(x_data) * 1
+            dy = np.ones_like(y_data) * 1
 
         z_data = vmin
-        dx = np.ones_like(x_data) * 1
-        dy = np.ones_like(y_data) * 1
+        if vmin is None:
+            vmin = data_df.values.min()
 
         dz = df_stacked.values - vmin
         if vmax is not None:
@@ -128,14 +137,18 @@ class Heatmap3DVisualizer(VisualizationBase):
         )
 
         ax.set_zlim([vmin, vmax])
-        ax.view_init(elev=15, azim=45)
 
-        ax.set_xticklabels(
-            ["$2^{" + str(int(i)) + "}$" for i in np.unique(x_data)],
-        )  # , tickpad=0.0)
-        ax.set_yticklabels(
-            ["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)],
-        )  # , tickpad=0.0)
+        el = kwargs.get("elev", 15)
+        az = kwargs.get("azim", 45)
+        ax.view_init(elev=el, azim=az)
+
+        if base2:
+            ax.set_xticklabels(
+                ["$2^{" + str(int(i)) + "}$" for i in np.unique(x_data)],
+            )
+            ax.set_yticklabels(
+                ["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)],
+            )
 
         ax.tick_params(pad=0.0)
 
