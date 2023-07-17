@@ -75,7 +75,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         if kwargs.get("new_fig", True):
             self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
-        self.plot_fcn(x, avg_line, label=label, color="gray")
+        self.plot_fcn(x, avg_line, label=label, color=kwargs.get("avg_color", "gray"))
 
         if kwargs.get("plot_std", True):
             y_std_upper = np.squeeze(avg_line + 1 * std_line)
