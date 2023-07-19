@@ -1,99 +1,76 @@
-from GravNN.Trajectories.SurfaceDist import SurfaceDist
-from GravNN.Trajectories import RandomAsteroidDist
-import matplotlib.pyplot as plt
-import numpy as np
 import glob
 import os
-import pickle
+
+import numpy as np
+import pandas as pd
+
+import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Visualization.VisualizationBase import VisualizationBase
+from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.Trajectories import RandomDist
+from GravNN.Trajectories.SurfaceDist import SurfaceDist
 
-def get_file_info(file_path):
-    directories = os.path.dirname(file_path).split('/')
-    model_name = os.path.basename(file_path).split('.')[0]
-    samples = int(model_name)
-    max_deg_dir = directories[-3]
-    max_deg = int(max_deg_dir.split("_")[1])
-    return samples, max_deg
 
-def evaluate_sh(planet, N, trajectory, dist_name, sampling_interval, hoppers=False):
-    
-    # models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/**/%s/*.csv" % (N, str(hoppers)))
-    models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/M_0/%s/*.csv" % (N, str(hoppers)))
-    # models = glob.glob("GravNN/Files/GravityModels/Regressed/Eros/EphemerisDist/BLLS/N_%d/M_1/%s/*.csv" % (N, str(hoppers)))
-    x, a_true, u = get_poly_data(trajectory, planet.obj_200k, point_mass_removed=[False])
+def evaluate_sh(trajectory, shape_file, model):
+    max_deg = int(os.path.basename(model).split("_")[1])
+    x, a_true, u = get_poly_data(trajectory, shape_file, point_mass_removed=[False])
+    x, a, u = get_sh_data(
+        trajectory,
+        model,
+        max_deg=max_deg,
+        deg_removed=-1,
+        override=[True],
+    )
+    a_error = np.linalg.norm(a - a_true, axis=1) / np.linalg.norm(a_true, axis=1) * 100
+    return np.average(a_error)
 
-    sample_list = np.array([])
-    error_list = np.array([])
 
-    models.sort()
-    for model in models:
-        samples, max_deg = get_file_info(model)
-        x, a, u = get_sh_data(trajectory, model, max_deg=max_deg, deg_removed=-1,override=[True])
-        a_error = np.linalg.norm(a - a_true, axis=1)/np.linalg.norm(a_true,axis=1)*100
-
-        sample_list = np.hstack((sample_list, samples))
-        error_list = np.hstack((error_list, np.average(a_error)))
-
-    # Sort models based on cumulative sample count
-    idx = np.argsort(sample_list)
-    sample_list = np.take_along_axis(sample_list,idx, axis=0)
-    error_list = np.take_along_axis(error_list, idx, axis=0)
-
-    vis = VisualizationBase()
-    vis.fig_size = vis.half_page
-    vis.newFig()
-    plt.semilogy(sample_list*sampling_interval/(86400), error_list)
-    plt.xlabel("Days Since Insersion")
-    plt.ylabel("Average Acceleration Error")
-    plt.ylim(1E0, np.max(error_list))
-
-    directory = os.path.abspath('.') + "/Plots/Asteroid/Regression/"
-    os.makedirs(directory, exist_ok=True)
-    vis.save(plt.gcf(), directory + "sh_error_near_shoemaker_"+ str(max_deg) + "_" + dist_name + ".pdf")
-
-    data_directory = os.path.dirname(models[-1]) + "/Data"
-    os.makedirs(data_directory,exist_ok=True)
-    with open(data_directory + "/sh_estimate_" + dist_name + ".data", 'wb') as f:
-        pickle.dump(sample_list, f)
-        pickle.dump(error_list, f)
-
-def evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers):
+def main(df_path):
     planet = Eros()
-    dist_name += "_"+str(sampling_interval)
-    evaluate_sh(planet, 4, trajectory, dist_name, sampling_interval, hoppers)
-    evaluate_sh(planet, 8, trajectory, dist_name, sampling_interval, hoppers)
-    evaluate_sh(planet, 16, trajectory, dist_name, sampling_interval, hoppers)
+    R = planet.radius
+    N_samples = 2000  # 20000
+    df = pd.read_pickle(df_path)
 
-def main():
-    planet = Eros()
-    hoppers = False
-    trajectory = RandomAsteroidDist(planet, [
-        planet.radius, planet.radius * 3], 
-        20000, 
-        planet.obj_200k)
-    dist_name = "r_outer"
-    sampling_interval = 10*60
-    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
+    for i in range(len(df)):
+        model = df.iloc[i]["file_name"]
 
-    min_radius = 0
-    max_radius = planet.radius 
-    trajectory = RandomAsteroidDist(planet, [
-        min_radius, max_radius], 
-        20000, 
-        planet.obj_200k)
-    dist_name = "r_inner"
-    sampling_interval = 10*60
-    evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
+        outer_trajectory = RandomDist(
+            planet,
+            [R, 3 * R],
+            N_samples,
+            shape_model=planet.obj_8k,
+        )
+        outer_avg_error = evaluate_sh(outer_trajectory, planet.obj_8k, model)
 
-    # trajectory = SurfaceDist(planet, planet.obj_200k)
-    # dist_name = "r_surface"
-    # sampling_interval = 10*60
-    # evaluate_sh_suite(trajectory, sampling_interval, dist_name, hoppers)
+        inner_trajectory = RandomDist(
+            planet,
+            [0, R],
+            N_samples,
+            shape_model=planet.obj_8k,
+        )
+        inner_avg_error = evaluate_sh(inner_trajectory, planet.obj_8k, model)
 
-    # plt.show()
+        surface_trajectory = SurfaceDist(planet, planet.obj_8k)
+        surface_avg_error = evaluate_sh(surface_trajectory, planet.obj_8k, model)
+
+        error_dict = {
+            "outer_avg_error": outer_avg_error,
+            "inner_avg_error": inner_avg_error,
+            "surface_avg_error": surface_avg_error,
+        }
+        # update dataframe in place to include these new columns
+        df.loc[df.index[i], error_dict.keys()] = error_dict.values()
+
+    new_df_path = df_path.split(".data")[0] + "_metrics.data"
+    df.to_pickle(new_df_path)
+
 
 if __name__ == "__main__":
-    main()
+    gravnn_dir = os.path.dirname(GravNN.__file__) + "/../"
+    search = f"{gravnn_dir}Data/Dataframes/eros_sh_regression_*.data"
+    files = glob.glob(search)
+    for file in files:
+        if "metric" in file:
+            continue
+        main(file)

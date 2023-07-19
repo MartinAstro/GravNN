@@ -1,14 +1,17 @@
+import argparse
+import copy
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 
+import GravNN
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks.Configs import *
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Layers import *
 from GravNN.Networks.Model import PINNGravityModel
 from GravNN.Networks.Saver import ModelSaver
+from GravNN.Regression.utils import append_data, preprocess_data
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories.utils import (
     generate_near_hopper_trajectories,
@@ -18,22 +21,17 @@ from GravNN.Trajectories.utils import (
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 
-def append_data(x_train, y_train, x, y):
-    try:
-        for i in range(len(x)):
-            x_train.append(x[i])
-            y_train.append(y[i])
-    except Exception:
-        x_train = np.concatenate((x_train, x))
-        y_train = np.concatenate((y_train, y))
-
-    x_train = np.array(x_train)
-    y_train = np.array(y_train)
-
-    return x_train, y_train
-
-
-def regress_nn(model, trajectories, hopper_trajectories, include_hoppers=False):
+def regress_nn(
+    model,
+    trajectories,
+    hopper_trajectories,
+    include_hoppers,
+    df_file,
+    acc_noise,
+    pos_noise,
+    new_model=False,
+    config=None,
+):
     planet = model.config["planet"][0]
 
     x_train = []
@@ -46,10 +44,12 @@ def regress_nn(model, trajectories, hopper_trajectories, include_hoppers=False):
     hopper_samples = 0
 
     # For each orbit, train the network
+    # for k in range(len(trajectories) - 4, len(trajectories)):
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
-        x, a, u = get_poly_data(trajectory, planet.obj_200k, remove_point_mass=[False])
-        x_train, y_train = append_data(x_train, y_train, x, a)
+        x, a, u = get_poly_data(trajectory, planet.obj_8k, remove_point_mass=[False])
+        x_errored, a_errored = preprocess_data(x, a, acc_noise, pos_noise)
+        x_train, y_train = append_data(x_train, y_train, x_errored, a_errored)
 
         # Don't include the hoppers in the sample count because those samples are used
         # to compute the times in the plotting routines.
@@ -57,16 +57,23 @@ def regress_nn(model, trajectories, hopper_trajectories, include_hoppers=False):
             hop_trajectory = hopper_trajectories[k]
             x_hop, a_hop, u_hop = get_poly_data(
                 hop_trajectory,
-                planet.obj_200k,
+                planet.obj_8k,
                 remove_point_mass=[False],
             )
             hopper_samples += len(x_hop)
-            x_train, y_train = append_data(x_train, y_train, x_hop, a_hop)
+            x_errored, a_errored = preprocess_data(x_hop, a_hop, acc_noise, pos_noise)
+            x_train, y_train = append_data(x_train, y_train, x_errored, a_errored)
 
         total_samples = len(x_train) - hopper_samples
 
         data = DataSet()
         data.config = {"dtype": ["float32"]}
+
+        if new_model:
+            new_config = None
+            if new_config is None:
+                new_config = copy.deepcopy(config)
+            model = PINNGravityModel(new_config)
 
         x_preprocessor = model.config["x_transformer"][0]
         a_preprocessor = model.config["a_transformer"][0]
@@ -76,24 +83,21 @@ def regress_nn(model, trajectories, hopper_trajectories, include_hoppers=False):
 
         data.from_raw_data(x_train_processed, y_train_processed)
         history = model.train(data)
-        saver = ModelSaver(model, history)
-        saver.save(df_file=None)
 
         plt.plot(history.history["loss"], label=str(k))
 
-        planet_name = planet.__class__.__name__
-        trajectory_name = trajectory.__class__.__name__
-        file_name = "%s/%s/%s/%d.data" % (
-            planet_name,
-            trajectory_name,
-            str(include_hoppers),
-            total_samples,
-        )
-        directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/"
-        os.makedirs(os.path.dirname(directory + file_name), exist_ok=True)
-        save_dir = directory + file_name
+        regression_dict = {
+            "planet": [planet.__class__.__name__],
+            "trajectory": [trajectory.__class__.__name__],
+            "hoppers": [include_hoppers],
+            "samples": [total_samples],
+            "acc_noise": [acc_noise],
+            "pos_noise": [pos_noise],
+            "seed": [0],
+        }
+        model.config.update(regression_dict)
         saver = ModelSaver(model, history)
-        saver.save(df_file=save_dir)
+        saver.save(df_file=df_file)
 
         pbar.update(k)
 
@@ -102,12 +106,55 @@ def regress_nn(model, trajectories, hopper_trajectories, include_hoppers=False):
 
 
 def main():
-    include_hoppers = False
+    parser = argparse.ArgumentParser(description="Regress SH from NEAR data.")
+
+    # Add arguments with default values
+    parser.add_argument(
+        "--hoppers",
+        type=bool,
+        default=False,
+        help="Include hoppers in the regression",
+    )
+    parser.add_argument(
+        "--acc_noise",
+        type=float,
+        default=0.0,
+        help="Acceleration error ratio [-].",
+    )
+    parser.add_argument(
+        "--pos_noise",
+        type=float,
+        default=0.0,
+        help="position error [m].",
+    )
+    parser.add_argument(
+        "--fuse_models",
+        type=bool,
+        default=False,
+        help="Fuse analytic model into PINN",
+    )
+
+    # Parse the command-line arguments
+    args = parser.parse_args()
+
+    # Access the values of the arguments
     sampling_interval = 10 * 60
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
     hopper_trajectories = generate_near_hopper_trajectories(
         sampling_inteval=sampling_interval,
     )
+    hoppers = args.hoppers
+    acc_noise = args.acc_noise
+    pos_noise = args.pos_noise
+    fuse_models = args.fuse_models
+
+    gravnn_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
+    model_specifier = f"{hoppers}_{acc_noise}_{pos_noise}_{fuse_models}.data"
+    df_file = f"{gravnn_dir}/../Data/Dataframes/eros_regression_{model_specifier}"
+
+    # remove the df_file if it exists
+    if os.path.exists(df_file):
+        os.remove(df_file)
 
     config = get_default_eros_config()
     config.update(PINN_III())
@@ -119,21 +166,17 @@ def main():
         "N_val": [10],
         "num_units": [20],
         "radius_min": [0.0],
-        "radius_max": [Eros().radius * 10],
+        "radius_max": [Eros().radius * 3],
         "loss_fcns": [["percent", "rms"]],
         "lr_anneal": [False],
-        "learning_rate": [0.0001],
+        "learning_rate": [0.0001 * 10],
         "dropout": [0.0],
         "batch_size": [2**18],
-        "epochs": [1000],
+        "epochs": [2500],
         "preprocessing": [["pines", "r_inv"]],
         "PINN_constraint_fcn": ["pinn_a"],
-        "ref_radius_analytic": [10],
-        "fuse_models": [False],
-        # "jit_compile": [False],
-        # "eager": [True],
-        # "tanh_r" : [3],
-        # "tanh_k": [5],
+        # "ref_radius_analytic": [10],
+        "fuse_models": [fuse_models],
     }
     config.update(hparams)
 
@@ -145,7 +188,12 @@ def main():
         model,
         trajectories,
         hopper_trajectories,
-        include_hoppers=include_hoppers,
+        hoppers,
+        df_file,
+        acc_noise,
+        pos_noise,
+        new_model=True,
+        config=config,
     )
 
 

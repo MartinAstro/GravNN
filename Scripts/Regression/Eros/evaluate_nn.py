@@ -1,123 +1,72 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import glob
 import os
-import pickle
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from GravNN.Trajectories import DHGridDist, SurfaceDist, RandomAsteroidDist
+
+import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-
-def evaluate_network_error(model, trajectory, a_true,):
-    df = pd.read_pickle(model)
-    ids = df['id']
-    model_name = os.path.basename(model).split('.')[0]
-    samples = int(model_name.split("_")[-1])
-    config, model = load_config_and_model(ids[-1], df)
-    a = model.compute_acceleration(trajectory.positions.astype(np.float32))
-    a_error = np.linalg.norm(a - a_true, axis=1)/np.linalg.norm(a_true, axis=1)*100
-    return samples, np.average(a_error)
+from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.Networks.Model import load_config_and_model
+from GravNN.Trajectories import RandomDist, SurfaceDist
 
 
-def evaluate_nn(trajectory, model_file, models):
+def evaluate_nn(trajectory, model_file, model):
     x, a_true, u = get_poly_data(trajectory, model_file, point_mass_removed=[False])
-    sample_list = []
-    error_list = []
-    for model in models:
-        if "nn_estimate_r_inner_600.data" in model or \
-            "nn_estimate_r_outer_600.data" in model or \
-            "nn_estimate_r_surface_600.data" in model:
-            continue
-        samples, error = evaluate_network_error(model, trajectory, a_true)
-        sample_list.append(samples)
-        error_list.append(error)
-    sample_list = np.array(sample_list)
-    error_list = np.array(error_list)
-    idx = np.argsort(sample_list)
-    sample_list = np.take_along_axis(sample_list,idx, axis=0)
-    error_list = np.take_along_axis(error_list, idx, axis=0)
-    return sample_list, error_list
+    a = model.compute_acceleration(trajectory.positions.astype(np.float32))
+    a_error = np.linalg.norm(a - a_true, axis=1) / np.linalg.norm(a_true, axis=1) * 100
+    return np.average(a_error)
 
 
+def main(df_path):
+    df = pd.read_pickle(df_path)
 
-def generate_figure(directory, sample_list, error_list):
-    vis = VisualizationBase()
-    vis.newFig()
-    plt.semilogy(sample_list, error_list)
-    plt.xlabel("Samples")
-    plt.ylabel("Average Acceleration Error")
-    vis.save(plt.gcf(), directory + "nn_error_near_shoemaker.pdf")
-
-def get_constraint_str(prefix):
-    words = prefix.split("_")
-    function = words[0].lower() + "_" + words[1].lower()
-    return function
-
-def main():
     planet = Eros()
-    for seed in range(0,5):
-        for hopper in [False]:#, False]:
-            for constraint in ['pinn_alc']:#['pinn_a', 'pinn_alc']:
-                network_type = "SphericalPinesTransformerNet"
-                model_directory = os.path.curdir + "/GravNN/Files/GravityModels/Regressed/%s/%s/%s/%s/%s/%s/" % (
-                    planet.__class__.__name__,
-                    "EphemerisDist",
-                    network_type,
-                    constraint,
-                    hopper,
-                    "seed_" + str(seed),
-                )
-                os.makedirs(model_directory + "Data",exist_ok=True)
-                models = glob.glob( model_directory + "*.data") # PINN_A, PINN_ALC
-                models.sort()
+    R = planet.radius
+    N_samples = 2000  # 20000
 
-                if len(models) == 0:
-                    continue
+    for i in range(len(df)):
+        id = df["id"].values[i]
+        config, model = load_config_and_model(id, df)
 
-                planet = Eros()
-                sampling_interval = 10*60
-                #plot_path = os.path.abspath('.') +"/Plots/Asteroid/Regression/" + file_prefix + "_"
+        outer_trajectory = RandomDist(
+            planet,
+            [R, 3 * R],
+            N_samples,
+            shape_model=planet.obj_8k,
+        )
+        outer_avg_error = evaluate_nn(outer_trajectory, planet.obj_8k, model)
 
-                min_radius = planet.radius
-                max_radius = planet.radius*3
-                trajectory = RandomAsteroidDist(planet, [
-                        min_radius, max_radius], 
-                        20000, 
-                        planet.obj_200k)
-                dist_name = "r_outer_" + str(sampling_interval)
-                sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
-                #generate_figure(plot_path, sample_list, error_list)
-                with open(model_directory + "Data/nn_estimate_" + dist_name + ".data", 'wb') as f:
-                    pickle.dump(sample_list, f)
-                    pickle.dump(error_list, f)
+        inner_trajectory = RandomDist(
+            planet,
+            [0, R],
+            N_samples,
+            shape_model=planet.obj_8k,
+        )
+        inner_avg_error = evaluate_nn(inner_trajectory, planet.obj_8k, model)
 
+        surface_trajectory = SurfaceDist(planet, planet.obj_8k)
+        surface_avg_error = evaluate_nn(surface_trajectory, planet.obj_8k, model)
 
-                min_radius = 0
-                max_radius = planet.radius 
-                trajectory = RandomAsteroidDist(planet, [
-                        min_radius, max_radius], 
-                        20000, 
-                        planet.obj_200k)
-                dist_name = "r_inner_" + str(sampling_interval)
-                sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
-                # generate_figure(plot_path, sample_list, error_list)
-                with open(model_directory + "Data/nn_estimate_" + dist_name + ".data", 'wb') as f:
-                    pickle.dump(sample_list, f)
-                    pickle.dump(error_list, f)
+        error_dict = {
+            "outer_avg_error": outer_avg_error,
+            "inner_avg_error": inner_avg_error,
+            "surface_avg_error": surface_avg_error,
+        }
+        # update dataframe in place to include these new columns
+        df.loc[df.index[i], error_dict.keys()] = error_dict.values()
 
-
-                trajectory = SurfaceDist(planet, planet.obj_200k)
-                dist_name = "r_surface_" + str(sampling_interval)
-                sample_list, error_list = evaluate_nn(trajectory, planet.obj_200k, models)
-                # generate_figure(plot_path, sample_list, error_list)
-                with open(model_directory + "Data/nn_estimate_" + dist_name + ".data", 'wb') as f:
-                    pickle.dump(sample_list, f)
-                    pickle.dump(error_list, f)
-
+    new_df_path = df_path.split(".data")[0] + "_metrics.data"
+    df.to_pickle(new_df_path)
     plt.show()
 
+
 if __name__ == "__main__":
-    main()
+    gravnn_dir = os.path.dirname(GravNN.__file__) + "/../"
+    search = f"{gravnn_dir}Data/Dataframes/eros_regression_*.data"
+    files = glob.glob(search)
+    for file in files:
+        if "metric" in file:
+            continue
+        main(file)
