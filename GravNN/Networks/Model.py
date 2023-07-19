@@ -49,8 +49,35 @@ class PINNGravityModel(tf.keras.Model):
         self.init_loss_fcns()
         self.init_annealing()
         self.init_training_steps()
+        self.init_preprocessing_layers()
 
     # Initialization Fcns
+    def init_preprocessing_layers(self):
+        x_transformer = self.config["x_transformer"][0]
+        u_transformer = self.config["u_transformer"][0]
+        a_transformer = self.config["a_transformer"][0]
+
+        self.x_preprocessor = PreprocessingLayer(
+            x_transformer.min_,
+            x_transformer.scale_,
+            self.dtype,
+        )  # normalizing layer
+        self.u_postprocessor = PostprocessingLayer(
+            u_transformer.min_,
+            u_transformer.scale_,
+            self.dtype,
+        )  # unnormalize layer
+        self.a_preprocessor = PreprocessingLayer(
+            a_transformer.min_,
+            a_transformer.scale_,
+            self.dtype,
+        )  # normalizing layer
+        self.a_postprocessor = PostprocessingLayer(
+            a_transformer.min_,
+            a_transformer.scale_,
+            self.dtype,
+        )  # unormalizing layer
+
     def init_physics_information(self):
         self.constraint = self.config["PINN_constraint_fcn"][0]
         self.eval = get_PI_constraint(self.constraint)
@@ -407,10 +434,11 @@ def load_config_and_model(
     # LOAD CONFIG
     # Get the configuration data specified model_id
     if type(df_file) == str:
+        df_file_basename = os.path.basename(df_file)
+
         # If there is a /Data/ dir that is within the df_path, use it.
         if "/Data/" in df_file and os.path.isabs(df_file):
             data_dir = df_file.split("/Data/")[0] + "/Data"
-            df_file_basename = os.path.basename(df_file)
 
         # If the config dataframe hasn't been loaded
         df_file_path = f"{data_dir}/Dataframes/{df_file_basename}"

@@ -22,6 +22,7 @@ def load_network(config):
             + str(config["init_file"][0])
             + "/network",
         )
+        print(f"LOG: Loaded network from file: {config['init_file'][0]}")
     else:
         network_fcn = _get_network_fcn(config["network_type"][0])
         network = network_fcn(**config)
