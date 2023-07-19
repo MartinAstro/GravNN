@@ -19,25 +19,26 @@ def main():
 
     hparams = {
         "N_dist": [5000000],
-        "N_train": [4500000],
-        "N_val": [500000],
+        "N_train": [4900000],
+        "N_val": [100000],
         # "N_dist": [50000],
         # "N_train": [45000],
         # "N_val": [5000],
         "num_units": [20],
-        "loss_fcns": [["percent"]],
+        "loss_fcns": [["percent", "rms"]],
         "jit_compile": [True],
         "lr_anneal": [False],
         "eager": [False],
-        "learning_rate": [0.01],
+        "learning_rate": [0.0001],
+        "batch_size": [2**13],
+        "epochs": [1000],
+        "preprocessing": [["pines", "r_inv"]],
         "patience": [5000],
         "dropout": [0.0],
         # "batch_size": [4500],
-        "batch_size": [2**19],
         "min_delta": [0.01],
-        "epochs": [5000],
         "acc_noise": [0.0],
-        "preprocessing": [["pines", "r_inv", "fourier"]],
+        # "preprocessing": [["pines", "r_inv", "fourier"]],
         "PINN_constraint_fcn": ["pinn_a"],
         # "fourier_features": [5],
         "fourier_sigma": [1],
@@ -84,6 +85,16 @@ def run(config):
     # Get data, network, optimizer, and generate model
     data = DataSet(config)
     model = PINNGravityModel(config)
+    history = model.train(data)
+
+    config.update(
+        {
+            "batch_size": [2**23],
+            "epochs": [10000],
+            "learning_rate": [0.01],
+        },
+    )
+    data = DataSet(config)
     history = model.train(data)
 
     saver = ModelSaver(model, history)
