@@ -11,6 +11,7 @@ from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Layers import *
 from GravNN.Networks.Model import PINNGravityModel
 from GravNN.Networks.Saver import ModelSaver
+from GravNN.Networks.utils import configure_tensorflow, populate_config_objects
 from GravNN.Regression.utils import append_data, preprocess_data
 from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories.utils import (
@@ -130,7 +131,7 @@ def main():
     parser.add_argument(
         "--fuse_models",
         type=bool,
-        default=False,
+        default=True,
         help="Fuse analytic model into PINN",
     )
 
@@ -179,6 +180,8 @@ def main():
         "fuse_models": [fuse_models],
     }
     config.update(hparams)
+    config = populate_config_objects(config)
+    configure_tensorflow(config)
 
     # Need to initialize data to configure the transformer scales
     DataSet(config)
