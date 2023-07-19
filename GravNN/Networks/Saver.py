@@ -39,41 +39,38 @@ class ModelSaver:
         }
         self.config.update(size_stats)
 
-    def save(self, df_file=None):
-        """Add remaining training / model variables into the configuration dictionary,
-        then save the config variables into its own pickled file, and potentially add
-        it to an existing dataframe defined by `df_file`.
-
-        Args:
-            df_file (str or pd.Dataframe, optional): path to dataframe to which the
-            config variables should be appended or the loaded dataframe itself.
-            Defaults to None.
-        """
-
+    def extract_save_directory(self, df_file):
         # assume save dir is GravNN/Data
-        self.save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
+        save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
 
+        # unless there is a /Data/ dir that is within the df_path
+        if (type(df_file) == str) and os.path.isabs(df_file):
+            save_dir = os.path.dirname(df_file)
+
+            # if the filepath has Data/ in it, clip everything past it
+            # and just save into Data/Dataframes and Data/Networks...
+            if "/Data/" in df_file:
+                save_dir = df_file.split("/Data/")[0] + "/Data"
+
+        self.save_dir = save_dir
+        self.config["save_dir"] = [save_dir]
+
+    def extract_basename(self, df_file):
+        basename = ""
         if type(df_file) == str:
-            df_file_basename = os.path.basename(df_file)
+            basename = os.path.basename(df_file)
+        return basename
 
-            # unless there is a /Data/ dir that is within the df_path
-            if "/Data/" in df_file and os.path.isabs(df_file):
-                self.save_dir = df_file.split("/Data/")[0] + "/Data"
-        else:
-            df_file_basename = ""
-
-        self.model_size_stats()
-
-        # ensure that the id is unique by using pid in id
+    def assign_model_id(self):
+        # ensure that the id is unique by using pid in
         model_id = (
             pd.Timestamp(time.time(), unit="s").to_julian_date() + 1 / os.getpid()
         )
         self.config["id"] = [model_id]
         self.config["timetag"] = [model_id]
-        self.config["save_dir"] = [self.save_dir]
+        return model_id
 
-        # Save the network
-        os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
+    def save_network(self, model_id):
         os.makedirs(f"{self.save_dir}/Networks/", exist_ok=True)
         network_dir = f"{self.save_dir}/Networks/{model_id}/"
         self.network.save(network_dir + "network")
@@ -90,12 +87,32 @@ class ModelSaver:
         df = pd.DataFrame().from_dict(config).set_index("timetag")
         df.to_pickle(network_dir + "config.data")
 
-        # concatenate config to preexisting dataframe if requested
-        save_path = f"{self.save_dir}/Dataframes/{df_file_basename}"
+        self.network_dir = network_dir
+
+    def save_dataframe(self, df_file):
         if df_file is not None:
+            # concatenate config to preexisting dataframe if requested
+            basename = self.extract_basename(df_file)
+            os.makedirs(f"{self.save_dir}/Dataframes/", exist_ok=True)
+            df_save_path = f"{self.save_dir}/Dataframes/{basename}"
             utils.save_df_row(
                 self.config,
-                save_path,
+                df_save_path,
             )
 
-        return network_dir
+    def save(self, df_file=None):
+        """Add remaining training / model variables into the configuration dictionary,
+        then save the config variables into its own pickled file, and potentially add
+        it to an existing dataframe defined by `df_file`.
+
+        Args:
+            df_file (str or pd.Dataframe, optional): path to dataframe to which the
+            config variables should be appended or the loaded dataframe itself.
+        """
+        self.extract_save_directory(df_file)
+        self.model_size_stats()
+        model_id = self.assign_model_id()
+        self.save_network(model_id)
+        self.save_dataframe(df_file)
+
+        return self.network_dir
