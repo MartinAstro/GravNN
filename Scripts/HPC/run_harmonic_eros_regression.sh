@@ -3,8 +3,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
+#SBATCH --array=1-8
 #SBATCH --time=01:00:00
-#SBATCH --partition=atesting
+#SBATCH --partition=amilan
 #SBATCH --output=SlurmFiles/Regression/regress-sh-%j.out
 
 module purge

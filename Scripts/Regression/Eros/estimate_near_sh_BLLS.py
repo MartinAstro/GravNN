@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 import pandas as pd
 
@@ -117,6 +118,28 @@ def BLLS_SH(
     return C_lm, S_lm
 
 
+def get_args(idx):
+    args = [
+        [4, False, 0.0, 0],
+        [4, False, 0.1, 0],
+        [4, False, 0.0, 1],
+        [4, False, 0.1, 1],
+        [4, True, 0.0, 0],
+        [4, True, 0.1, 0],
+        [4, True, 0.0, 1],
+        [4, True, 0.1, 1],
+        [16, False, 0.0, 0],
+        [16, False, 0.1, 0],
+        [16, False, 0.0, 1],
+        [16, False, 0.1, 1],
+        [16, True, 0.0, 0],
+        [16, True, 0.1, 0],
+        [16, True, 0.0, 1],
+        [16, True, 0.1, 1],
+    ]
+    return args[idx]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Regress SH from NEAR data.")
 
@@ -143,6 +166,10 @@ def main():
 
     # Parse the command-line arguments
     args = parser.parse_args()
+    max_deg = args.deg
+    hoppers = args.hoppers
+    acc_noise = args.acc_noise
+    pos_noise = args.pos_noise
 
     # Access the values of the arguments
     sampling_interval = 10 * 60
@@ -150,10 +177,16 @@ def main():
     hopper_trajectories = generate_near_hopper_trajectories(
         sampling_inteval=sampling_interval,
     )
-    max_deg = args.deg
-    hoppers = args.hoppers
-    acc_noise = args.acc_noise
-    pos_noise = args.pos_noise
+
+    # override command line args with HPC idx
+    idx = int(sys.argv[1])
+    args = get_args(idx)
+
+    max_deg = args[0]
+    hoppers = args[1]
+    acc_noise = args[2]
+    pos_noise = args[3]
+
     remove_deg = -1
 
     BLLS_SH(

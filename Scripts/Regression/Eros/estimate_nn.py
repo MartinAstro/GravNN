@@ -106,6 +106,20 @@ def regress_nn(
     plt.show()
 
 
+def get_args(idx):
+    args = [
+        [False, 0.0, 0],
+        [False, 0.1, 0],
+        [False, 0.0, 1],
+        [False, 0.1, 1],
+        [True, 0.0, 0],
+        [True, 0.1, 0],
+        [True, 0.0, 1],
+        [True, 0.1, 1],
+    ]
+    return args[idx]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Regress SH from NEAR data.")
 
@@ -137,6 +151,10 @@ def main():
 
     # Parse the command-line arguments
     args = parser.parse_args()
+    hoppers = args.hoppers
+    acc_noise = args.acc_noise
+    pos_noise = args.pos_noise
+    fuse_models = args.fuse_models
 
     # Access the values of the arguments
     sampling_interval = 10 * 60
@@ -144,10 +162,14 @@ def main():
     hopper_trajectories = generate_near_hopper_trajectories(
         sampling_inteval=sampling_interval,
     )
-    hoppers = args.hoppers
-    acc_noise = args.acc_noise
-    pos_noise = args.pos_noise
-    fuse_models = args.fuse_models
+
+    # override args with HPC idx
+    idx = int(sys.argv[1])
+    args = get_args(idx)
+
+    hoppers = args[0]
+    acc_noise = args[1]
+    pos_noise = args[2]
 
     gravnn_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
     model_specifier = f"{hoppers}_{acc_noise}_{pos_noise}_{fuse_models}.data"
@@ -195,7 +217,7 @@ def main():
         df_file,
         acc_noise,
         pos_noise,
-        new_model=True,
+        new_model=False,
         config=config,
     )
 

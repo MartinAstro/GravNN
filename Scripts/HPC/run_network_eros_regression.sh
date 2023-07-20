@@ -4,8 +4,9 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
+#SBATCH --array=1-8
 #SBATCH --time=00:30:00
-#SBATCH --partition=atesting_a100
+#SBATCH --partition=a100
 #SBATCH --output=SlurmFiles/Regression/regress-nn-%j.out
 
 module purge
