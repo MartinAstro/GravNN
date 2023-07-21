@@ -2,9 +2,10 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --array=1-8
-#SBATCH --time=01:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --array=0-8
+#SBATCH --account=ucb387_asc1
+#SBATCH --time=01:30:00
 #SBATCH --partition=amilan
 #SBATCH --output=SlurmFiles/Regression/regress-sh-%j.out
 
@@ -22,7 +23,7 @@ echo "== Run data generation =="
 
 echo "Running orbit search"
 
-srun python /projects/joma5012/GravNN/Scripts/Regression/Eros/estimate_near_sh_BLLS.py --deg $1 --hoppers $2 --acc_noise $3 --pos_noise $4
+srun python /projects/joma5012/GravNN/Scripts/Regression/Eros/estimate_near_sh_BLLS.py $SLURM_ARRAY_TASK_ID
 
 wait
 echo "== End of Job =="

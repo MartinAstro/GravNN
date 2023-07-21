@@ -77,16 +77,21 @@ def main(hoppers, noise):
 
     sampling_interval = 60 * 10
     noise_str = "0.1_1" if noise else "0.0_0"
+    qual = f"{noise_str}_{hoppers}"
     data_dir = os.path.abspath(os.path.dirname(GravNN.__file__)) + "/../Data/Dataframes"
-    nn_df_file = f"{data_dir}/eros_regression_{hoppers}_{noise_str}_True_metrics.data"
-    sh_4_file = f"{data_dir}/eros_sh_regression_4_{noise_str}_{hoppers}_metrics.data"
-    sh_16_file = f"{data_dir}/eros_sh_regression_16_{noise_str}_{hoppers}_metrics.data"
+    nn_a_df_file = f"{data_dir}/eros_regression_{qual}_pinn_a_metrics.data"
+    nn_al_df_file = f"{data_dir}/eros_regression_{qual}_pinn_al_metrics.data"
+    sh_4_file = f"{data_dir}/eros_sh_regression_4_{qual}_metrics.data"
+    sh_16_file = f"{data_dir}/eros_sh_regression_16_{qual}_metrics.data"
 
     ############
     # Networks #
     ############
-    df = pd.read_pickle(nn_df_file)
-    plot_model_error(df, "orange", "NN", sampling_interval)
+    df = pd.read_pickle(nn_a_df_file)
+    plot_model_error(df, "orange", "NN PINN A", sampling_interval)
+
+    df = pd.read_pickle(nn_al_df_file)
+    plot_model_error(df, "green", "NN PINN AL", sampling_interval)
 
     ######################
     # Spherical Harmonics#

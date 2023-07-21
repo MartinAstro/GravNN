@@ -1,4 +1,3 @@
-import argparse
 import os
 import sys
 
@@ -6,7 +5,7 @@ import pandas as pd
 
 import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_symmetric_data
 from GravNN.Regression.BLLS import BLLS
 from GravNN.Regression.utils import (
     append_data,
@@ -54,7 +53,7 @@ def BLLS_SH(
     # for k in range(len(trajectories) - 4, len(trajectories)):
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
-        x, a, u = get_poly_data(trajectory, planet.obj_8k)
+        x, a, u = get_hetero_poly_symmetric_data(trajectory, planet.obj_8k)
         x_errored, a_errored = preprocess_data(x, a, acc_noise, pos_noise)
         x_train, y_train = append_data(x_train, y_train, x_errored, a_errored)
 
@@ -62,7 +61,7 @@ def BLLS_SH(
         # to compute the times in the plotting routines.
         if include_hoppers:
             hop_trajectory = hopper_trajectories[k]
-            x_hop, a_hop, u_hop = get_poly_data(
+            x_hop, a_hop, u_hop = get_hetero_poly_symmetric_data(
                 hop_trajectory,
                 planet.obj_8k,
                 remove_point_mass=[False],
@@ -121,57 +120,18 @@ def BLLS_SH(
 def get_args(idx):
     args = [
         [4, False, 0.0, 0],
-        [4, False, 0.1, 0],
-        [4, False, 0.0, 1],
         [4, False, 0.1, 1],
         [4, True, 0.0, 0],
-        [4, True, 0.1, 0],
-        [4, True, 0.0, 1],
         [4, True, 0.1, 1],
         [16, False, 0.0, 0],
-        [16, False, 0.1, 0],
-        [16, False, 0.0, 1],
         [16, False, 0.1, 1],
         [16, True, 0.0, 0],
-        [16, True, 0.1, 0],
-        [16, True, 0.0, 1],
         [16, True, 0.1, 1],
     ]
     return args[idx]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Regress SH from NEAR data.")
-
-    # Add arguments with default values
-    parser.add_argument("--deg", type=int, default=4, help="Max degree to regress")
-    parser.add_argument(
-        "--hoppers",
-        type=bool,
-        default=False,
-        help="Include hoppers in the regression",
-    )
-    parser.add_argument(
-        "--acc_noise",
-        type=float,
-        default=0.0,
-        help="Acceleration error ratio [-].",
-    )
-    parser.add_argument(
-        "--pos_noise",
-        type=float,
-        default=0.0,
-        help="position error [m].",
-    )
-
-    # Parse the command-line arguments
-    args = parser.parse_args()
-    max_deg = args.deg
-    hoppers = args.hoppers
-    acc_noise = args.acc_noise
-    pos_noise = args.pos_noise
-
-    # Access the values of the arguments
     sampling_interval = 10 * 60
     trajectories = generate_near_orbit_trajectories(sampling_inteval=sampling_interval)
     hopper_trajectories = generate_near_hopper_trajectories(
