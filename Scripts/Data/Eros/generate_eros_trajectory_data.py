@@ -37,12 +37,12 @@ def main():
     # trajectories
     trajectories = generate_near_orbit_trajectories(sampling_inteval=60 * 10)
     for trajectory in trajectories:
-        gen_data(trajectory).load()
+        gen_data(trajectory)
 
     # hoppers
     trajectories = generate_near_hopper_trajectories(sampling_inteval=60 * 10)
     for trajectory in trajectories:
-        gen_data(trajectory).load()
+        gen_data(trajectory)
 
     # evaluation data
     R = planet.radius
@@ -64,9 +64,9 @@ def main():
 
     surface_trajectory = SurfaceDist(planet, model_file)
 
-    gen_data(outer_trajectory).load()
-    gen_data(inner_trajectory).load()
-    gen_data(surface_trajectory).load()
+    gen_data(outer_trajectory)
+    gen_data(inner_trajectory)
+    gen_data(surface_trajectory)
 
 
 if __name__ == "__main__":

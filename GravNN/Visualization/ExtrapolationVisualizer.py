@@ -22,7 +22,6 @@ class ExtrapolationVisualizer(VisualizationBase):
             0
         ][0]
         self.set_x_axis(kwargs.get("x_axis", "dist_2_surf"))
-        self.annotate = kwargs.get("annotate", True)
         self.plot_fcn = kwargs.get("plot_fcn", plt.plot)
 
     def set_x_axis(self, x_type):
@@ -42,12 +41,41 @@ class ExtrapolationVisualizer(VisualizationBase):
         else:
             raise ValueError()
 
-    def annotate_metrics(self, values, xy=(0.3, 0.95)):
-        rms_avg = sigfig.round(np.mean(values), sigfigs=2)
-        rms_std = sigfig.round(np.std(values), sigfigs=2)
-        rms_max = sigfig.round(np.max(values), sigfigs=2)
-        metric_str = "%s ± %s (%s)" % (rms_avg, rms_std, rms_max)
-        plt.annotate(metric_str, xy=xy, xycoords="axes fraction")
+    def annotate_metrics(self, x, values, xy=(0.3, 0.95)):
+        interior_mask = x < 1.0
+
+        interior_values = values[interior_mask]
+        exterior_values = values[~interior_mask]
+
+        def compute_stats_str(vals):
+            rms_avg = sigfig.round(np.mean(vals), sigfigs=2)
+            rms_std = sigfig.round(np.std(vals), sigfigs=2)
+            rms_max = sigfig.round(np.max(vals), sigfigs=2)
+            if rms_avg > 1e3:
+                stat_str = "%.1E ± %.1E (%.1E)" % (rms_avg, rms_std, rms_max)
+            else:
+                stat_str = f"{rms_avg}±{rms_std} ({rms_max})"
+            return stat_str
+
+        interior_stats = "Interior: " + compute_stats_str(interior_values)
+        exterior_stats = "Exterior: " + compute_stats_str(exterior_values)
+
+        plt.gca().annotate(
+            interior_stats,
+            xy=(0.5, 0.9),
+            ha="center",
+            va="center",
+            xycoords="axes fraction",
+            bbox=dict(boxstyle="round", fc="w"),
+        )
+        plt.gca().annotate(
+            exterior_stats,
+            xy=(0.5, 0.8),
+            ha="center",
+            va="center",
+            xycoords="axes fraction",
+            bbox=dict(boxstyle="round", fc="w"),
+        )
 
     def plot_histogram(self, x):
         ax = plt.twinx()
@@ -75,7 +103,7 @@ class ExtrapolationVisualizer(VisualizationBase):
         if kwargs.get("new_fig", True):
             self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
-        self.plot_fcn(x, avg_line, label=label, color=kwargs.get("avg_color", "gray"))
+        self.plot_fcn(x, avg_line, label=label)
 
         if kwargs.get("plot_std", True):
             y_std_upper = np.squeeze(avg_line + 1 * std_line)
@@ -89,8 +117,8 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.vlines(training_bounds[0], ymin=0, ymax=np.max(value), color="green")
         plt.vlines(training_bounds[1], ymin=0, ymax=np.max(value), color="green")
         plt.vlines(1, ymin=0, ymax=np.max(value), color="grey")
-        if self.annotate:
-            self.annotate_metrics(value)
+        if kwargs.get("annotate", True):
+            self.annotate_metrics(x, value)
         plt.tight_layout()
 
     def plot_interpolation_loss(self, **kwargs):

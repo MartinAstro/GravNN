@@ -149,9 +149,12 @@ class PlanesVisualizer(VisualizationBase):
         std = sigfig.round(np.nanstd(values), sigfigs=2)
         max = sigfig.round(np.nanmax(values), sigfigs=2)
         stat_str = f"{avg}±{std} ({max})"
+        # stat_str = f"%.1f ± %.1f (%.1E)" % (avg, std, max)
         plt.gca().annotate(
             stat_str,
-            xy=(0.25, 0.1),
+            xy=(0.5, 0.1),
+            ha="center",
+            va="center",
             xycoords="axes fraction",
             bbox=dict(boxstyle="round", fc="w"),
         )
@@ -295,19 +298,3 @@ class PlanesVisualizer(VisualizationBase):
         plt.subplot(2, 2, 4)
         self.plot_plane(x, y, plane="yz", colorbar_label=cbar_label)
         plt.tight_layout()
-
-    def plot_scatter_error(self):
-        import OrbitalElements.orbitalPlotting as op
-
-        print(len(self.experiment.percent_error_acc[: self.max_idx]))
-        error = np.clip(self.experiment.percent_error_acc[: self.max_idx], 0, 10)
-        error = self.experiment.percent_error_acc[: self.max_idx]
-        scale = np.max(error) - np.min(error)
-        colors = plt.cm.RdYlGn(1 - ((error - np.min(error)) / scale))
-        op.plot3d(
-            self.experiment.positions[: self.max_idx].T,
-            cVec=colors,
-            obj_file=self.experiment.config["grav_file"][0],
-            plot_type="scatter",
-            alpha=0.2,
-        )

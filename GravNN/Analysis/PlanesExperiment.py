@@ -18,6 +18,7 @@ class PlanesExperiment:
         self.bounds = np.array(bounds)
         self.samples_1d = samples_1d
         self.interior_mask = None
+        self.model_data_loaded = False
 
         self.brillouin_radius = config["planet"][0].radius
         original_max_radius = self.config["radius_max"][0]
@@ -152,11 +153,31 @@ class PlanesExperiment:
             print("INCLUDING TRAIN")
             self.get_train_data()
         self.get_test_data()
-        self.get_model_data()
+        if self.model_data_loaded is False:
+            self.get_model_data()
         self.get_planet_mask()
         self.compute_percent_error()
         self.compute_RMS()
         self.compute_losses(self.loss_fcn_list)
+
+    def load_model_data(self, model):
+        planet = self.config["planet"][0]
+        self.config.get("grav_file", [None])[0]
+        self.config["gravity_data_fcn"][0]
+
+        interpolation_dist = PlanesDist(
+            planet,
+            bounds=self.bounds,
+            samples_1d=self.samples_1d,
+            **self.config,
+        )
+        model.trajectory = interpolation_dist
+        model.load()
+        self.x_pred = model.trajectory.positions
+        self.u_pred = model.potentials
+        self.a_pred = model.accelerations
+
+        self.model_data_loaded = True
 
 
 def main():
