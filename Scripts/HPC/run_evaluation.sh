@@ -11,6 +11,7 @@ module purge
 
 echo "== Load Anaconda =="
 
+module load slurm/alpine
 module load anaconda
 
 echo "== Activate Env =="
