@@ -49,54 +49,53 @@ def plot_model_error(df, color, label, sampling_interval):
     plt.semilogy(
         times,
         outer_errors,
-        label=f"Outer {label}",
+        label=f"{label}",
         color=color,
         linestyle="-",
     )
     plt.semilogy(
         times,
         inner_errors,
-        label=f"Inner {label}",
+        label=f"{label}",
         color=color,
         linestyle="--",
     )
     plt.semilogy(
         times,
         surface_errors,
-        label=f"Surface {label}",
+        label=f"{label}",
         color=color,
         linestyle=":",
     )
 
 
-def main():
+def main(hoppers, noise):
     os.path.dirname(GravNN.__file__) + "/../"
     vis = VisualizationBase()
     vis.fig_size = vis.full_page_default
     vis.newFig()
-    hoppers = False
+
     sampling_interval = 60 * 10
+    noise_str = "0.1_1" if noise else "0.0_0"
+    data_dir = os.path.abspath(os.path.dirname(GravNN.__file__)) + "/../Data/Dataframes"
+    nn_df_file = f"{data_dir}/eros_regression_{hoppers}_{noise_str}_True_metrics.data"
+    sh_4_file = f"{data_dir}/eros_sh_regression_4_{noise_str}_{hoppers}_metrics.data"
+    sh_16_file = f"{data_dir}/eros_sh_regression_16_{noise_str}_{hoppers}_metrics.data"
 
     ############
     # Networks #
     ############
-    df = pd.read_pickle(
-        "Data/Dataframes/eros_regression_False_0.0_0.0_False_metrics.data",
-    )
-    plot_model_error(df, "blue", "NN", sampling_interval)
-
-    df = pd.read_pickle(
-        "Data/Dataframes/eros_regression_False_0.0_0.0_True_metrics.data",
-    )
-    plot_model_error(df, "red", "NN Fuse", sampling_interval)
+    df = pd.read_pickle(nn_df_file)
+    plot_model_error(df, "orange", "NN", sampling_interval)
 
     ######################
     # Spherical Harmonics#
     ######################
-    df = pd.read_pickle(
-        "Data/Dataframes/eros_sh_regression_4_0.0_0.0_False_metrics.data",
-    )
-    plot_model_error(df, "orange", "SH 4", sampling_interval)
+    df = pd.read_pickle(sh_4_file)
+    plot_model_error(df, "blue", "SH 4", sampling_interval)
+
+    df = pd.read_pickle(sh_16_file)
+    plot_model_error(df, "red", "SH 16", sampling_interval)
 
     #################
     # Labels + Legend
@@ -106,7 +105,7 @@ def main():
     plt.ylim(1e-1, 1e3)
 
     lines = plt.gca().get_lines()
-    legend1 = plt.legend(handles=lines[0:4], loc="upper left")
+    legend1 = plt.legend(handles=lines[0::3], loc="upper left")
     exterior_line = mlines.Line2D(
         [],
         [],
@@ -174,12 +173,15 @@ def main():
 
     plt.ylabel("Radius (km)")
 
-    # vis.save(plt.gcf(),
-    #   directory+"transformer_regression_error_near_shoemaker_%s.pdf" % str(hoppers))
-    # vis.save(plt.gcf(), directory+"regression_error_near_shoemaker.pdf")
+    directory = os.path.dirname(GravNN.__file__) + "/../Plots/"
+    file_name = f"regression_error_near_shoemaker_hop_{hoppers}_noise_{noise}.pdf"
+    vis.save(plt.gcf(), directory + file_name)
 
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    main(hoppers=False, noise=False)
+    main(hoppers=False, noise=True)
+    main(hoppers=True, noise=False)
+    main(hoppers=True, noise=True)
