@@ -113,22 +113,22 @@ class HeterogeneousPoly(Polyhedral):
         self.a_poly = copy.deepcopy(self.accelerations)
         self.u_poly = copy.deepcopy(self.potentials)
 
-        x = self.positions
-        a_poly = self.accelerations
-        u_poly = self.potentials
+        # x = self.positions
+        # a_poly = self.accelerations
+        # u_poly = self.potentials
 
-        for i in range(len(self.point_mass_list)):
-            r_offset = self.offset_list[i]
-            x_pm = x - r_offset
+        # for i in range(len(self.point_mass_list)):
+        #     r_offset = self.offset_list[i]
+        #     x_pm = x - r_offset
 
-            a_pm = self.point_mass_list[i].compute_acceleration(x_pm)
-            u_pm = self.point_mass_list[i].compute_potential(x_pm)
+        #     a_pm = self.point_mass_list[i].compute_acceleration(x_pm)
+        #     u_pm = self.point_mass_list[i].compute_potential(x_pm)
 
-            a_poly += a_pm
-            u_poly += u_pm
+        #     a_poly += a_pm
+        #     u_poly += u_pm
 
-        self.accelerations = a_poly
-        self.potentials = u_poly
+        # self.accelerations = a_poly
+        # self.potentials = u_poly
 
     def compute_acceleration(self, positions=None):
         if positions is None:
