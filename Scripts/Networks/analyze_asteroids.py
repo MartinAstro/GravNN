@@ -1,11 +1,14 @@
 import os
-os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
+
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 import multiprocessing as mp
+
 import pandas as pd
+
 from GravNN.CelestialBodies.Asteroids import Bennu, Eros
 from GravNN.Networks.script_utils import save_analysis
-from GravNN.Analysis.AsteroidAnalyzer import AsteroidAnalyzer
+
 
 def main():
     """
@@ -19,22 +22,17 @@ def main():
 
     df_file = "Data/Dataframes/eros_official_transformer_pinn_40.data"
 
-
     interior_bound = Eros().radius
-    exterior_bound = Eros().radius*3
-
-
-
+    exterior_bound = Eros().radius * 3
 
     # df_file = "Data/Dataframes/bennu_traditional_wo_annealing.data"
     # df_file = "Data/Dataframes/bennu_official_w_noise_2.data"
     df_file = "Data/Dataframes/bennu_residual.data"
     interior_bound = Bennu().radius
-    exterior_bound = Bennu().radius*3
-
+    exterior_bound = Bennu().radius * 3
 
     args = []
-    for idx in range(0,45):
+    for idx in range(0, 45):
         args.append((idx, df_file, interior_bound, exterior_bound))
 
     with mp.Pool(4) as pool:
@@ -57,7 +55,7 @@ def analyze(idx, df_file, interior_bound, exterior_bound):
 
     model_id = df["id"].values[idx]
     tf.keras.backend.clear_session()
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     analyzer = AsteroidAnalyzer(model, config, interior_bound, exterior_bound)
     surface_stats = analyzer.compute_surface_stats()

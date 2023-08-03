@@ -1,14 +1,16 @@
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
+from GravNN.Trajectories import RandomAsteroidDist
 from GravNN.Visualization.DataVisSuite import DataVisSuite
-from GravNN.Networks.Data import DataSet
 
 
 def make_fcn_name_latex_compatable(name):
@@ -53,7 +55,14 @@ def overlay_hist(x_sph_train, twinx=True):
 
 
 def plot_moving_average(
-    x, y, y_pred, percent=True, alpha=0.5, label=None, marker=None, color="black"
+    x,
+    y,
+    y_pred,
+    percent=True,
+    alpha=0.5,
+    label=None,
+    marker=None,
+    color="black",
 ):
     if not percent:
         diff = y - y_pred
@@ -76,17 +85,19 @@ def main():
     df = pd.read_pickle("Data/Dataframes/transformers_wo_constraints.data")
 
     test_trajectory = RandomAsteroidDist(
-        planet, [0, planet.radius + 5000], 50000, grav_file=[planet.obj_8k]
+        planet,
+        [0, planet.radius + 5000],
+        50000,
+        grav_file=[planet.obj_8k],
     )
-    test_poly_gm = Polyhedral(
-        planet, planet.obj_8k, trajectory=test_trajectory
-    ).load(override=False)
+    test_poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=test_trajectory).load(
+        override=False,
+    )
 
-
-    config, model = load_config_and_model(df["id"].values[0], df)
+    config, model = load_config_and_model(df, df["id"].values[0])
     data = DataSet(config)
-    x_train = data.raw_data['x_train']
-    a_train = data.raw_data['a_train']
+    x_train = data.raw_data["x_train"]
+    a_train = data.raw_data["a_train"]
     x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
     data_vis.newFig()
@@ -98,7 +109,7 @@ def main():
     color_list = ["black", "gray", "light gray"]
     q = 0
     for model_id in df["id"].values[:]:
-        config, model = load_config_and_model(model_id, df)
+        config, model = load_config_and_model(df, model_id)
 
         extra_samples = config.get("extra_N_train", [None])[0]
         directory = (
@@ -112,13 +123,12 @@ def main():
             + "/"
         )
         label = make_fcn_name_latex_compatable(
-            config["PINN_constraint_fcn"][0].__name__
+            config["PINN_constraint_fcn"][0].__name__,
         )
         os.makedirs(directory, exist_ok=True)
 
         x = test_poly_gm.positions
         a = test_poly_gm.accelerations
-        u = test_poly_gm.potentials
 
         a_pred = model.compute_acceleration(x)
 
@@ -126,8 +136,8 @@ def main():
         x_sph, a_sph_pred = get_spherical_data(x, a_pred)
 
         data = DataSet(config)
-        x_train = data.raw_data['x_train']
-        a_train = data.raw_data['a_train']
+        x_train = data.raw_data["x_train"]
+        a_train = data.raw_data["a_train"]
         x_sph_train, a_sph_train = get_spherical_data(x_train, a_train)
 
         data_vis.plot_residuals(

@@ -49,7 +49,7 @@ def main():
 
     df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
     model_id = df.id.values[-1]
-    config, test_pinn_model = load_config_and_model(model_id, df)
+    config, test_pinn_model = load_config_and_model(df, model_id)
 
     if os.path.exists(traj_exp_file):
         with open(traj_exp_file, "rb") as f:

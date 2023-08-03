@@ -73,13 +73,16 @@ class HistoryVisualizer(VisualizationBase):
 
 def main():
     gravnn_dir = os.path.dirname(GravNN.__file__) + "/../"
-    df = pd.read_pickle(gravnn_dir + "Data/Dataframes/eros_poly_071023_small_BS.data")
+    df = pd.read_pickle(gravnn_dir + "Data/Dataframes/earth_revisited_032723.data")
     idx = -1
     model_id = df["id"].values[idx]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     vis = HistoryVisualizer(model, config)
-    vis.plot_loss(log_y=False)
+    vis.plot_loss(
+        log_y=False,
+        # skip_epochs=0,
+    )
     plt.show()
 
 

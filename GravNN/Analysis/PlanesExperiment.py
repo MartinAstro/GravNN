@@ -189,7 +189,7 @@ def main():
 
     df = pd.read_pickle("Data/Dataframes/eros_constant_poly.data")
     model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     planet = config["planet"][0]
     points = 100

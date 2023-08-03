@@ -92,7 +92,7 @@ def main():
     #######################################
     df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
     model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     a_pinn = model.compute_acceleration(x_hetero_poly)
     da_norm = np.linalg.norm(a_pinn - a_hetero_poly, axis=1)

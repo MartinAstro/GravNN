@@ -142,7 +142,7 @@ class VisualizationBase(ABC):
 
     def new3DFig(self, unit="m", **kwargs):
         figsize = kwargs.get("fig_size", self.fig_size)
-        fig = plt.figure(num=None, figsize=figsize)
+        fig = plt.figure(num=None, figsize=figsize, dpi=300)
         ax = fig.add_subplot(111, projection="3d")
         # ax.set_xlabel(r'$x$ ('+unit+r')')
         # ax.set_ylabel(r'$y$ ('+unit+r')')

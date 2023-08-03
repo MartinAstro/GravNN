@@ -80,7 +80,7 @@ def main(df_path):
 
     for i in range(len(df)):
         model_id = df.iloc[i]["id"]
-        config, model = load_config_and_model(model_id, df)
+        config, model = load_config_and_model(df, model_id)
         config["override"] = [False]
         config["acc_noise"] = [0]
         metrics_exp = MetricsExperiment(model, config, 50000, remove_J2=False)

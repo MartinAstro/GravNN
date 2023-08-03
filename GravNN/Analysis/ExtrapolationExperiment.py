@@ -196,7 +196,7 @@ def main():
 
     df = pd.read_pickle("Data/Dataframes/optimize_20.data")
     model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
     extrapolation_exp = ExtrapolationExperiment(model, config, 500)
     extrapolation_exp.run()
     vis = ExtrapolationVisualizer(extrapolation_exp)

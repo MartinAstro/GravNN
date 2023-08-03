@@ -106,7 +106,7 @@ def main():
     model_id = df["id"].values[-1]
     print(model_id)
 
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     planet = config["planet"][0]
     radius_bounds = [-planet.radius * 3, planet.radius * 3]

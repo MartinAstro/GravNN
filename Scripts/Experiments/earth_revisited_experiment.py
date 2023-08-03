@@ -17,9 +17,9 @@ def main():
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        "N_dist": [5000000],
-        "N_train": [4900000],
-        "N_val": [100000],
+        "N_dist": [50000],
+        "N_train": [49000],
+        "N_val": [1000],
         "num_units": [20],
         "loss_fcns": [["percent", "rms"]],
         "jit_compile": [True],
@@ -31,7 +31,7 @@ def main():
         "min_delta": [0.01],
         "acc_noise": [0.0],
         "PINN_constraint_fcn": ["pinn_a"],
-        "learning_rate": [0.0001],
+        "learning_rate": [0.01],
         "batch_size": [2**13],
         "epochs": [100],
         # "learning_rate": [0.01],
@@ -46,7 +46,7 @@ def main():
         # "shared_offset": [True],
         "tanh_k": [3],
         "tanh_r": [Earth().radius * 10],
-        "init_file": [2460145.335219605],
+        # "init_file": [2460145.335219605],
         # "augment_data_config": [
         #     {
         #         "N_dist": [105000],
@@ -78,8 +78,8 @@ def run(config):
     data = DataSet(config)
     if config["init_file"][0] is not None:
         _, model = load_config_and_model(
-            config["init_file"][0],
             df_file,
+            config["init_file"][0],
             custom_dtype=config["dtype"][0],
             only_weights=True,
         )

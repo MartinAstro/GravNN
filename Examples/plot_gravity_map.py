@@ -15,11 +15,15 @@ def main():
     # Load a PINN Model
     df = pd.read_pickle("Data/Dataframes/example_training.data")
     model_id = df["id"].values[-1]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     # Build a grid of position data at a fix altitude that can be used to produce maps
     planet = Eros()
-    trajectory = DHGridDist(planet, planet.radius, degree=20) # degree corresponds to density of map
+    trajectory = DHGridDist(
+        planet,
+        planet.radius,
+        degree=20,
+    )  # degree corresponds to density of map
 
     # define the gravity model to produce true accelerations
     # populate it with the trajectory to evaluate accelerations for
@@ -40,20 +44,28 @@ def main():
 
     # Instantiate a plotting class which produces maps from grid objects
     map_vis = MapBase()
-    map_vis.tick_interval = [45,45] # interval for Lat/Long
+    map_vis.tick_interval = [45, 45]  # interval for Lat/Long
     map_vis.newFig(fig_size=(6, 6))
     vlim = [grid_true.total.min(), grid_true.total.max()]
-    plt.subplot(3,1,1)
+    plt.subplot(3, 1, 1)
     map_vis.plot_grid(grid_true.total, vlim=vlim, label="True Accel.", new_fig=False)
-    plt.subplot(3,1,2)
-    map_vis.plot_grid(grid_pred.total, vlim=vlim, label="Predicted Accel.", new_fig=False)
-    plt.subplot(3,1,3)
-    map_vis.plot_grid(percent_error_grid.total, vlim=[0,100], label="Difference", new_fig=False)
+    plt.subplot(3, 1, 2)
+    map_vis.plot_grid(
+        grid_pred.total,
+        vlim=vlim,
+        label="Predicted Accel.",
+        new_fig=False,
+    )
+    plt.subplot(3, 1, 3)
+    map_vis.plot_grid(
+        percent_error_grid.total,
+        vlim=[0, 100],
+        label="Difference",
+        new_fig=False,
+    )
 
-    
-
-    planet = config['planet'][0]
-    radius_bounds = [-planet.radius*3, planet.radius*3]
+    planet = config["planet"][0]
+    radius_bounds = [-planet.radius * 3, planet.radius * 3]
     max_percent = 25
     planes_exp = PlanesExperiment(model, config, radius_bounds, 30)
     planes_exp.run()
@@ -61,6 +73,7 @@ def main():
     vis.plot(percent_max=max_percent)
 
     plt.show()
+
 
 if __name__ == "__main__":
     main()

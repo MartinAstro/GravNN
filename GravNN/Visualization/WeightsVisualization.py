@@ -1,10 +1,11 @@
-from GravNN.Visualization.VisualizationBase import VisualizationBase
-import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D
+
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+
 
 class WeightsVisualizer(VisualizationBase):
     def __init__(self, model, config, **kwargs):
@@ -30,44 +31,44 @@ class WeightsVisualizer(VisualizationBase):
         for layer in params:
             idx = self.get_layer_number(layer.name)
             if "kernel" in layer.name:
-                weights.update({str(idx) : layer.numpy().flatten()})
+                weights.update({str(idx): layer.numpy().flatten()})
             if "bias" in layer.name:
-                biases.update({str(idx) : layer.numpy().flatten()})
+                biases.update({str(idx): layer.numpy().flatten()})
         return weights, biases
-
-
 
     def plot_hist(self, dict_params, label):
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
         nbins = 50
 
         for idx, values in dict_params.items():
             ys = values
 
             hist, bins = np.histogram(ys, bins=nbins)
-            xs = (bins[:-1] + bins[1:])/2
+            xs = (bins[:-1] + bins[1:]) / 2
 
-            ax.bar(xs, hist, width=np.diff(bins)[0], zs=int(idx), zdir='y', alpha=0.5)
+            ax.bar(xs, hist, width=np.diff(bins)[0], zs=int(idx), zdir="y", alpha=0.5)
 
         ax.set_xlabel(label)
-        ax.set_ylabel('Dense Layer Idx')
-        ax.set_zlabel('Frequency')
+        ax.set_ylabel("Dense Layer Idx")
+        ax.set_zlabel("Frequency")
 
     def plot(self):
         self.plot_hist(self.weights, "Weights")
         self.plot_hist(self.biases, "Biases")
 
+
 5
 if __name__ == "__main__":
-    import pandas as pd
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+
     from GravNN.Networks.Model import load_config_and_model
-    from GravNN.CelestialBodies.Asteroids import Eros
+
     df = pd.read_pickle("Data/Dataframes/test.data")
-    model_id = df["id"].values[-1] 
-    config, model = load_config_and_model(model_id, df)
+    model_id = df["id"].values[-1]
+    config, model = load_config_and_model(df, model_id)
 
     vis = WeightsVisualizer(model, config)
     vis.plot()

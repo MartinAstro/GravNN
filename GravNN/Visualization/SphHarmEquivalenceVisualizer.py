@@ -45,7 +45,7 @@ class SphHarmEquivalenceVisualizer(VisualizationBase):
         # Generate their altitude rse plot
         for model_id in ids:
             tf.keras.backend.clear_session()
-            config, model = load_config_and_model(model_id, df)
+            config, model = load_config_and_model(df, model_id)
 
             # Gather rse statistics for that model (must run analysis w/ altitude)
             directory = f"{GravNN_path}/../Data/Networks/{model_id}/"
@@ -79,7 +79,7 @@ class SphHarmEquivalenceVisualizer(VisualizationBase):
         min_radius = df["radius_min"][0]
 
         # Generate trajectory histogram
-        config, model = load_config_and_model(self.df.id[-1], df)
+        config, model = load_config_and_model(df, self.df.id[-1])
         data = DataSet(config)
 
         # Generate the SH equivalent altitude curves individually

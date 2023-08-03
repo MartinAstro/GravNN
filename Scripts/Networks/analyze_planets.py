@@ -22,7 +22,7 @@ def analyze(idx, df, planet, analyze_altitude, test_trajectories, points):
 
     model_id = df["id"].values[idx]
     tf.keras.backend.clear_session()
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     analyzer = PlanetAnalyzer(model, config)
     rse_entries = analyzer.compute_rse_stats(test_trajectories, percent=False)

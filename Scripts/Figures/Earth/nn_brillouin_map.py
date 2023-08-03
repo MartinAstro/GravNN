@@ -22,7 +22,7 @@ def main():
 
     df = pd.read_pickle(df_file)
     model_id = df["id"].iloc[idx]
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     # plt.switch_backend("WebAgg")
     vis = ErrorMapVisualizer(config, model, sh_deg=55)

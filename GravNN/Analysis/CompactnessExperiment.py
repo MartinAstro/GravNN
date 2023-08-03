@@ -208,7 +208,7 @@ class CompactnessExperiment:
         # a Fibbonacci grid
         for idx in range(len(self.nn_df)):
             model_id = self.nn_df.id.values[idx]
-            config, model = load_config_and_model(model_id, self.nn_df)
+            config, model = load_config_and_model(self.nn_df, model_id)
             self.configure_model(model, config)
             self.get_sh_truth(config)
             traj = FibonacciDist(planet, radius, points)
@@ -217,9 +217,9 @@ class CompactnessExperiment:
 
 
 if __name__ == "__main__":
-    df_name = "Data/Dataframes/earth_PINN_III_FF_040423.data"
+    df_name = "Data/Dataframes/earth_revisited_071923.data"
     df = pd.read_pickle(df_name)
     planet = Earth()
 
     exp = CompactnessExperiment(df, 2)
-    exp.run(planet, planet.radius, points=50000)
+    exp.run(planet, planet.radius, points=250000)

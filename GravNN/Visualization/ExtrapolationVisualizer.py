@@ -190,7 +190,7 @@ def main():
 
     for i in range(1, 2):
         model_id = df["id"].values[-i]  # with scaling
-        config, model = load_config_and_model(model_id, df)
+        config, model = load_config_and_model(df, model_id)
 
         # evaluate the error at "training" altitudes and beyond
         extrapolation_exp = ExtrapolationExperiment(model, config, 1000)

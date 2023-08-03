@@ -410,8 +410,8 @@ class PINNGravityModel(tf.keras.Model):
 
 
 def load_config_and_model(
-    model_id,
     df_file,
+    model_id,
     custom_dtype=None,
     only_weights=False,
 ):
@@ -474,10 +474,15 @@ def load_config_and_model(
             weights_save_dir_parts = weights_save_dir.split(
                 "/projects/joma5012/GravNN/",
             )
+            if len(weights_save_dir_parts) == 1:
+                weights_save_dir = os.path.dirname(GravNN.__file__) + "/../Data"
 
-            weights_save_dir = (
-                os.path.dirname(GravNN.__file__) + "/../.." + weights_save_dir_parts[-1]
-            )
+            else:
+                weights_save_dir = (
+                    os.path.dirname(GravNN.__file__)
+                    + "/../.."
+                    + weights_save_dir_parts[-1]
+                )
 
         model.network.load_weights(
             f"{weights_save_dir}/Networks/{model_id}/weights",

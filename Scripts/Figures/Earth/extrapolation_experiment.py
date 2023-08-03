@@ -60,7 +60,7 @@ def main():
     ################
 
     model_id = df["id"].values[-1]  # with scaling
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     # evaluate the error at "training" altitudes and beyond
     extrapolation_exp = ExtrapolationExperiment(model, config, 10000)
@@ -85,7 +85,7 @@ def main():
     ###################
 
     model_id = df["id"].values[-2]  # without scaling
-    config, model = load_config_and_model(model_id, df)
+    config, model = load_config_and_model(df, model_id)
 
     # evaluate the error at "training" altitudes and beyond
     extrapolation_exp = ExtrapolationExperiment(model, config, 10000)

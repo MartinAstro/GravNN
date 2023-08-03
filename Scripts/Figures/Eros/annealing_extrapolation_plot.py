@@ -66,7 +66,7 @@ def main(df_path, invert=False):
     end_idx = -1 if invert else 4
     for i in range(start_idx, end_idx):
         model_id = df["id"].values[i]
-        config, model = load_config_and_model(model_id, df)
+        config, model = load_config_and_model(df, model_id)
 
         config["acc_noise"] = [0.0]
 

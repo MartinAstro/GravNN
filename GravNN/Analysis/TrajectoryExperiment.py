@@ -22,6 +22,7 @@ class TrajectoryExperiment:
         t_mesh_density=100,
         pbar=False,
         random_seed=1234,
+        tol=1e-10,
     ):
         self.true_model = true_grav_model
         self.t_mesh_density = t_mesh_density
@@ -29,6 +30,7 @@ class TrajectoryExperiment:
         self.x0 = initial_state
         self.test_models = []
         self.pbar = pbar
+        self.tol = tol
         np.random.seed(random_seed)
 
     def add_test_model(self, model, label, color, linestyle="-"):
@@ -65,8 +67,8 @@ class TrajectoryExperiment:
             [0, t_eval[-1]],
             X0.reshape((-1,)),
             t_eval=t_eval,
-            atol=1e-10,
-            rtol=1e-10,
+            atol=self.tol,
+            rtol=self.tol,
         )
         fun.elapsed_time.append(time.time() - fun.start_time)
         fun.pbar.update(t_eval[-1])
@@ -79,6 +81,7 @@ class TrajectoryExperiment:
 
             dy = test_sol.y - self.true_sol.y
             dX = np.linalg.norm(dy, axis=0)
+            dX = np.linalg.norm(dy[0:3], axis=0)
 
             self.test_models[i].update({"pos_diff": dX})
 
@@ -140,7 +143,7 @@ def main():
 
     df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
     model_id = df.id.values[-1]
-    config, test_pinn_model = load_config_and_model(model_id, df)
+    config, test_pinn_model = load_config_and_model(df, model_id)
 
     experiment = TrajectoryExperiment(
         true_model,

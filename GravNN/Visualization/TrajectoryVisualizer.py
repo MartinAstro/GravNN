@@ -30,8 +30,8 @@ class TrajectoryVisualizer(VisualizationBase):
             plt.semilogy(time, dr / 1000.0, label=label, color=color)
 
         plt.ylabel("$|\Delta r|$ Error [km]")
-        # plt.xlabel("Time [s]")
-        plt.gca().set_xticklabels("")
+        plt.xlabel("Time [s]")
+        # plt.gca().set_xticklabels("")
         plt.gca().yaxis.tick_right()
         plt.gca().yaxis.set_label_position("right")
         # plt.legend()
@@ -53,7 +53,7 @@ class TrajectoryVisualizer(VisualizationBase):
 
     def plot_3d_trajectory(self, new_fig=True):
         if new_fig:
-            self.new3DFig(fig_size=(self.w_full / 2, self.w_full / 2))
+            self.new3DFig()
 
         true_sol = self.experiment.true_sol
         X, Y, Z = true_sol.y[0:3]
@@ -96,8 +96,71 @@ class TrajectoryVisualizer(VisualizationBase):
 
             plt.gca().add_collection3d(tri)
 
-    def plot(self):
-        self.newFig((self.w_full / 2, self.w_full / 2))
+    def plot_reference_trajectory(self, new_fig=True, show_mesh=False, az=235, el=35):
+        if new_fig:
+            self.new3DFig()
+        true_sol = self.experiment.true_sol
+        X, Y, Z = true_sol.y[0:3]
+        plt.plot(X, Y, Z, label="True", color="black")
+        plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
+
+        if show_mesh:
+            if self.mesh is not None:
+                tri = Poly3DCollection(
+                    self.mesh.triangles * 1000,
+                    cmap=plt.get_cmap("Greys"),
+                    alpha=0.4,
+                    # shade=True,
+                )
+
+                plt.gca().add_collection3d(tri)
+        plt.gca().view_init(elev=el, azim=az, roll=0)
+
+    def plot_3d_trajectory_individually(self, idx, az=235, el=35):
+        for i, model_dict in enumerate(self.experiment.test_models):
+            if i != idx:
+                continue
+            self.new3DFig()
+            self.plot_reference_trajectory(new_fig=False)
+
+            sol = model_dict["solution"]
+            X, Y, Z = sol.y[0:3]
+            label = model_dict["label"]
+            color = model_dict["color"]
+            linestyle = model_dict["linestyle"]
+            plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
+
+            plt.legend()
+            # plt.gca().set_xlabel("X [m]")
+            # plt.gca().set_ylabel("Y [m]")
+            # plt.gca().set_zlabel("Z [m]")
+
+            plt.gca().set_xticklabels("")
+            plt.gca().set_yticklabels("")
+            plt.gca().set_zticklabels("")
+
+            min_lim = np.min(sol.y[0:3])
+            max_lim = np.max(sol.y[0:3])
+            plt.gca().axes.set_xlim3d(left=min_lim, right=max_lim)
+            plt.gca().axes.set_ylim3d(bottom=min_lim, top=max_lim)
+            plt.gca().axes.set_zlim3d(bottom=min_lim, top=max_lim)
+
+            plt.gca().set_box_aspect((1, 1, 1))
+            plt.gca().view_init(elev=el, azim=az, roll=0)
+
+            if self.mesh is not None:
+                tri = Poly3DCollection(
+                    self.mesh.triangles * 1000,
+                    cmap=plt.get_cmap("Greys"),
+                    alpha=0.4,
+                    # shade=True,
+                )
+
+                plt.gca().add_collection3d(tri)
+
+    def plot(self, new_fig=True):
+        if new_fig:
+            self.newFig((self.w_full / 2, self.w_full / 2))
         plt.subplot2grid((2, 1), (0, 0))
         self.plot_position_error()
         plt.subplot2grid((2, 1), (1, 0))
@@ -149,7 +212,7 @@ if __name__ == "__main__":
 
     df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
     model_id = df.id.values[-1]
-    config, test_pinn_model = load_config_and_model(model_id, df)
+    config, test_pinn_model = load_config_and_model(df, model_id)
 
     experiment = TrajectoryExperiment(
         true_model,
