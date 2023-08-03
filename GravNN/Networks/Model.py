@@ -411,7 +411,8 @@ class PINNGravityModel(tf.keras.Model):
 
 def load_config_and_model(
     df_file,
-    model_id,
+    model_id=None,  # timestamp of model
+    idx=-1,  # index in dataframe
     custom_dtype=None,
     only_weights=False,
 ):
@@ -443,13 +444,24 @@ def load_config_and_model(
         # If the config dataframe hasn't been loaded
         df_file_path = f"{data_dir}/Dataframes/{df_file_basename}"
         print("Loading from: ", df_file_path)
-        config = utils.get_df_row(model_id, df_file_path)
+        df = pd.read_pickle(df_file_path)
 
+    elif type(df_file) == pd.DataFrame:
+        df = df_file
     else:
-        # If the config dataframe has already been loaded
-        config = df_file[model_id == df_file["id"]].to_dict()
-        for key, value in config.items():
-            config[key] = list(value.values())
+        raise Exception("Invalid df_file type")
+
+    # Get the configuration data specified model_id
+    if model_id is None:
+        config = df.iloc[idx].to_dict()
+        model_id = config["id"]
+        print(f"INFO: Model ID not specified, loading idx={idx} (model ID={model_id}))")
+    else:
+        config = df[model_id == df["id"]].to_dict()
+        print(f"INFO: Loading Model ID={model_id})")
+
+    for key, value in config.items():
+        config[key] = list(value.values())
 
     # remove nan's
     drop_keys = []
