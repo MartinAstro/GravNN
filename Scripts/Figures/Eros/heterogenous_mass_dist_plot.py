@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.HeterogeneousPoly import HeterogeneousPoly
+from GravNN.GravityModels.HeterogeneousPoly import Heterogeneity, HeterogeneousPoly
 from GravNN.GravityModels.PointMass import PointMass
 from GravNN.Trajectories.SurfaceDist import SurfaceDist
 
@@ -9,21 +9,22 @@ if __name__ == "__main__":
     planet = Eros()
 
     traj = SurfaceDist(planet, planet.obj_8k)
-    gravity_model = HeterogeneousPoly(planet, planet.obj_8k, traj)
-
     mass_1 = Eros()
-    mass_1.mu = planet.mu / 10
-    r_offset_1 = [planet.radius / 3, 0, 0]
+    mass_1.mu = mass_1.mu / 10
+    r_offset_1 = [mass_1.radius / 3, 0, 0]
 
     mass_2 = Eros()
-    mass_2.mu = -planet.mu / 10
-    r_offset_2 = [-planet.radius / 3, 0, 0]
+    mass_2.mu = -mass_2.mu / 10
+    r_offset_2 = [-mass_2.radius / 3, 0, 0]
 
-    point_mass_1 = PointMass(mass_1, traj)
-    point_mass_2 = PointMass(mass_2, traj)
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
 
-    gravity_model.add_point_mass(point_mass_1, r_offset_1)
-    gravity_model.add_point_mass(point_mass_2, r_offset_2)
+    mascon_1 = Heterogeneity(point_mass_1, r_offset_1)
+    mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
+    heterogeneities = [mascon_1, mascon_2]
+
+    gravity_model = HeterogeneousPoly(planet, planet.obj_8k, heterogeneities)
 
     gravity_model.load()
 
