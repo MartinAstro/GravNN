@@ -7,34 +7,12 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
 
-class CustomPlanesVisualizer(PlanesVisualizer):
-    def __init__(self, exp, **kwargs):
-        super().__init__(exp, **kwargs)
-        plt.rc("font", size=7)
-        self.fig_size = (self.w_half, self.w_half)
-
-    def plot(self, percent_max=100):
-        self.max = percent_max
-        self.newFig()
-
-        x = self.experiment.x_test
-        y = self.experiment.percent_error_acc
-        cbar_label = "$\mathbf{a}$ \% Error"
-        cbar_label = None
-        self.plot_plane(x, y, plane="xy", colorbar_label=cbar_label)
-        plt.gcf().axes[0].set_xlabel("")
-        plt.gcf().axes[0].set_ylabel("")
-        plt.gcf().axes[0].set_xticks([])
-        plt.gcf().axes[0].set_yticks([])
-        plt.tight_layout()
-
-
 def run(config, model, radius_bounds, max_percent):
     planes_exp = PlanesExperiment(model, config, radius_bounds, 200)
     planes_exp.run()
-    vis = CustomPlanesVisualizer(planes_exp)
+    vis = PlanesVisualizer(planes_exp)
     vis.fig_size = (vis.w_half, vis.w_half)
-    vis.plot(percent_max=max_percent)
+    vis.plot(z_max=max_percent)
     return vis
 
 

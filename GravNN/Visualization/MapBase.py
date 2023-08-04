@@ -1,5 +1,3 @@
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.cm import get_cmap
@@ -18,7 +16,6 @@ class MapBase(VisualizationBase):
             unit (str, optional): Acceleration unit (ex. 'mGal' or 'm/s^2').
         """
         super().__init__(**kwargs)
-        self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         if unit == "mGal":
             # https://en.wikipedia.org/wiki/Gal_(unit)
             # 1 Gal == 0.01 m/s^2

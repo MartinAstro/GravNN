@@ -2,16 +2,14 @@ import os
 
 import matplotlib
 import matplotlib.cm as cm
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import sigfig
-import trimesh
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage.filters import gaussian_filter
 from scipy.stats import gaussian_kde
 
-from GravNN.Support.PathTransformations import make_windows_path_posix
-from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
@@ -51,34 +49,6 @@ class PlanesVisualizer(VisualizationBase):
         else:
             raise ValueError(f"Invalid Plane: {plane}")
         return idx_start, idx_end
-
-    def get_planet_mask(self):
-        # Don't recompute this
-        if self.interior_mask is None:
-            config = self.experiment.config
-            # asteroids grav_file is the shape model
-            grav_file = config.get("grav_file", [None])[0]
-
-            # planets have shape model (sphere currently)
-            self.model_file = config.get("shape_model", [grav_file])[0]
-            filename, file_extension = os.path.splitext(self.model_file)
-            self.shape_model = trimesh.load_mesh(
-                make_windows_path_posix(self.model_file),
-                file_type=file_extension[1:],
-            )
-
-            N = len(self.experiment.x_test)
-            step = 5000
-            mask = np.full((N,), False)
-            pbar = ProgressBar(N, True)
-            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
-            for i in range(0, N, step):
-                end_idx = (i // step + 1) * step
-                position_subset = self.experiment.x_test[i:end_idx] / 1e3
-                mask[i:end_idx] = rayObject.contains_points(position_subset)
-                pbar.update(i)
-            pbar.close()
-            self.interior_mask = mask
 
     def set_SRP_contour(self, a_srp):
         self.r_srp = np.sqrt(self.planet.mu / a_srp)
@@ -148,8 +118,12 @@ class PlanesVisualizer(VisualizationBase):
         avg = sigfig.round(np.nanmean(values), sigfigs=2)
         std = sigfig.round(np.nanstd(values), sigfigs=2)
         max = sigfig.round(np.nanmax(values), sigfigs=2)
-        stat_str = f"{avg}±{std} ({max})"
-        # stat_str = f"%.1f ± %.1f (%.1E)" % (avg, std, max)
+
+        if avg > 1e3:
+            stat_str = "%.1E ± %.1E (%.1E)" % (avg, std, max)
+        else:
+            stat_str = f"{avg}±{std} ({max})"
+        plt.sca(plt.gcf().axes[1])
         plt.gca().annotate(
             stat_str,
             xy=(0.5, 0.1),
@@ -164,7 +138,6 @@ class PlanesVisualizer(VisualizationBase):
         x_vec,
         z_vec,
         plane="xy",
-        nan_interior=True,
         colorbar_label=None,
         srp_sphere=False,
         annotate_stats=False,
@@ -173,22 +146,25 @@ class PlanesVisualizer(VisualizationBase):
         cbar=True,
         cmap=cm.jet,
         cbar_gs=None,
-        z_min=1e-3,
+        z_min=0,
+        z_max=None,
         log=False,
         contour=False,
+        trajectory=False,
     ):
+        # create mask for the two position coordinates
         mask = self.plane_mask(plane)
+
+        # select the indices for the plane
         idx_start, idx_end = self.get_plane_idx(plane)
+
+        # Grab the positions for the plane and remove the irrelevant coordinate
         x = x_vec[idx_start:idx_end, mask]
-        try:
-            z = z_vec[idx_start:idx_end, mask]
-        except Exception:
-            z = z_vec[idx_start:idx_end]
 
-        if nan_interior:
-            self.get_planet_mask()
-            z[self.interior_mask[idx_start:idx_end]] = np.nan
+        # Select the metric of interest
+        z = z_vec[idx_start:idx_end]
 
+        # normalize position coordinates w.r.t. radius
         min_x_0 = np.min(x[:, 0]) / self.radius
         max_x_0 = np.max(x[:, 0]) / self.radius
 
@@ -198,33 +174,39 @@ class PlanesVisualizer(VisualizationBase):
         N = np.sqrt(len(z)).astype(int)
 
         if log:
-            norm = matplotlib.colors.LogNorm(vmin=z_min, vmax=self.max)
+            if z_min == 0:
+                print("WARNING: Log scale cannot work with z_min = 0, setting to 1e-3")
+                z_min = 1e-3
+            norm = matplotlib.colors.LogNorm(vmin=z_min, vmax=z_max)
         else:
-            norm = matplotlib.colors.Normalize(vmin=0, vmax=self.max)
+            norm = matplotlib.colors.Normalize(vmin=z_min, vmax=z_max)
 
         im = plt.imshow(
             z.reshape((N, N)),
             extent=[min_x_0, max_x_0, min_x_1, max_x_1],
             origin="lower",
             cmap=cmap,
-            # vmin=0,
-            # vmax=self.max,
             norm=norm,
         )
 
+        # optional contour
         if contour:
             zm = np.ma.masked_invalid(z)
             cntr = plt.gca().contour(
                 zm.reshape((N, N)),
-                levels=np.logspace(z_min, self.max, 5),
+                levels=np.logspace(z_min, z_max, 5),
                 norm=norm,
-                # cmap=cmap,
                 extent=[min_x_0, max_x_0, min_x_1, max_x_1],
                 colors="k",
                 linewidths=0.5,
             )
 
             plt.clabel(cntr, inline=True, fontsize=8, fmt="%1.0e")
+
+        # overlay a trajectory
+        if trajectory is not None:
+            X0, X1 = trajectory[:, mask] / self.radius
+            plt.plot(X0, X1, color="black", linewidth=0.5)
 
         plt.gca().set_xlabel(plane[0])
         plt.gca().set_ylabel(plane[1])
@@ -250,8 +232,6 @@ class PlanesVisualizer(VisualizationBase):
                 cBar = plt.colorbar(im, cax=cbar_gs)
             else:
                 cBar = plt.colorbar(im, cax=plt.subplot(cbar_gs))
-
-            # cbar = plt.colorbar(fraction=0.15,)
             cBar.set_label(colorbar_label)
 
         if srp_sphere:
@@ -265,36 +245,48 @@ class PlanesVisualizer(VisualizationBase):
 
         return im
 
-    def plot(self, percent_max=100, **kwargs):
-        self.max = percent_max
-        plt.figure()
-        plt.subplot(2, 2, 1)
-        self.plot_density_map(self.experiment.x_train)
+    def plot(self, **kwargs):
+        # default plotting routine
+        self.plot_percent_error(**kwargs)
 
+    def plot_percent_error(self, **kwargs):
         x = self.experiment.x_test
-        y = self.experiment.losses["percent"] * 100
-        cbar_label = "Acceleration Percent Error"
-        plt.subplot(2, 2, 2)
-        self.plot_plane(x, y, plane="xy", colorbar_label=cbar_label, **kwargs)
-        plt.subplot(2, 2, 3)
-        self.plot_plane(x, y, plane="xz", colorbar_label=cbar_label, **kwargs)
-        plt.subplot(2, 2, 4)
-        self.plot_plane(x, y, plane="yz", colorbar_label=cbar_label, **kwargs)
-        plt.tight_layout()
+        y = self.experiment.percent_error_acc
+        self.default_plot(x, y, "Acceleration Percent Error", **kwargs)
 
-    def plot_RMS(self, max=None):
-        self.max = max
-        plt.figure()
-        plt.subplot(2, 2, 1)
-        self.plot_density_map(self.experiment.x_train)
-
+    def plot_RMS(self, **kwargs):
         x = self.experiment.x_test
         y = self.experiment.RMS_acc
-        cbar_label = "Acceleration RMS Error"
-        plt.subplot(2, 2, 2)
-        self.plot_plane(x, y, plane="xy", colorbar_label=cbar_label)
-        plt.subplot(2, 2, 3)
-        self.plot_plane(x, y, plane="xz", colorbar_label=cbar_label)
-        plt.subplot(2, 2, 4)
-        self.plot_plane(x, y, plane="yz", colorbar_label=cbar_label)
-        plt.tight_layout()
+        self.default_plot(x, y, "Acceleration RMS Error [$m/s^2$]", **kwargs)
+
+    def plot_gravity_field(self, **kwargs):
+        x = self.experiment.x_test
+        y = np.linalg.norm(self.experiment.a_test, axis=1, keepdims=True)
+        label = "Acceleration Magnitude [$m/s^2$]"
+        self.default_plot(x, y, colorbar_label=label, cmap=cm.viridis, **kwargs)
+
+    def default_plot(self, x, y, colorbar_label, **kwargs):
+        fig, ax = self.newFig()
+        x = self.experiment.x_test
+        y = self.experiment.percent_error_acc
+        gs = gridspec.GridSpec(1, 4, figure=fig, width_ratios=[1, 1, 1, 0.05])
+
+        kwargs.update({"ticks": False, "labels": False})
+
+        fig.add_subplot(gs[0, 0])
+        self.plot_plane(x, y, plane="xy", cbar=False, **kwargs)
+
+        fig.add_subplot(gs[0, 1])
+        self.plot_plane(x, y, plane="xz", cbar=False, **kwargs)
+
+        fig.add_subplot(gs[0, 2])
+        self.plot_plane(
+            x,
+            y,
+            plane="yz",
+            cbar=True,
+            colorbar_label=colorbar_label,
+            cbar_gs=gs[3],
+            **kwargs,
+        )
+        plt.subplots_adjust(wspace=0.00, hspace=0.00)

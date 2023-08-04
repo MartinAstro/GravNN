@@ -108,16 +108,11 @@ class PlanesExperiment:
         losses = {}
         for loss_key in loss_fcn_list:
             loss_fcn = get_loss_fcn(loss_key)
-
+            key = f"{loss_fcn.__name__}"
+            values = loss_fcn(self.a_pred, self.a_test).numpy()
+            values[self.interior_mask] = np.nan
             # Compute loss on acceleration and potential
-            losses.update(
-                {
-                    f"{loss_fcn.__name__}": loss_fcn(
-                        self.a_pred,
-                        self.a_test,
-                    ).numpy(),
-                },
-            )
+            losses.update({key: values})
         self.losses = losses
 
     def get_planet_mask(self):
@@ -187,12 +182,13 @@ def main():
     from GravNN.Networks.Model import load_config_and_model
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
-    df = pd.read_pickle("Data/Dataframes/eros_constant_poly.data")
+    # df = pd.read_pickle("Data/Dataframes/eros_poly_071123.data")
+    df = pd.read_pickle("Data/Dataframes/eros_poly_071023.data")
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(df, model_id)
 
     planet = config["planet"][0]
-    points = 100
+    points = 10
     radius_bounds = [-2 * planet.radius, 2 * planet.radius]
     planes_exp = PlanesExperiment(
         model,

@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 # tf.config.run_functions_eagerly(True)
@@ -461,7 +462,10 @@ def load_config_and_model(
         print(f"INFO: Loading Model ID={model_id})")
 
     for key, value in config.items():
-        config[key] = list(value.values())
+        try:
+            config[key] = list(value.values())
+        except Exception:
+            config[key] = [value]
 
     # remove nan's
     drop_keys = []
