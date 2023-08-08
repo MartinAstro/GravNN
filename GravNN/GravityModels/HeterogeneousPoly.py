@@ -19,7 +19,7 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
     mass_1.mu = mass_1.mu / 10
     r_offset_1 = [mass_1.radius / 3, 0, 0]
 
-    mass_1 = copy.deepcopy(trajectory.celestial_body)
+    mass_2 = copy.deepcopy(trajectory.celestial_body)
     mass_2.mu = -mass_2.mu / 10
     r_offset_2 = [-mass_2.radius / 3, 0, 0]
 
@@ -159,6 +159,8 @@ class HeterogeneousPoly(Polyhedral):
         # If heterogeneous model exists, load it
         data_exists = os.path.exists(self.file_directory + "acceleration.data")
         if data_exists:
+            self.homogeneous_poly.trajectory = self.trajectory
+            self.homogeneous_poly.configure(self.trajectory)
             self.homogeneous_poly.load()
             super().load(override)
 

@@ -69,6 +69,38 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
     return x, a, u
 
 
+class SphericalHarmonicsDegRemoved(GravityModelBase):
+    def __init__(self, sh_info, degree, remove_deg, trajectory=None, parallel=False):
+        self.sh_hf = SphericalHarmonics(sh_info, degree, trajectory)
+        self.sh_lf = SphericalHarmonics(sh_info, remove_deg, trajectory)
+        super().__init__()
+        self.configure(trajectory)
+        self.deg_removed = degree
+
+    def compute_potential(self, positions=None):
+        if positions is None:
+            positions = self.trajectory.positions
+        self.sh_hf.compute_potential(positions)
+        self.sh_lf.compute_potential(positions)
+        self.potentials = self.sh_hf.potentials - self.sh_lf.potentials
+        return self.potentials
+
+    def compute_acceleration(self, positions=None):
+        if positions is None:
+            positions = self.trajectory.positions
+        self.sh_hf.compute_acceleration(positions)
+        self.sh_lf.compute_acceleration(positions)
+        self.accelerations = self.sh_hf.accelerations - self.sh_lf.accelerations
+        return self.accelerations
+
+    def generate_full_file_directory(self):
+        class_name = self.__class__.__name__
+        grav_file = os.path.basename(self.sh_hf.file).split(".csv")[0].split(".txt")[0]
+        hf_deg = str(self.sh_hf.degree)
+        lf_deg = str(self.sh_lf.degree)
+        self.file_directory += f"{class_name}_{grav_file}_{hf_deg}_{lf_deg}/"
+
+
 class SphericalHarmonics(GravityModelBase):
     def __init__(self, sh_info, degree, trajectory=None, parallel=False):
         """Spherical Harmonic Gravity Model. Takes in a set of Stokes coefficients and

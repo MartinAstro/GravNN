@@ -481,3 +481,20 @@ def MultiScaleNet(**kwargs):
     super(tf.keras.Model, model).__init__(dtype=dtype)
 
     return model
+
+
+## Legacy
+
+
+def SphericalTraditionalNet(**kwargs):
+    layers = kwargs["layers"][0]
+    dtype = kwargs["dtype"][0]
+
+    preprocess_args = get_preprocess_args(kwargs)
+    inputs = tf.keras.Input(shape=(layers[0],), dtype=dtype)
+    features = Cart2PinesSphLayer(**preprocess_args)(inputs)
+    u_nn = get_network_fcn(kwargs["network_arch"][0])(features, **kwargs)
+    model = tf.keras.Model(inputs=inputs, outputs=u_nn)
+    super(tf.keras.Model, model).__init__(dtype=dtype)
+
+    return model

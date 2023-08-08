@@ -90,7 +90,7 @@ def main():
     #######################################
     # Error of PINN model
     #######################################
-    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    df = pd.read_pickle("Data/Dataframes/heterogeneous_asymmetric_080523.data")
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(df, model_id)
 
@@ -112,7 +112,7 @@ def main():
     format()
     vis.save(plt.gcf(), "eros_hetero_pinn_surface_error.pdf")
 
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":

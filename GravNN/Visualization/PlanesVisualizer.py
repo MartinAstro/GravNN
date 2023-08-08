@@ -22,6 +22,7 @@ class PlanesVisualizer(VisualizationBase):
         self.training_bounds = np.array(self.experiment.training_bounds)
         self.planet = experiment.config["planet"][0]
         self.interior_mask = self.experiment.interior_mask
+        self.fig_size = (self.w_full, self.w_full / 3 * 1.2)
 
     def plane_mask(self, plane):
         mask = np.array([False, False, False])
@@ -120,10 +121,9 @@ class PlanesVisualizer(VisualizationBase):
         max = sigfig.round(np.nanmax(values), sigfigs=2)
 
         if avg > 1e3:
-            stat_str = "%.1E ± %.1E (%.1E)" % (avg, std, max)
+            stat_str = "%.1E ± %.0E (%.0E)" % (avg, std, max)
         else:
             stat_str = f"{avg}±{std} ({max})"
-        plt.sca(plt.gcf().axes[1])
         plt.gca().annotate(
             stat_str,
             xy=(0.5, 0.1),
@@ -146,11 +146,11 @@ class PlanesVisualizer(VisualizationBase):
         cbar=True,
         cmap=cm.jet,
         cbar_gs=None,
-        z_min=0,
+        z_min=None,
         z_max=None,
         log=False,
         contour=False,
-        trajectory=False,
+        trajectory=None,
     ):
         # create mask for the two position coordinates
         mask = self.plane_mask(plane)
@@ -163,6 +163,13 @@ class PlanesVisualizer(VisualizationBase):
 
         # Select the metric of interest
         z = z_vec[idx_start:idx_end]
+        z_min_true = np.nanmin(z)
+        z_max_true = np.nanmax(z)
+
+        if z_min is None:
+            z_min = z_min_true
+        if z_max is None:
+            z_max = z_max_true
 
         # normalize position coordinates w.r.t. radius
         min_x_0 = np.min(x[:, 0]) / self.radius
@@ -174,9 +181,6 @@ class PlanesVisualizer(VisualizationBase):
         N = np.sqrt(len(z)).astype(int)
 
         if log:
-            if z_min == 0:
-                print("WARNING: Log scale cannot work with z_min = 0, setting to 1e-3")
-                z_min = 1e-3
             norm = matplotlib.colors.LogNorm(vmin=z_min, vmax=z_max)
         else:
             norm = matplotlib.colors.Normalize(vmin=z_min, vmax=z_max)
@@ -222,16 +226,24 @@ class PlanesVisualizer(VisualizationBase):
             plt.gca().set_yticklabels("")
 
         if annotate_stats:
-            self.annotate(z)
+            self.annotate(z_vec)
 
         if cbar:
             if cbar_gs is None:
                 ax = plt.gca()
                 divider = make_axes_locatable(ax)
-                cbar_gs = divider.append_axes("right", size="5%", pad=0.05)
-                cBar = plt.colorbar(im, cax=cbar_gs)
+                cbar_gs = divider.append_axes("bottom", size="5%", pad=0.05)
+                cBar = plt.colorbar(
+                    im,
+                    cax=cbar_gs,
+                    orientation="horizontal",
+                )
             else:
-                cBar = plt.colorbar(im, cax=plt.subplot(cbar_gs))
+                cBar = plt.colorbar(
+                    im,
+                    cax=plt.subplot(cbar_gs),
+                    orientation="horizontal",
+                )
             cBar.set_label(colorbar_label)
 
         if srp_sphere:
@@ -252,7 +264,9 @@ class PlanesVisualizer(VisualizationBase):
     def plot_percent_error(self, **kwargs):
         x = self.experiment.x_test
         y = self.experiment.percent_error_acc
-        self.default_plot(x, y, "Acceleration Percent Error", **kwargs)
+        defaults = {"z_min": 1e-3}
+        defaults.update(kwargs)
+        self.default_plot(x, y, "Acceleration Percent Error", **defaults)
 
     def plot_RMS(self, **kwargs):
         x = self.experiment.x_test
@@ -262,31 +276,78 @@ class PlanesVisualizer(VisualizationBase):
     def plot_gravity_field(self, **kwargs):
         x = self.experiment.x_test
         y = np.linalg.norm(self.experiment.a_test, axis=1, keepdims=True)
+
+        # nan out the interior
+        nan_idx = np.where(np.isnan(self.experiment.percent_error_acc))
+        y[nan_idx] = np.nan
+
         label = "Acceleration Magnitude [$m/s^2$]"
-        self.default_plot(x, y, colorbar_label=label, cmap=cm.viridis, **kwargs)
+        defaults = {"annotate_stats": False}
+        defaults.update(kwargs)
+        self.default_plot(x, y, colorbar_label=label, cmap=cm.viridis, **defaults)
 
     def default_plot(self, x, y, colorbar_label, **kwargs):
         fig, ax = self.newFig()
-        x = self.experiment.x_test
-        y = self.experiment.percent_error_acc
-        gs = gridspec.GridSpec(1, 4, figure=fig, width_ratios=[1, 1, 1, 0.05])
 
-        kwargs.update({"ticks": False, "labels": False})
+        # If cBar is explicitly set to False, only make one row
+        use_cbar = kwargs.get("cbar", True)
+        if not use_cbar:
+            del fig.axes[0]
+            ax0 = plt.subplot(1, 3, 1)
+            ax1 = plt.subplot(1, 3, 2)
+            ax2 = plt.subplot(1, 3, 3)
+            gs = np.array([[ax0, ax1, ax2]])
+            # gs = gridspec.GridSpec(1, 3, figure=fig)
+            cbar_gs = None
+            sca = plt.sca
+        else:
+            gs = gridspec.GridSpec(
+                2,
+                3,
+                figure=fig,
+                width_ratios=[1, 1, 1],
+                height_ratios=[1, 0.05],
+            )
+            cbar_gs = gs[1, :]
+            sca = fig.add_subplot
 
-        fig.add_subplot(gs[0, 0])
-        self.plot_plane(x, y, plane="xy", cbar=False, **kwargs)
+        defaults = {
+            "ticks": False,
+            "labels": False,
+        }
+        defaults.update(kwargs)
+        defaults.update({"cbar": use_cbar})
 
-        fig.add_subplot(gs[0, 1])
-        self.plot_plane(x, y, plane="xz", cbar=False, **kwargs)
+        sca(gs[0, 0])
+        self.plot_plane(
+            x,
+            y,
+            plane="xy",
+            colorbar_label=colorbar_label,
+            cbar_gs=cbar_gs,
+            **defaults,
+        )
 
-        fig.add_subplot(gs[0, 2])
+        # Only use cbar for first image
+        defaults.update({"cbar": False})
+
+        # default to annotate, unless specified
+        annotate = kwargs.get("annotate_stats", True)
+        defaults.update({"annotate_stats": annotate})
+        sca(gs[0, 1])
+        self.plot_plane(
+            x,
+            y,
+            plane="xz",
+            **defaults,
+        )
+
+        # Remove annotate for last image
+        sca(gs[0, 2])
+        defaults.update({"annotate_stats": False})
         self.plot_plane(
             x,
             y,
             plane="yz",
-            cbar=True,
-            colorbar_label=colorbar_label,
-            cbar_gs=gs[3],
-            **kwargs,
+            **defaults,
         )
-        plt.subplots_adjust(wspace=0.00, hspace=0.00)

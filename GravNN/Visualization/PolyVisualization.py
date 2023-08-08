@@ -30,6 +30,8 @@ class PolyVisualization(VisualizationBase):
         percent=False,
         min_percent=0,
         max_percent=1,
+        z_min=None,
+        z_max=None,
         alpha=0.4,
         surface_colors=True,
         cbar_orientation="horizontal",
@@ -68,9 +70,9 @@ class PolyVisualization(VisualizationBase):
                     x_normal = np.ones_like(x_normal)
             else:
                 # Normalize the color from 0 - 1
-                x_normal = (x - x.min()) / (x.max() - x.min())
-                x_min = np.min(x)
-                x_max = np.max(x)
+                x_min = np.min(x) if z_min is None else z_min
+                x_max = np.max(x) if z_max is None else z_max
+                x_normal = (x - x_min) / (x_max - x_min)
             mesh.visual.face_colors = cmap(x_normal)
 
             # place color on the collection

@@ -157,8 +157,6 @@ class PlanesExperiment:
 
     def load_model_data(self, model):
         planet = self.config["planet"][0]
-        self.config.get("grav_file", [None])[0]
-        self.config["gravity_data_fcn"][0]
 
         interpolation_dist = PlanesDist(
             planet,
@@ -167,6 +165,7 @@ class PlanesExperiment:
             **self.config,
         )
         model.trajectory = interpolation_dist
+        model.configure(interpolation_dist)
         model.load()
         self.x_pred = model.trajectory.positions
         self.u_pred = model.potentials
@@ -183,12 +182,12 @@ def main():
     from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
     # df = pd.read_pickle("Data/Dataframes/eros_poly_071123.data")
-    df = pd.read_pickle("Data/Dataframes/eros_poly_071023.data")
+    df = pd.read_pickle("Data/Dataframes/heterogeneous_asymmetric_080523.data")
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(df, model_id)
 
     planet = config["planet"][0]
-    points = 10
+    points = 100
     radius_bounds = [-2 * planet.radius, 2 * planet.radius]
     planes_exp = PlanesExperiment(
         model,
@@ -196,11 +195,12 @@ def main():
         radius_bounds,
         points,
         remove_error=True,
+        omit_train_data=True,
     )
     planes_exp.run()
 
     vis = PlanesVisualizer(planes_exp)
-    vis.plot(percent_max=10, annotate_stats=True)
+    vis.plot(z_max=10, annotate_stats=True)
 
     plt.show()
 

@@ -17,7 +17,7 @@ from GravNN.Visualization.TrajectoryVisualizer import TrajectoryVisualizer
 def main():
     planet = Eros()
     obj_file = planet.obj_200k
-    traj_exp_file = "Data/Experiments/trajectory_hetero_200k.data"
+    traj_exp_file = "Data/Experiments/trajectory_hetero_200k_v2.data"
     init_state = np.array(
         [
             -10800.002,
@@ -44,11 +44,11 @@ def main():
     mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
     heterogeneities = [mascon_1, mascon_2]
 
-    true_model = HeterogeneousPoly(planet, planet.obj_8k, heterogeneities)
+    true_model = HeterogeneousPoly(planet, planet.obj_200k, heterogeneities)
 
     test_poly_model = Polyhedral(planet, obj_file)
 
-    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    df = pd.read_pickle("Data/Dataframes/heterogeneous_asymmetric_080523.data")
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 
@@ -60,6 +60,8 @@ def main():
             true_model,
             initial_state=init_state,
             period=1 * 24 * 3600,  # 24 * 3600,
+            pbar=True,
+            tol=1e-8,
         )
         experiment.add_test_model(test_poly_model, "Poly", "r")
         experiment.add_test_model(test_pinn_model, "PINN", "g")
