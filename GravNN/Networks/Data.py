@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.utils import shuffle
 
+from GravNN.CelestialBodies.Planets import Planet
 from GravNN.Networks.Constraints import *
 from GravNN.Preprocessors.DummyScaler import DummyScaler
 from GravNN.Support.PathTransformations import make_windows_path_posix
@@ -510,13 +511,19 @@ class DataSet:
         planet = self.config["planet"][0]
         radius_bounds = [self.config["radius_min"][0], self.config["radius_max"][0]]
         N_dist = self.config["N_dist"][0]
-        grav_file = self.config["grav_file"][0]
+        obj_file = self.config["obj_file"][0]
+        sh_file = self.config["sh_file"][0]
+
+        if issubclass(planet, Planet):
+            grav_file = sh_file
+        else:
+            grav_file = obj_file
 
         distribution = self.config["distribution"][0]
         if distribution.__name__ == "SurfaceDist":
             trajectory = distribution(
                 planet,
-                make_windows_path_posix(self.config["grav_file"][0]),
+                make_windows_path_posix(obj_file),
                 **self.config,
             )
         else:

@@ -1,14 +1,16 @@
 import multiprocessing as mp
+import os
+
+from GravNN.Networks.Configs import *
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
-from GravNN.Networks.Configs import *
-import os
-os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
+
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+
 
 def main():
-
     # dataframe where the network configuration info will be saved
-    df_file = "Data/Dataframes/example_training.data" 
+    df_file = "Data/Dataframes/example_training.data"
 
     # a default set of hyperparameters / configuration details for PINN
     config = get_default_eros_config()
@@ -16,19 +18,19 @@ def main():
     # hyperparameters which overwrite defaults
     hparams = PINN_III()
     hparams.update(ReduceLrOnPlateauConfig())
-    hparams.update({
-        "grav_file" : [Eros().obj_8k],
-        "N_dist": [5000],
-        "N_train": [4500],
-        "N_val": [500],
-        "batch_size" : [4096],
-        "PINN_constraint_fcn": ["pinn_a"],
-
-        # 'trainable_tanh' : [True],
-        # 'tanh_k' : [1.0],
-        # 'tanh_r' : [1.0],
-    })
-
+    hparams.update(
+        {
+            "obj_file": [Eros().obj_8k],
+            "N_dist": [5000],
+            "N_train": [4500],
+            "N_val": [500],
+            "batch_size": [4096],
+            "PINN_constraint_fcn": ["pinn_a"],
+            # 'trainable_tanh' : [True],
+            # 'tanh_k' : [1.0],
+            # 'tanh_r' : [1.0],
+        },
+    )
 
     threads = 1
     args = configure_run_args(config, hparams)
@@ -39,13 +41,12 @@ def main():
 
 
 def run(config):
-    # Tensorflow dependent functions must be defined inside of 
+    # Tensorflow dependent functions must be defined inside of
     # run function for thread-safe behavior.
     from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
     from GravNN.Networks.Saver import ModelSaver
-    from GravNN.Networks.utils import configure_tensorflow
-    from GravNN.Networks.utils import populate_config_objects
+    from GravNN.Networks.utils import configure_tensorflow, populate_config_objects
 
     configure_tensorflow(config)
 

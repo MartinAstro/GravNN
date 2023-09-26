@@ -14,12 +14,12 @@ def main():
 
     # df_file = "Data/Dataframes/sh_stats_moon_Brillouin.data"
     # planet = Moon()
-    # model_file = planet.sh_file
+    # sh_file = planet.sh_file
 
     df_file = "Data/Dataframes/sh_stats_Brillouin_deg_n1.data"
     deg_removed = -1
     planet = Earth()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
 
     trajectory = FibonacciDist(planet, planet.radius, points)
 
@@ -34,7 +34,7 @@ def main():
 
     x, acc_sh, u = get_sh_data(
         trajectory,
-        model_file,
+        sh_file,
         max_deg=max_deg,
         deg_removed=deg_removed,
     )
@@ -44,7 +44,7 @@ def main():
     deg_list = np.append(deg_list, [175, 200, 215, 250, 300, 400, 500, 700, 900])
     df_all = pd.DataFrame()
     for deg in deg_list:
-        x, acc_sh, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=-1)
+        x, acc_sh, u = get_sh_data(trajectory, sh_file, max_deg=deg, deg_removed=-1)
 
         grid_pred = StateObject(trajectory=trajectory, accelerations=acc_sh)
         diff = grid_pred - grid_true

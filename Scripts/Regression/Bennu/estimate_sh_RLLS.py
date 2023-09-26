@@ -119,22 +119,22 @@ def main():
     # This has the true SH coef of Bennu --
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Bennu()
-    model_file = planet.obj_8k
+    obj_file = planet.obj_8k
     regress_deg = 4
     remove_deg = -1
 
     batch_initialization = True
     batch_size = 60000
-    Polyhedral(planet, model_file)
+    Polyhedral(planet, obj_file)
     # trajectory = RandomDist(planet,
-    # [0, planet.radius+10000], 10000, grav_file=[model_file])
+    # [0, planet.radius+10000], 10000, obj_file=[obj_file])
     # trajectory = RandomDist(planet,
-    # [planet.radius, planet.radius+10000], 10000, grav_file=[model_file])
+    # [planet.radius, planet.radius+10000], 10000, obj_file=[obj_file])
     trajectory = RandomDist(
         planet,
         [planet.radius * 2, planet.radius * 3],
         10000,
-        grav_file=[model_file],
+        obj_file=[obj_file],
     )  # confidently outside of Brill sphere
     trajectory = DHGridDist(
         planet,
@@ -145,7 +145,7 @@ def main():
     remove_point_mass = False if remove_deg == -1 else True
     x, a, u = get_poly_data(
         trajectory,
-        model_file,
+        obj_file,
         remove_point_mass=[remove_point_mass],
         override=[False],
     )

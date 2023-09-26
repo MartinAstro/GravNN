@@ -22,27 +22,27 @@ class TrainingDistributionVisualizer(VisualizationBase):
 
     def populate_polyhedron(self, config):
         try:
-            self.model_file = self.celestial_body.shape_model
+            self.obj_file = self.celestial_body.obj_file
         except:
-            grav_file = config.get("grav_file", [None])[
+            obj_file = config.get("obj_file", [None])[
                 0
-            ]  # asteroids grav_file is the shape model
-            self.model_file = config.get(
-                "shape_model",
-                [grav_file],
+            ]  # asteroids obj_file is the shape model
+            self.obj_file = config.get(
+                "obj_file",
+                [obj_file],
             )  # planets have shape model (sphere currently)
-            if isinstance(self.model_file, list):
-                self.model_file = self.model_file[0]
-        filename, file_extension = os.path.splitext(self.model_file)
-        self.shape_model = trimesh.load_mesh(
-            self.model_file,
+            if isinstance(self.obj_file, list):
+                self.obj_file = self.obj_file[0]
+        filename, file_extension = os.path.splitext(self.obj_file)
+        self.obj_file = trimesh.load_mesh(
+            self.obj_file,
             file_type=file_extension[1:],
         )
 
     def plot_polyhedron(self):
         plt.get_cmap("Greys")
         tri = Poly3DCollection(
-            self.shape_model.triangles * 1000 / self.planet_radius,
+            self.obj_file.triangles * 1000 / self.planet_radius,
             alpha=1.0,
         )
         tri.set_facecolor("gray")

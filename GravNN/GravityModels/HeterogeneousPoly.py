@@ -89,7 +89,7 @@ def get_hetero_poly_symmetric_data(trajectory, obj_file, **kwargs):
     return x, a, u
 
 
-def generate_heterogeneous_sym_model(planet, shape_model, trajectory=None):
+def generate_heterogeneous_sym_model(planet, obj_file, trajectory=None):
     # Force the following mass inhomogeneity
     mass_0 = copy.deepcopy(planet)
     mass_0.mu = -2 * mass_0.mu / 20
@@ -114,7 +114,7 @@ def generate_heterogeneous_sym_model(planet, shape_model, trajectory=None):
     heterogeneities = [mascon_0, mascon_1, mascon_2]
     poly_r0_gm = HeterogeneousPoly(
         planet,
-        shape_model,
+        obj_file,
         heterogeneities,
         trajectory=trajectory,
     )

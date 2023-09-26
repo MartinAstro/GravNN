@@ -15,7 +15,7 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Trajectories import RandomDist, SurfaceDist
 
 planet = Eros()
-model_file = planet.obj_200k
+obj_file = planet.obj_200k
 interior_bound = planet.radius
 exterior_bound = planet.radius * 3
 
@@ -41,7 +41,7 @@ def get_file_info(model_path):
 
 def compute_stats(model, trajectory, config):
     # Compute the true error of the 20,000 point distributions (or 200k if surface)
-    x, a, u = get_poly_data(trajectory, model_file, **config)
+    x, a, u = get_poly_data(trajectory, obj_file, **config)
 
     # if the distribution is the surface, sample only 20000 points
     indices = np.linspace(0, len(x) - 1, len(x))
@@ -62,7 +62,7 @@ def compute_stats(model, trajectory, config):
 
 def compute_sh_stats(model, trajectory):
     # Compute the true error of the 20,000 point distributions (or 200k if surface)
-    x, a_true, u = get_poly_data(trajectory, model_file, point_mass_removed=[False])
+    x, a_true, u = get_poly_data(trajectory, obj_file, point_mass_removed=[False])
     N, M, N_data, noise = get_file_info(model)
     x, a_regress, u = get_sh_data(
         trajectory,
@@ -80,7 +80,7 @@ def compute_sh_stats(model, trajectory):
 
 
 def compute_surface_stats(model, config=None):
-    trajectory = SurfaceDist(planet, model_file)
+    trajectory = SurfaceDist(planet, obj_file)
     if config is None:
         stats = compute_sh_stats(model, trajectory)
     else:
@@ -89,7 +89,7 @@ def compute_surface_stats(model, config=None):
 
 
 def compute_interior_stats(model, config=None):
-    trajectory = RandomDist(planet, [0, interior_bound], 20000, model_file)
+    trajectory = RandomDist(planet, [0, interior_bound], 20000, obj_file)
     if config is None:
         stats = compute_sh_stats(model, trajectory)
     else:
@@ -102,7 +102,7 @@ def compute_exterior_stats(model, config=None):
         planet,
         [interior_bound, exterior_bound],
         20000,
-        model_file,
+        obj_file,
     )
     if config is None:
         stats = compute_sh_stats(model, trajectory)

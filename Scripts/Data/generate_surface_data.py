@@ -9,14 +9,14 @@ from GravNN.Trajectories import SurfaceDist
 def main():
     print_slurm_info()
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     trajectory = SurfaceDist(
         planet,
-        obj_file=model_file,
+        obj_file=obj_file,
     )
     start_time = time.time()
-    Polyhedral(planet, model_file, trajectory=trajectory).load()
+    Polyhedral(planet, obj_file, trajectory=trajectory).load()
     print(f"Total time: {time.time() - start_time}")
 
 

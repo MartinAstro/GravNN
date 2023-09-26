@@ -95,10 +95,10 @@ class SphericalHarmonicsDegRemoved(GravityModelBase):
 
     def generate_full_file_directory(self):
         class_name = self.__class__.__name__
-        grav_file = os.path.basename(self.sh_hf.file).split(".csv")[0].split(".txt")[0]
+        obj_file = os.path.basename(self.sh_hf.file).split(".csv")[0].split(".txt")[0]
         hf_deg = str(self.sh_hf.degree)
         lf_deg = str(self.sh_lf.degree)
-        self.file_directory += f"{class_name}_{grav_file}_{hf_deg}_{lf_deg}/"
+        self.file_directory += f"{class_name}_{obj_file}_{hf_deg}_{lf_deg}/"
 
 
 class SphericalHarmonics(GravityModelBase):

@@ -28,8 +28,8 @@ def evaluate_network_error(
     return samples, np.average(a_error)
 
 
-def evaluate_nn(trajectory, model_file, models):
-    x, a_true, u = get_poly_data(trajectory, model_file, point_mass_removed=[False])
+def evaluate_nn(trajectory, obj_file, models):
+    x, a_true, u = get_poly_data(trajectory, obj_file, point_mass_removed=[False])
     sample_list = []
     error_list = []
     for model in models:

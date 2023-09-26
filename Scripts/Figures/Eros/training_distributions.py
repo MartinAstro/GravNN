@@ -35,7 +35,7 @@ def main():
         planet,
         [min_radius, max_radius],
         20000,
-        model_file=planet.obj_200k,
+        obj_file=planet.obj_200k,
     )
     surface_trajectory = SurfaceDist(planet, planet.obj_200k)
     surface_poly_gm = Polyhedral(

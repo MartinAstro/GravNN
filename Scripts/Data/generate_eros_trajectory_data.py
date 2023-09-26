@@ -12,10 +12,10 @@ from GravNN.Trajectories.utils import (
 
 def gen_data(trajectory):
     planet = Eros()
-    model_file = planet.obj_8k
+    obj_file = planet.obj_8k
     generate_heterogeneous_sym_model(
         planet,
-        model_file,
+        obj_file,
         trajectory=trajectory,
     ).load()
 
@@ -32,7 +32,7 @@ def main():
 
     # print(f"Num Threads:{mp.cpu_count()}")
     planet = Eros()
-    model_file = planet.obj_8k
+    obj_file = planet.obj_8k
 
     # trajectories
     trajectories = generate_near_orbit_trajectories(sampling_inteval=60 * 10)
@@ -52,17 +52,17 @@ def main():
         planet,
         [R, 3 * R],
         N_samples,
-        shape_model=model_file,
+        obj_file=obj_file,
     )
 
     inner_trajectory = RandomDist(
         planet,
         [0, R],
         N_samples,
-        shape_model=model_file,
+        obj_file=obj_file,
     )
 
-    surface_trajectory = SurfaceDist(planet, model_file)
+    surface_trajectory = SurfaceDist(planet, obj_file)
 
     gen_data(outer_trajectory)
     gen_data(inner_trajectory)

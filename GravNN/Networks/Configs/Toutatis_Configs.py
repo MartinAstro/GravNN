@@ -6,7 +6,7 @@ from GravNN.Trajectories import RandomDist
 def get_prototype_toutatis_config():
     data_config = {
         "planet": [Toutatis()],
-        "grav_file": [Toutatis().model_lf],
+        "obj_file": [Toutatis().model_lf],
         "distribution": [RandomDist],
         "N_dist": [10000],
         "N_train": [2500],

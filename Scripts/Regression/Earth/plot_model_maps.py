@@ -105,7 +105,7 @@ def plot_nn_model_map(nn_df, trajectory, model_df, grid_true):
 
 def main():
     planet = Earth()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     max_deg = 1000
 
     # * Generate the true acceleration
@@ -114,7 +114,7 @@ def main():
     trajectory = DHGridDist(planet, planet.radius, degree=180)
     x, a, u = get_sh_data(
         trajectory,
-        model_file,
+        sh_file,
         max_deg=max_deg,
         deg_removed=2,
         override=False,

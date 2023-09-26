@@ -22,7 +22,7 @@ def main():
 
     print(model_id)
     config, model = load_config_and_model(df, model_id)
-    config["grav_file"] = [Eros().obj_8k]
+    config["obj_file"] = [Eros().obj_8k]
 
     planet = config["planet"][0]
     config["gravity_data_fcn"] = [get_poly_data]

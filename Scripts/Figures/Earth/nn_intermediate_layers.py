@@ -23,7 +23,7 @@ if sys.platform == "win32":
 
 def generate_data(traj, config):
     # Generate the plotting data
-    x, a, u = get_sh_data(traj, config["grav_file"][0], **config)
+    x, a, u = get_sh_data(traj, config["obj_file"][0], **config)
     x_transformer = config["x_transformer"][0]
     config["a_transformer"][0]
     x = x_transformer.transform(x)

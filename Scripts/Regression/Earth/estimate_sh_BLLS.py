@@ -1,51 +1,63 @@
+import multiprocessing as mp
+import os
+
 import numpy as np
 import pandas as pd
-import os
-import multiprocessing as mp
-from GravNN.CelestialBodies.Planets import Earth
-from GravNN.Regression.BLLS import BLLS
-from GravNN.Regression.utils import save, format_coefficients
-from GravNN.Networks.Data import get_preprocessed_data
+
 from GravNN.Networks.Configs import *
+from GravNN.Networks.Data import get_preprocessed_data
+from GravNN.Regression.BLLS import BLLS
+from GravNN.Regression.utils import format_coefficients, save
+
 np.random.seed(1234)
+
 
 def regress_sh_model(config, max_deg, noise, idx):
     print("Max Deg: " + str(max_deg))
-    # Get randomly shuffled data 
-    planet = config['planet'][0]
+    # Get randomly shuffled data
+    planet = config["planet"][0]
     dataset, val_dataset, transformers = get_preprocessed_data(config)
     x = dataset[0]
     a = dataset[2]
-    N_train = config['N_train'][0]
+    N_train = config["N_train"][0]
 
-    file_name = "regress_%d_%.1f_%d_%d.csv" %(max_deg, noise, idx, N_train)
-    grav_file = os.path.join(os.path.abspath('.') , 'GravNN','Files', 'GravityModels','Regressed', 'Earth', file_name)
-    regressor = BLLS(max_deg, planet, remove_deg=2)#
+    file_name = "regress_%d_%.1f_%d_%d.csv" % (max_deg, noise, idx, N_train)
+    obj_file = os.path.join(
+        os.path.abspath("."),
+        "GravNN",
+        "Files",
+        "GravityModels",
+        "Regressed",
+        "Earth",
+        file_name,
+    )
+    regressor = BLLS(max_deg, planet, remove_deg=2)  #
     results = regressor.update(x, a)
     C_lm, S_lm = format_coefficients(results, max_deg, 2)
-    save(grav_file, planet, C_lm, S_lm)
+    save(obj_file, planet, C_lm, S_lm)
     return file_name, max_deg, noise, idx
+
 
 def generate_args(config, num_models, noise_list, deg_list):
     args = []
     for idx in range(num_models):
         for noise in noise_list:
             for deg in deg_list:
-                config['acc_noise'] = [noise]
-                config['seed'] = [idx]
+                config["acc_noise"] = [noise]
+                config["seed"] = [idx]
                 args.append((config, deg, noise, idx))
     return args
 
 
 def regression_9500_v1():
-    """Multiprocessed version of generate models. Trains multiple networks 
+    """Multiprocessed version of generate models. Trains multiple networks
     simultaneously to speed up regression.
     """
     config = get_default_earth_config()
-    config['N_train'] = [9500]
-    config['N_val'] = [500]
-    config['scale_by'] = ["none"]
-    model_deg = 40 
+    config["N_train"] = [9500]
+    config["N_val"] = [500]
+    config["scale_by"] = ["none"]
+    model_deg = 40
     model_interval = 10
     num_models = 3
 
@@ -53,7 +65,13 @@ def regression_9500_v1():
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
-    sh_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, deg_list, model_id_list], names=['noise', 'degree', 'id']), columns=['model_identifier'])
+    sh_df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [noise_list, deg_list, model_id_list],
+            names=["noise", "degree", "id"],
+        ),
+        columns=["model_identifier"],
+    )
 
     pool = mp.Pool(1)
     args = generate_args(config, num_models, noise_list, deg_list)
@@ -65,15 +83,16 @@ def regression_9500_v1():
 
     sh_df.to_pickle("Data/Dataframes/Regression/Earth_SH_regression_9500_v1.data")
 
+
 def regression_5000_v1():
-    """Multiprocessed version of generate models. Trains multiple networks 
+    """Multiprocessed version of generate models. Trains multiple networks
     simultaneously to speed up regression.
     """
     config = get_default_earth_config()
-    config['N_train'] = [5000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["none"]
-    model_deg = 40 
+    config["N_train"] = [5000]
+    config["N_val"] = [500]
+    config["scale_by"] = ["none"]
+    model_deg = 40
     model_interval = 10
     num_models = 3
 
@@ -81,7 +100,13 @@ def regression_5000_v1():
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
-    sh_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, deg_list, model_id_list], names=['noise', 'degree', 'id']), columns=['model_identifier'])
+    sh_df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [noise_list, deg_list, model_id_list],
+            names=["noise", "degree", "id"],
+        ),
+        columns=["model_identifier"],
+    )
 
     pool = mp.Pool(1)
     args = generate_args(config, num_models, noise_list, deg_list)
@@ -93,15 +118,16 @@ def regression_5000_v1():
 
     sh_df.to_pickle("Data/Dataframes/Regression/Earth_SH_regression_5000_v1.data")
 
+
 def regression_2500_v1():
-    """Multiprocessed version of generate models. Trains multiple networks 
+    """Multiprocessed version of generate models. Trains multiple networks
     simultaneously to speed up regression.
     """
     config = get_default_earth_config()
-    config['N_train'] = [2500]
-    config['N_val'] = [500]
-    config['scale_by'] = ["none"]
-    model_deg = 40 
+    config["N_train"] = [2500]
+    config["N_val"] = [500]
+    config["scale_by"] = ["none"]
+    model_deg = 40
     model_interval = 10
     num_models = 3
 
@@ -109,7 +135,13 @@ def regression_2500_v1():
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
-    sh_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, deg_list, model_id_list], names=['noise', 'degree', 'id']), columns=['model_identifier'])
+    sh_df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [noise_list, deg_list, model_id_list],
+            names=["noise", "degree", "id"],
+        ),
+        columns=["model_identifier"],
+    )
 
     pool = mp.Pool(1)
     args = generate_args(config, num_models, noise_list, deg_list)
@@ -121,15 +153,16 @@ def regression_2500_v1():
 
     sh_df.to_pickle("Data/Dataframes/Regression/Earth_SH_regression_2500_v1.data")
 
+
 def regression_18000_v1():
-    """Multiprocessed version of generate models. Trains multiple networks 
+    """Multiprocessed version of generate models. Trains multiple networks
     simultaneously to speed up regression.
     """
     config = get_default_earth_config()
-    config['N_train'] = [18000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["none"]
-    model_deg = 40 
+    config["N_train"] = [18000]
+    config["N_val"] = [500]
+    config["scale_by"] = ["none"]
+    model_deg = 40
     model_interval = 10
     num_models = 3
 
@@ -137,7 +170,13 @@ def regression_18000_v1():
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
-    sh_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, deg_list, model_id_list], names=['noise', 'degree', 'id']), columns=['model_identifier'])
+    sh_df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [noise_list, deg_list, model_id_list],
+            names=["noise", "degree", "id"],
+        ),
+        columns=["model_identifier"],
+    )
 
     pool = mp.Pool(1)
     args = generate_args(config, num_models, noise_list, deg_list)
@@ -149,15 +188,16 @@ def regression_18000_v1():
 
     sh_df.to_pickle("Data/Dataframes/Regression/Earth_SH_regression_18000_v1.data")
 
+
 def regression_5000_v2():
-    """Multiprocessed version of generate models. Trains multiple networks 
+    """Multiprocessed version of generate models. Trains multiple networks
     simultaneously to speed up regression.
     """
     config = get_default_earth_config()
-    config['N_train'] = [5000]
-    config['N_val'] = [500]
-    config['scale_by'] = ["none"]
-    model_deg = 63 
+    config["N_train"] = [5000]
+    config["N_val"] = [500]
+    config["scale_by"] = ["none"]
+    model_deg = 63
     model_interval = 10
     num_models = 3
 
@@ -165,7 +205,13 @@ def regression_5000_v2():
     deg_list = np.arange(3, model_deg, model_interval, dtype=int)
     model_id_list = np.arange(0, num_models, 1, dtype=int)
 
-    sh_df = pd.DataFrame(index=pd.MultiIndex.from_product([noise_list, deg_list, model_id_list], names=['noise', 'degree', 'id']), columns=['model_identifier'])
+    sh_df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [noise_list, deg_list, model_id_list],
+            names=["noise", "degree", "id"],
+        ),
+        columns=["model_identifier"],
+    )
 
     pool = mp.Pool(1)
     args = generate_args(config, num_models, noise_list, deg_list)
@@ -184,4 +230,3 @@ if __name__ == "__main__":
     # regression_2500_v1()
     # regression_18000_v1()
     regression_5000_v2()
-

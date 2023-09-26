@@ -31,10 +31,10 @@ def evaluate_sh(trajectory, shape_file, model):
     return np.average(a_error)
 
 
-def evaluate_nn(trajectory, model_file, model):
+def evaluate_nn(trajectory, obj_file, model):
     x, a_true, u = get_hetero_poly_symmetric_data(
         trajectory,
-        model_file,
+        obj_file,
         point_mass_removed=[False],
     )
     a = model.compute_acceleration(trajectory.positions.astype(np.float32))
@@ -52,7 +52,7 @@ def evaluate_model(i, df, evaluate_method):
         planet,
         [R, 3 * R],
         N_samples,
-        shape_model=planet.obj_8k,
+        obj_file=planet.obj_8k,
     )
     outer_avg_error = evaluate_method(outer_trajectory, planet.obj_8k, model)
 
@@ -60,7 +60,7 @@ def evaluate_model(i, df, evaluate_method):
         planet,
         [0, R],
         N_samples,
-        shape_model=planet.obj_8k,
+        obj_file=planet.obj_8k,
     )
     inner_avg_error = evaluate_method(inner_trajectory, planet.obj_8k, model)
 

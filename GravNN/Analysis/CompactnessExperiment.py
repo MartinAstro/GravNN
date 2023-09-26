@@ -185,7 +185,7 @@ class CompactnessExperiment:
         # Get SH data
         x, acc_sh, u = get_sh_data(
             traj,
-            config["grav_file"][0],
+            config["obj_file"][0],
             **config,
         )
         acc_pinn = self.model.compute_acceleration(x)

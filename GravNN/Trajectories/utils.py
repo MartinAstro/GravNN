@@ -106,7 +106,7 @@ def generate_near_hopper_trajectories(sampling_inteval):
             planet,
             [0, 1.05 * planet.radius],
             int(samples),
-            model_file=planet.obj_200k,
+            obj_file=planet.obj_200k,
         )
         hopper_trajectories.append(trajectory)
     return hopper_trajectories
@@ -250,7 +250,7 @@ def generate_orex_hopper_trajectories(sampling_inteval):
             planet,
             [0, 1.05 * planet.radius],
             int(samples),
-            model_file=planet.obj_200k,
+            obj_file=planet.obj_200k,
         )
         hopper_trajectories.append(trajectory)
     return hopper_trajectories

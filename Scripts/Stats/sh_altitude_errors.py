@@ -26,7 +26,7 @@ def main():
     alt_list = np.linspace(0, 50000, 50, dtype=float)
     alt_list = np.concatenate([alt_list, np.linspace(50000, 55000, 2, dtype=float)[1:]])
 
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     max_deg = 1000
     points = 250000
 
@@ -45,7 +45,7 @@ def main():
     for i, alt in enumerate(alt_list):
         trajectory = FibonacciDist(planet, planet.radius + alt, points=points)
 
-        x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
+        x, a, u = get_sh_data(trajectory, sh_file, max_deg=max_deg, deg_removed=2)
         grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
         rse_mean_array = np.zeros((1, len(deg_list)))
@@ -59,7 +59,7 @@ def main():
         for j in range(len(deg_list)):
             deg = deg_list[j]
 
-            x, a, u = get_sh_data(trajectory, model_file, max_deg=deg, deg_removed=2)
+            x, a, u = get_sh_data(trajectory, sh_file, max_deg=deg, deg_removed=2)
             grid_pred = StateObject(trajectory=trajectory, accelerations=a)
             diff = grid_pred - grid_true
 

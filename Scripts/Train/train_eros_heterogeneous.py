@@ -41,7 +41,7 @@ def main():
         "fuse_models": [True],
         "tanh_r": [10],
         "tanh_k": [1e3],
-        "grav_file": [Eros().obj_200k],
+        "obj_file": [Eros().obj_200k],
         "gravity_data_fcn": [get_hetero_poly_data],
         # "gravity_data_fcn": [get_hetero_poly_symmetric_data],
         "augment_data_config": [

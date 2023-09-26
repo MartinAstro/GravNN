@@ -117,7 +117,7 @@ def main():
     )
     extrapolation_exp.run(batch=False)
 
-    sh_model = SphericalHarmonics(config["grav_file"][0], degree=100, parallel=False)
+    sh_model = SphericalHarmonics(config["obj_file"][0], degree=100, parallel=False)
     extrapolation_exp = TimePredictionExperiment(
         sh_model,
         r_max,

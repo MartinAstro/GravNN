@@ -48,7 +48,7 @@ class PlanesExperiment:
 
     def get_test_data(self):
         planet = self.config["planet"][0]
-        obj_file = self.config.get("grav_file", [None])[0]
+        obj_file = self.config.get("obj_file", [None])[0]
         gravity_data_fcn = self.config["gravity_data_fcn"][0]
         interpolation_dist = PlanesDist(
             planet,
@@ -118,14 +118,14 @@ class PlanesExperiment:
     def get_planet_mask(self):
         # Don't recompute this
         if self.interior_mask is None:
-            # asteroids grav_file is the shape model
-            grav_file = self.config.get("grav_file", [None])[0]
+            # asteroids obj_file is the shape model
+            obj_file = self.config.get("obj_file", [None])[0]
             # planets have shape model (sphere currently)
-            self.model_file = self.config.get("shape_model", [grav_file])[0]
-            self.model_file = make_windows_path_posix(self.model_file)
-            filename, file_extension = os.path.splitext(self.model_file)
-            self.shape_model = trimesh.load_mesh(
-                self.model_file,
+            self.obj_file = self.config.get("obj_file", [obj_file])[0]
+            self.obj_file = make_windows_path_posix(self.obj_file)
+            filename, file_extension = os.path.splitext(self.obj_file)
+            self.obj_file = trimesh.load_mesh(
+                self.obj_file,
                 file_type=file_extension[1:],
             )
 
@@ -133,7 +133,7 @@ class PlanesExperiment:
             step = 100
             mask = np.full((N,), False)
             pbar = ProgressBar(N, True)
-            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+            rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.obj_file)
             for i in range(0, N, step):
                 end_idx = (i // step + 1) * step
                 position_subset = self.x_test[i:end_idx] / 1e3

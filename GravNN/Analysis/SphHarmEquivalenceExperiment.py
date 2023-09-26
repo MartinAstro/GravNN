@@ -144,8 +144,8 @@ class SphHarmEquivalenceExperiment:
         altitudes = self.truth_df.index
         for alt in altitudes:
             trajectory = FibonacciDist(self.planet, self.planet.radius + alt, points)
-            model_file = trajectory.celestial_body.sh_file
-            x, acc_sh, u = get_sh_data(trajectory, model_file, **self.config)
+            sh_file = trajectory.celestial_body.sh_file
+            x, acc_sh, u = get_sh_data(trajectory, sh_file, **self.config)
             acc_pinn = self.model.compute_acceleration(x)
 
             state_obj_true = StateObject(trajectory=trajectory, accelerations=acc_sh)

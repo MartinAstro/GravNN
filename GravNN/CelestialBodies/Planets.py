@@ -1,15 +1,23 @@
 import os
 import re
-import pooch
-import GravNN
-import numpy as np
 from zipfile import ZipFile
-class Earth:
+
+import numpy as np
+import pooch
+
+import GravNN
+
+
+class Planet:
+    def __init__(self):
+        pass
+
+
+class Earth(Planet):
     def __init__(self):
         self.body_name = "earth"
         self.mu = 0.3986004415e15  # meters^3/s^2
         self.radius = 6378136.6  # meters
-        
 
         def unpack(fname, action, member):
             # manual unpack processor
@@ -31,16 +39,27 @@ class Earth:
             if os.path.exists(new_name):
                 return new_name
 
-            with open(unzipped, 'rb') as f:
+            with open(unzipped, "rb") as f:
                 data = f.readlines()
             os.remove(unzipped)
 
-            with open(new_name, 'w') as f:
+            with open(new_name, "w") as f:
                 f.write("%f,%f,%f,%d\n" % (self.radius, self.mu, 0.0, 360))
-                f.write("0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.write("1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.write("1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.writelines([ re.sub("\s+", ",", line.decode("utf-8").lstrip()) + "\n" for line in data])
+                f.write(
+                    "0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.write(
+                    "1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.write(
+                    "1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.writelines(
+                    [
+                        re.sub("\s+", ",", line.decode("utf-8").lstrip()) + "\n"
+                        for line in data
+                    ],
+                )
             return new_name
 
         def format_EGM2008_sh(fname, action, pooch_inst):
@@ -49,41 +68,60 @@ class Earth:
             if os.path.exists(new_name):
                 return new_name
 
-            with open(unzipped, 'rb') as f:
+            with open(unzipped, "rb") as f:
                 data = f.readlines()
             os.remove(unzipped)
 
-            with open(new_name, 'w') as f:
+            with open(new_name, "w") as f:
                 f.write("%f,%f,%f,%d\n" % (self.radius, self.mu, 0.0, 2190))
-                f.write("0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.write("1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.write("1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n")
-                f.writelines([ re.sub("\s+", ",", line.decode("utf-8").replace("D", "E").lstrip()) + "\n" for line in data])
+                f.write(
+                    "0,0, 1.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.write(
+                    "1,0, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.write(
+                    "1,1, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00, 0.00000000000E+00\n",
+                )
+                f.writelines(
+                    [
+                        re.sub(
+                            "\s+",
+                            ",",
+                            line.decode("utf-8").replace("D", "E").lstrip(),
+                        )
+                        + "\n"
+                        for line in data
+                    ],
+                )
             return new_name
 
         self.EGM96 = pooch.retrieve(
-            url='https://earth-info.nga.mil/php/download.php?file=egm-96spherical',
+            url="https://earth-info.nga.mil/php/download.php?file=egm-96spherical",
             known_hash="1f21ab8151c1b9fe25f483a4f6b78acdbf5306daf923725017b83d87a5f33472",
             fname="EGM96_raw.zip",
             path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Earth/",
-            processor=format_EGM96_sh
+            processor=format_EGM96_sh,
         )
 
         self.EGM2008 = pooch.retrieve(
-            url='https://earth-info.nga.mil/php/download.php?file=egm-08spherical',
-            known_hash='65a9072f337f156e8cbd76ffd773f536e6fb0de18697ea6726ecdb790fac0fbd',
+            url="https://earth-info.nga.mil/php/download.php?file=egm-08spherical",
+            known_hash="65a9072f337f156e8cbd76ffd773f536e6fb0de18697ea6726ecdb790fac0fbd",
             fname="EGM2008_raw.zip",
             path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Earth/",
-            processor=format_EGM2008_sh
+            processor=format_EGM2008_sh,
         )
 
-        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Earth/Earth.obj"
+        self.obj_file = (
+            os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Earth/Earth.obj"
+        )
 
         # Backwards compatability
         # self.sh_file = self.EGM96
         self.sh_file = self.EGM2008
 
-class Moon:
+
+class Moon(Planet):
     def __init__(self):
         self.body_name = "moon"
         self.radius = 1738100.0  # meters
@@ -94,25 +132,34 @@ class Moon:
             if os.path.exists(new_name):
                 return new_name
 
-            with open(fname, 'r') as f:
+            with open(fname, "r") as f:
                 data = f.readlines()
             meta_data = np.array([float(x) for x in data[0].split(", ")])
-            meta_data[0] *= 1000.0 # change radius units to meters
-            meta_data[1] *= 1000.0**3 # change mu units to meters^3
-            
-            with open(new_name, 'w') as f:
-                f.write(np.array2string(meta_data, separator=', ', max_line_width=2000)[1:-1] + "\n")
-                f.write("    0,    0,  1.00000000000E+00,  0.00000000000E+00, 0.00000000000E+00,  0.00000000000E+00\n")
+            meta_data[0] *= 1000.0  # change radius units to meters
+            meta_data[1] *= 1000.0**3  # change mu units to meters^3
+
+            with open(new_name, "w") as f:
+                f.write(
+                    np.array2string(meta_data, separator=", ", max_line_width=2000)[
+                        1:-1
+                    ]
+                    + "\n",
+                )
+                f.write(
+                    "    0,    0,  1.00000000000E+00,  0.00000000000E+00, 0.00000000000E+00,  0.00000000000E+00\n",
+                )
                 f.writelines(data[1:])
             return new_name
 
         self.GRGM1200 = pooch.retrieve(
-            url='https://pds-geosciences.wustl.edu/grail/grail-l-lgrs-5-rdr-v1/grail_1001/shadr/gggrx_1200a_sha.tab',
+            url="https://pds-geosciences.wustl.edu/grail/grail-l-lgrs-5-rdr-v1/grail_1001/shadr/gggrx_1200a_sha.tab",
             known_hash="fa04c3dce9376948ad243f3df74144e2602f12d183ea4d179604ed0a79da7ded",
             fname="GRGM_1200_raw.txt",
             path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Moon/",
-            processor=format_sh
+            processor=format_sh,
         )
-        
+
         self.sh_file = self.GRGM1200
-        self.shape_model = os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Moon/Moon.obj"
+        self.obj_file = (
+            os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Moon/Moon.obj"
+        )

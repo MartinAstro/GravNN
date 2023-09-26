@@ -17,7 +17,7 @@ np.random.seed(1234)
 tf.random.set_seed(0)
 
 
-def get_regress_data(model_file):
+def get_regress_data(sh_file):
     # Generate the data
     planet = Earth()
     trajectory = RandomDist(planet, [planet.radius, planet.radius + 420000.0], 1000000)
@@ -29,15 +29,15 @@ def get_regress_data(model_file):
 def regress_model(x, a, max_deg):
     planet = Earth()
     gravnn_path = os.path.dirname(GravNN.__file__)
-    grav_file = gravnn_path + f"/Files/GravityModels/Regressed/regress_{max_deg}.csv"
+    sh_file = gravnn_path + f"/Files/GravityModels/Regressed/regress_{max_deg}.csv"
     regressor = Regression(max_deg, planet, x, a)
     regressor.perform_regression(remove_deg=True)
-    regressor.save(grav_file)
+    regressor.save(sh_file)
 
 
 def main():
     planet = Earth()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
     model_deg = 33
@@ -45,7 +45,7 @@ def main():
     # * Generate the true acceleration
     df_file = "Data/Dataframes/sh_regress_stats_" + str(model_deg) + "_Brillouin.data"
     trajectory = DHGridDist(planet, planet.radius, degree=density_deg)
-    x, a, u = get_sh_data(trajectory, model_file, max_deg=max_deg, deg_removed=2)
+    x, a, u = get_sh_data(trajectory, sh_file, max_deg=max_deg, deg_removed=2)
     grid_true = StateObject(trajectory=trajectory, accelerations=a)
 
     deg_list = np.arange(3, model_deg, 1, dtype=int)

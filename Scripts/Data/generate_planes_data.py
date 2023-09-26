@@ -9,7 +9,7 @@ from GravNN.Trajectories import PlanesDist
 def main():
     print_slurm_info()
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     # # Training data
     # trajectory = PlanesDist(
@@ -18,7 +18,7 @@ def main():
     #     samples_1d=200,
     # )
     # start_time = time.time()
-    # Polyhedral(planet, model_file, trajectory=trajectory).load()
+    # Polyhedral(planet, obj_file, trajectory=trajectory).load()
     # print(f"Total time: {time.time() - start_time}")
 
     trajectory = PlanesDist(
@@ -27,7 +27,7 @@ def main():
         samples_1d=200,
     )
     start_time = time.time()
-    Polyhedral(planet, model_file, trajectory=trajectory).load()
+    Polyhedral(planet, obj_file, trajectory=trajectory).load()
     print(f"Total time: {time.time() - start_time}")
 
     trajectory = PlanesDist(
@@ -36,7 +36,7 @@ def main():
         samples_1d=200,
     )
     start_time = time.time()
-    Polyhedral(planet, model_file, trajectory=trajectory).load()
+    Polyhedral(planet, obj_file, trajectory=trajectory).load()
     print(f"Total time: {time.time() - start_time}")
 
 

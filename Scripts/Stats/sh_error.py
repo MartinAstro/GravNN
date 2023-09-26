@@ -17,8 +17,8 @@ def compute_acceleration(trajectory):
     return a
 
 
-def compute_stats(trajectory, prefix, model_file):
-    x, a, u = get_poly_data(trajectory, model_file)
+def compute_stats(trajectory, prefix, obj_file):
+    x, a, u = get_poly_data(trajectory, obj_file)
 
     a_pred = compute_acceleration(trajectory)
 
@@ -43,26 +43,26 @@ def main():
     planet = Eros()
     interior_bound = planet.radius
     exterior_bound = planet.radius * 3
-    model_file = planet.obj_200k
-    trajectory = SurfaceDist(planet, model_file)
+    obj_file = planet.obj_200k
+    trajectory = SurfaceDist(planet, obj_file)
     stats = {}
-    stats.update(compute_stats(trajectory, "surface", model_file))
+    stats.update(compute_stats(trajectory, "surface", obj_file))
 
     trajectory = RandomDist(
         planet,
         [0, interior_bound],
         20000,
-        model_file,
+        obj_file,
     )
-    stats.update(compute_stats(trajectory, "interior", model_file))
+    stats.update(compute_stats(trajectory, "interior", obj_file))
 
     trajectory = RandomDist(
         planet,
         [interior_bound, exterior_bound],
         20000,
-        model_file,
+        obj_file,
     )
-    stats.update(compute_stats(trajectory, "exterior", model_file))
+    stats.update(compute_stats(trajectory, "exterior", obj_file))
     print(stats)
 
 

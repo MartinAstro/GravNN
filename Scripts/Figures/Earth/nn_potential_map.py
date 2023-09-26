@@ -77,7 +77,7 @@ def plot_potential_full_C22(map_vis, grid_pot_true, grid_C22):
 def plot_radial_potential_dist(map_vis, trajectory, model, config, title):
     x, a, u = get_sh_data(
         trajectory,
-        config["grav_file"][0],
+        config["obj_file"][0],
         max_deg=1000,
         deg_removed=-1,
     )
@@ -191,7 +191,7 @@ def main():
     data_vis = DataVisualization(mapUnit, halt_formatting=True)
 
     planet = Earth()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     density_deg = 180
     max_deg = 1000
 
@@ -204,11 +204,11 @@ def main():
     )
 
     Call_r0_gm = SphericalHarmonics(
-        model_file,
+        sh_file,
         degree=max_deg,
         trajectory=DH_trajectory,
     ).load(override=False)
-    C22_r0_gm = SphericalHarmonics(model_file, degree=2, trajectory=DH_trajectory).load(
+    C22_r0_gm = SphericalHarmonics(sh_file, degree=2, trajectory=DH_trajectory).load(
         override=False,
     )
 

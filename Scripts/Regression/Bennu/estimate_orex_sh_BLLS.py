@@ -54,7 +54,7 @@ def preprocess_data(x_dumb, a_dumb, acc_noise):
 def BLLS_SH(regress_deg, remove_deg, sampling_interval, include_hoppers=False):
     # This has the true SH coef of Bennu -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Bennu()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     N = regress_deg
     M = remove_deg
@@ -84,7 +84,7 @@ def BLLS_SH(regress_deg, remove_deg, sampling_interval, include_hoppers=False):
         trajectory = trajectories[k]
         x, a, u = get_poly_data(
             trajectory,
-            model_file,
+            obj_file,
             remove_point_mass=[remove_point_mass],
             override=[False],
         )

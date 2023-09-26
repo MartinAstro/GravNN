@@ -18,17 +18,17 @@ def main():
 
     # print(f"Num Threads:{mp.cpu_count()}")
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     # Training data
     trajectory = RandomDist(
         planet,
         [0, planet.radius * 10],
         points=1000000,
-        shape_model=model_file,
+        obj_file=obj_file,
     )
     start_time = time.time()
-    Polyhedral(planet, model_file, trajectory=trajectory).load()
+    Polyhedral(planet, obj_file, trajectory=trajectory).load()
     print(f"Total time: {time.time() - start_time}")
 
 

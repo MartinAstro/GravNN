@@ -372,7 +372,7 @@ def format_config(config):
     new_config["dummy_transformer"] = [
         new_config["dummy_transformer"][0].__class__.__name__,
     ]
-    new_config["grav_file"] = [new_config["grav_file"][0].split("/")[-1]]
+    new_config["obj_file"] = [new_config["obj_file"][0].split("/")[-1]]
     new_config["deg_removed"] = [new_config.get("deg_removed", ["None"])[0]]
     new_config["remove_point_mass"] = [new_config.get("remove_point_mass", ["None"])[0]]
     return new_config
@@ -383,7 +383,7 @@ def print_config(original_config):
     data_keys = [
         "planet",
         "distribution",
-        "grav_file",
+        "obj_file",
         "deg_removed",
         "remove_point_mass",
         "N_dist",

@@ -48,7 +48,7 @@ def main():
     """
 
     planet = Moon()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     max_deg = 1000
 
     trajectory = FibonacciDist(planet, planet.radius, 250000)
@@ -67,7 +67,7 @@ def main():
 
     x, a, u = get_sh_data(
         trajectory,
-        model_file,
+        sh_file,
         max_deg=max_deg,
         deg_removed=2,
         override=False,

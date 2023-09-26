@@ -62,15 +62,15 @@ def plot_moving_average(
 
 def plot_residual_figure(df, sh_regress_files, show):
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     test_trajectory = RandomDist(
         planet,
         [0, planet.radius * 3],
         50000,
-        grav_file=[model_file],
+        obj_file=[obj_file],
     )
-    test_poly_gm = Polyhedral(planet, model_file, trajectory=test_trajectory).load()
+    test_poly_gm = Polyhedral(planet, obj_file, trajectory=test_trajectory).load()
 
     x = test_poly_gm.positions
     a = test_poly_gm.accelerations

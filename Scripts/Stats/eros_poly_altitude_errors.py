@@ -12,7 +12,7 @@ def main():
     # TODO: Need to make this a multi-index of ["SH_deg_2"]["diff_mean"],
     # ['28385867.273768]['diff_mean']
     planet = Eros()
-    model_file = planet.model_25k
+    obj_file = planet.model_25k
     density_deg = 90
 
     df_file = "Data/Dataframes/poly_stats_altitude.data"
@@ -36,7 +36,7 @@ def main():
     for alt in alt_list:
         trajectory = DHGridDist(planet, planet.radius + alt, degree=density_deg)
 
-        x, a, u = get_poly_data(trajectory, model_file)
+        x, a, u = get_poly_data(trajectory, obj_file)
         grid_true = Grid(trajectory=trajectory, accelerations=a)
 
         stats = {}

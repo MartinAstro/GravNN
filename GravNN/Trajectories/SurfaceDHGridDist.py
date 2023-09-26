@@ -7,7 +7,7 @@ from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class SurfaceDHGridDist(TrajectoryBase):
-    def __init__(self, celestial_body, radius, degree, shape_model, **kwargs):
+    def __init__(self, celestial_body, radius, degree, obj_file, **kwargs):
         self.radius = radius
         self.degree = degree
         n = 2 * degree + 2
@@ -15,7 +15,7 @@ class SurfaceDHGridDist(TrajectoryBase):
         self.N_lat = n
         self.points = self.N_lon * self.N_lat
         self.celestial_body = celestial_body
-        self.load_shape_model(shape_model)
+        self.load_obj_file(obj_file)
         super().__init__(**kwargs)
 
     def generate_full_file_directory(self):
@@ -30,10 +30,10 @@ class SurfaceDHGridDist(TrajectoryBase):
         )
         self.file_directory += self.trajectory_name + "/"
 
-    def load_shape_model(self, shape_file):
+    def load_obj_file(self, shape_file):
         filename, file_extension = os.path.splitext(shape_file)
         self.shape_file = shape_file
-        self.shape_model = trimesh.load_mesh(shape_file, file_type=file_extension[1:])
+        self.obj_file = trimesh.load_mesh(shape_file, file_type=file_extension[1:])
 
     def generate(self):
         """Sample the grid at uniform intervals defined by the maximum
@@ -63,7 +63,7 @@ class SurfaceDHGridDist(TrajectoryBase):
 
         # Project the grid down to the surface of the body
         ray_origins = np.zeros_like(brill_positions)
-        intersections, ray_idx, _ = self.shape_model.ray.intersects_location(
+        intersections, ray_idx, _ = self.obj_file.ray.intersects_location(
             ray_origins,
             brill_positions,
         )

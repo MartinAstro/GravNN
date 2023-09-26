@@ -7,7 +7,7 @@ from GravNN.Trajectories import RandomDist
 def get_default_bennu_config():
     data_config = {
         "planet": [Bennu()],
-        "grav_file": [Bennu().stl_200k],
+        "obj_file": [Bennu().stl_200k],
         "distribution": [RandomDist],
         "N_dist": [20000],
         "N_train": [2500],

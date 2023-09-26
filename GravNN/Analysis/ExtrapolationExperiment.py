@@ -3,6 +3,7 @@ import os
 import numpy as np
 import trimesh
 
+from GravNN.Analysis.ExperimentBaseClass import ExperimentBaseClass
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Losses import *
 from GravNN.Support.batches import batch_function
@@ -10,7 +11,7 @@ from GravNN.Support.transformations import cart2sph
 from GravNN.Trajectories import RandomDist
 
 
-class ExtrapolationExperiment:
+class ExtrapolationExperiment(ExperimentBaseClass):
     def __init__(self, model, config, points, random_seed=1234, **kwargs):
         self.config = config
         self.model = model
@@ -36,6 +37,7 @@ class ExtrapolationExperiment:
         self.percent_error_pot = None
 
         np.random.seed(random_seed)
+        super().__init__()
 
     def get_train_data(self):
         data = DataSet(self.config)
@@ -46,11 +48,11 @@ class ExtrapolationExperiment:
         self.train_dist_2_COM_idx = np.argsort(train_r_COM)
         self.train_r_COM = train_r_COM[self.train_dist_2_COM_idx]
 
-        # asteroids grav_file is the shape model
-        grav_file = self.config.get("grav_file", [None])[0]
+        # asteroids obj_file is the shape model
+        obj_file = self.config.get("obj_file", [None])[0]
 
         # planets have shape model (sphere currently)
-        obj_file = self.config.get("shape_model", [grav_file])[0]
+        obj_file = self.config.get("obj_file", [obj_file])[0]
 
         # Compute distance to surface
         filename, file_extension = os.path.splitext(obj_file)
@@ -83,7 +85,7 @@ class ExtrapolationExperiment:
         max_radius = np.max([original_max_radius, extra_max_radius])
 
         self.config["radius_min"][0]
-        obj_file = self.config.get("grav_file", [None])[0]
+        obj_file = self.config.get("obj_file", [None])[0]
 
         gravity_data_fcn = self.config["gravity_data_fcn"][0]
 
@@ -123,7 +125,7 @@ class ExtrapolationExperiment:
         self.test_dist_2_COM_idx = np.argsort(x_sph[:, 0])
         self.test_r_COM = x_sph[self.test_dist_2_COM_idx, 0]
 
-        mesh = interpolation_dist.shape_model
+        mesh = interpolation_dist.obj_file
 
         def closest_point_fcn(x):
             return trimesh.proximity.closest_point(mesh, x)[1]
@@ -176,6 +178,12 @@ class ExtrapolationExperiment:
         self.loss_acc = tf.reduce_sum(
             [tf.reduce_mean(loss) for loss in losses.values()],
         )
+
+    def save(self):
+        pass
+
+    def load(self):
+        pass
 
     def run(self):
         if not self.omit_train_data:

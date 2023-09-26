@@ -37,12 +37,12 @@ def std_masks(grid, sigma):
 
 def get_grid(degree):
     planet = Moon()
-    model_file = planet.sh_file
+    sh_file = planet.sh_file
     density_deg = 180
 
     radius_min = planet.radius
     trajectory = DHGridDist(planet, radius_min, degree=density_deg)
-    Clm_r0_gm = SphericalHarmonics(model_file, degree=degree, trajectory=trajectory)
+    Clm_r0_gm = SphericalHarmonics(sh_file, degree=degree, trajectory=trajectory)
     Clm_a = Clm_r0_gm.load().accelerations
     return Grid(trajectory, Clm_a)
 

@@ -149,7 +149,7 @@ def fit_transformers(x_dumb, a_dumb, u_dumb, config):
 def regress_nn(config, sampling_interval, include_hoppers=False):
     print(config["PINN_constraint_fcn"][0])
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
     remove_point_mass = False
 
     epochs = config["epochs"][0]
@@ -188,7 +188,7 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
         trajectory = trajectories[k]
         x, a, u = get_poly_data(
             trajectory,
-            model_file,
+            obj_file,
             remove_point_mass=[remove_point_mass],
         )
 
@@ -196,7 +196,7 @@ def regress_nn(config, sampling_interval, include_hoppers=False):
             trajectory = hopper_trajectories[k]
             x_hop, a_hop, u_hop = get_poly_data(
                 trajectory,
-                model_file,
+                obj_file,
                 remove_point_mass=[remove_point_mass],
             )
             x = np.vstack((x, x_hop))

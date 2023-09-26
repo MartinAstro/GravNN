@@ -1,4 +1,5 @@
-import os, sys
+import hashlib
+import os
 import pickle
 from abc import ABC, abstractmethod
 
@@ -13,6 +14,18 @@ class GravityModelBase(ABC):
         self.potentials = None
         self.file_directory = None
         return
+
+    def _deterministic_string(self):
+        attributes = vars(self)
+        # Sort attributes to ensure the order is always the same
+        sorted_items = sorted(attributes.items())
+        return "-".join(f"{key}:{value}" for key, value in sorted_items)
+
+    def __hash__(self):
+        combined_str = self._deterministic_string()
+        hasher = hashlib.sha256()
+        hasher.update(combined_str.encode("utf-8"))
+        return int.from_bytes(hasher.digest()[:8], "big")
 
     def configure(self, trajectory):
         if trajectory is not None:
@@ -58,12 +71,12 @@ class GravityModelBase(ABC):
         # Check if the file exists and either load the acceleration or generate it
         if (
             os.path.exists(self.file_directory + "acceleration.data")
-            and override == False
+            and override is False
         ):
             if self.verbose:
                 print(
                     "Found existing acceleration.data at "
-                    + os.path.relpath(self.file_directory)
+                    + os.path.relpath(self.file_directory),
                 )
             with open(self.file_directory + "acceleration.data", "rb") as f:
                 self.accelerations = pickle.load(f)
@@ -71,7 +84,8 @@ class GravityModelBase(ABC):
         else:
             if self.verbose:
                 print(
-                    "Generating acceleration at " + os.path.relpath(self.file_directory)
+                    "Generating acceleration at "
+                    + os.path.relpath(self.file_directory),
                 )
             # Note: compute_acceleration() might generate the potential values too for some representations.
             # For example, computing the potential of the polyhedral model adds one extra step
@@ -83,11 +97,11 @@ class GravityModelBase(ABC):
 
     def load_potential(self, override=False):
         # Check if the file exists and either load the potential or generate it
-        if os.path.exists(self.file_directory + "potential.data") and override == False:
+        if os.path.exists(self.file_directory + "potential.data") and override is False:
             if self.verbose:
                 print(
                     "Found existing potential.data at "
-                    + os.path.relpath(self.file_directory)
+                    + os.path.relpath(self.file_directory),
                 )
             with open(self.file_directory + "potential.data", "rb") as f:
                 self.potentials = pickle.load(f)

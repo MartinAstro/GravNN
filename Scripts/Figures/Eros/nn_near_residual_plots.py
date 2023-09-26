@@ -78,13 +78,13 @@ def plot_moving_average(
 
 
 def get_near_positions():
-    model_file = Eros().obj_200k
+    obj_file = Eros().obj_200k
     trajectories = generate_near_orbit_trajectories(60 * 10)
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
         r, a, u = get_poly_data(
             trajectory,
-            model_file,
+            obj_file,
             remove_point_mass=[False],
             override=[False],
         )
@@ -112,15 +112,15 @@ def main():
         "[5000,10000]",
     )
 
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
 
     test_trajectory = RandomDist(
         planet,
         [0, planet.radius * 3],
         20000,
-        grav_file=[model_file],
+        obj_file=[obj_file],
     )
-    test_poly_gm = Polyhedral(planet, model_file, trajectory=test_trajectory).load()
+    test_poly_gm = Polyhedral(planet, obj_file, trajectory=test_trajectory).load()
 
     data_vis.newFig()
     x_sph_train = get_near_positions()

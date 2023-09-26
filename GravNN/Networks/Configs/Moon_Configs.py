@@ -1,16 +1,14 @@
 from GravNN.CelestialBodies.Planets import Moon
-from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
 from GravNN.Trajectories import RandomDist
-from GravNN.Preprocessors import DummyScaler, UniformScaler
-from sklearn.preprocessing import MinMaxScaler
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-grav_model = SphericalHarmonics(Moon().GRGM1200,2)
+
+grav_model = SphericalHarmonics(Moon().GRGM1200, 2)
 
 
 def get_default_moon_config():
     data_config = {
         "planet": [Moon()],
-        "grav_file": [Moon().sh_file],
+        "sh_file": [Moon().sh_file],
         "distribution": [RandomDist],
         "N_dist": [1000000],
         "N_train": [950000],
@@ -23,11 +21,10 @@ def get_default_moon_config():
         "mixed_precision": [False],
         "max_deg": [1000],
         "analytic_truth": ["sh_stats_moon_"],
-        "gravity_data_fcn" : [get_sh_data],
-        "shape_model" : [Moon().shape_model],
-        "mu" : [Moon().mu],
-        "cBar" : [grav_model.C_lm],
-        "sBar" : [grav_model.S_lm]
+        "gravity_data_fcn": [get_sh_data],
+        "obj_file": [Moon().obj_file],
+        "mu": [Moon().mu],
+        "cBar": [grav_model.C_lm],
+        "sBar": [grav_model.S_lm],
     }
     return data_config
-

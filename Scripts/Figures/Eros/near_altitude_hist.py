@@ -10,14 +10,14 @@ from GravNN.Trajectories.utils import generate_near_orbit_trajectories
 def main():
     # This has the true SH coef of Eros -- http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
     planet = Eros()
-    model_file = planet.obj_200k
+    obj_file = planet.obj_200k
     trajectories = generate_near_orbit_trajectories(sampling_inteval=10 * 60)
 
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
         r, a, u = get_poly_data(
             trajectory,
-            model_file,
+            obj_file,
             remove_point_mass=[False],
             override=[False],
         )

@@ -21,7 +21,7 @@ def main():
         planet,
         radius_bounds=[0.0, planet.radius * 3],
         points=500,
-        model_file=planet.obj_8k,
+        obj_file=planet.obj_8k,
     )
 
     # Define the analytic gravity model used to define ground truth

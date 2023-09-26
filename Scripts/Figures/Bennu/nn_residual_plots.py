@@ -86,7 +86,7 @@ def main():
     data_vis.fig_size = data_vis.tri_vert_page
 
     planet = Bennu()
-    model_file = planet.stl_200k
+    obj_file = planet.stl_200k
     df, descriptor = (
         pd.read_pickle("Data/Dataframes/bennu_traditional_wo_annealing.data"),
         "[0,R*3]",
@@ -102,9 +102,9 @@ def main():
         planet,
         [0, planet.radius * 3],
         20000,
-        grav_file=[model_file],
+        obj_file=[obj_file],
     )
-    test_poly_gm = Polyhedral(planet, model_file, trajectory=test_trajectory).load(
+    test_poly_gm = Polyhedral(planet, obj_file, trajectory=test_trajectory).load(
         override=False,
     )
 

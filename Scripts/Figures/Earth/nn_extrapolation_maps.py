@@ -1,11 +1,5 @@
 import os
 
-os.environ["PATH"] += (
-    os.pathsep
-    + "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.1\\extras\\CUPTI\\lib64"
-)
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,7 +9,11 @@ from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.Grid import Grid
-from GravNN.Support.transformations import cart2sph, project_acceleration
+from GravNN.Support.transformations import (
+    cart2sph,
+    invert_projection,
+    project_acceleration,
+)
 from GravNN.Trajectories import DHGridDist
 from GravNN.Visualization.MapBase import MapBase
 
@@ -31,10 +29,10 @@ def plot_maps(config, model, map_trajectories):
     x_transformer = config["x_transformer"][0]
     a_transformer = config["a_transformer"][0]
     for name, map_traj in map_trajectories.items():
-        model_file = map_traj.celestial_body.sh_file
+        sh_file = map_traj.celestial_body.sh_file
         x, a, u = get_sh_data(
             map_traj,
-            model_file,
+            sh_file,
             config["max_deg"][0],
             config["deg_removed"][0],
         )
@@ -93,7 +91,7 @@ def main():
     for id_value in ids:
         tf.keras.backend.clear_session()
 
-        config, model = load_config_and_model(df, model_id_file)
+        config, model = load_config_and_model(df, id_value)
 
         density_deg = 180
         test_trajectories = {

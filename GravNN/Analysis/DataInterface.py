@@ -45,9 +45,9 @@ class DataInterface:
 
     def get_data(self):
         planet = self.config["planet"][0]
-        grav_file = self.config["grav_file"][0]
+        obj_file = self.config["obj_file"][0]
 
-        grav_file = make_windows_path_posix(grav_file)
+        obj_file = make_windows_path_posix(obj_file)
 
         trajectory = self.distribution(
             planet,
@@ -59,7 +59,7 @@ class DataInterface:
 
         x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
             trajectory,
-            grav_file,
+            obj_file,
             **self.config,
         )
 
@@ -78,7 +78,7 @@ class DataInterface:
 
     def get_J2_data(self):
         planet = self.config["planet"][0]
-        grav_file = self.config["grav_file"][0]
+        obj_file = self.config["obj_file"][0]
 
         trajectory = RandomDist(planet, self.radius_bounds, self.points, **self.config)
         get_analytic_data_fcn = self.config["gravity_data_fcn"][0]
@@ -87,7 +87,7 @@ class DataInterface:
 
         x_unscaled, a_unscaled, u_unscaled = get_analytic_data_fcn(
             trajectory,
-            grav_file,
+            obj_file,
             **config_mod,
         )
 

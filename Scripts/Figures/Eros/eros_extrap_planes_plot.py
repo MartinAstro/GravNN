@@ -31,14 +31,14 @@ def main():
     # Load PINN II
     model_id = df["id"].values[-1]
     config, model = load_config_and_model(df, model_id)
-    config["grav_file"] = [planet.obj_8k]  # plot with simpler obj file
+    config["obj_file"] = [planet.obj_8k]  # plot with simpler obj file
     vis = run(config, model, radius_bounds, max_percent)
     vis.save(plt.gcf(), "PINNII/Eros_Planes.pdf")
 
     # PINN III
     model_id = df["id"].values[-2]
     config, model = load_config_and_model(df, model_id)
-    config["grav_file"] = [planet.obj_8k]
+    config["obj_file"] = [planet.obj_8k]
     vis = run(config, model, radius_bounds, max_percent)
     vis.save(plt.gcf(), "PINNIII/Eros_Planes.pdf")
 

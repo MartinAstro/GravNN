@@ -88,7 +88,7 @@ def main():
         planet,
         [0, planet.radius + 5000],
         50000,
-        grav_file=[planet.obj_8k],
+        obj_file=[planet.obj_8k],
     )
     test_poly_gm = Polyhedral(planet, planet.obj_8k, trajectory=test_trajectory).load(
         override=False,

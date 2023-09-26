@@ -25,40 +25,40 @@ class RandomDist(TrajectoryBase):
             uniform_volume = uniform_volume[0]
         self.uniform_volume = uniform_volume
 
-        self.populate_shape_model(**kwargs)
+        self.populate_obj_file(**kwargs)
         super().__init__(**kwargs)
 
         pass
 
-    def populate_shape_model(self, **kwargs):
+    def populate_obj_file(self, **kwargs):
         try:
-            self.model_file = self.celestial_body.shape_model
+            self.obj_file = self.celestial_body.obj_file
         except Exception:
-            # asteroids grav_file is the shape model
-            grav_file = kwargs.get("grav_file", [None])[0]
-            if grav_file is not None:
-                grav_file = make_windows_path_posix(grav_file)
+            # asteroids obj_file is the shape model
+            obj_file = kwargs.get("obj_file", [None])[0]
+            if obj_file is not None:
+                obj_file = make_windows_path_posix(obj_file)
 
             # planets have shape model (sphere currently)
-            self.model_file = kwargs.get("shape_model", [grav_file])
+            self.obj_file = kwargs.get("obj_file", [obj_file])
 
             try:
                 # can happen if planet + asteroid in same df
-                if np.isnan(self.model_file[0]):
-                    self.model_file = [grav_file]
+                if np.isnan(self.obj_file[0]):
+                    self.obj_file = [obj_file]
             except Exception:
                 pass
 
-            if isinstance(self.model_file, list):
-                self.model_file = self.model_file[0]
+            if isinstance(self.obj_file, list):
+                self.obj_file = self.obj_file[0]
 
         # If the file was saved on windows but we are running on mac, load the mac path.
-        self.model_file = make_windows_path_posix(self.model_file)
+        self.obj_file = make_windows_path_posix(self.obj_file)
 
-        _, file_extension = os.path.splitext(self.model_file)
-        self.filename = os.path.basename(self.model_file)
-        self.shape_model = trimesh.load_mesh(
-            self.model_file,
+        _, file_extension = os.path.splitext(self.obj_file)
+        self.filename = os.path.basename(self.obj_file)
+        self.obj_file = trimesh.load_mesh(
+            self.obj_file,
             file_type=file_extension[1:],
         )
 
@@ -66,9 +66,9 @@ class RandomDist(TrajectoryBase):
         directory_name = os.path.splitext(os.path.basename(__file__))[0]
         body = self.celestial_body.body_name
         try:
-            model_name = os.path.basename(self.model_file).split(".")[0]
+            model_name = os.path.basename(self.obj_file).split(".")[0]
         except Exception:
-            model_name = str(self.model_file.split("Blender_")[1]).split(".")[0]
+            model_name = str(self.obj_file.split("Blender_")[1]).split(".")[0]
 
         N_points = int(self.points)
         rad_bounds = self.radius_bounds
@@ -115,7 +115,7 @@ class RandomDist(TrajectoryBase):
         N = len(positions)
         step = 500
         mask = np.full((N,), False)
-        rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.shape_model)
+        rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.obj_file)
         for i in range(0, N, step):
             end_idx = (i // step + 1) * step
             position_subset = positions[i:end_idx] / 1e3

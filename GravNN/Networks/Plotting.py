@@ -1,20 +1,20 @@
 import os
-from GravNN.Visualization.MapBase import MapBase
-from GravNN.Visualization.VisualizationBase import VisualizationBase
 
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
-from GravNN.Networks import utils
-from GravNN.Support.Grid import Grid
-from GravNN.Support.transformations import (
-    sphere2cart,
-    cart2sph,
-    invert_projection,
-    project_acceleration,
-)
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
+from GravNN.Support.Grid import Grid
+from GravNN.Support.transformations import (
+    cart2sph,
+    invert_projection,
+    project_acceleration,
+)
+from GravNN.Visualization.MapBase import MapBase
+from GravNN.Visualization.VisualizationBase import VisualizationBase
+
 
 # TODO : Consider using subplot2grid to make more compact figures
 # TODO: Make data plotting routines, and model plotting routines
@@ -31,8 +31,8 @@ class Plotting:
 
     def plot_maps(self, map_trajectories):
         for name, map_traj in map_trajectories.items():
-            model_file = map_traj.celestial_body.sh_file
-            x, a, u = get_sh_data(map_traj, model_file, **self.config)
+            sh_file = map_traj.celestial_body.sh_file
+            x, a, u = get_sh_data(map_traj, sh_file, **self.config)
 
             if self.config["basis"][0] == "spherical":
                 x = cart2sph(x)
@@ -51,8 +51,9 @@ class Plotting:
             if self.config["basis"][0] == "spherical":
                 x[:, 1:3] = np.rad2deg(x[:, 1:3])
                 a = invert_projection(x, a)
-                a_pred = invert_projection(
-                    x, acc_pred.astype(float)
+                invert_projection(
+                    x,
+                    acc_pred.astype(float),
                 )  # numba requires that the types are the same
 
             grid_true = Grid(trajectory=map_traj, accelerations=a)
@@ -66,7 +67,8 @@ class Plotting:
             fig_true, ax = map_vis.plot_grid(grid_true.total, "True Grid [mGal]")
             fig_pred, ax = map_vis.plot_grid(grid_pred.total, "NN Grid [mGal]")
             fig_pert, ax = map_vis.plot_grid(
-                diff.total, "Acceleration Difference [mGal]"
+                diff.total,
+                "Acceleration Difference [mGal]",
             )
 
             fig, ax = map_vis.newFig(fig_size=(5 * 4, 3.5 * 4))
@@ -94,7 +96,7 @@ class Plotting:
         history = self.config["history"][0]
         epochs = np.arange(0, len(history["loss"]), 1)
         start = 100
-        if log == False:
+        if log is False:
             plt.plot(epochs[start:], history["loss"][start:])
             plt.plot(epochs[start:], history["val_loss"][start:])
         else:
@@ -126,7 +128,7 @@ class Plotting:
             self.config["planet"][0],
             [self.config["radius_min"][0], self.config["radius_max"][0]],
             self.config["N_dist"][0],
-            **self.config
+            **self.config,
         )  # points=1000000)
         positions = cart2sph(trajectory.positions) - self.config["planet"][0].radius
         ax1 = plt.gca()
@@ -144,5 +146,7 @@ class Plotting:
     def plot_model_graph(self):
         dot_img_file = self.directory + "model_graph.pdf"
         tf.keras.utils.plot_model(
-            self.model.network, to_file=dot_img_file, show_shapes=True
+            self.model.network,
+            to_file=dot_img_file,
+            show_shapes=True,
         )

@@ -7,8 +7,8 @@ def get_default_eros_config():
     data_config = {
         "planet": [Eros()],
         "mu": [Eros().mu],
-        "grav_file": [Eros().obj_8k],
-        # "grav_file": [Eros().obj_200k],
+        "obj_file": [Eros().obj_8k],
+        # "obj_file": [Eros().obj_200k],
         "distribution": [RandomDist],
         "N_dist": [50000],
         "N_train": [2500],
