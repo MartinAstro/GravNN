@@ -9,7 +9,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Trajectories import RandomDist
 from GravNN.Visualization.DataVisSuite import DataVisSuite
 
 
@@ -84,7 +84,7 @@ def main():
     planet = Bennu()
     df = pd.read_pickle("Data/Dataframes/transformers_wo_constraints.data")
 
-    test_trajectory = RandomAsteroidDist(
+    test_trajectory = RandomDist(
         planet,
         [0, planet.radius + 5000],
         50000,

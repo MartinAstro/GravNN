@@ -6,7 +6,7 @@ import pandas as pd
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Trajectories.RandomAsteroidDist import RandomAsteroidDist
+from GravNN.Trajectories.RandomDist import RandomDist
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
 
     # Generate sample testing data randomly distributed around the asteroid
     planet = Eros()
-    trajectory = RandomAsteroidDist(
+    trajectory = RandomDist(
         planet,
         radius_bounds=[0.0, planet.radius * 3],
         points=500,

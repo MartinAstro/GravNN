@@ -12,7 +12,7 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Trajectories import RandomAsteroidDist, SurfaceDist
+from GravNN.Trajectories import RandomDist, SurfaceDist
 
 planet = Eros()
 model_file = planet.obj_200k
@@ -24,7 +24,7 @@ transformer_df = pd.read_pickle(
     "Data/Dataframes/eros_official_noise_transformer_no_annealing.data",
 )
 sh_models = glob.glob(
-    "GravNN/Files/GravityModels/Regressed/Eros/RandomAsteroidDist/BLLS/**/**/**/**.csv",
+    "GravNN/Files/GravityModels/Regressed/Eros/RandomDist/BLLS/**/**/**/**.csv",
 )
 
 
@@ -89,7 +89,7 @@ def compute_surface_stats(model, config=None):
 
 
 def compute_interior_stats(model, config=None):
-    trajectory = RandomAsteroidDist(planet, [0, interior_bound], 20000, model_file)
+    trajectory = RandomDist(planet, [0, interior_bound], 20000, model_file)
     if config is None:
         stats = compute_sh_stats(model, trajectory)
     else:
@@ -98,7 +98,7 @@ def compute_interior_stats(model, config=None):
 
 
 def compute_exterior_stats(model, config=None):
-    trajectory = RandomAsteroidDist(
+    trajectory = RandomDist(
         planet,
         [interior_bound, exterior_bound],
         20000,

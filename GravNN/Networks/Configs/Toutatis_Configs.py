@@ -1,15 +1,13 @@
 from GravNN.CelestialBodies.Asteroids import Toutatis
 from GravNN.GravityModels.Polyhedral import get_poly_data
-from GravNN.Trajectories import RandomAsteroidDist
-from GravNN.Preprocessors import DummyScaler, UniformScaler
-from sklearn.preprocessing import MinMaxScaler
+from GravNN.Trajectories import RandomDist
 
 
 def get_prototype_toutatis_config():
     data_config = {
         "planet": [Toutatis()],
         "grav_file": [Toutatis().model_lf],
-        "distribution": [RandomAsteroidDist],
+        "distribution": [RandomDist],
         "N_dist": [10000],
         "N_train": [2500],
         "N_val": [150],
@@ -20,7 +18,7 @@ def get_prototype_toutatis_config():
         "mixed_precision": [False],
         "dtype": ["float32"],
         "analytic_truth": ["poly_stats_"],
-        "gravity_data_fcn" : [get_poly_data],
+        "gravity_data_fcn": [get_poly_data],
     }
 
     return data_config

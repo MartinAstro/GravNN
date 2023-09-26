@@ -9,7 +9,7 @@ import pandas as pd
 from GravNN.CelestialBodies.Asteroids import Bennu
 from GravNN.GravityModels.Polyhedral import get_poly_data
 from GravNN.Networks.Model import load_config_and_model
-from GravNN.Trajectories import RandomAsteroidDist, SurfaceDist
+from GravNN.Trajectories import RandomDist, SurfaceDist
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
@@ -96,7 +96,7 @@ def main():
 
                 min_radius = planet.radius
                 max_radius = planet.radius * 3
-                trajectory = RandomAsteroidDist(
+                trajectory = RandomDist(
                     planet,
                     [min_radius, max_radius],
                     20000,
@@ -118,7 +118,7 @@ def main():
 
                 min_radius = 0
                 max_radius = planet.radius
-                trajectory = RandomAsteroidDist(
+                trajectory = RandomDist(
                     planet,
                     [min_radius, max_radius],
                     20000,

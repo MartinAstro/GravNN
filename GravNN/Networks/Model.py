@@ -500,14 +500,29 @@ def load_config_and_model(
                     + weights_save_dir_parts[-1]
                 )
 
-        model.network.load_weights(
-            f"{weights_save_dir}/Networks/{model_id}/weights",
-        )
+        try:
+            model.network.load_weights(
+                f"{weights_save_dir}/Networks/{model_id}/weights",
+            )
+        except:
+            new_dir = f"{weights_save_dir}/Networks/{model_id}/weights".replace(
+                "GravNN",
+                "StatOD",
+            )
+            model.network.load_weights(new_dir)
+
     else:
         # Reinitialize the model
-        network = tf.keras.models.load_model(
-            f"{data_dir}/Networks/{model_id}/network",
-        )
+        try:
+            network = tf.keras.models.load_model(
+                f"{data_dir}/Networks/{model_id}/network",
+            )
+        except:
+            data_dir = data_dir.replace("GravNN", "StatOD")
+            data_dir = data_dir.replace("ML_Gravity", "StatOD")
+            network = tf.keras.models.load_model(
+                f"{data_dir}/Networks/{model_id}/network",
+            )
         model = PINNGravityModel(config, network)
 
     x_transformer = config["x_transformer"][0]

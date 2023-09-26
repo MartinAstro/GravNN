@@ -9,7 +9,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Trajectories import RandomDist
 from GravNN.Visualization.DataVisSuite import DataVisSuite
 
 
@@ -64,7 +64,7 @@ def plot_residual_figure(df, sh_regress_files, show):
     planet = Eros()
     model_file = planet.obj_200k
 
-    test_trajectory = RandomAsteroidDist(
+    test_trajectory = RandomDist(
         planet,
         [0, planet.radius * 3],
         50000,

@@ -10,7 +10,7 @@ from GravNN.Networks.Constraints import *
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Trajectories import RandomDist
 from GravNN.Visualization.DataVisSuite import DataVisSuite
 
 
@@ -98,7 +98,7 @@ def main():
     df = df[df["N_train"] == 2500]
     df = df[df["PINN_constraint_fcn"] != pinn_00]
 
-    test_trajectory = RandomAsteroidDist(
+    test_trajectory = RandomDist(
         planet,
         [0, planet.radius * 3],
         20000,

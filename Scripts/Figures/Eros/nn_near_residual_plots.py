@@ -8,7 +8,7 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.Polyhedral import Polyhedral, get_poly_data
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.transformations import cart2sph, project_acceleration
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Trajectories import RandomDist
 from GravNN.Trajectories.utils import generate_near_orbit_trajectories
 from GravNN.Visualization.DataVisSuite import DataVisSuite
 
@@ -114,7 +114,7 @@ def main():
 
     model_file = planet.obj_200k
 
-    test_trajectory = RandomAsteroidDist(
+    test_trajectory = RandomDist(
         planet,
         [0, planet.radius * 3],
         20000,

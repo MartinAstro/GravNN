@@ -57,10 +57,10 @@ GravNN.Trajectories.GaussianDist module
    :undoc-members:
    :show-inheritance:
 
-GravNN.Trajectories.RandomAsteroidDist module
+GravNN.Trajectories.RandomDist module
 ---------------------------------------------
 
-.. automodule:: GravNN.Trajectories.RandomAsteroidDist
+.. automodule:: GravNN.Trajectories.RandomDist
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,4 +96,3 @@ GravNN.Trajectories.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-

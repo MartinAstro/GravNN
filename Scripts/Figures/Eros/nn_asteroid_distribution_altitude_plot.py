@@ -11,7 +11,7 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Networks.Plotting import Plotting
 from GravNN.Support.transformations import cart2sph
 from GravNN.Trajectories import *
-from GravNN.Trajectories import RandomAsteroidDist
+from GravNN.Trajectories import RandomDist
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 np.random.seed(1234)
@@ -245,7 +245,7 @@ def main():
     # * Random Brillouin
     # vis.fig_size = vis.half_page
     radius_bounds = [0, planet.radius + 10000.0]
-    traj = RandomAsteroidDist.RandomAsteroidDist(
+    traj = RandomDist.RandomDist(
         planet,
         planet.model_25k,
         radius_bounds,
@@ -255,7 +255,7 @@ def main():
 
     # * Random Brillouin Features
     radius_bounds = [0, planet.radius + 10000.0]
-    traj = RandomAsteroidDist.RandomAsteroidDist(
+    traj = RandomDist.RandomDist(
         planet,
         planet.model_25k,
         radius_bounds,
