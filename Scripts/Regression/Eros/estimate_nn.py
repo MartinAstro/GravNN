@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 
 import GravNN
-from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_symmetric_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.Networks.Configs import *
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.Layers import *
@@ -46,7 +46,7 @@ def regress_nn(
     # for k in range(len(trajectories) - 4, len(trajectories)):
     for k in range(max_traj):
         trajectory = trajectories[k]
-        x, a, u = get_hetero_poly_symmetric_data(
+        x, a, u = get_hetero_poly_data(
             trajectory,
             planet.obj_8k,
             point_mass_removed=[False],
@@ -58,7 +58,7 @@ def regress_nn(
         # to compute the times in the plotting routines.
         if include_hoppers:
             hop_trajectory = hopper_trajectories[k]
-            x_hop, a_hop, u_hop = get_hetero_poly_symmetric_data(
+            x_hop, a_hop, u_hop = get_hetero_poly_data(
                 hop_trajectory,
                 planet.obj_8k,
                 remove_point_mass=[False],

@@ -2,7 +2,7 @@ import multiprocessing as mp
 import os
 from pprint import pprint
 
-from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_symmetric_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.Networks.Configs import *
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
@@ -34,7 +34,7 @@ def main():
         # "batch_size": [4500],
         "epochs": [20000],
         "acc_noise": [0.0],
-        "gravity_data_fcn": [get_hetero_poly_symmetric_data],
+        "gravity_data_fcn": [get_hetero_poly_data],
         # "network_arch" : ["traditional"],
         # "preprocessing" : [["pines", "r_inv", "fourier_2n"]],
         # "preprocessing" : [["pines", "r_inv", "fourier"]],

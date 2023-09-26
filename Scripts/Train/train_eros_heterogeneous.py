@@ -43,7 +43,6 @@ def main():
         "tanh_k": [1e3],
         "obj_file": [Eros().obj_200k],
         "gravity_data_fcn": [get_hetero_poly_data],
-        # "gravity_data_fcn": [get_hetero_poly_symmetric_data],
         "augment_data_config": [
             {
                 "distribution": [SurfaceDist],

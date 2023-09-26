@@ -5,11 +5,10 @@ from GravNN.Trajectories import RandomDist
 
 def main():
     planet = Earth()
-    sh_file = planet.sh_file
     bounds = [planet.radius, planet.radius + 420000.0]
     trajectory = RandomDist(planet, bounds, points=5000000)
     gravity_model = SphericalHarmonics(
-        sh_file,
+        planet.sh_file,
         degree=1000,
         trajectory=trajectory,
         parallel=False,

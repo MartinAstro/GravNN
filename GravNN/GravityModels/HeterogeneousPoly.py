@@ -15,54 +15,6 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
 
     obj_file = make_windows_path_posix(obj_file)
 
-    mass_1 = copy.deepcopy(trajectory.celestial_body)
-    mass_1.mu = mass_1.mu / 10
-    r_offset_1 = [mass_1.radius / 3, 0, 0]
-
-    mass_2 = copy.deepcopy(trajectory.celestial_body)
-    mass_2.mu = -mass_2.mu / 10
-    r_offset_2 = [-mass_2.radius / 3, 0, 0]
-
-    point_mass_1 = PointMass(mass_1)
-    point_mass_2 = PointMass(mass_2)
-
-    mascon_1 = Heterogeneity(point_mass_1, r_offset_1)
-    mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
-    heterogeneities = [mascon_1, mascon_2]
-
-    poly_r0_gm = HeterogeneousPoly(
-        trajectory.celestial_body,
-        obj_file,
-        heterogeneities,
-        trajectory=trajectory,
-    )
-
-    poly_r0_gm.load(override=override)
-
-    x = poly_r0_gm.positions  # position (N x 3)
-    a = poly_r0_gm.accelerations
-    u = np.array([poly_r0_gm.potentials]).transpose()  # potential (N x 1)
-
-    # TODO: Determine if this is valuable -- how do dynamics and representation change
-    # inside brillouin sphere
-    if remove_point_mass:
-        point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
-        point_mass_r0_gm.load(override=override)
-        a_pm = point_mass_r0_gm.accelerations
-        u_pm = np.array([point_mass_r0_gm.potentials]).transpose()
-
-        a = a - a_pm
-        u = u - u_pm
-
-    return x, a, u
-
-
-def get_hetero_poly_symmetric_data(trajectory, obj_file, **kwargs):
-    override = bool(kwargs.get("override", [False])[0])
-    remove_point_mass = bool(kwargs.get("remove_point_mass", [False])[0])
-
-    obj_file = make_windows_path_posix(obj_file)
-
     poly_r0_gm = generate_heterogeneous_sym_model(
         trajectory.celestial_body,
         obj_file,

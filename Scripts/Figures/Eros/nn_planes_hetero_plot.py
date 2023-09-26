@@ -5,7 +5,6 @@ import pandas as pd
 
 from GravNN.Analysis.PlanesExperiment import PlanesExperiment
 from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
-from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.PlanesVisualizer import PlanesVisualizer
 
@@ -40,28 +39,6 @@ def main():
     )
     vis_hetero.plot(z_max=max_percent)  # , annotate_stats=True)
     vis_hetero.save(plt.gcf(), "Eros_Planes_hetero.pdf")
-
-    ###########################################
-    # Constant Poly Error
-    ###########################################
-    model = Polyhedral(planet, planet.obj_200k)
-    planes_exp = PlanesExperiment(
-        model,
-        config,
-        radius_bounds,
-        100,
-        omit_train_data=True,
-    )
-    planes_exp.load_model_data(model)
-    planes_exp.run()
-    vis = PlanesVisualizer(
-        planes_exp,
-        save_directory=os.path.abspath(".") + "/Plots/Eros/",
-    )
-    vis.interior_mask = vis_hetero.interior_mask  # speeds up calc
-    vis.plot(z_max=max_percent)  # , annotate_stats=True)
-    vis.save(plt.gcf(), "Eros_Planes_homo.pdf")
-
     # plt.show()
 
 

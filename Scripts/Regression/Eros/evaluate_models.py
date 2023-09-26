@@ -7,7 +7,7 @@ import pandas as pd
 
 import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_symmetric_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Trajectories import RandomDist
 from GravNN.Trajectories.SurfaceDist import SurfaceDist
@@ -15,7 +15,7 @@ from GravNN.Trajectories.SurfaceDist import SurfaceDist
 
 def evaluate_sh(trajectory, shape_file, model):
     max_deg = int(os.path.basename(model).split("_")[1])
-    x, a_true, u = get_hetero_poly_symmetric_data(
+    x, a_true, u = get_hetero_poly_data(
         trajectory,
         shape_file,
         point_mass_removed=[False],
@@ -32,7 +32,7 @@ def evaluate_sh(trajectory, shape_file, model):
 
 
 def evaluate_nn(trajectory, obj_file, model):
-    x, a_true, u = get_hetero_poly_symmetric_data(
+    x, a_true, u = get_hetero_poly_data(
         trajectory,
         obj_file,
         point_mass_removed=[False],

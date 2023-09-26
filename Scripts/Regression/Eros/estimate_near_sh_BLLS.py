@@ -5,7 +5,7 @@ import pandas as pd
 
 import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_symmetric_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.Regression.BLLS import BLLS
 from GravNN.Regression.utils import (
     append_data,
@@ -53,7 +53,7 @@ def BLLS_SH(
     # for k in range(len(trajectories) - 4, len(trajectories)):
     for k in range(len(trajectories)):
         trajectory = trajectories[k]
-        x, a, u = get_hetero_poly_symmetric_data(trajectory, planet.obj_8k)
+        x, a, u = get_hetero_poly_data(trajectory, planet.obj_8k)
         x_errored, a_errored = preprocess_data(x, a, acc_noise, pos_noise)
         x_train, y_train = append_data(x_train, y_train, x_errored, a_errored)
 
@@ -61,7 +61,7 @@ def BLLS_SH(
         # to compute the times in the plotting routines.
         if include_hoppers:
             hop_trajectory = hopper_trajectories[k]
-            x_hop, a_hop, u_hop = get_hetero_poly_symmetric_data(
+            x_hop, a_hop, u_hop = get_hetero_poly_data(
                 hop_trajectory,
                 planet.obj_8k,
                 remove_point_mass=[False],
