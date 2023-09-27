@@ -15,7 +15,7 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
 
     obj_file = make_windows_path_posix(obj_file)
 
-    poly_r0_gm = generate_heterogeneous_sym_model(
+    poly_r0_gm = generate_heterogeneous_model(
         trajectory.celestial_body,
         obj_file,
         trajectory=trajectory,
@@ -41,7 +41,7 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
     return x, a, u
 
 
-def generate_heterogeneous_sym_model(planet, obj_file, trajectory=None):
+def generate_heterogeneous_model(planet, obj_file, trajectory=None):
     # Force the following mass inhomogeneity
     mass_0 = copy.deepcopy(planet)
     mass_0.mu = -2 * mass_0.mu / 20

@@ -5,7 +5,7 @@ import pandas as pd
 import StatOD
 from StatOD.utils import *
 
-from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_sym_model
+from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.Networks.Configs import *
 from GravNN.Networks.Model import load_config_and_model
 
@@ -30,7 +30,7 @@ def plot_analytic_model(gravity_model):
     plt.plot(x_coordinates, u_point_mass_mod, label="1/r-mod")
     plt.ylim([-60, 0])
 
-    poly_gm = generate_heterogeneous_sym_model(planet, planet.obj_8k)
+    poly_gm = generate_heterogeneous_model(planet, planet.obj_8k)
     poly_potential = poly_gm.compute_potential(positions)
     plt.subplot(3, 1, 2)
     plt.plot(x_coordinates, poly_potential, label="Poly Model")

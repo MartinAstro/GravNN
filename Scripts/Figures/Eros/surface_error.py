@@ -5,6 +5,7 @@ import pandas as pd
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.GravityModels.SphericalHarmonics import get_sh_data
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Trajectories import SurfaceDist
 from GravNN.Visualization.PolyVisualization import PolyVisualization
@@ -31,6 +32,13 @@ def main():
         trajectory,
         planet.obj_200k,
         remove_point_mass=[False],
+    )
+
+    x_sh, a_sh, u_sh = get_sh_data(
+        trajectory,
+        planet.sh_file,
+        max_deg=4,
+        deg_removed=-1,
     )
 
     #######################################
@@ -86,6 +94,26 @@ def main():
     )
     format()
     vis.save(plt.gcf(), "eros_homo_surface_error.pdf")
+
+    #######################################
+    # Error of Spherical Harmonics assumption
+    #######################################
+    da_norm = np.linalg.norm(a_sh - a_hetero_poly, axis=1)
+    a_norm = np.linalg.norm(a_hetero_poly, axis=1)
+
+    a_error = da_norm / a_norm * 100
+    a_error = a_error.reshape((-1, 1))
+    vis.plot_polyhedron(
+        planet.obj_200k,
+        a_error,
+        label="Acceleration Errors",
+        log=False,
+        percent=True,
+        max_percent=0.3,
+        alpha=1,
+    )
+    format()
+    vis.save(plt.gcf(), "eros_sh_surface_error.pdf")
 
     #######################################
     # Error of PINN model
