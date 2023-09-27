@@ -32,7 +32,7 @@ class PointMass(GravityModelBase):
             trajectory (TrajectoryBase, optional): trajectory for which gravity
             measurements must be produced. Defaults to None.
         """
-        super().__init__()
+        super().__init__(celestial_body, trajectory=trajectory)
         self.configure(trajectory)
 
         self.celestial_body = celestial_body

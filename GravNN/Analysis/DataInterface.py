@@ -38,8 +38,8 @@ class DataInterface:
         self.accelerations = None
         self.potentials = None
 
-        self.predicted_accelerations = None
-        self.predicted_potentials = None
+        self.a_pred = None
+        self.u_pred = None
 
         np.random.seed(random_seed)
 
@@ -69,12 +69,8 @@ class DataInterface:
 
     def get_PINN_data(self):
         positions = self.positions
-        self.predicted_accelerations = (
-            self.model.compute_acceleration(positions).numpy().astype(float)
-        )
-        self.predicted_potentials = (
-            self.model.compute_potential(positions).numpy().astype(float)
-        )
+        self.a_pred = self.model.compute_acceleration(positions).numpy().astype(float)
+        self.u_pred = self.model.compute_potential(positions).numpy().astype(float)
 
     def get_J2_data(self):
         planet = self.config["planet"][0]

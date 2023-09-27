@@ -30,7 +30,6 @@ def main():
         config,
         radius_bounds,
         100,
-        omit_train_data=True,
     )
     planes_exp.run()
     vis_hetero = PlanesVisualizer(

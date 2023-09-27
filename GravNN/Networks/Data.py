@@ -511,10 +511,16 @@ class DataSet:
         planet = self.config["planet"][0]
         radius_bounds = [self.config["radius_min"][0], self.config["radius_max"][0]]
         N_dist = self.config["N_dist"][0]
-        obj_file = self.config["obj_file"][0]
-        sh_file = self.config["sh_file"][0]
 
-        if issubclass(planet, Planet):
+        grav_file = self.config.get("grav_file", [None])[0]
+
+        # HACK: This is a hack to get the correct gravity file for the distribution
+        obj_file = grav_file if grav_file is not None else self.config["obj_file"][0]
+        sh_file = grav_file if grav_file is not None else self.config["sh_file"][0]
+        self.config["obj_file"] = [obj_file]
+        self.config["sh_file"] = [sh_file]
+
+        if isinstance(planet, Planet):
             grav_file = sh_file
         else:
             grav_file = obj_file

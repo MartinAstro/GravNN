@@ -27,15 +27,11 @@ class ExtrapolationVisualizer(VisualizationBase):
     def set_x_axis(self, x_type):
         if x_type == "dist_2_COM":
             self.x_test = self.experiment.test_r_COM / self.radius
-            # self.x_train = self.experiment.train_r_COM / self.radius
             self.idx_test = self.experiment.test_dist_2_COM_idx
-            # self.idx_train = self.experiment.train_dist_2_COM_idx
             self.x_label = "Distance to COM [R]"
         elif x_type == "dist_2_surf":
             self.x_test = self.experiment.test_r_surf / self.radius
-            # self.x_train = self.experiment.train_r_surf / self.radius
             self.idx_test = self.experiment.test_dist_2_surf_idx
-            # self.idx_train = self.experiment.train_dist_2_surf_idx
             self.x_label = "Distance to Surface [R]"
 
         else:

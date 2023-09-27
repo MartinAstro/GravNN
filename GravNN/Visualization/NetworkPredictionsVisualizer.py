@@ -29,7 +29,7 @@ class NetworkPredictionsVisualizer(DataInterface):
 
     def plot_accelerations(self):
         plt.figure()
-        a_hat = np.linalg.norm(self.predicted_accelerations, axis=1)
+        a_hat = np.linalg.norm(self.a_pred, axis=1)
         a_true = np.linalg.norm(self.accelerations, axis=1)
 
         r = np.linalg.norm(self.positions, axis=1)
@@ -40,7 +40,7 @@ class NetworkPredictionsVisualizer(DataInterface):
     def plot_potentials(self):
         plt.figure()
         r = np.linalg.norm(self.positions, axis=1)
-        plt.scatter(r, self.predicted_potentials, label="predicted")
+        plt.scatter(r, self.u_pred, label="predicted")
         plt.scatter(r, self.potentials, label="true")
         plt.legend()
 
@@ -49,7 +49,7 @@ class NetworkPredictionsVisualizer(DataInterface):
         Plots the difference between the predicted
         and true accelerations as histograms
         """
-        da = self.accelerations - self.predicted_accelerations
+        da = self.accelerations - self.a_pred
         if sph:
             da = project_acceleration(cart2sph(self.positions), da)
 
@@ -64,7 +64,7 @@ class NetworkPredictionsVisualizer(DataInterface):
 
     def plot_potential_differences(self):
         plt.figure()
-        plt.hist(self.potentials - self.predicted_potentials, 1000)
+        plt.hist(self.potentials - self.u_pred, 1000)
         plt.xlabel("Potentials")
         plt.show()
 

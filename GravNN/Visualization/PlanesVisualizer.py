@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sigfig
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.ndimage.filters import gaussian_filter
-from scipy.stats import gaussian_kde
 
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
@@ -53,67 +51,6 @@ class PlanesVisualizer(VisualizationBase):
 
     def set_SRP_contour(self, a_srp):
         self.r_srp = np.sqrt(self.planet.mu / a_srp)
-
-    def plot_density_map(self, x_vec, plane="xy"):
-        x, y, z = x_vec.T
-        mask = self.plane_mask(plane)
-        train_data = x_vec.T[mask]
-        test_data = self.experiment.x_test.T[mask]
-        k = gaussian_kde(train_data)
-        nbins = 50
-
-        x_0, x_1 = train_data[0], train_data[1]
-        x_test_0, x_test_1 = test_data[0], test_data[1]
-
-        x_0_i, x_1_i = np.mgrid[
-            x_0.min() : x_0.max() : nbins * 1j,
-            x_1.min() : x_1.max() : nbins * 1j,
-        ]
-        k(np.vstack([x_0_i.flatten(), x_1_i.flatten()]))
-        # plt.gca().pcolormesh(x_0_i, x_1_i, zi.reshape(x_0_i.shape))
-
-        min_x_test_0 = np.min(x_test_0) / self.radius
-        max_x_test_0 = np.max(x_test_0) / self.radius
-
-        min_x_test_1 = np.min(x_test_1) / self.radius
-        max_x_test_1 = np.max(x_test_1) / self.radius
-
-        np.min(x_0) / self.radius
-        np.max(x_0) / self.radius
-
-        np.min(x_1) / self.radius
-        np.max(x_1) / self.radius
-
-        heatmap, xedges, yedges = np.histogram2d(
-            x_0 / self.radius,
-            x_1 / self.radius,
-            nbins,
-            # range=[
-            #     [min_x_0, max_x_0],
-            #     [min_x_1, max_x_1]
-            #     ]
-            range=[
-                [min_x_test_0, max_x_test_0],
-                [min_x_test_1, max_x_test_1],
-            ],
-        )
-
-        heatmap = gaussian_filter(heatmap, sigma=1)
-
-        extent = [min_x_test_0, max_x_test_0, min_x_test_1, max_x_test_1]
-        # extent = [min_x_0, max_x_0, min_x_1, max_x_1]
-        plt.imshow(heatmap.T, extent=extent, origin="lower", cmap=cm.jet)
-        cbar = plt.colorbar(fraction=0.15)
-        cbar.set_label("Samples")
-        # plt.scatter(x_0 / self.radius,
-        #             x_1 / self.radius,
-        #              s=5, c='r', alpha=0.5)
-        # plt.scatter(x_0, x_1, c='r', alpha=1)
-        # plt.xlim([min_x_test_0, max_x_test_0])
-        # plt.ylim([min_x_test_1, max_x_test_1])
-
-        plt.xlabel(plane[0])
-        plt.ylabel(plane[1])
 
     def annotate(self, values):
         avg = sigfig.round(np.nanmean(values), sigfigs=2)

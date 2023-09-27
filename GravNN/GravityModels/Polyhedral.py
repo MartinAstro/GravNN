@@ -13,13 +13,17 @@ from GravNN.GravityModels.PointMass import PointMass
 from GravNN.Support.PathTransformations import make_windows_path_posix
 
 
-def get_poly_data(trajectory, obj_file, **kwargs):
+def get_poly_data(trajectory, obj_mesh_file, **kwargs):
     override = bool(kwargs.get("override", [False])[0])
     remove_point_mass = bool(kwargs.get("remove_point_mass", [False])[0])
 
-    obj_file = make_windows_path_posix(obj_file)
+    obj_mesh_file = make_windows_path_posix(obj_mesh_file)
 
-    poly_r0_gm = Polyhedral(trajectory.celestial_body, obj_file, trajectory=trajectory)
+    poly_r0_gm = Polyhedral(
+        trajectory.celestial_body,
+        obj_mesh_file,
+        trajectory=trajectory,
+    )
     poly_r0_gm.load(override=override)
 
     x = poly_r0_gm.positions  # position (N x 3)
@@ -212,7 +216,7 @@ class Polyhedral(GravityModelBase):
             trajectory (TrajectoryBase, optional): Trajectory / distribution for which
                 the gravity measurements should be computed. Defaults to None.
         """
-        super().__init__()
+        super().__init__(celestial_body, obj_file, trajectory=trajectory)
         self.obj_file = obj_file
 
         self.configure(trajectory)

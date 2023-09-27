@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 
+from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.GravityModels.PointMass import PointMass
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Support.PathTransformations import make_windows_path_posix
@@ -80,9 +81,10 @@ class Heterogeneity:
     r_offset: np.ndarray
 
 
-class HeterogeneousPoly(Polyhedral):
+class HeterogeneousPoly(GravityModelBase):
     def __init__(self, celestial_body, obj_file, heterogeneities, trajectory=None):
         self.homogeneous_poly = Polyhedral(celestial_body, obj_file, trajectory)
+
         self.point_mass_list = []
         self.offset_list = []
 
@@ -90,7 +92,17 @@ class HeterogeneousPoly(Polyhedral):
             self.point_mass_list.append(heterogeneity.model)
             self.offset_list.append(heterogeneity.r_offset)
 
-        super().__init__(celestial_body, obj_file, trajectory)
+        homo_id = self.homogeneous_poly.id
+
+        # specify the lists as args to make unique hash.
+        super().__init__(
+            celestial_body,
+            obj_file,
+            homo_id,
+            self.offset_list,
+            self.point_mass_list,
+            trajectory,
+        )
 
     def add_point_mass(self, point_mass, r_offset):
         self.point_mass_list.append(point_mass)
@@ -144,7 +156,7 @@ class HeterogeneousPoly(Polyhedral):
         if positions is None:
             positions = self.trajectory.positions
 
-        a_poly = super().compute_acceleration(positions.reshape((-1, 3)))
+        a_poly = self.homogeneous_poly.compute_acceleration(positions.reshape((-1, 3)))
 
         for i in range(len(self.point_mass_list)):
             r_offset = np.array(self.offset_list[i]).reshape((-1, 3))
@@ -157,7 +169,7 @@ class HeterogeneousPoly(Polyhedral):
         if positions is None:
             positions = self.trajectory.positions
 
-        u_poly = super().compute_potential(positions)
+        u_poly = self.homogeneous_poly.compute_potential(positions)
 
         for i in range(len(self.point_mass_list)):
             r_offset = self.offset_list[i]

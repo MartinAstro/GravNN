@@ -5,15 +5,15 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
 
+from GravNN.Analysis.ExperimentBase import ExperimentBase
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.HeterogeneousPoly import Heterogeneity, HeterogeneousPoly
-from GravNN.GravityModels.PointMass import PointMass
+from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.ProgressBar import ProgressBar
 
 
-class TrajectoryExperiment:
+class TrajectoryExperiment(ExperimentBase):
     def __init__(
         self,
         true_grav_model,
@@ -24,6 +24,15 @@ class TrajectoryExperiment:
         random_seed=1234,
         tol=1e-10,
     ):
+        super().__init__(
+            true_grav_model,
+            initial_state,
+            period,
+            t_mesh_density,
+            pbar,
+            random_seed,
+            tol,
+        )
         self.true_model = true_grav_model
         self.t_mesh_density = t_mesh_density
         self.period = period
@@ -85,20 +94,20 @@ class TrajectoryExperiment:
 
             self.test_models[i].update({"pos_diff": dX})
 
-    def run(self):
+    def generate_data(self):
         self.t_mesh = np.linspace(0, self.period, self.t_mesh_density, endpoint=True)
 
-        # Generate trajectories using the true and test grav models
-        self.true_sol, self.elapsed_time = self.generate_trajectory(
-            self.true_model,
-            self.x0,
-            self.t_mesh,
-        )
+        # Generate trajectories using the true grav model
+        if not hasattr(self, "true_sol"):
+            self.true_sol, self.elapsed_time = self.generate_trajectory(
+                self.true_model,
+                self.x0,
+                self.t_mesh,
+            )
 
         # generate trajectories for all test models
         for i, model_dict in enumerate(self.test_models):
             model = model_dict["model"]
-
             sol, elapsed_time = self.generate_trajectory(
                 model,
                 self.x0,
@@ -107,6 +116,13 @@ class TrajectoryExperiment:
             self.test_models[i].update({"solution": sol, "elapsed_time": elapsed_time})
 
         self.compute_differences()
+
+        # Can only save the true model, b/c the test models may change.
+        data = {
+            "true_sol": self.true_sol,
+            "elapsed_time": self.elapsed_time,
+        }
+        return data
 
 
 def main():
@@ -123,26 +139,10 @@ def main():
         ],
     )
 
-    mass_1 = Eros()
-    mass_1.mu = mass_1.mu / 10
-    r_offset_1 = [mass_1.radius / 3, 0, 0]
-
-    mass_2 = Eros()
-    mass_2.mu = -mass_2.mu / 10
-    r_offset_2 = [-mass_2.radius / 3, 0, 0]
-
-    point_mass_1 = PointMass(mass_1)
-    point_mass_2 = PointMass(mass_2)
-
-    mascon_1 = Heterogeneity(point_mass_1, r_offset_1)
-    mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
-    heterogeneities = [mascon_1, mascon_2]
-
-    true_model = HeterogeneousPoly(planet, planet.obj_8k, heterogeneities)
-
+    true_model = generate_heterogeneous_model(planet, planet.obj_8k)
     test_poly_model = Polyhedral(planet, planet.obj_8k)
 
-    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    df = pd.read_pickle("Data/Dataframes/eros_poly_071123.data")
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 

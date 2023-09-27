@@ -36,7 +36,7 @@ class MetricsExperiment(DataInterface):
             losses.update(
                 {
                     f"{loss_fcn.__name__}": loss_fcn(
-                        self.predicted_accelerations - self.LF_accelerations,
+                        self.a_pred - self.LF_accelerations,
                         self.accelerations - self.LF_accelerations,
                     ),
                 },

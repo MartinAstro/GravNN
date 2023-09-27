@@ -1,31 +1,50 @@
 import hashlib
+import inspect
+import json
 import os
 import pickle
 from abc import ABC, abstractmethod
 
 
+class SkipNonSerializable(json.JSONEncoder):
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            return None  # or return
+
+
 class GravityModelBase(ABC):
     verbose = True
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Base class responsible for generating the accelerations for a given trajectory / distribution"""
         self.trajectory = None
         self.accelerations = None
         self.potentials = None
         self.file_directory = None
+        self.id = self.generate_hash(*args, **kwargs)
         return
 
-    def _deterministic_string(self):
-        attributes = vars(self)
-        # Sort attributes to ensure the order is always the same
-        sorted_items = sorted(attributes.items())
-        return "-".join(f"{key}:{value}" for key, value in sorted_items)
+    def generate_hash(self, *args, **kwargs):
+        # map all arguments to their names
+        params = inspect.signature(self.__init__).parameters
+        args_names = list(params.keys())
+        args_with_names = dict(zip(args_names, args))
 
-    def __hash__(self):
-        combined_str = self._deterministic_string()
-        hasher = hashlib.sha256()
-        hasher.update(combined_str.encode("utf-8"))
-        return int.from_bytes(hasher.digest()[:8], "big")
+        # Convert the sorted input arguments (wo kwargs) to a JSON string
+        input_data = json.dumps(
+            args_with_names,
+            sort_keys=True,
+            cls=SkipNonSerializable,
+        )
+        input_data += self.__class__.__name__
+
+        # Generate a SHA256 hash of the input data based on string
+        hash_obj = hashlib.sha256(input_data.encode())
+        unique_hash = hash_obj.hexdigest()
+
+        return unique_hash
 
     def configure(self, trajectory):
         if trajectory is not None:

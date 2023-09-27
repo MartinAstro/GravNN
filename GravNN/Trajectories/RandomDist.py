@@ -57,7 +57,7 @@ class RandomDist(TrajectoryBase):
 
         _, file_extension = os.path.splitext(self.obj_file)
         self.filename = os.path.basename(self.obj_file)
-        self.obj_file = trimesh.load_mesh(
+        self.obj_mesh = trimesh.load_mesh(
             self.obj_file,
             file_type=file_extension[1:],
         )
@@ -115,7 +115,7 @@ class RandomDist(TrajectoryBase):
         N = len(positions)
         step = 500
         mask = np.full((N,), False)
-        rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.obj_file)
+        rayObject = trimesh.ray.ray_triangle.RayMeshIntersector(self.obj_mesh)
         for i in range(0, N, step):
             end_idx = (i // step + 1) * step
             position_subset = positions[i:end_idx] / 1e3

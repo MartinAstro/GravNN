@@ -113,7 +113,7 @@ class SphericalHarmonics(GravityModelBase):
             trajectory (TrajectoryBase, optional): Trajectory / distribution for which
             the gravity measurements should be produced. Defaults to None.
         """
-        super().__init__()
+        super().__init__(sh_info, degree, trajectory=trajectory, parallel=parallel)
 
         self.degree = degree
 

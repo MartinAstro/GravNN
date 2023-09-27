@@ -482,6 +482,13 @@ def load_config_and_model(
     if custom_dtype is not None:
         config["dtype"] = [custom_dtype]
 
+    # HACK: Fix grav file if necessary
+    grav_file = config.get("grav_file", [None])[0]
+    obj_file = grav_file if grav_file is not None else config["obj_file"][0]
+    sh_file = grav_file if grav_file is not None else config["sh_file"][0]
+    config["obj_file"] = [obj_file]
+    config["sh_file"] = [sh_file]
+
     if only_weights:
         model = PINNGravityModel(config)
         weights_save_dir = config.get("save_dir", [data_dir])[0]
