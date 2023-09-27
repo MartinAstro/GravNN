@@ -1,8 +1,10 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import numpy as np
-from copy import deepcopy
 import re
+from copy import deepcopy
+
+import numpy as np
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 def read_ephemeris_head(file_name):
@@ -58,7 +60,7 @@ class CustomDist(TrajectoryBase):
         self.ephemeris_file = ephemeris_file
         self.file_name = os.path.basename(ephemeris_file).split(".")[0]
         self.object, self.start_time, self.stop_time = read_ephemeris_head(
-            ephemeris_file
+            ephemeris_file,
         )
         self.max_data_entries = max_data_entries
         super().__init__(**kwargs)
@@ -122,13 +124,16 @@ class CustomDist(TrajectoryBase):
 def main():
     # Meant for testing
     import matplotlib.pyplot as plt
+
     from GravNN.Visualization.VisualizationBase import VisualizationBase
 
     near_traj = EphemerisDist(
-        "GravNN/Files/Ephmerides/near_positions.txt", override=False
+        "GravNN/Files/Ephmerides/near_positions.txt",
+        override=False,
     )
     eros_traj = EphemerisDist(
-        "GravNN/Files/Ephmerides/eros_positions.txt", override=True
+        "GravNN/Files/Ephmerides/eros_positions.txt",
+        override=True,
     )
 
     near_m_eros_traj = near_traj - eros_traj

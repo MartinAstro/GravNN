@@ -1,7 +1,8 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
+
 import numpy as np
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class GaussianDist(TrajectoryBase):

@@ -1,29 +1,31 @@
 import multiprocessing as mp
-from GravNN.Networks.script_utils import save_training
-from GravNN.Networks.utils import configure_run_args
-from GravNN.Networks.Configs import *
 import os
 from pprint import pprint
-os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] ='YES'
+
+from GravNN.Networks.Configs import *
+from GravNN.Networks.script_utils import save_training
+from GravNN.Networks.utils import configure_run_args
+
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+
 
 def main():
-
     threads = 2
 
-    df_file = "Data/Dataframes/network_size_test.data" 
+    df_file = "Data/Dataframes/network_size_test.data"
     config = get_default_earth_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        "N_dist" : [500],
-        "N_train" : [450],
-        "N_val" : [10],
-        "epochs" : [50],
-        "loss_fcns" : [['percent']],
+        "N_dist": [500],
+        "N_train": [450],
+        "N_val": [10],
+        "epochs": [50],
+        "loss_fcns": [["percent"]],
         # "override" : [True],
-        "num_units" : [10, 20, 40, 80, 160, 320, 640],
-        "PINN_constraint_fcn" : ['pinn_a'],
+        "num_units": [10, 20, 40, 80, 160, 320, 640],
+        "PINN_constraint_fcn": ["pinn_a"],
     }
     args = configure_run_args(config, hparams)
     # run(*args[0])
@@ -33,13 +35,11 @@ def main():
     save_training(df_file, configs)
 
 
-def run(config):    
-
+def run(config):
     from GravNN.Networks.Data import DataSet
     from GravNN.Networks.Model import PINNGravityModel
     from GravNN.Networks.Saver import ModelSaver
-    from GravNN.Networks.utils import configure_tensorflow
-    from GravNN.Networks.utils import populate_config_objects
+    from GravNN.Networks.utils import configure_tensorflow, populate_config_objects
 
     configure_tensorflow(config)
 

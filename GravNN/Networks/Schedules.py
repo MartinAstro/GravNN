@@ -70,7 +70,10 @@ def _get_cosine_decay_schedule(config):
     decay_steps = config.get("decay_steps")[0]
     alpha = config.get("alpha", 0.0)
     return tf.keras.optimizers.schedules.CosineDecay(
-        initial_learning_rate, decay_steps, alpha=alpha, name=None
+        initial_learning_rate,
+        decay_steps,
+        alpha=alpha,
+        name=None,
     )
 
 

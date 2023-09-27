@@ -1,10 +1,9 @@
 """Experimental optimization functions used to compress, prune, and cluster model sizes. WIP."""
 
-import tensorflow as tf
 
 # import tensorflow_model_optimization as tfmot
-from GravNN.Networks.Model import PINNGravityModel
 from GravNN.Networks.Callbacks import SimpleCallback
+from GravNN.Networks.Model import PINNGravityModel
 
 
 def prune_model(model, dataset, val_dataset, config):
@@ -22,7 +21,8 @@ def prune_model(model, dataset, val_dataset, config):
         #                         begin_step=0,
         #                         frequency=10)
         pruned_network = tfmot.sparsity.keras.prune_low_magnitude(
-            model.network, pruning_schedule=pruning_schedule
+            model.network,
+            pruning_schedule=pruning_schedule,
         )
         pruned_model = PINNGravityModel(config, pruned_network)
         pruned_model.compile(loss="mse", optimizer="adam")
@@ -52,7 +52,8 @@ def cluster_model(model, dataset, val_dataset, config):
         }
 
         clustered_network = tfmot.clustering.keras.cluster_weights(
-            model.network, **clustering_params
+            model.network,
+            **clustering_params,
         )
         clustered_model = PINNGravityModel(config, clustered_network)
         clustered_model.compile(loss="mse", optimizer="adam")
@@ -67,7 +68,7 @@ def cluster_model(model, dataset, val_dataset, config):
         )
         history.history["time_delta"] = callback.time_delta
         clustered_network = tfmot.clustering.keras.strip_clustering(
-            clustered_model.network
+            clustered_model.network,
         )
         model = PINNGravityModel(config, clustered_network)
     return model, history
@@ -77,7 +78,7 @@ def quantize_model(model, dataset, val_dataset, config):
     history = None
     if config["quantization"][0] is not None:
         # Quantizations: https://blog.tensorflow.org/2020/04/quantization-aware-training-with-tensorflow-model-optimization-toolkit.html
-        qunatized_network = tfmot.quantization.keras.quantize_model(model.network)
+        tfmot.quantization.keras.quantize_model(model.network)
         model = PINNGravityModel(config, quantized_network)
 
     return model, history

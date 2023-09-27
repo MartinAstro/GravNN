@@ -1,34 +1,19 @@
-        
-import os
-import pickle
-
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
-from GravNN.CelestialBodies.Asteroids import Bennu
-from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Trajectories import SurfaceDist
-
-from GravNN.Visualization.PolyVisualization import PolyVisualization
-
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from collections import OrderedDict
 from sklearn.preprocessing import MinMaxScaler
 
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from GravNN.CelestialBodies.Asteroids import Bennu
+from GravNN.GravityModels.Polyhedral import Polyhedral
+from GravNN.Trajectories import SurfaceDist
+from GravNN.Visualization.PolyVisualization import PolyVisualization
 
 gradient = np.linspace(0, 1, 256)
+
 
 def main():
     # https://www.asteroidmission.org/updated-bennu-shape-model-3d-files/
     planet = Bennu()
     obj_file = planet.obj_file
-    sh_file = planet.sh_file
-    density_deg = 180
     poly_vis = PolyVisualization()
 
     trajectory = SurfaceDist(planet, obj_file)
@@ -42,7 +27,7 @@ def main():
     # diff = acc_poly - acc_sh
 
     # Polyhedral Results
-    totals = np.linalg.norm(acc_poly, axis=1).reshape((-1,1))
+    totals = np.linalg.norm(acc_poly, axis=1).reshape((-1, 1))
     vlim = [np.min(totals), np.max(totals)]
     minmax = MinMaxScaler()
 
@@ -55,7 +40,7 @@ def main():
     # totals_normalized = minmax.transform(totals)
     # poly_vis.plot_polyhedron(poly_gm.mesh, totals_normalized, vlim)
 
-    # # Difference 
+    # # Difference
     # totals = np.linalg.norm(diff, axis=1).reshape((-1,1))
     # totals_normalized = minmax.transform(totals)
     # poly_vis.plot_polyhedron(poly_gm.mesh, totals_normalized, vlim)

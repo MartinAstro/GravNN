@@ -1,9 +1,19 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import os
-def heatmap(data, row_labels, col_labels, ax=None,
-            cbar_kw=None, cbarlabel="", **kwargs):
+
+
+def heatmap(
+    data,
+    row_labels,
+    col_labels,
+    ax=None,
+    cbar_kw=None,
+    cbarlabel="",
+    **kwargs,
+):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
@@ -46,47 +56,52 @@ def heatmap(data, row_labels, col_labels, ax=None,
     ax.set_yticklabels(row_labels)
 
     # Let the horizontal axes labeling appear on top.
-    ax.tick_params(top=True, bottom=False,
-                   labeltop=True, labelbottom=False)
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",
-             rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=-30, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     # ax.spines[:].set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
-    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
     ax.tick_params(which="minor", bottom=False, left=False)
 
     return im, cbar
+
 
 def make_grid(df, query):
     if query is not None:
         sub_df = df.query(query)
     else:
         sub_df = df.copy()
-    sub_df = sub_df.pivot_table(columns='FF1', index='FF2', 
-                            values='percent_mean', fill_value=0, aggfunc=np.mean)
+    sub_df = sub_df.pivot_table(
+        columns="FF1",
+        index="FF2",
+        values="percent_mean",
+        fill_value=0,
+        aggfunc=np.mean,
+    )
     return sub_df
+
 
 def plot(df, query, **kwargs):
     sub_df = make_grid(df, query)
     plt.figure()
-    im, cbar = heatmap(sub_df.values,
-                    row_labels=sub_df.index,
-                    col_labels=sub_df.columns,
-                    **kwargs
-                    )
+    im, cbar = heatmap(
+        sub_df.values,
+        row_labels=sub_df.index,
+        col_labels=sub_df.columns,
+        **kwargs,
+    )
     return plt.gcf()
 
 
 def save(name):
     plt.tight_layout()
-    plt.savefig(name, bbox_inches='tight')
-
+    plt.savefig(name, bbox_inches="tight")
 
 
 def main():
@@ -95,12 +110,11 @@ def main():
     df_file = "Data/Dataframes/fourier_search_2_metrics.data"
     df = pd.read_pickle(df_file)
 
-    df["FF1"] = np.array(df['fourier_sigma'].values.tolist()).astype(float)[:,0]
-    df["FF2"] = np.array(df['fourier_sigma'].values.tolist()).astype(float)[:,1]
-    
+    df["FF1"] = np.array(df["fourier_sigma"].values.tolist()).astype(float)[:, 0]
+    df["FF2"] = np.array(df["fourier_sigma"].values.tolist()).astype(float)[:, 1]
 
-    v_min = df['percent_mean'].min()
-    v_max = 0.5# df['percent_mean'].max()
+    v_min = df["percent_mean"].min()
+    v_max = 0.5  # df['percent_mean'].max()
 
     os.makedirs("Plots/PINNIII/", exist_ok=True)
 
@@ -111,7 +125,6 @@ def main():
     plot(df, query, vmin=v_min, vmax=v_max)
     # save("Plots/PINNIII/NvE_10.pdf")
     plt.show()
-
 
 
 if __name__ == "__main__":

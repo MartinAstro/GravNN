@@ -1,7 +1,8 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
+
 import numpy as np
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class PlanesDist(TrajectoryBase):
@@ -32,25 +33,26 @@ class PlanesDist(TrajectoryBase):
         X = np.linspace(self.bounds[0], self.bounds[1], self.samples_1d)
         Y = np.linspace(self.bounds[0], self.bounds[1], self.samples_1d)
         Z = np.linspace(self.bounds[0], self.bounds[1], self.samples_1d)
-        xy_x, xy_y = np.meshgrid(X,Y)
-        xz_x, xz_z = np.meshgrid(X,Z)
-        yz_y, yz_z = np.meshgrid(Y,Z)
+        xy_x, xy_y = np.meshgrid(X, Y)
+        xz_x, xz_z = np.meshgrid(X, Z)
+        yz_y, yz_z = np.meshgrid(Y, Z)
 
-        xy_x = xy_x.reshape((-1,1))
-        xy_y = xy_y.reshape((-1,1))
-        xz_x = xz_x.reshape((-1,1))
-        xz_z = xz_z.reshape((-1,1))
-        yz_y = yz_y.reshape((-1,1))
-        yz_z = yz_z.reshape((-1,1))
+        xy_x = xy_x.reshape((-1, 1))
+        xy_y = xy_y.reshape((-1, 1))
+        xz_x = xz_x.reshape((-1, 1))
+        xz_z = xz_z.reshape((-1, 1))
+        yz_y = yz_y.reshape((-1, 1))
+        yz_z = yz_z.reshape((-1, 1))
 
         zeros = np.zeros_like(xy_x)
 
-        planes = np.block([
-            [xy_x, xy_y, zeros],
-            [xz_x, zeros, xz_z],
-            [zeros, yz_y, yz_z],
-
-        ])
+        planes = np.block(
+            [
+                [xy_x, xy_y, zeros],
+                [xz_x, zeros, xz_z],
+                [zeros, yz_y, yz_z],
+            ],
+        )
         positions = planes
         self.positions = positions
         return positions

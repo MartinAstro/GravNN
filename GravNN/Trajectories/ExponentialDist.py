@@ -1,7 +1,8 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
+
 import numpy as np
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class ExponentialDist(TrajectoryBase):
@@ -21,8 +22,12 @@ class ExponentialDist(TrajectoryBase):
         self.radiusBounds = radiusBounds
         self.points = points
         self.celestial_body = celestial_body
-        self.scale_parameter = kwargs["scale_parameter"][0]  # TODO: Make this a required parameter
-        self.invert = kwargs["invert"][0]  # if true, higher probabilities occur at higher altitude TODO: Make this a required param
+        self.scale_parameter = kwargs["scale_parameter"][
+            0
+        ]  # TODO: Make this a required parameter
+        self.invert = kwargs["invert"][
+            0
+        ]  # if true, higher probabilities occur at higher altitude TODO: Make this a required param
 
         super().__init__()
 

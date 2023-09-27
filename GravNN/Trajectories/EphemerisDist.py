@@ -1,8 +1,8 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
-import pathlib
-import numpy as np
+
 import spicepy as spice
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class EphemerisDist(TrajectoryBase):
@@ -76,7 +76,11 @@ class EphemerisDist(TrajectoryBase):
         step = int((etTwo - etOne) / self.sampling_interval)
         self.times = [x * (etTwo - etOne) / step + etOne for x in range(step)]
         positions, lightTimes = spice.spkpos(
-            self.source, self.times, self.frame, "NONE", self.target
+            self.source,
+            self.times,
+            self.frame,
+            "NONE",
+            self.target,
         )
         spice.kclear()
         self.positions = positions * 1000.0  # km -> meters
@@ -85,6 +89,7 @@ class EphemerisDist(TrajectoryBase):
 
 def main():
     import matplotlib.pyplot as plt
+
     from GravNN.Visualization.VisualizationBase import VisualizationBase
 
     orbits = [
@@ -121,9 +126,14 @@ def main():
 
     # https://www.jhuapl.edu/Content/techdigest/pdf/V23-N01/23-01-Holdridge.pdf -- NEAR Orbits
     for i in range(0, len(orbits) - 1):
-        utc = [orbits[i], orbits[i + 1]]
+        [orbits[i], orbits[i + 1]]
         trajectory = EphemerisDist(
-            "NEAR", "EROS", "EROS_FIXED", orbits[i], orbits[i + 1], 10 * 60
+            "NEAR",
+            "EROS",
+            "EROS_FIXED",
+            orbits[i],
+            orbits[i + 1],
+            10 * 60,
         )
         positions = trajectory.positions
 

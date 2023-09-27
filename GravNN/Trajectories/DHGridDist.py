@@ -1,6 +1,8 @@
 import os
-from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
+
 import numpy as np
+
+from GravNN.Trajectories.TrajectoryBase import TrajectoryBase
 
 
 class DHGridDist(TrajectoryBase):
@@ -30,8 +32,8 @@ class DHGridDist(TrajectoryBase):
 
     def generate_full_file_directory(self):
         self.trajectory_name = (
-            os.path.splitext(os.path.basename(__file__))[0] +
-            f"/{self.celestial_body.body_name}_Deg{self.degree}_Rad{self.radius}"
+            os.path.splitext(os.path.basename(__file__))[0]
+            + f"/{self.celestial_body.body_name}_Deg{self.degree}_Rad{self.radius}"
         )
         self.file_directory += self.trajectory_name + "/"
         pass

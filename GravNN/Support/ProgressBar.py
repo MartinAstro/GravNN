@@ -1,5 +1,4 @@
 from tqdm import tqdm
-from colorama import Fore
 
 
 class ProgressBar:
@@ -10,16 +9,13 @@ class ProgressBar:
         self.p = self.pbar()
 
     def pbar(self):
-        return tqdm(
-            total=self.max_value,
-            desc='Progress: ',
-            disable=not self.enable)
-            #,
-            #bar_format="%s{l_bar}{bar}|%s" % (Fore.YELLOW, Fore.RESET))
+        return tqdm(total=self.max_value, desc="Progress: ", disable=not self.enable)
+        # ,
+        # bar_format="%s{l_bar}{bar}|%s" % (Fore.YELLOW, Fore.RESET))
 
     def update(self, update_value):
         if update_value < self.max_value:
-            self.p.update(update_value-self.last_update)
+            self.p.update(update_value - self.last_update)
             self.last_update = update_value
         else:
             self.p.update(self.max_value - self.last_update)
@@ -28,8 +24,7 @@ class ProgressBar:
     def markComplete(self):
         if self.update == self.max_value:
             return
-        self.p.update(self.max_value-self.last_update)
+        self.p.update(self.max_value - self.last_update)
 
     def close(self):
         self.p.close()
-
