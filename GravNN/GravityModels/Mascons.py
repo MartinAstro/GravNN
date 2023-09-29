@@ -2,16 +2,17 @@ import os
 
 import numpy as np
 
+import GravNN
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Support.transformations import cart2sph
 
 
-def get_pm_data(trajectory, gravity_file, **kwargs):
+def get_mascons_data(trajectory, gravity_file, **kwargs):
     # Handle cases where the keyword wasn't properly wrapped as a list []
     override = bool(kwargs.get("override", [False])[0])
 
-    point_mass_r0_gm = PointMass(kwargs["planet"][0], trajectory=trajectory)
+    point_mass_r0_gm = Mascons(kwargs["planet"][0], trajectory=trajectory)
     accelerations = point_mass_r0_gm.load(override=override).accelerations
     potentials = point_mass_r0_gm.potentials
 
@@ -22,8 +23,8 @@ def get_pm_data(trajectory, gravity_file, **kwargs):
     return x, a, u
 
 
-class PointMass(GravityModelBase):
-    def __init__(self, celestial_body, trajectory=None):
+class Mascons(GravityModelBase):
+    def __init__(self, celestial_body, mass_csv, trajectory=None):
         """Gravity model that only produces accelerations and potentials
         as if there were only a point mass.
 
@@ -32,16 +33,30 @@ class PointMass(GravityModelBase):
             trajectory (TrajectoryBase, optional): trajectory for which gravity
             measurements must be produced. Defaults to None.
         """
-        super().__init__(celestial_body, trajectory=trajectory)
-        self.configure(trajectory)
-
+        super().__init__(celestial_body, mass_csv, trajectory=trajectory)
         self.celestial_body = celestial_body
         self.mu = celestial_body.mu
+        self.mass_csv = mass_csv
+        self.read_mass_csv()
+        self.configure(trajectory)
+
+    def read_mass_csv(self):
+        gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
+        with open(
+            f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/" + self.mass_csv,
+            "r",
+        ) as f:
+            lines = f.readlines()
+            lines = lines[1:]  # Skip header
+            lines = [line.strip().split(",") for line in lines]
+            lines = np.array(lines).astype(np.float64)
+            self.masses_mu = lines[:, 0:1]
+            self.masses_position = lines[:, 1:]
 
     def generate_full_file_directory(self):
-        self.file_directory += (
-            os.path.splitext(os.path.basename(__file__))[0] + f"_PointMass_{self.mu}/"
-        )
+        model_name = os.path.splitext(os.path.basename(__file__))[0]
+        masses_file = os.path.splitext(os.path.basename(self.mass_csv))[0]
+        self.file_directory += f"{model_name}_{masses_file}/"
         pass
 
     def compute_acceleration(self, positions=None):
@@ -73,35 +88,18 @@ class PointMass(GravityModelBase):
         # U = -mu/r
         # dU/dx = mu/r^2
         # a = -dU/dx = -mu/r^2
-        return (
-            -self.mu * position / np.linalg.norm(position, axis=0) ** 3
-        )  # [a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
-
-    def compute_dfdx(self, positions):
-        """Compute gradient of the acceleration"""
-        x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]
-        r = np.linalg.norm(positions, axis=1)
-
-        def diag(x, r):
-            return self.mu * (3.0 * x**2 - r**2) / (r**2) ** (5.0 / 2.0)
-            # return -self.mu * (1.0 / r**3 - 3.0 * x**2 / r**5)
-
-        def off_diag(i, j, r):
-            return self.mu * (3.0 * i * j / (r**2) ** (5.0 / 2.0))
-            # return self.mu * (3.0 * i * j / r**5)
-
-        dfdx = np.block(
-            [
-                [diag(x, r), off_diag(x, y, r), off_diag(x, z, r)],
-                [off_diag(y, x, r), diag(y, r), off_diag(y, z, r)],
-                [off_diag(z, x, r), off_diag(z, y, r), diag(z, r)],
-            ],
-        )
-
-        return dfdx
+        dr = position - self.masses_position
+        dr_mag = np.linalg.norm(dr, axis=1, keepdims=True)
+        a_mass_i = -self.masses_mu * dr / dr_mag**3
+        a_mass = np.sum(a_mass_i, axis=0)
+        return a_mass
 
     def compute_potential_value(self, position):
-        return -self.mu / position[0]
+        dr = position - self.masses_position
+        dr_mag = np.linalg.norm(dr, axis=1)
+        u_mass_i = -self.masses_mu / dr_mag
+        u_mass = np.sum(u_mass_i)
+        return u_mass
 
 
 def main():
@@ -109,7 +107,7 @@ def main():
 
     start = time.time()
     planet = Earth()
-    point_mass = PointMass(planet)
+    mascons = Mascons(planet)
     print(time.time() - start)
 
     position = (
@@ -118,17 +116,7 @@ def main():
 
     print(position)
     start = time.time()
-    accelerations = point_mass.compute_acceleration(position)
-    print(accelerations)
-    print(np.linalg.norm(accelerations, axis=1))
-    print(time.time() - start)
-
-    from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
-
-    model = SphericalHarmonics(planet.sh_file, 1000)
-    sh_results = model.compute_acceleration(position)
-
-    print(sh_results)
+    mascons.compute_acceleration(position)
 
 
 if __name__ == "__main__":
