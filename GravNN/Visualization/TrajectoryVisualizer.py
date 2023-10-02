@@ -5,7 +5,7 @@ import numpy as np
 import trimesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from GravNN.GravityModels.HeterogeneousPoly import Heterogeneity, HeterogeneousPoly
+from GravNN.Analysis.TrajectoryExperiment import TestModel
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
@@ -24,10 +24,10 @@ class TrajectoryVisualizer(VisualizationBase):
     def plot_position_error(self):
         # self.newFig(fig_size=(self.w_full, self.h_full / 5))
         for model_dict in self.experiment.test_models:
-            dr = model_dict["pos_diff"]
-            time = model_dict["solution"].t
-            label = model_dict["label"]
-            color = model_dict["color"]
+            label = model_dict.label
+            color = model_dict.color
+            time = model_dict.orbit.solution.t
+            dr = model_dict.metrics["pos_diff"]
             plt.semilogy(time, dr / 1000.0, label=label, color=color)
 
         plt.ylabel("$|\Delta r|$ Error [km]")
@@ -40,10 +40,10 @@ class TrajectoryVisualizer(VisualizationBase):
     def plot_execution_time(self):
         # self.newFig(fig_size=(self.w_full, self.h_full / 5))
         for model_dict in self.experiment.test_models:
-            time_real = model_dict["elapsed_time"][1:]
-            time_sim = model_dict["solution"].t[1:]
-            label = model_dict["label"]
-            color = model_dict["color"]
+            time_real = model_dict.orbit.elapsed_time[1:]
+            time_sim = model_dict.orbit.solution.t[1:]
+            label = model_dict.label
+            color = model_dict.color
             plt.semilogy(time_sim, time_real, label=label, color=color)
 
         plt.ylabel("Real Time [s]")
@@ -62,11 +62,11 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
 
         for model_dict in self.experiment.test_models:
-            sol = model_dict["solution"]
+            sol = model_dict.orbit.solution
             X, Y, Z = sol.y[0:3]
-            label = model_dict["label"]
-            color = model_dict["color"]
-            linestyle = model_dict["linestyle"]
+            label = model_dict.label
+            color = model_dict.color
+            linestyle = model_dict.linestyle
             plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
 
         plt.legend()
@@ -124,11 +124,11 @@ class TrajectoryVisualizer(VisualizationBase):
             self.new3DFig()
             self.plot_reference_trajectory(new_fig=False)
 
-            sol = model_dict["solution"]
+            sol = model_dict.orbit.solution
             X, Y, Z = sol.y[0:3]
-            label = model_dict["label"]
-            color = model_dict["color"]
-            linestyle = model_dict["linestyle"]
+            label = model_dict.label
+            color = model_dict.color
+            linestyle = model_dict.linestyle
             plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
 
             plt.legend()
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     from GravNN.Analysis.TrajectoryExperiment import TrajectoryExperiment
     from GravNN.CelestialBodies.Asteroids import Eros
-    from GravNN.GravityModels.PointMass import PointMass
+    from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
     from GravNN.GravityModels.Polyhedral import Polyhedral
     from GravNN.Networks.Model import load_config_and_model
 
@@ -192,37 +192,23 @@ if __name__ == "__main__":
         ],
     )
 
-    mass_1 = Eros()
-    mass_1.mu = mass_1.mu / 10
-    r_offset_1 = [mass_1.radius / 3, 0, 0]
-
-    mass_2 = Eros()
-    mass_2.mu = -mass_2.mu / 10
-    r_offset_2 = [-mass_2.radius / 3, 0, 0]
-
-    point_mass_1 = PointMass(mass_1)
-    point_mass_2 = PointMass(mass_2)
-
-    mascon_1 = Heterogeneity(point_mass_1, r_offset_1)
-    mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
-    heterogeneities = [mascon_1, mascon_2]
-
-    true_model = HeterogeneousPoly(planet, planet.obj_8k, heterogeneities)
-
+    true_model = generate_heterogeneous_model(planet, planet.obj_8k)
     test_poly_model = Polyhedral(planet, planet.obj_8k)
 
-    df = pd.read_pickle("Data/Dataframes/heterogenous_eros_041823.data")
+    df = pd.read_pickle("Data/Dataframes/eros_poly_071123.data")
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 
+    poly_test = TestModel(test_poly_model, "Poly", "r")
+    pinn_test = TestModel(test_pinn_model, "PINN", "g")
     experiment = TrajectoryExperiment(
         true_model,
+        [poly_test, pinn_test],
         initial_state=init_state,
-        period=1 * 24 * 3600,  # 24 * 3600,
+        pbar=True,
+        period=1 * 3600,  # 24 * 3600,
     )
-    experiment.add_test_model(test_poly_model, "Poly", "r")
-    experiment.add_test_model(test_pinn_model, "PINN", "g")
-    experiment.run()
+    experiment.run(override=True)
 
     vis = TrajectoryVisualizer(experiment, obj_file=planet.obj_8k)
     vis.plot()

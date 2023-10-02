@@ -33,10 +33,9 @@ class PointMass(GravityModelBase):
             measurements must be produced. Defaults to None.
         """
         super().__init__(celestial_body, trajectory=trajectory)
-        self.configure(trajectory)
-
         self.celestial_body = celestial_body
         self.mu = celestial_body.mu
+        self.configure(trajectory)
 
     def generate_full_file_directory(self):
         self.file_directory += (

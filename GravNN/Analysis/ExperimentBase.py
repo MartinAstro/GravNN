@@ -26,15 +26,21 @@ class ExperimentBase(ABC):
 
         self.override = False
         self.loaded = False
-
         self.set_save_directory()
         pass
 
-    def get_grav_model_id(self, model):
-        if isinstance(model, PINNGravityModel):
-            model_id = str(model.config["id"][0])
+    def get_grav_model_id(self, args_with_names):
+        grav_model = args_with_names.get("model", None)
+        if grav_model is None:
+            if "model" in list(args_with_names.keys())[0]:
+                grav_model = args_with_names.values()[0]
+            else:
+                exit("No gravity model found in to experiment")
+
+        if isinstance(grav_model, PINNGravityModel):
+            model_id = str(grav_model.config["id"][0])
         else:
-            model_id = model.id
+            model_id = grav_model.id
         return model_id
 
     def generate_hash(self, *args, **kwargs):
@@ -44,13 +50,7 @@ class ExperimentBase(ABC):
         args_with_names = dict(zip(args_names, args))
 
         # Hash should account for the gravity model used
-        grav_model = args_with_names.get("model", None)
-        if grav_model is None:
-            if "model" in list(args_with_names.keys())[0]:
-                grav_model = args[0]
-            else:
-                exit("No gravity model found in to experiment")
-        grav_model_id = self.get_grav_model_id(grav_model)
+        grav_model_id = self.get_grav_model_id(args_with_names)
 
         # Convert the sorted input arguments to a JSON string
         all_args = {**args_with_names, **kwargs, "grav_model_id": grav_model_id}

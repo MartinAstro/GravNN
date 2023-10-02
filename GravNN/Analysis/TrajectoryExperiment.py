@@ -13,10 +13,19 @@ from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.ProgressBar import ProgressBar
 
 
-class TrajectoryExperiment(ExperimentBase):
+class TestModel:
+    def __init__(self, model, label, color, linestyle="-"):
+        self.model = model
+        self.label = label
+        self.color = color
+        self.linestyle = linestyle
+        self.orbit = None
+
+
+class TrajectoryPropagator(ExperimentBase):
     def __init__(
         self,
-        true_grav_model,
+        model,
         initial_state,
         period,
         t_mesh_density=100,
@@ -25,15 +34,14 @@ class TrajectoryExperiment(ExperimentBase):
         tol=1e-10,
     ):
         super().__init__(
-            true_grav_model,
+            model,
             initial_state,
             period,
             t_mesh_density,
-            pbar,
             random_seed,
             tol,
         )
-        self.true_model = true_grav_model
+        self.true_model = model
         self.t_mesh_density = t_mesh_density
         self.period = period
         self.x0 = initial_state
@@ -41,16 +49,6 @@ class TrajectoryExperiment(ExperimentBase):
         self.pbar = pbar
         self.tol = tol
         np.random.seed(random_seed)
-
-    def add_test_model(self, model, label, color, linestyle="-"):
-        self.test_models.append(
-            {
-                "model": model,
-                "label": label,
-                "color": color,
-                "linestyle": linestyle,
-            },
-        )
 
     def generate_trajectory(self, model, X0, t_eval):
         def fun(t, y, IC=None):
@@ -69,6 +67,8 @@ class TrajectoryExperiment(ExperimentBase):
         fun.t_eval_idx = 0
         fun.elapsed_time = []
         fun.pbar = ProgressBar(t_eval[-1], self.pbar)
+        # avoid the first call to fun() to avoid a duplicate call to compute_acceleration
+        model.compute_acceleration(np.array([[100.0, 100.0, 100.0]]))
         fun.start_time = time.time()
 
         sol = solve_ivp(
@@ -84,45 +84,87 @@ class TrajectoryExperiment(ExperimentBase):
         fun.pbar.close()
         return sol, fun.elapsed_time
 
-    def compute_differences(self):
-        for i, model_dict in enumerate(self.test_models):
-            test_sol = model_dict["solution"]
-
-            dy = test_sol.y - self.true_sol.y
-            dX = np.linalg.norm(dy, axis=0)
-            dX = np.linalg.norm(dy[0:3], axis=0)
-
-            self.test_models[i].update({"pos_diff": dX})
-
     def generate_data(self):
-        self.t_mesh = np.linspace(0, self.period, self.t_mesh_density, endpoint=True)
+        if not hasattr(self, "solution"):
+            self.t_mesh = np.linspace(
+                0,
+                self.period,
+                self.t_mesh_density,
+                endpoint=True,
+            )
 
-        # Generate trajectories using the true grav model
-        if not hasattr(self, "true_sol"):
-            self.true_sol, self.elapsed_time = self.generate_trajectory(
+            self.solution, self.elapsed_time = self.generate_trajectory(
                 self.true_model,
                 self.x0,
                 self.t_mesh,
             )
-
-        # generate trajectories for all test models
-        for i, model_dict in enumerate(self.test_models):
-            model = model_dict["model"]
-            sol, elapsed_time = self.generate_trajectory(
-                model,
-                self.x0,
-                self.t_mesh,
-            )
-            self.test_models[i].update({"solution": sol, "elapsed_time": elapsed_time})
-
-        self.compute_differences()
-
-        # Can only save the true model, b/c the test models may change.
         data = {
-            "true_sol": self.true_sol,
+            "solution": self.solution,
             "elapsed_time": self.elapsed_time,
+            "t_mesh": self.t_mesh,
         }
         return data
+
+
+class TrajectoryExperiment:
+    def __init__(
+        self,
+        true_model,
+        test_models,
+        initial_state,
+        period,
+        t_mesh_density=100,
+        pbar=False,
+        random_seed=1234,
+        tol=1e-10,
+    ):
+        self.true_model = true_model
+        self.test_models = test_models
+        self.initial_state = initial_state
+        self.period = period
+        self.t_mesh_density = t_mesh_density
+        self.pbar = pbar
+        self.random_seed = random_seed
+        self.tol = tol
+
+    def run(self, override=False):
+        self.true_orbit = TrajectoryPropagator(
+            self.true_model,
+            self.initial_state,
+            self.period,
+            self.t_mesh_density,
+            self.pbar,
+            self.random_seed,
+            self.tol,
+        )
+        self.true_orbit.run(override=override)
+
+        for i, model in enumerate(self.test_models):
+            orbit = TrajectoryPropagator(
+                model.model,
+                self.initial_state,
+                self.period,
+                self.t_mesh_density,
+                self.pbar,
+                self.random_seed,
+                self.tol,
+            )
+            orbit.run(override=override)
+            self.test_models[i].orbit = orbit
+
+        self.true_sol = self.true_orbit.solution
+        for i, test_model in enumerate(self.test_models):
+            test_sol = test_model.orbit.solution
+
+            dy = test_sol.y - self.true_sol.y
+            dx = np.linalg.norm(dy, axis=0)
+            dx_sum = np.cumsum(dx)
+
+            metrics = {
+                "pos_diff": np.cumsum(np.linalg.norm(dy[0:3, :], axis=0)),
+                "dx_sum": dx_sum,
+            }
+            self.test_models[i].metrics = metrics
 
 
 def main():
@@ -146,13 +188,16 @@ def main():
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 
+    poly_test = TestModel(test_poly_model, "Poly", "r")
+    pinn_test = TestModel(test_pinn_model, "PINN", "g")
+    test_models = [poly_test, pinn_test]
+
     experiment = TrajectoryExperiment(
         true_model,
+        test_models,
         initial_state=init_state,
         period=24 * 3600,  # 24 * 3600,
     )
-    experiment.add_test_model(test_poly_model, "Poly", "r")
-    experiment.add_test_model(test_pinn_model, "PINN", "g")
     experiment.run()
 
     plt.show()
