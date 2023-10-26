@@ -37,20 +37,20 @@ class ExtrapolationVisualizer(VisualizationBase):
         else:
             raise ValueError()
 
-    def annotate_metrics(self, x, values, xy=(0.3, 0.95)):
-        interior_mask = x < 1.0
+    def annotate_metrics(self, x, values, xy=(0.3, 0.95), critical_radius=1.0):
+        interior_mask = x < critical_radius
 
         interior_values = values[interior_mask]
         exterior_values = values[~interior_mask]
 
         def compute_stats_str(vals):
-            rms_avg = sigfig.round(np.mean(vals), sigfigs=2)
-            rms_std = sigfig.round(np.std(vals), sigfigs=2)
-            rms_max = sigfig.round(np.max(vals), sigfigs=2)
-            if rms_avg > 1e3:
-                stat_str = "%.1E ± %.1E (%.1E)" % (rms_avg, rms_std, rms_max)
+            avg = sigfig.round(np.mean(vals), sigfigs=2)
+            std = sigfig.round(np.std(vals), sigfigs=2)
+            max = sigfig.round(np.max(vals), sigfigs=2)
+            if avg > 1e3:
+                stat_str = "%.1E ± %.1E (%.1E)" % (avg, std, max)
             else:
-                stat_str = f"{rms_avg}±{rms_std} ({rms_max})"
+                stat_str = f"{avg}±{std} ({max})"
             return stat_str
 
         interior_stats = "Interior: " + compute_stats_str(interior_values)
@@ -95,11 +95,13 @@ class ExtrapolationVisualizer(VisualizationBase):
         # sort entries
         avg_line, std_line, max_line = get_rolling_lines(value)
         label = kwargs.get("label", None)
+        linewidth = kwargs.get("linewidth", 0.5)
+        color = kwargs.get("color", None)
 
         if kwargs.get("new_fig", True):
             self.newFig()
         plt.scatter(x, value, alpha=0.2, s=2)
-        self.plot_fcn(x, avg_line, label=label)
+        self.plot_fcn(x, avg_line, label=label, linewidth=linewidth, color=color)
 
         if kwargs.get("plot_std", True):
             y_std_upper = np.squeeze(avg_line + 1 * std_line)
@@ -114,7 +116,11 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.vlines(training_bounds[1], ymin=0, ymax=np.max(value), color="green")
         plt.vlines(1, ymin=0, ymax=np.max(value), color="grey")
         if kwargs.get("annotate", True):
-            self.annotate_metrics(x, value)
+            self.annotate_metrics(
+                x,
+                value,
+                critical_radius=kwargs.get("critical_radius", 1.0),
+            )
         plt.tight_layout()
 
     def plot_interpolation_loss(self, **kwargs):
@@ -137,23 +143,23 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.ylabel("Loss")
         plt.xlabel(self.x_label)
 
-    def plot_interpolation_rms(self, **kwargs):
+    def plot_interpolation_mse(self, **kwargs):
         self.plot(
             self.x_test[: self.max_idx],
-            self.experiment.losses["rms"][self.idx_test][: self.max_idx],
+            self.experiment.losses["mse"][self.idx_test][: self.max_idx],
             **kwargs,
         )
         plt.gca().set_yscale("log")
         plt.xlim(self.training_bounds / self.radius)
-        plt.ylabel("RMS [$m/s^2$]")
+        plt.ylabel("MSE [$m/s^2$]")
         plt.xlabel(self.x_label)
         plt.ylim([0, None])
         # self.plot_histogram(self.x_train)
 
-    def plot_extrapolation_rms(self, **kwargs):
-        self.plot(self.x_test, self.experiment.losses["rms"][self.idx_test], **kwargs)
+    def plot_extrapolation_mse(self, **kwargs):
+        self.plot(self.x_test, self.experiment.losses["mse"][self.idx_test], **kwargs)
         plt.gca().set_yscale("log")
-        plt.ylabel("RMS [$m/s^2$]")
+        plt.ylabel("MSE [$m/s^2$]")
         plt.xlabel(self.x_label)
 
     def plot_interpolation_percent_error(self, **kwargs):
@@ -170,10 +176,12 @@ class ExtrapolationVisualizer(VisualizationBase):
         # self.plot_histogram(self.x_train)
 
     def plot_extrapolation_percent_error(self, **kwargs):
+        R_max = self.experiment.config["radius_max"][0] / self.radius
         extrapol_error = self.experiment.losses["percent"][self.idx_test]
         self.plot(
             self.x_test,
             extrapol_error * 100,
+            critical_radius=R_max,
             **kwargs,
         )
         plt.ylabel("Percent Error")
@@ -201,8 +209,8 @@ def main():
         vis.plot_interpolation_percent_error()
         plt.gca().set_ylim([1e-3, 1e2])
         vis.plot_extrapolation_percent_error()
-    # vis.plot_interpolation_rms()
-    # vis.plot_extrapolation_rms()
+    # vis.plot_interpolation_mse()
+    # vis.plot_extrapolation_mse()
 
     plt.show()
 
