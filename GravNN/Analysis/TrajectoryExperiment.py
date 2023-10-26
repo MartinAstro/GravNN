@@ -11,6 +11,7 @@ from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Support.ProgressBar import ProgressBar
+from GravNN.Support.RigidBodyKinematics import euler1232C
 
 
 class TestModel:
@@ -20,6 +21,19 @@ class TestModel:
         self.color = color
         self.linestyle = linestyle
         self.orbit = None
+
+
+def compute_BN(t, omega_vec):
+    if isinstance(t, float):
+        euler = omega_vec * t
+        DCM = euler1232C(euler)
+    elif isinstance(t, np.ndarray):
+        eulers = omega_vec.reshape((3, 1)) * t
+        eulers = eulers.T
+        DCM = np.array([euler1232C(euler) for euler in eulers])
+    else:
+        raise Exception("t must be float or np.ndarray")
+    return DCM
 
 
 class TrajectoryPropagator(ExperimentBase):
@@ -32,6 +46,7 @@ class TrajectoryPropagator(ExperimentBase):
         pbar=False,
         random_seed=1234,
         tol=1e-10,
+        omega_vec=np.array([0.0, 0.0, 0.0]).reshape((3, 1)),
     ):
         super().__init__(
             model,
@@ -40,6 +55,7 @@ class TrajectoryPropagator(ExperimentBase):
             t_mesh_density,
             random_seed,
             tol,
+            omega_vec,
         )
         self.true_model = model
         self.t_mesh_density = t_mesh_density
@@ -48,15 +64,23 @@ class TrajectoryPropagator(ExperimentBase):
         self.test_models = []
         self.pbar = pbar
         self.tol = tol
+        self.omega_vec = omega_vec
         np.random.seed(random_seed)
 
     def generate_trajectory(self, model, X0, t_eval):
         def fun(t, y, IC=None):
             "Return the first-order system"
-            R = np.array([y[0:3]])
-            V = np.array([y[3:6]])
-            a = model.compute_acceleration(R)
-            dxdt = np.hstack((V, a)).squeeze()
+            R = y[0:3]
+            V = y[3:6]
+
+            BN = compute_BN(t, self.omega_vec).squeeze()
+            x_pos_B = BN @ R
+            x_pos_B = x_pos_B.reshape((1, -1))
+            a_B = model.compute_acceleration(x_pos_B)
+            a_B = np.array(a_B).squeeze()
+            a_N = BN.T @ a_B
+
+            dxdt = np.hstack((V, a_N)).squeeze()
 
             if t > t_eval[fun.t_eval_idx]:
                 fun.elapsed_time.append(time.time() - fun.start_time)
@@ -67,6 +91,7 @@ class TrajectoryPropagator(ExperimentBase):
         fun.t_eval_idx = 0
         fun.elapsed_time = []
         fun.pbar = ProgressBar(t_eval[-1], self.pbar)
+
         # avoid the first call to fun() to avoid a duplicate call to compute_acceleration
         model.compute_acceleration(np.array([[100.0, 100.0, 100.0]]))
         fun.start_time = time.time()
@@ -117,6 +142,7 @@ class TrajectoryExperiment:
         pbar=False,
         random_seed=1234,
         tol=1e-10,
+        omega_vec=np.array([0.0, 0.0, 0.0]).reshape((3, 1)),
     ):
         self.true_model = true_model
         self.test_models = test_models
@@ -126,6 +152,7 @@ class TrajectoryExperiment:
         self.pbar = pbar
         self.random_seed = random_seed
         self.tol = tol
+        self.omega_vec = omega_vec
 
     def run(self, override=False):
         self.true_orbit = TrajectoryPropagator(
@@ -136,6 +163,7 @@ class TrajectoryExperiment:
             self.pbar,
             self.random_seed,
             self.tol,
+            self.omega_vec,
         )
         self.true_orbit.run(override=override)
 
@@ -148,6 +176,7 @@ class TrajectoryExperiment:
                 self.pbar,
                 self.random_seed,
                 self.tol,
+                self.omega_vec,
             )
             orbit.run(override=override)
             self.test_models[i].orbit = orbit
