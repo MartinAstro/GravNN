@@ -1,6 +1,7 @@
 from sklearn.preprocessing import MinMaxScaler
 
-from GravNN.Preprocessors import DummyScaler, UniformScaler
+from GravNN.Preprocessors.DummyScaler import DummyScaler
+from GravNN.Preprocessors.UniformScaler import UniformScaler
 
 
 def PINN_I():
