@@ -14,13 +14,15 @@ class ExtrapolationExperiment(ExperimentBase):
         self.config = config
         self.model = model
         self.points = points
-        self.loss_fcn_list = ["rms", "percent"]
+        self.loss_fcn_list = ["mse", "rms", "percent"]
 
         self.brillouin_radius = config["planet"][0].radius
         original_max_radius = self.config["radius_max"][0]
         extra_max_radius = np.nan_to_num(self.config.get("extra_radius_max", [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config["radius_min"][0], max_radius]
+
+        self.max_radius_scale = kwargs.get("max_radius_scale", 10)
 
         np.random.seed(random_seed)
 
@@ -44,7 +46,7 @@ class ExtrapolationExperiment(ExperimentBase):
         )
         extrapolation_dist = RandomDist(
             planet,
-            radius_bounds=[max_radius, max_radius * 10],
+            radius_bounds=[max_radius, max_radius * self.max_radius_scale],
             points=self.points,
             **self.config,
         )
