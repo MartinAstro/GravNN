@@ -190,7 +190,8 @@ class Eros(Asteroid):
         self.radius = 16000.0  # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.998.2986&rep=rep1&type=pdf
         self.radius_min = 3120.0
         G = 6.67430 * 10**-11
-        self.mu = G * 6.687 * 10**15
+        volume = 2525994603183.156  # m^3 from 8k file
+        self.mu = G * volume * self.density
 
         def reindex_faces(fname, action, pooch_inst):
             "add 1 to the face indices in the obj file to work with trimesh"
