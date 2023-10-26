@@ -5,7 +5,7 @@ import numpy as np
 import trimesh
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from GravNN.Analysis.TrajectoryExperiment import TestModel
+from GravNN.Analysis.TrajectoryExperiment import TestModel, compute_BN
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
@@ -15,35 +15,35 @@ class TrajectoryVisualizer(VisualizationBase):
         self.experiment = experiment
         self.file_directory += os.path.splitext(os.path.basename(__file__))[0] + "/"
         self.mesh = None
-        # plt.rc("lines", linewidth=1)
+        self.frame = kwargs.get("frame", "N")
+
+        self.true_model = TestModel(self.experiment.true_model, "True", "black")
+        self.true_model.orbit = self.experiment.true_orbit
 
         if obj_file is not None:
             filename, file_extension = os.path.splitext(obj_file)
             self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
 
     def plot_position_error(self):
-        # self.newFig(fig_size=(self.w_full, self.h_full / 5))
-        for model_dict in self.experiment.test_models:
-            label = model_dict.label
-            color = model_dict.color
-            time = model_dict.orbit.solution.t
-            dr = model_dict.metrics["pos_diff"]
+        for model in self.experiment.test_models:
+            label = model.label
+            color = model.color
+            time = model.orbit.solution.t
+            dr = model.metrics["pos_diff"]
             plt.semilogy(time, dr / 1000.0, label=label, color=color)
 
         plt.ylabel("$|\Delta r|$ Error [km]")
         plt.xlabel("Time [s]")
-        # plt.gca().set_xticklabels("")
         plt.gca().yaxis.tick_right()
         plt.gca().yaxis.set_label_position("right")
-        # plt.legend()
 
     def plot_execution_time(self):
         # self.newFig(fig_size=(self.w_full, self.h_full / 5))
-        for model_dict in self.experiment.test_models:
-            time_real = model_dict.orbit.elapsed_time[1:]
-            time_sim = model_dict.orbit.solution.t[1:]
-            label = model_dict.label
-            color = model_dict.color
+        for model in self.experiment.test_models:
+            time_real = model.orbit.elapsed_time[1:]
+            time_sim = model.orbit.solution.t[1:]
+            label = model.label
+            color = model.color
             plt.semilogy(time_sim, time_real, label=label, color=color)
 
         plt.ylabel("Real Time [s]")
@@ -52,27 +52,26 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().yaxis.set_label_position("right")
         # plt.legend()
 
-    def plot_3d_trajectory(self, new_fig=True):
-        if new_fig:
-            self.new3DFig()
+    def plot_orbit(self, model, az=235, el=35):
+        sol = model.orbit.solution
+        omega_vec = model.orbit.omega_vec
 
-        true_sol = self.experiment.true_sol
-        X, Y, Z = true_sol.y[0:3]
-        plt.plot(X, Y, Z, label="True", color="black")
-        plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
-
-        for model_dict in self.experiment.test_models:
-            sol = model_dict.orbit.solution
+        if self.frame == "B":
+            BN = compute_BN(sol.t, omega_vec)
+            X = sol.y[0:3].T
+            X = X.reshape((-1, 3, 1))
+            X = BN @ X
+            X = X.squeeze()
+            X, Y, Z = X[:, 0], X[:, 1], X[:, 2]
+        else:
             X, Y, Z = sol.y[0:3]
-            label = model_dict.label
-            color = model_dict.color
-            linestyle = model_dict.linestyle
-            plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
+
+        label = model.label
+        color = model.color
+        linestyle = model.linestyle
+        plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
 
         plt.legend()
-        # plt.gca().set_xlabel("X [m]")
-        # plt.gca().set_ylabel("Y [m]")
-        # plt.gca().set_zlabel("Z [m]")
 
         plt.gca().set_xticklabels("")
         plt.gca().set_yticklabels("")
@@ -85,79 +84,30 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().axes.set_zlim3d(bottom=min_lim, top=max_lim)
 
         plt.gca().set_box_aspect((1, 1, 1))
-        plt.gca().view_init(elev=35, azim=235, roll=0)
+        plt.gca().view_init(elev=el, azim=az, roll=0)
 
+    def plot_shape_model(self):
         if self.mesh is not None:
             tri = Poly3DCollection(
                 self.mesh.triangles * 1000,
                 cmap=plt.get_cmap("Greys"),
                 alpha=0.4,
-                # shade=True,
             )
-
             plt.gca().add_collection3d(tri)
 
-    def plot_reference_trajectory(self, new_fig=True, show_mesh=False, az=235, el=35):
+    def plot_3d_trajectory(self, new_fig=True, **kwargs):
         if new_fig:
             self.new3DFig()
-        true_sol = self.experiment.true_sol
-        X, Y, Z = true_sol.y[0:3]
-        plt.plot(X, Y, Z, label="True", color="black")
-        plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
+        self.plot_orbit(self.true_model, **kwargs)
+        # plt.gca().scatter(X[0], Y[0], Z[0], c="g", s=2)
+        for model in self.experiment.test_models:
+            self.plot_orbit(model, **kwargs)
+        self.plot_shape_model()
 
-        if show_mesh:
-            if self.mesh is not None:
-                tri = Poly3DCollection(
-                    self.mesh.triangles * 1000,
-                    cmap=plt.get_cmap("Greys"),
-                    alpha=0.4,
-                    # shade=True,
-                )
-
-                plt.gca().add_collection3d(tri)
-        plt.gca().view_init(elev=el, azim=az, roll=0)
-
-    def plot_3d_trajectory_individually(self, idx, az=235, el=35):
-        for i, model_dict in enumerate(self.experiment.test_models):
-            if i != idx:
-                continue
+    def plot_reference_trajectory(self, new_fig=True, **kwargs):
+        if new_fig:
             self.new3DFig()
-            self.plot_reference_trajectory(new_fig=False)
-
-            sol = model_dict.orbit.solution
-            X, Y, Z = sol.y[0:3]
-            label = model_dict.label
-            color = model_dict.color
-            linestyle = model_dict.linestyle
-            plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
-
-            plt.legend()
-            # plt.gca().set_xlabel("X [m]")
-            # plt.gca().set_ylabel("Y [m]")
-            # plt.gca().set_zlabel("Z [m]")
-
-            plt.gca().set_xticklabels("")
-            plt.gca().set_yticklabels("")
-            plt.gca().set_zticklabels("")
-
-            min_lim = np.min(sol.y[0:3])
-            max_lim = np.max(sol.y[0:3])
-            plt.gca().axes.set_xlim3d(left=min_lim, right=max_lim)
-            plt.gca().axes.set_ylim3d(bottom=min_lim, top=max_lim)
-            plt.gca().axes.set_zlim3d(bottom=min_lim, top=max_lim)
-
-            plt.gca().set_box_aspect((1, 1, 1))
-            plt.gca().view_init(elev=el, azim=az, roll=0)
-
-            if self.mesh is not None:
-                tri = Poly3DCollection(
-                    self.mesh.triangles * 1000,
-                    cmap=plt.get_cmap("Greys"),
-                    alpha=0.4,
-                    # shade=True,
-                )
-
-                plt.gca().add_collection3d(tri)
+        self.plot_orbit(self.true_model, **kwargs)
 
     def plot(self, new_fig=True):
         if new_fig:
@@ -166,7 +116,6 @@ class TrajectoryVisualizer(VisualizationBase):
         self.plot_position_error()
         plt.subplot2grid((2, 1), (1, 0))
         self.plot_execution_time()
-
         self.plot_3d_trajectory()
 
 
@@ -206,11 +155,15 @@ if __name__ == "__main__":
         [poly_test, pinn_test],
         initial_state=init_state,
         pbar=True,
-        period=1 * 3600,  # 24 * 3600,
+        t_mesh_density=1000,
+        period=24 * 3600,  # 24 * 3600,
+        omega_vec=np.array([0.000729 * 1, 0.000729 * 0.5, 0.000729]),
     )
-    experiment.run(override=True)
+    experiment.run(override=False)
 
     vis = TrajectoryVisualizer(experiment, obj_file=planet.obj_8k)
+    vis.plot()
+    vis = TrajectoryVisualizer(experiment, obj_file=planet.obj_8k, frame="B")
     vis.plot()
 
     plt.show()
