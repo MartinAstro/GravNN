@@ -6,6 +6,7 @@ import tensorflow as tf
 
 def get_loss_fcn(loss_key):
     return {
+        "mse": mse,
         "rms": rms,
         "percent": percent,
         "angle": angle,
@@ -53,6 +54,13 @@ def MetaLoss(y_hat_dict, y_dict, loss_fcn_list):
                 losses.update({loss_name: loss})
 
     return losses
+
+
+def mse(y_hat, y):
+    dy = y_hat - y
+    dy_sq = tf.square(dy)
+    mse = tf.reduce_mean(dy_sq, axis=1)
+    return mse
 
 
 def rms(y_hat, y):
