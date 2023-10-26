@@ -1,0 +1,89 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
+from GravNN.Networks.Model import load_config_and_model
+from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
+
+plt.rc("text", usetex=True)
+
+
+def plot(config, model, file_name, new_fig=True):
+    # evaluate the error at "training" altitudes and beyond
+    extrapolation_exp = ExtrapolationExperiment(
+        model,
+        config,
+        points=1000,
+        max_radius_scale=10,
+    )
+    extrapolation_exp.run(override=False)
+
+    # visualize error @ training altitude and beyond
+    vis = ExtrapolationVisualizer(
+        extrapolation_exp,
+        x_axis="dist_2_COM",
+        plot_fcn=plt.semilogy,
+        annotate=False,
+    )
+    vis.fig_size = (vis.w_full, vis.w_half)
+    if not new_fig:
+        plt.figure(1)
+    vis.plot_extrapolation_percent_error(
+        plot_std=False,
+        plot_max=False,
+        new_fig=new_fig,
+        annotate=False,
+        linewidth=1,
+        label=file_name,
+    )
+    plt.ylim([1e-4, 1e2])
+    plt.legend()
+
+    if not new_fig:
+        plt.figure(2)
+    vis.plot_interpolation_percent_error(
+        plot_std=False,
+        plot_max=False,
+        new_fig=new_fig,
+        annotate=False,
+        linewidth=1,
+        label=file_name,
+    )
+    plt.ylim([1e-4, 1e2])
+    plt.legend()
+    plt.tight_layout()
+
+    # plt.savefig(f"Plots/PINNIII/{file_name}.pdf", pad_inches=0.0)
+    # plt.savefig(f"Plots/PINNIII/{file_name}.png", pad_inches=0.0, dpi=250)
+
+
+def main():
+    # RMS #
+    df = pd.read_pickle("Data/Dataframes/pinn_III_mods_RMS.data")
+    config, model = load_config_and_model(df, idx=-1)
+    plot(config, model, "I: Features")
+
+    # Percent #
+    df = pd.read_pickle("Data/Dataframes/pinn_III_mods_percent.data")
+    config, model = load_config_and_model(df, idx=-1)
+    plot(config, model, "II: Percent", new_fig=False)
+
+    # With Scaling #
+    df = pd.read_pickle("Data/Dataframes/pinn_III_mods_scaling.data")
+    config, model = load_config_and_model(df, idx=-1)
+    plot(config, model, "III: Scaling", new_fig=False)
+
+    # With BC #
+    df = pd.read_pickle("Data/Dataframes/pinn_III_mods_BC.data")
+    config, model = load_config_and_model(df, idx=-1)
+    plot(config, model, "IV: BC", new_fig=False)
+
+    # With Fuse #
+    df = pd.read_pickle("Data/Dataframes/pinn_III_mods_fuse.data")
+    config, model = load_config_and_model(df, idx=-1)  #
+    plot(config, model, "V: Fusing", new_fig=False)
+
+
+if __name__ == "__main__":
+    main()
+    plt.show()
