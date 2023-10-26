@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from GravNN.Analysis.TrajectoryExperiment import TrajectoryExperiment
+from GravNN.Analysis.TrajectoryExperiment import TestModel, TrajectoryExperiment
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.HeterogeneousPoly import (
     generate_heterogeneous_model,
@@ -42,15 +42,16 @@ def main():
         with open(traj_exp_file, "rb") as f:
             experiment = pickle.load(f)
     else:
+        poly_test = TestModel(test_poly_model, "Poly", "r")
+        pinn_test = TestModel(test_pinn_model, "PINN", "g")
         experiment = TrajectoryExperiment(
             true_model,
+            [poly_test, pinn_test],
             initial_state=init_state,
             period=1 * 24 * 3600,  # 24 * 3600,
             pbar=True,
             tol=1e-8,
         )
-        experiment.add_test_model(test_poly_model, "Poly", "r")
-        experiment.add_test_model(test_pinn_model, "PINN", "g")
         experiment.run()
 
         experiment.test_models[-1].pop("model")
