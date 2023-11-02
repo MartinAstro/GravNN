@@ -5,6 +5,8 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 import GravNN
 from GravNN.Networks.Model import PINNGravityModel
 
@@ -12,7 +14,10 @@ from GravNN.Networks.Model import PINNGravityModel
 class SkipNonSerializable(json.JSONEncoder):
     def default(self, obj):
         try:
-            return super().default(obj)
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            else:
+                return json.JSONEncoder.default(self, obj)
         except TypeError:
             return None  # or return
 

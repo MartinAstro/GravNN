@@ -141,6 +141,18 @@ if __name__ == "__main__":
         ],
     )
 
+    # planet.radius*2, 0.1, np.pi / 2, 0, 0, 0 -- polar orbit
+    init_state = np.array(
+        [
+            2.88000000e04,
+            0.00000000e00,
+            0.00000000e00,
+            0.00000000e00,
+            -1.81246412e-07,
+            4.14643442e00,
+        ],
+    )
+
     true_model = generate_heterogeneous_model(planet, planet.obj_8k)
     test_poly_model = Polyhedral(planet, planet.obj_8k)
 
@@ -150,6 +162,8 @@ if __name__ == "__main__":
 
     poly_test = TestModel(test_poly_model, "Poly", "r")
     pinn_test = TestModel(test_pinn_model, "PINN", "g")
+
+    rot_rate = 2 * np.pi / (3600 * 24)
     experiment = TrajectoryExperiment(
         true_model,
         [poly_test, pinn_test],
@@ -157,7 +171,7 @@ if __name__ == "__main__":
         pbar=True,
         t_mesh_density=1000,
         period=24 * 3600,  # 24 * 3600,
-        omega_vec=np.array([0.000729 * 1, 0.000729 * 0.5, 0.000729]),
+        omega_vec=np.array([0, 0, rot_rate * 10]),
     )
     experiment.run(override=False)
 

@@ -43,19 +43,20 @@ class TrajectoryPropagator(ExperimentBase):
         initial_state,
         period,
         t_mesh_density=100,
-        pbar=False,
         random_seed=1234,
         tol=1e-10,
         omega_vec=np.array([0.0, 0.0, 0.0]).reshape((3, 1)),
+        pbar=False,
     ):
         super().__init__(
             model,
-            initial_state,
-            period,
-            t_mesh_density,
-            random_seed,
-            tol,
-            omega_vec,
+            initial_state=initial_state,
+            period=period,
+            t_mesh_density=t_mesh_density,
+            random_seed=random_seed,
+            tol=tol,
+            omega_vec=omega_vec,
+            pbar=pbar,
         )
         self.true_model = model
         self.t_mesh_density = t_mesh_density
@@ -139,10 +140,10 @@ class TrajectoryExperiment:
         initial_state,
         period,
         t_mesh_density=100,
-        pbar=False,
         random_seed=1234,
         tol=1e-10,
         omega_vec=np.array([0.0, 0.0, 0.0]).reshape((3, 1)),
+        pbar=False,
     ):
         self.true_model = true_model
         self.test_models = test_models
@@ -157,26 +158,26 @@ class TrajectoryExperiment:
     def run(self, override=False):
         self.true_orbit = TrajectoryPropagator(
             self.true_model,
-            self.initial_state,
-            self.period,
-            self.t_mesh_density,
-            self.pbar,
-            self.random_seed,
-            self.tol,
-            self.omega_vec,
+            initial_state=self.initial_state,
+            period=self.period,
+            t_mesh_density=self.t_mesh_density,
+            random_seed=self.random_seed,
+            tol=self.tol,
+            omega_vec=self.omega_vec,
+            pbar=self.pbar,
         )
         self.true_orbit.run(override=override)
 
         for i, model in enumerate(self.test_models):
             orbit = TrajectoryPropagator(
                 model.model,
-                self.initial_state,
-                self.period,
-                self.t_mesh_density,
-                self.pbar,
-                self.random_seed,
-                self.tol,
-                self.omega_vec,
+                initial_state=self.initial_state,
+                period=self.period,
+                t_mesh_density=self.t_mesh_density,
+                random_seed=self.random_seed,
+                tol=self.tol,
+                omega_vec=self.omega_vec,
+                pbar=self.pbar,
             )
             orbit.run(override=override)
             self.test_models[i].orbit = orbit
@@ -184,14 +185,10 @@ class TrajectoryExperiment:
         self.true_sol = self.true_orbit.solution
         for i, test_model in enumerate(self.test_models):
             test_sol = test_model.orbit.solution
-
             dy = test_sol.y - self.true_sol.y
-            dx = np.linalg.norm(dy, axis=0)
-            dx_sum = np.cumsum(dx)
-
             metrics = {
                 "pos_diff": np.cumsum(np.linalg.norm(dy[0:3, :], axis=0)),
-                "dx_sum": dx_sum,
+                "state_diff": np.cumsum(np.linalg.norm(dy, axis=0)),
             }
             self.test_models[i].metrics = metrics
 

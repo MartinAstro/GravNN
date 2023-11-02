@@ -81,7 +81,10 @@ class PlanesExperiment(ExperimentBase):
             return percent_error
 
         self.percent_error_acc = percent_error(self.a_pred, self.a_test)
-        self.percent_error_pot = percent_error(self.u_pred, self.u_test)
+        self.percent_error_pot = percent_error(
+            self.u_pred.reshape((-1, 1)),
+            self.u_test.reshape((-1, 1)),
+        )
 
         # nan out interior
         self.percent_error_acc[self.interior_mask] = np.nan
@@ -92,7 +95,10 @@ class PlanesExperiment(ExperimentBase):
             return np.sqrt(np.sum(np.square(x_true - x_hat), axis=1))
 
         self.RMS_acc = RMS(self.a_pred, self.a_test)
-        self.RMS_pot = RMS(self.u_pred, self.u_test)
+        self.RMS_pot = RMS(
+            self.u_pred.reshape((-1, 1)),
+            self.u_test.reshape((-1, 1)),
+        )
 
         self.RMS_acc[self.interior_mask] = np.nan
         self.RMS_pot[self.interior_mask] = np.nan
