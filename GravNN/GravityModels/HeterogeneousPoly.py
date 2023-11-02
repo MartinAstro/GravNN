@@ -10,15 +10,15 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Support.PathTransformations import make_windows_path_posix
 
 
-def get_hetero_poly_data(trajectory, obj_file, **kwargs):
+def get_hetero_poly_data(trajectory, obj_shape_file, **kwargs):
     override = bool(kwargs.get("override", [False])[0])
     remove_point_mass = bool(kwargs.get("remove_point_mass", [False])[0])
 
-    obj_file = make_windows_path_posix(obj_file)
+    obj_shape_file = make_windows_path_posix(obj_shape_file)
 
     poly_r0_gm = generate_heterogeneous_model(
         trajectory.celestial_body,
-        obj_file,
+        obj_shape_file,
         trajectory=trajectory,
     )
 
@@ -26,7 +26,7 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
 
     x = poly_r0_gm.positions  # position (N x 3)
     a = poly_r0_gm.accelerations
-    u = np.array([poly_r0_gm.potentials]).transpose()  # potential (N x 1)
+    u = poly_r0_gm.potentials  # potential (N,)
 
     # TODO: Determine if this is valuable -- how do dynamics and representation change
     # inside brillouin sphere
@@ -34,7 +34,7 @@ def get_hetero_poly_data(trajectory, obj_file, **kwargs):
         point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
         point_mass_r0_gm.load(override=override)
         a_pm = point_mass_r0_gm.accelerations
-        u_pm = np.array([point_mass_r0_gm.potentials]).transpose()
+        u_pm = point_mass_r0_gm.potentials
 
         a = a - a_pm
         u = u - u_pm
@@ -84,7 +84,7 @@ class Heterogeneity:
 class HeterogeneousPoly(GravityModelBase):
     def __init__(self, celestial_body, obj_file, heterogeneities, trajectory=None):
         self.homogeneous_poly = Polyhedral(celestial_body, obj_file, trajectory)
-
+        self.obj_file = obj_file
         self.point_mass_list = []
         self.offset_list = []
 
@@ -103,6 +103,7 @@ class HeterogeneousPoly(GravityModelBase):
             self.point_mass_list,
             trajectory,
         )
+        self.configure(trajectory)
 
     def add_point_mass(self, point_mass, r_offset):
         self.point_mass_list.append(point_mass)
@@ -123,9 +124,12 @@ class HeterogeneousPoly(GravityModelBase):
         # If heterogeneous model exists, load it
         data_exists = os.path.exists(self.file_directory + "acceleration.data")
         if data_exists:
+            # you need to load the homogeneous solution
             self.homogeneous_poly.trajectory = self.trajectory
             self.homogeneous_poly.configure(self.trajectory)
             self.homogeneous_poly.load()
+
+            # now load the heterogeneous solution
             super().load(override)
 
         # If not, generate / load the homogeneous data first,
@@ -138,6 +142,7 @@ class HeterogeneousPoly(GravityModelBase):
             accelerations = self.homogeneous_poly.accelerations
             potentials = self.homogeneous_poly.potentials
 
+            # add the point mass contributions to the homogeneous solution
             positions = self.positions
             for i in range(len(self.point_mass_list)):
                 r_offset = np.array(self.offset_list[i]).reshape((-1, 3))

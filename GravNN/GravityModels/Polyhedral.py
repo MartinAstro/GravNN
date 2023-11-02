@@ -28,7 +28,7 @@ def get_poly_data(trajectory, obj_mesh_file, **kwargs):
 
     x = poly_r0_gm.positions  # position (N x 3)
     a = poly_r0_gm.accelerations
-    u = np.array([poly_r0_gm.potentials]).transpose()  # potential (N x 1)
+    u = poly_r0_gm.potentials  # potential (N,)
 
     # TODO: Determine if this is valuable -- how do dynamics and representation change
     # inside brillouin sphere
@@ -36,7 +36,7 @@ def get_poly_data(trajectory, obj_mesh_file, **kwargs):
         point_mass_r0_gm = PointMass(trajectory.celestial_body, trajectory=trajectory)
         point_mass_r0_gm.load(override=override)
         a_pm = point_mass_r0_gm.accelerations
-        u_pm = np.array([point_mass_r0_gm.potentials]).transpose()
+        u_pm = point_mass_r0_gm.potentials
 
         a = a - a_pm
         u = u - u_pm

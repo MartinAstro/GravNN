@@ -17,7 +17,7 @@ def get_pm_data(trajectory, gravity_file, **kwargs):
 
     x = point_mass_r0_gm.positions  # position (N x 3)
     a = accelerations
-    u = np.array(potentials).reshape((-1, 1))  # potential (N x 1)
+    u = potentials  # potential (N,)
 
     return x, a, u
 

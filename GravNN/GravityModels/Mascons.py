@@ -18,7 +18,7 @@ def get_mascons_data(trajectory, gravity_file, **kwargs):
 
     x = point_mass_r0_gm.positions  # position (N x 3)
     a = accelerations
-    u = np.array(potentials).reshape((-1, 1))  # potential (N x 1)
+    u = potentials  # (N,)
 
     return x, a, u
 

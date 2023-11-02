@@ -6,6 +6,7 @@ import numpy as np
 
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.GravityModels.PinesAlgorithm import *
+from GravNN.Regression.utils import RegressSolution
 
 
 def make_2D_array(lis):
@@ -64,7 +65,7 @@ def get_sh_data(trajectory, gravity_file, **kwargs):
 
     x = Call_r0_gm.positions  # position (N x 3)
     a = accelerations - accelerations_Clm
-    u = np.array(potentials - potentials_Clm).reshape((-1, 1))  # potential (N x 1)
+    u = potentials - potentials_Clm  # (N,)
 
     return x, a, u
 
@@ -122,18 +123,18 @@ class SphericalHarmonics(GravityModelBase):
         self.C_lm = None
         self.S_lm = None
 
-        if type(sh_info) == str:
-            self.file = sh_info
-        else:
+        if isinstance(sh_info, RegressSolution):
             self.file = "./"
+        else:
+            self.file = sh_info
 
         self.configure(trajectory)
 
-        if type(sh_info) == str:
-            self.loadSH()
-        else:
+        if isinstance(sh_info, RegressSolution):
             # If the harmonics should be loaded from a RegressSolution
             self.load_regression(sh_info)
+        else:
+            self.loadSH()
 
         self.n1, self.n2, self.n1q, self.n2q = compute_n_matrices(self.degree)
 
