@@ -370,11 +370,9 @@ def scale_by_non_dim_potential(data_dict, config):
         scaler=1 / u_star,
     )  # u_star == (x_star/t_star)**2
 
-    u3vec = np.repeat(data_dict["u_val"], 3, axis=1)
-
     x_val = x_transformer.transform(data_dict["x_val"])
     a_val = a_transformer.transform(data_dict["a_val"])
-    u_val = u_transformer.transform(u3vec)[:, 0].reshape((-1, 1))
+    u_val = u_transformer.transform(data_dict["u_val"])
 
     # can't just select max from non-dim x_train because config is dimensionalized
     ref_radius_min = config.get("ref_radius_min", [x_norm.min()])[0]
