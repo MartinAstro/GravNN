@@ -206,6 +206,12 @@ def configure_optimizer(config, mixed_precision):
     return optimizer
 
 
+def permutate_dict(dictionary):
+    keys, values = zip(*dictionary.items())
+    permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    return permutations_dicts
+
+
 def configure_run_args(config, hparams):
     """Helper function to permutate all hyperparameter combinations and load them into a
     multiprocess script.
@@ -217,9 +223,7 @@ def configure_run_args(config, hparams):
     Returns:
         list: list of arguments to be passed into the run function
     """
-    keys, values = zip(*hparams.items())
-    permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
-
+    permutations_dicts = permutate_dict(hparams)
     args = []
     session_num = 0
     for hparam_inst in permutations_dicts:
