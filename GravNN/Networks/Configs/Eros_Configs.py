@@ -1,5 +1,5 @@
 from GravNN.CelestialBodies.Asteroids import Eros
-from GravNN.GravityModels.Polyhedral import get_poly_data
+from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.Trajectories import RandomDist
 
 
@@ -18,7 +18,7 @@ def get_default_eros_config():
         "acc_noise": [0.0],
         "basis": [None],
         "analytic_truth": ["poly_stats_"],
-        "gravity_data_fcn": [get_poly_data],
+        "gravity_data_fcn": [get_hetero_poly_data],
         "remove_point_mass": [False],  # remove point mass from polyhedral model
         "override": [False],
         "ref_radius": [Eros().radius],

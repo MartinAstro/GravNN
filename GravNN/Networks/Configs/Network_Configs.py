@@ -36,7 +36,7 @@ def PINN_I():
         "eager": [False],
         "dtype": ["float32"],
         "network_arch": ["traditional"],
-        "loss_fcns": [["rms"]],
+        "loss_fcns": [["mse"]],
         "trainable_tanh": [False],
         "tanh_k": [0.0],
         "scale_nn_potential": [False],
