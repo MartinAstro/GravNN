@@ -159,6 +159,29 @@ class BLLS:
         return results
 
 
+class BLLS_PM:
+    def __init__(self, max_deg, planet, remove_deg=-1):
+        self.N = max_deg  # Degree
+        self.a = planet.radius
+        self.mu = planet.mu
+        self.remove_deg = remove_deg
+
+    def update(self, rVec, aVec, iterations=5):
+        r = np.linalg.norm(rVec, axis=1)
+        r_hat = rVec / r.reshape((-1, 1))
+        a_pm = -self.mu * r_hat / r.reshape((-1, 1)) ** 2
+        da_dmu = a_pm / self.mu
+        M = da_dmu.reshape((-1, 1))
+
+        self.rVec1D = rVec.reshape((-1,))
+        self.aVec1D = aVec.reshape((-1,))
+        self.P = len(self.rVec1D)
+
+        results = iterate_lstsq(M, self.aVec1D, iterations)
+        results /= self.mu
+        return results
+
+
 def main():
     import time
 
@@ -166,9 +189,9 @@ def main():
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
     from GravNN.Trajectories import DHGridDist
 
-    max_true_deg = 4
-    regress_deg = 4
-    remove_deg = 1
+    max_true_deg = 10
+    regress_deg = 5
+    remove_deg = -1
     # remove_deg = 0 # C20 is very close, C22 isn't that close
 
     planet = Earth()
@@ -177,42 +200,28 @@ def main():
     trajectory = DHGridDist(planet, sh_EGM2008.radEquator, 5)
     # trajectory = RandomDist(planet, [planet.radius, planet.radius+420], 1000)
 
-    if remove_deg != -1:
-        x, a, u = get_sh_data(
-            trajectory,
-            planet.sh_file,
-            max_deg=max_true_deg,
-            deg_removed=remove_deg,
-        )
-    else:
-        x, a, u = get_sh_data(
-            trajectory,
-            planet.sh_file,
-            max_deg=max_true_deg,
-            deg_removed=-1,
-        )
+    x, a, u = get_sh_data(
+        trajectory,
+        planet.sh_file,
+        max_deg=max_true_deg,
+        deg_removed=remove_deg,
+    )
 
     regressor = BLLS(regress_deg, planet, remove_deg)
     start = time.time()
     results = regressor.update(x, a)
     C_lm, S_lm = format_coefficients(results, regress_deg, remove_deg)
     print(time.time() - start)
-    # print(C_lm)
-    # print(S_lm)
 
     k = len(C_lm)
-    print(
-        np.array2string(
-            (sh_EGM2008.C_lm[:k, :k] - C_lm) / sh_EGM2008.C_lm[:k, :k] * 100,
-            precision=0,
-        ),
-    )
-    print(
-        np.array2string(
-            (sh_EGM2008.S_lm[:k, :k] - S_lm) / sh_EGM2008.S_lm[:k, :k] * 100,
-            precision=0,
-        ),
-    )
+    C_lm_true = sh_EGM2008.C_lm[:k, :k]
+    S_lm_true = sh_EGM2008.S_lm[:k, :k]
+
+    C_lm_error = (C_lm_true - C_lm) / C_lm_true * 100
+    S_lm_error = (S_lm_true - S_lm) / S_lm_true * 100
+
+    print(np.array2string(C_lm_error, precision=0))
+    print(np.array2string(S_lm_error, precision=0))
 
     # regressor.save('C:\\Users\\John\\Documents\\Research\\ML_Gravity\\GravNN\\Files\\GravityModels\\Regressed\\some.csv')
     # print(coefficients)
