@@ -71,6 +71,28 @@ def blend_smooth(r, f, g, r_ref_min=0.0, r_ref_max=1.0):
     return (1.0 - phi) * f + phi * g
 
 
+def compute_shape_parameters(**kwargs):
+    R = kwargs["planet"][0].radius
+    R_min = kwargs.get("ref_radius_min", [0.0])[0]
+    x_transformer = kwargs["x_transformer"][0]
+
+    R_vec = np.array([[R, R_min, 0]])
+    R_vec_ND = x_transformer.transform(R_vec)
+
+    a = R_vec_ND[0, 0]
+    b = R_vec_ND[0, 1]
+
+    e = np.sqrt(1 - b**2 / a**2)
+    return a, b, e
+
+
+def internal_scale(r_cap, a):
+    r_sq = r_cap**2
+    R_cubed = a**3
+    scale = (r_sq / R_cubed) - (2.0 / a)
+    return scale
+
+
 # preprocessing
 class PreprocessingLayer(tf.keras.layers.Layer):
     def __init__(self, min, scale, dtype):
@@ -148,46 +170,11 @@ class InvRLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         r = inputs[:, 0:1]
         r_cap, r_inv_cap = r_safety_set(r)
-
-        # r_inv = tf.math.divide_no_nan(1.0, r)
-        # r_cap = tf.clip_by_value(r, 0.0, 3.0)
-        # r_inv_cap = tf.clip_by_value(r_inv, 0.0, 3.0)
-
-        spheres = tf.concat([r_inv_cap, inputs[:, 1:4], r_cap], axis=1)
-        # spheres = tf.concat([tf.math.divide_no_nan(1.0,r), inputs[:, 1:4]], axis=1)
+        spheres = tf.concat([r_cap, r_inv_cap, inputs[:, 1:4]], axis=1)
         return spheres
 
     def get_config(self):
         config = super().get_config().copy()
-        return config
-
-
-class ExponentLayer(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        dtype = kwargs.get("dtype")[0]
-        super(ExponentLayer, self).__init__(dtype=dtype)
-        exponent = kwargs.get("exponent", [0.25])[0]
-        self.exponent_init = tf.constant(exponent, dtype=dtype).numpy()
-
-    def build(self, input_shapes):
-        self.exponent = self.add_weight(
-            "exponent_analytic",
-            shape=[1],
-            trainable=True,
-            initializer=tf.keras.initializers.Constant(value=self.exponent_init),
-        )
-        super(ExponentLayer, self).build(input_shapes)
-
-    def call(self, features):
-        return self.exponent
-
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update(
-            {
-                "exponent": self.exponent_init,
-            },
-        )
         return config
 
 
@@ -204,19 +191,10 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         transition_potential = kwargs.get("use_transition_potential", [True])[0]
         self.use_transition_potential = transition_potential
 
-        # compute reference radius
-        radius = kwargs["planet"][0].radius
-        x_transformer = kwargs["x_transformer"][0]
-        min_radius = kwargs.get("ref_radius_min", [0.0])[0]
-        radius_non_dim = x_transformer.transform(np.array([[radius, min_radius, 0]]))
-
-        a = radius_non_dim[0, 0]
-
         self.c1 = np.sqrt(15.0 / 4.0) * np.sqrt(3.0)
         self.c2 = np.sqrt(5.0 / 4.0)
 
         # ensure proper dtype
-        self.a = tf.constant(a, dtype=dtype).numpy()
         self.mu = tf.constant(self.mu, dtype=dtype).numpy()
         self.C20 = tf.constant(self.C20, dtype=dtype).numpy()
         self.c1 = tf.constant(self.c1, dtype=dtype).numpy()
@@ -226,39 +204,28 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
             dtype=tf.bool,
         ).numpy()
 
-        self.r_internal = tf.constant(radius_non_dim[0, 1], dtype=dtype).numpy()
+        a, b, e = compute_shape_parameters(**kwargs)
+        self.a = tf.constant(a, dtype=dtype).numpy()
+        self.b = tf.constant(b, dtype=dtype).numpy()
 
         self.trainable_tanh = kwargs.get("trainable_tanh", [True])[0]
 
-        e = np.sqrt(1 - self.r_internal**2 / self.a**2)
-        self.e = tf.constant(e, dtype=dtype).numpy()
-        print(f"[INFO] RADII: {self.r_internal} {self.a} \t e: {self.e}")
-
     def build(self, input_shapes):
-        self.k_internal = self.add_weight(
-            "k_internal",
-            shape=[1],
-            trainable=True,  # self.trainable_tanh,
-            initializer=tf.keras.initializers.Constant(value=5.0),
-        )
         self.k_external = self.add_weight(
             "k_external",
             shape=[1],
-            trainable=False,  # self.trainable_tanh,
-            # initializer=tf.keras.initializers.Constant(value=0.5),
+            trainable=False,
             initializer=tf.keras.initializers.Constant(value=0.5),
         )
         self.r_external = self.add_weight(
             "r_external",
             shape=[1],
-            trainable=False,  # self.trainable_tanh,
-            # initializer=tf.keras.initializers.Constant(value=5*self.a),
-            # initializer=tf.keras.initializers.Constant(value=2*(self.a + self.e)),
+            trainable=False,
             initializer=tf.keras.initializers.Constant(value=0.0),
         )
         super(AnalyticModelLayer, self).build(input_shapes)
 
-    def call(self, inputs, exponent):
+    def call(self, inputs):
         r = inputs[:, 0:1]
         u = inputs[:, 3:4]
 
@@ -285,15 +252,12 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
 
         u_analytic = tf.where(r < self.a, u_internal, u_external_full)
 
-        # h_internal = G(r, self.r_internal, self.k_internal)
-        h_external = H(r, self.r_external, self.k_external)
-
         # decrease the weight of the model in the region between
         # the interior of the asteroid and out to r < 1 + e, where
         # e is the eccentricity of the asteroid geometry, because
         # in this regime, a point mass / SH assumption adds unnecessary
         # error.
-        # u_analytic = u_analytic*g_internal + u_analytic*h_external
+        h_external = H(r, self.r_external, self.k_external)
         u_analytic = u_analytic * h_external
 
         return u_analytic
@@ -307,8 +271,6 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
                 "C20": self.C20,
                 "c1": self.c1,
                 "c2": self.c2,
-                "e": self.e,
-                "r_internal": self.r_internal,
                 "use_transition_potential": self.use_transition_potential,
             },
         )
@@ -320,10 +282,6 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         dtype = kwargs["dtype"][0]
         super(ScaleNNPotential, self).__init__(dtype=dtype)
         self.power = tf.constant(power, dtype=dtype).numpy()
-
-        min_radius = kwargs.get("ref_radius_min", [0.0])[0]
-        self.min_radius = tf.constant(min_radius, dtype=dtype).numpy()
-
         use_transition_potential = kwargs.get("use_transition_potential", [True])[0]
         self.use_transition_potential = tf.constant(
             use_transition_potential,
@@ -331,46 +289,35 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         ).numpy()
 
         self.scale_potential = kwargs.get("scale_nn_potential", [True])[0]
-        radius = kwargs["planet"][0].radius
-        x_transformer = kwargs["x_transformer"][0]
-        min_radius = kwargs.get("ref_radius_min", [0.0])[0]
-        radius_non_dim = x_transformer.transform(np.array([[radius, 0, 0]]))
-        self.a = tf.constant(radius_non_dim[0, 0], dtype=dtype).numpy()
+        a, b, e = compute_shape_parameters(**kwargs)
+        self.a = tf.constant(a, dtype=dtype).numpy()
+        self.b = tf.constant(b, dtype=dtype).numpy()
+        self.e = tf.constant(e, dtype=dtype).numpy()
 
-    def call(self, features, u_nn, exponent):
+    def call(self, features, u_nn):
         r = features[:, 0:1]
         r_cap, r_inv_cap = r_safety_set(r)
 
         if not self.scale_potential:
             return u_nn
 
+        # scale the internal potential
+        # scale = internal_scale(r_cap, self.a)
+        # u_scaled_internal = tf.negative(u_nn * scale)
+
         # scale the external potential down to correct order of mag
         # U = U_NN * 1 / r^power
         scale_external = tf.pow(r_inv_cap, self.power)
-        u_scaled_external = u_nn * scale_external
-
-        # scale the internal potential
-        r_sq = r_cap**2
-        R_cubed = self.a**3
-        scale = (r_sq / R_cubed) - (2.0 / self.a)
-        u_scaled_internal = tf.negative(u_nn * scale)
 
         # Don't scale within the critical radius (1+e)
-        # e = 1.0
-        # u_scaled_transition = u_nn
-        # u_final = tf.where(r < 1.0 + e, u_scaled_transition, u_scaled_external)
-        u_final = tf.where(r < 1.0, u_scaled_internal, u_scaled_external)
+        tf.ones_like(scale_external)
 
-        # Don't scale the interior if you fuse with the analytic model
-        if self.power > 2:
-            u_final = tf.where(r > 1.0, u_scaled_external, u_nn)
-
-        # u_final = u_nn*fuse(r, scale_internal, scale_external, 3.0, 1.0)
-        scale_internal = tf.ones_like(scale_external)
-        e = 1.0
-        u_final = u_nn * blend_smooth(r, scale_internal, scale_external, 1.0 + e, 5.0)
-
-        u_final = u_scaled_external
+        # Must use a smooth_step function instead of tanh to
+        # force solution scaling to 0 or 1.
+        # R_trans = 1.0 + self.e
+        # scale = blend_smooth(r, scale_internal, scale_external, R_trans, 2*R_trans)
+        # u_final = u_nn * scale
+        u_final = u_nn * scale_external
 
         return u_final
 
@@ -379,9 +326,10 @@ class ScaleNNPotential(tf.keras.layers.Layer):
         config.update(
             {
                 "power": self.power,
-                "min_radius": self.min_radius,
                 "use_transition_potential": self.use_transition_potential,
                 "a": self.a,
+                "b": self.b,
+                "e": self.e,
             },
         )
         return config
