@@ -53,9 +53,6 @@ def plot(config, model, file_name, new_fig=True):
     plt.legend()
     plt.tight_layout()
 
-    # plt.savefig(f"Plots/PINNIII/{file_name}.pdf", pad_inches=0.0)
-    # plt.savefig(f"Plots/PINNIII/{file_name}.png", pad_inches=0.0, dpi=250)
-
 
 def main():
     # RMS #
@@ -82,6 +79,22 @@ def main():
     df = pd.read_pickle("Data/Dataframes/pinn_III_mods_fuse.data")
     config, model = load_config_and_model(df, idx=-1)  #
     plot(config, model, "V: Fusing", new_fig=False)
+
+    plt.figure(1)
+    plt.savefig("Plots/PINNIII/PINN_III_Mods_extrapolation.pdf", pad_inches=0.0)
+    plt.savefig(
+        "Plots/PINNIII/PINN_III_Mods_extrapolation.png",
+        pad_inches=0.0,
+        dpi=250,
+    )
+
+    plt.figure(2)
+    plt.savefig("Plots/PINNIII/PINN_III_Mods_interpolation.pdf", pad_inches=0.0)
+    plt.savefig(
+        "Plots/PINNIII/PINN_III_Mods_interpolation.png",
+        pad_inches=0.0,
+        dpi=250,
+    )
 
 
 if __name__ == "__main__":
