@@ -1,4 +1,5 @@
 import os
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -21,7 +22,8 @@ from GravNN.Networks.utils import (
     configure_run_args,
     configure_tensorflow,
 )
-from GravNN.Regression.BLLS import BLLS, BLLS_PM, format_coefficients
+from GravNN.Regression.BLLS import BLLS_PM, format_coefficients
+from GravNN.Regression.ELM import OS_ELM
 from GravNN.Regression.MasconRegressor import MasconRegressor
 from GravNN.Regression.RLLS import RLLS
 from GravNN.Regression.utils import save
@@ -113,20 +115,25 @@ class SphericalHarmonicWrapper(ModelInterface):
         x = dataset.raw_data["x_train"]
         a = dataset.raw_data["a_train"]
 
-        batch_regressor = BLLS(self.degree, self.planet, -1)
-        results = batch_regressor.update(x[:100, :], a[:100, :])
-        x0 = results
-
+        # Configure Parameters
         N = self.degree
         REMOVE_DEG = -1
+        P0_diag = 0
+        dim = (N + 2) * (N + 1) - (REMOVE_DEG + 2) * (REMOVE_DEG + 1)
+        init_batch = 1000 if len(x) > 1000 else len(x)
+        # Configure State
+        x0 = np.zeros((dim,))
+        x0[0] = 0.0 if REMOVE_DEG != -1 else 1.0
 
-        P0 = np.identity((N + 2) * (N + 1)) * 1e-3
-        P0[np.isnan(P0)] = 0.0
-        Rk = np.identity(3) * np.std(a) * 10
+        # Define uncertainty
+        P0 = np.identity(dim) * P0_diag
+
+        # Functionally no meas uncertainty, but 1e-16 needed to avoid singularities
+        Rk = np.identity(3) + 1e-16
 
         # Initialize the regressor
         self.regressor = RLLS(N, self.planet, x0, P0, Rk, REMOVE_DEG)
-        results = self.regressor.update(x, a)
+        results = self.regressor.update(x, a, init_batch=init_batch, history=True)
 
         self.C_lm, self.S_lm = format_coefficients(results, self.degree, REMOVE_DEG)
         self.results = results
@@ -301,28 +308,43 @@ class MasconWrapper(ModelInterface):
 
 
 class ELMWrapper(ModelInterface):
-    pass
-    # def configure(self, config):
-    #     hparams = {
-    #         "learning_rate": [0.0001],
-    #         "batch_size": [2**11],
-    #         "epochs": [20000],
-    #     }
-    #     configure_run_args(config, hparams)
-    #     configure_tensorflow(config)
-    #     self.model = PINNGravityModel(config)
+    def configure(self, config):
+        configure_tensorflow(config)
+        self.model = OS_ELM(
+            n_input_nodes=3,
+            n_hidden_nodes=config["num_units"][0],
+            n_output_nodes=3,
+            k=2e-6,
+        )
+        N_train = self.config["N_train"][0]
+        acc_noise = self.config["acc_noise"][0]
+        num_units = self.config["num_units"][0]
+        model_name = self.config["model_name"][0]
 
-    # def train(self, dataset):
-    #     self.model.train(dataset)
+        directory = Path(os.path.abspath(os.path.dirname(GravNN.__file__)))
 
-    # def save(self):
-    #     directory = Path(os.path.abspath(os.path.dirname(GravNN.__file__)))
-    #     df_file = directory + "../Data/Dataframes/model_comparison_elm.data"
-    #     saver = ModelSaver(self.model)
-    #     saver.save(df_file)
+        unique_idx = f"{num_units}_{N_train}_{acc_noise}_{model_name}"
+        self.filename = directory + f"../Data/Comparison/{unique_idx}.data"
+        unique_idx = f"{num_units}_{N_train}_{acc_noise}_{model_name}"
+        self.filename = directory + f"../Data/Comparison/elm_{unique_idx}.data"
 
-    # def get_model(self):
-    #     return self.model
+    def train(self, dataset):
+        x = dataset.raw_data["x_train"]
+        a = dataset.raw_data["a_train"]
+        self.model.update(x, a)
+
+    def save(self):
+        # save model to pickle
+        with open(self.filename, "wb") as f:
+            pickle.dump(self.model, f)
+
+    def load(self):
+        # load pickle
+        with open(self.filename, "rb") as f:
+            self.model = pickle.load(f)
+
+    def get_model(self):
+        return self.model
 
 
 def make_experiments(exp_list):
