@@ -52,7 +52,10 @@ class PolyVisualization(VisualizationBase):
                 # shade=True,
             )
 
-            x = np.linalg.norm(accelerations, axis=1)
+            if len(accelerations.shape) == 2:
+                x = np.linalg.norm(accelerations, axis=1)
+            else:
+                x = accelerations
 
             if percent:
                 # Clip the values to prescribed range

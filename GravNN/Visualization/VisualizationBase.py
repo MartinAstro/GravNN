@@ -5,6 +5,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+import GravNN
+
 
 def convert_string(string):
     string = string.replace(".", "_")
@@ -156,26 +158,32 @@ class VisualizationBase(ABC):
         ax = fig.add_subplot(111)
         return fig, ax
 
-    def save(self, fig, name):
-        # If the name is an absolute path -- save to the path
-        if os.path.isabs(name):
-            try:
-                plt.figure(fig.number)
-                plt.savefig(name)
-            except Exception as e:
-                print("Couldn't save " + name)
-                print(e)
-            return
+    def save(self, fig, name, directory=None):
+        if directory is None:
+            GravNN_dir = os.path.abspath(GravNN.__path__[0])
+            directory = os.path.join(GravNN_dir, "../Plots")
 
-        # If not absolute, create a directory and save the plot
-        directory = os.path.abspath(os.path.dirname(self.file_directory + name))
-        directory = convert_string(directory)
-
-        filename = os.path.basename(name)
+        # Normalize and create the directory if it doesn't exist
+        directory = os.path.normpath(directory)
         os.makedirs(directory, exist_ok=True)
+
+        # Convert the figure name to avoid invalid characters
+        name = convert_string(name)
+
+        # Check if the name is an absolute path
+        if os.path.isabs(name):
+            base, ext = os.path.splitext(name)
+            pdf_path = f"{base}.pdf"
+            png_path = f"{base}.png"
+        else:
+            pdf_path = os.path.join(directory, f"{name}.pdf")
+            png_path = os.path.join(directory, f"{name}.png")
+
+        # Save the figure in both PDF and PNG formats
+        fig.tight_layout(pad=0.0)
         try:
-            plt.savefig(directory + "/" + filename, bbox_inches="tight")
-            filename = filename.replace(".pdf", ".png")
-            plt.savefig(directory + "/" + filename, dpi=250, bbox_inches="tight")
+            fig.savefig(pdf_path, format="pdf", bbox_inches="tight")
+            fig.savefig(png_path, format="png", dpi=250, bbox_inches="tight")
+            print(f"Figure saved as:\n{pdf_path}\n{png_path}")
         except Exception as e:
-            print(f"Couldn't save {filename}\n {e}")
+            print(f"Couldn't save the figure {name}\nError: {e}")
