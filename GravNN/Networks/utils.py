@@ -1,4 +1,5 @@
 import itertools
+import logging
 import os
 import pickle
 import tempfile
@@ -181,6 +182,7 @@ def populate_config_objects(config):
     if "num_units" in config:
         for i in range(1, len(config["layers"][0]) - 1):
             config["layers"][0][i] = config["num_units"][0]
+        logging.info("Changed Layers to: " + str(config["layers"][0]))
 
     check_config_combos(config)
     return config

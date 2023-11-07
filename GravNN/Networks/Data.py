@@ -330,8 +330,8 @@ def scale_by_non_dim_potential(data_dict, config):
     # If deg_removed == 2: u_J2/u_brill
     if config.get("fuse_models", [False])[0]:
         x = data_dict["x_train"]
-        r = np.linalg.norm(x, axis=1, keepdims=True)
-        u = x[:, 2:] / r
+        r = np.linalg.norm(x, axis=1)
+        u = x[:, 2] / r
 
         a = config["planet"][0].radius
         mu = config["mu"][0]

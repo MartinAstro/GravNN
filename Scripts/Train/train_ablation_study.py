@@ -4,144 +4,114 @@ from GravNN.Networks.Configs import *
 from GravNN.Networks.script_utils import save_training
 
 
-def width_depth_ablation():
+def default_config():
     config = get_default_eros_config()
     config.update(PINN_III())
     config.update(ReduceLrOnPlateauConfig())
+    config.update(
+        {
+            # "N_dist": [150000],
+            "N_dist": [50000],
+            "N_train": [45000],
+            "N_val": [5000],
+            "radius_max": [Eros().radius * 3],
+            "batch_size": [2**13],
+            "learning_rate": [2**-6],
+            "epochs": [2**13],  # 8192
+            # "eager": [True],
+            # "jit_compile": [False],
+        },
+    )
+    return config
+
+
+def small_network():
     hparams = {
-        "N_dist": [1000000],
-        "N_train": [50000],
-        "N_val": [5000],
-        "epochs": [8192],
-        "radius_max": [Eros().radius * 3],
+        "num_units": [8],
+        "layers": [[3, 1, 1, 3]],
+    }
+    return hparams
+
+
+def large_network():
+    hparams = {
+        "num_units": [32],
+        "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
+    }
+    return hparams
+
+
+def run(hparams, df_file):
+    config = default_config()
+    pool_trainer = PoolTrainer(config, hparams, df_file)
+    run_data = pool_trainer.run(threads=1)
+    save_training(df_file, run_data)
+
+
+def width_depth(df_file):
+    hparams = {
         "num_units": [8, 16, 32, 64],
         "layers": [
             [3, 1, 1, 3],
             [3, 1, 1, 1, 1, 3],
             [3, 1, 1, 1, 1, 1, 1, 1, 1, 3],
         ],
-        "batch_size": [2**11, 2**12, 2**13, 2**14],
-        "learning_rate": [2**-7, 2**-6, 2**-5, 2**-4],
     }
-
-    # Multiprocess
-    df_file = "Data/Dataframes/pinn_III_ablation_width_depth.data"
-    pool_trainer = PoolTrainer(config, hparams, df_file).run(threads=1)
-    run_data = pool_trainer.run()
-    save_training(df_file, run_data)
+    run(hparams, df_file)
 
 
-def data_epochs_ablation():
-    df_file = "Data/Dataframes/pinn_III_ablation_data_epochs.data"
-    config = get_default_eros_config()
-    config.update(PINN_III())
-    config.update(ReduceLrOnPlateauConfig())
+def batch_learning(df_file):
     hparams = {
-        "N_dist": [1000000],
-        "N_train": [
-            2**9,
-            2**10,
-            2**11,
-            2**12,
-            2**13,
-            2**14,
-            2**15,
-            2**16,
-        ],
-        "epochs": [
-            2**9,
-            2**10,
-            2**11,
-            2**12,
-            2**13,
-            2**14,
-            2**15,
-            2**16,
-        ],
-        "N_val": [5000],
-        "radius_max": [Eros().radius * 3],
-        "num_units": [8],
-        "layers": [
-            [3, 1, 1, 3],
-        ],
-        "batch_size": [2**11],
-        "learning_rate": [2**-6],
+        "num_units": [16],
+        "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
+        "batch_size": [2**i for i in range(11, 15)],
+        "learning_rate": [2**-i for i in range(-7, -3)],
     }
-    hparams_copy = hparams.copy()
-
-    # Multiprocess
-    pool_trainer = PoolTrainer(config, hparams, df_file).run(threads=1)
-    run_data = pool_trainer.run()
-    save_training(df_file, run_data)
-
-    # Big Network
-    config = get_default_eros_config()
-    config.update(PINN_III())
-    config.update(ReduceLrOnPlateauConfig())
-    hparams_copy.update(
-        {
-            "num_units": [32],
-            "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
-        },
-    )
-
-    pool_trainer = PoolTrainer(config, hparams, df_file).run(threads=1)
-    run_data = pool_trainer.run()
-    save_training(df_file, run_data)
+    run(hparams, df_file)
 
 
-def noise_loss_ablation():
-    df_file = "Data/Dataframes/pinn_III_ablation_noise_loss.data"
-    config = get_default_eros_config()
-    config.update(PINN_III())
-    config.update(ReduceLrOnPlateauConfig())
+def data_epochs_small(df_file):
     hparams = {
-        "N_dist": [1000000],
-        "N_train": [
-            2**9,
-            2**10,
-            2**11,
-            2**12,
-            2**13,
-            2**14,
-            2**15,
-            2**16,
-        ],
-        "epochs": [2**13],
-        "N_val": [5000],
-        "radius_max": [Eros().radius * 3],
-        "num_units": [8],
-        "layers": [
-            [3, 1, 1, 3],
-        ],
+        "N_train": [2**i for i in range(9, 17)],
+        "epochs": [2**i for i in range(9, 17)],
+    }
+    hparams.update(small_network())
+    run(hparams, df_file)
+
+
+def data_epochs_large(df_file):
+    hparams = {
+        "N_train": [2**i for i in range(9, 17)],
+        "epochs": [2**i for i in range(9, 17)],
+    }
+    hparams.update(large_network())
+    run(hparams, df_file)
+
+
+def noise_loss_small(df_file):
+    hparams = {
+        "N_train": [2**i for i in range(9, 17)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
-        "batch_size": [2**11],
-        "learning_rate": [2**-6],
     }
-    hparams_copy = hparams.copy()
+    hparams.update(small_network())
+    run(hparams, df_file)
 
-    # Multiprocess
-    pool_trainer = PoolTrainer(config, hparams, df_file).run(threads=1)
-    run_data = pool_trainer.run()
-    save_training(df_file, run_data)
 
-    # Big Network
-    config = get_default_eros_config()
-    config.update(PINN_III())
-    config.update(ReduceLrOnPlateauConfig())
-    hparams_copy.update(
-        {
-            "num_units": [32],
-            "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
-        },
-    )
-
-    pool_trainer = PoolTrainer(config, hparams, df_file).run(threads=1)
-    run_data = pool_trainer.run()
-    save_training(df_file, run_data)
+def noise_loss_large(df_file):
+    hparams = {
+        "N_train": [2**i for i in range(9, 17)],
+        "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
+    }
+    hparams.update(large_network())
+    run(hparams, df_file)
 
 
 if __name__ == "__main__":
-    width_depth_ablation()
-    data_epochs_ablation()
-    noise_loss_ablation()
+    width_depth("Data/Dataframes/ablation_width_depth.data")
+    batch_learning("Data/Dataframes/ablation_batch_learning.data")
+
+    # data_epochs_small("Data/Dataframes/ablation_data_epochs.data")
+    # data_epochs_large("Data/Dataframes/ablation_data_epochs.data")
+
+    # noise_loss_small("Data/Dataframes/ablation_noise_loss.data")
+    # noise_loss_large("Data/Dataframes/ablation_noise_loss.data")
