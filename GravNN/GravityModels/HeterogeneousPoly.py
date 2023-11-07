@@ -84,6 +84,7 @@ class Heterogeneity:
 class HeterogeneousPoly(GravityModelBase):
     def __init__(self, celestial_body, obj_file, heterogeneities, trajectory=None):
         self.homogeneous_poly = Polyhedral(celestial_body, obj_file, trajectory)
+        self.planet = celestial_body
         self.obj_file = obj_file
         self.point_mass_list = []
         self.offset_list = []

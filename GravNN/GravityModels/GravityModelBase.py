@@ -1,6 +1,7 @@
 import hashlib
 import inspect
 import json
+import logging
 import os
 import pickle
 from abc import ABC, abstractmethod
@@ -19,7 +20,7 @@ class GravityModelBase(ABC):
 
     def __init__(self, *args, **kwargs):
         """Base class responsible for generating the accelerations for a given trajectory / distribution"""
-        self.trajectory = None
+        self._trajectory = None
         self.accelerations = None
         self.potentials = None
         self.file_directory = None
@@ -50,7 +51,7 @@ class GravityModelBase(ABC):
         if trajectory is not None:
             # If a trajectory is defined, save all corresponding data within that trajectory's directory
             self.file_directory = trajectory.file_directory
-            self.trajectory = trajectory
+            self._trajectory = trajectory
             self.positions = trajectory.positions
         else:
             self.file_directory = (
@@ -143,3 +144,13 @@ class GravityModelBase(ABC):
     @abstractmethod
     def compute_potential(self):
         pass
+
+    @property
+    def trajectory(self):
+        return self._trajectory
+
+    @trajectory.setter
+    def trajectory(self, value):
+        logging.info("Setting Trajectory + rerunning configure!")
+        self._trajectory = value
+        self.configure(self._trajectory)
