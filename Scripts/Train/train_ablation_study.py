@@ -64,8 +64,8 @@ def batch_learning(df_file):
     hparams = {
         "num_units": [16],
         "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
-        "batch_size": [2**i for i in range(11, 15)],
-        "learning_rate": [2**-i for i in range(-7, -3)],
+        "batch_size": [2**i for i in range(7, 15 + 1, 2)],
+        "learning_rate": [2**i for i in range(-16, -8 + 1, 2)],
     }
     run(hparams, df_file)
 
@@ -90,6 +90,7 @@ def data_epochs_large(df_file):
 
 def noise_loss_small(df_file):
     hparams = {
+        "acc_noise": [0.1],
         "N_train": [2**i for i in range(9, 17)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
     }
@@ -99,6 +100,7 @@ def noise_loss_small(df_file):
 
 def noise_loss_large(df_file):
     hparams = {
+        "acc_noise": [0.1],
         "N_train": [2**i for i in range(9, 17)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
     }

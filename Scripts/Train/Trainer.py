@@ -1,5 +1,6 @@
 import logging
 import multiprocessing as mp
+from copy import deepcopy
 from pprint import pprint
 
 from GravNN.Networks.Configs import *
@@ -30,6 +31,7 @@ class Trainer:
         data = DataSet(config)
         model = PINNGravityModel(config)
         history = model.train(data)
+        model.config["val_loss"] = history.history["val_percent_mean"][-1]
 
         saver = ModelSaver(model, history)
         saver.save(df_file=None)
@@ -51,7 +53,7 @@ class PoolTrainer:
         # Initialize their trainers
         self.trainers = []
         for hparams in hparams_permutations:
-            self.trainers.append(Trainer(config, hparams, df_file))
+            self.trainers.append(Trainer(deepcopy(config), hparams, df_file))
 
     def run(self, threads=1):
         def trainer_run(trainer):
@@ -69,3 +71,28 @@ class PoolTrainer:
                 results.get()
 
         save_training(self.df_file, results)
+
+
+class HPCTrainer:
+    def __init__(self, config, hparams, df_file):
+        self.df_file = df_file
+
+        # permute all hparams
+        hparams_permutations = permutate_dict(hparams)
+
+        # Initialize their trainers
+        self.trainers = []
+        for hparams in hparams_permutations:
+            self.trainers.append(Trainer(deepcopy(config), hparams, df_file))
+
+    def run(self, idx):
+        logging.info("Running in serial")
+        results = []
+        for i, trainer in enumerate(self.trainers):
+            if i != idx:
+                continue
+            result = trainer.run()
+            results.append(result)
+
+        file_name = self.df_file.split()[0] + f"_{idx}.data"
+        save_training(file_name, results)
