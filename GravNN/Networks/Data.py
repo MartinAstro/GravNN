@@ -726,8 +726,19 @@ class DataSet:
             data.pop("curl")
             val_data.pop("curl")
 
-        y_train = np.hstack([y for y in data.values()])
-        y_val = np.hstack([y for y in val_data.values()])
+        # stack the data into a single array, but
+        # ensure that dimensions are 2D
+
+        def hstack_2D(data):
+            data_list = []
+            for values in data.values():
+                if len(np.shape(values)) == 1:
+                    values = values.reshape((-1, 1))
+                data_list.append(values)
+            return np.hstack(data_list)
+
+        y_train = hstack_2D(data)
+        y_val = hstack_2D(val_data)
 
         batch_size = config.get("batch_size", [len(y_train)])[0]
         dtype = config.get("dtype", [tf.float64])[0]
