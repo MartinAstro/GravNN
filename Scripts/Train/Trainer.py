@@ -31,7 +31,9 @@ class Trainer:
         data = DataSet(config)
         model = PINNGravityModel(config)
         history = model.train(data)
+        model.config["val_loss_actual"] = history.history["val_loss"][-1]
         model.config["val_loss"] = history.history["val_percent_mean"][-1]
+        model.config["time_delta"] = history.history["time_delta"][-1]
 
         saver = ModelSaver(model, history)
         saver.save(df_file=None)
