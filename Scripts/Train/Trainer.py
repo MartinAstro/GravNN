@@ -96,5 +96,6 @@ class HPCTrainer:
             result = trainer.run()
             results.append(result)
 
-        file_name = self.df_file.split()[0] + f"_{idx}.data"
-        save_training(file_name, results)
+        if len(results) > 0:
+            file_name = self.df_file.split(".")[0] + f"_{idx}.data"
+            save_training(file_name, results)
