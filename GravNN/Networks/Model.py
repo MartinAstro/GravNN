@@ -272,7 +272,7 @@ class PINNGravityModel(tf.keras.Model):
         schedule = get_schedule(self.config)
 
         callbacks = [callback, schedule]
-        if self.config["early_stop"][0]:
+        if self.config.get("early_stop", [False])[0]:
             early_stop = get_early_stop(self.config)
             callbacks.append(early_stop)
 

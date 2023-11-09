@@ -1,5 +1,3 @@
-import sys
-
 from Trainer import HPCTrainer
 
 from GravNN.Networks.Configs import *
@@ -96,10 +94,11 @@ def run(hparams, df_file):
     # permute all hparams
     hparams_permutations = permutate_dict(hparams)
     for hparams in hparams_permutations:
-        if hparams["PINN_constraint_fcn"][0] == "pinn_al":
-            hparams["loss_fcns"] = [["percent", "mse"]]
+        if "PINN_constraint_fcn" in hparams:
+            if hparams["PINN_constraint_fcn"] == "pinn_al":
+                hparams["loss_fcns"] = ["percent", "mse"]
     hpc_trainer = HPCTrainer(config, hparams_permutations, df_file)
-    idx = int(sys.argv[1])
+    idx = 1  # int(sys.argv[1])
     hpc_trainer.run(idx)
 
 
@@ -144,6 +143,7 @@ def data_epochs_large(df_file):
 
 def noise_loss_small(df_file):
     hparams = {
+        "batch_size": [2**15],
         "acc_noise": [0.1],
         "N_train": [2**i for i in range(9, 18)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
@@ -155,6 +155,7 @@ def noise_loss_small(df_file):
 
 def noise_loss_large(df_file):
     hparams = {
+        "batch_size": [2**15],
         "acc_noise": [0.1],
         "N_train": [2**i for i in range(9, 18)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
