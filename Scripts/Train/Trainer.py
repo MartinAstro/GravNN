@@ -79,13 +79,10 @@ class HPCTrainer:
     def __init__(self, config, hparams, df_file):
         self.df_file = df_file
 
-        # permute all hparams
-        hparams_permutations = permutate_dict(hparams)
-
         # Initialize their trainers
         self.trainers = []
-        for hparams in hparams_permutations:
-            self.trainers.append(Trainer(deepcopy(config), hparams, df_file))
+        for hparam in hparams:
+            self.trainers.append(Trainer(deepcopy(config), hparam, df_file))
 
     def run(self, idx):
         logging.info("Running in serial")

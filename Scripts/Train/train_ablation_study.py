@@ -3,6 +3,7 @@ import sys
 from Trainer import HPCTrainer
 
 from GravNN.Networks.Configs import *
+from GravNN.Networks.utils import permutate_dict
 
 
 def default_config():
@@ -19,6 +20,29 @@ def default_config():
             "batch_size": [2**13],
             "learning_rate": [2**-13],
             "epochs": [2**13],  # 8192
+            # "eager": [True],
+            # "jit_compile": [False],
+        },
+    )
+    return config
+
+
+def optimized_config():
+    config = get_default_eros_config()
+    config.update(PINN_III())
+    config.update(ReduceLrOnPlateauConfig())
+    config.update(
+        {
+            # "N_dist": [150000],
+            "N_dist": [150000],
+            "N_train": [2**15],  # 32,768
+            "N_val": [2**12],  # 4096
+            "radius_max": [Eros().radius * 3],
+            "batch_size": [2**11],
+            "learning_rate": [2**-10],
+            "epochs": [2**13],  # 8192
+            "layers": [[3, 1, 1, 1, 1, 1, 1, 1]],
+            "num_units": [32],
             # "eager": [True],
             # "jit_compile": [False],
         },
@@ -69,7 +93,12 @@ def large_network():
 
 def run(hparams, df_file):
     config = optimized_config()
-    hpc_trainer = HPCTrainer(config, hparams, df_file)
+    # permute all hparams
+    hparams_permutations = permutate_dict(hparams)
+    for hparams in hparams_permutations:
+        if hparams["PINN_constraint_fcn"][0] == "pinn_al":
+            hparams["loss_fcns"] = [["percent", "mse"]]
+    hpc_trainer = HPCTrainer(config, hparams_permutations, df_file)
     idx = int(sys.argv[1])
     hpc_trainer.run(idx)
 
