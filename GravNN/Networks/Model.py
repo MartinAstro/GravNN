@@ -8,7 +8,7 @@ import tensorflow as tf
 import GravNN
 from GravNN.Networks import utils
 from GravNN.Networks.Annealing import *
-from GravNN.Networks.Callbacks import SimpleCallback
+from GravNN.Networks.Callbacks import SimpleCallback, get_early_stop
 from GravNN.Networks.Constraints import *
 from GravNN.Networks.Layers import *
 from GravNN.Networks.Losses import *
@@ -271,12 +271,17 @@ class PINNGravityModel(tf.keras.Model):
         )
         schedule = get_schedule(self.config)
 
+        callbacks = [callback, schedule]
+        if self.config["early_stop"][0]:
+            early_stop = get_early_stop(self.config)
+            callbacks.append(early_stop)
+
         history = self.fit(
             data.train_data,
             epochs=self.config["epochs"][0],
             verbose=0,
             validation_data=data.valid_data,
-            callbacks=[callback, schedule],
+            callbacks=callbacks,
             use_multiprocessing=True,
         )
         history.history["time_delta"] = callback.time_delta

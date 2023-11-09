@@ -188,3 +188,15 @@ class TimingCallback(tf.keras.callbacks.Callback):
     def on_train_end(self, logs=None):
         self.end_time = time.time()
         self.time_delta = np.round(self.end_time - self.train_start, 2)
+
+
+def get_early_stop(config):
+    if config["early_stop"][0]:
+        return tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            min_delta=1e-6,
+            patience=500,
+            verbose=1,
+            baseline=None,
+            restore_best_weights=True,
+        )
