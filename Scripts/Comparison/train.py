@@ -8,6 +8,8 @@ from GravNN.Networks.utils import populate_config_objects
 
 def run(experiment, idx):
     config = get_default_eros_config()
+    config.update({"obj_file": [Eros().obj_200k]})
+
     # config['N_dist'] = [1000]
     # config["radius_min"] = [Eros().radius * 10]
     # config["radius_max"] = [Eros().radius * 15]

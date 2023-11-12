@@ -221,11 +221,17 @@ class Eros(Asteroid):
 
             return new_name
 
+        gravNN_dir = os.path.dirname(GravNN.__file__)
+
+        # Test Models
+        self.obj_77 = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_77.obj"
+        self.obj_20k = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_20000.obj"
+
         self.obj_8k = pooch.retrieve(
             url="http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros007790.tab",
             known_hash="183df4df96ea6c66dee7a4b2368dc706d81c4942fbfb043198260f5406233ff0",
             fname="eros_shape_7790_raw.obj",
-            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
+            path=f"{gravNN_dir}/Files/ShapeModels/Eros/",
             processor=reindex_faces,
         )
 
@@ -233,7 +239,7 @@ class Eros(Asteroid):
             url="http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros089398.tab",
             known_hash="15184730d0a79db5d4de600fed7c758b3beb148f50d4d0e0acbebe7a1f73d82f",
             fname="eros_shape_89398_raw.obj",
-            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
+            path=f"{gravNN_dir}/Files/ShapeModels/Eros/",
             processor=reindex_faces,
         )
 
@@ -241,7 +247,7 @@ class Eros(Asteroid):
             url="http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros200700.tab",
             known_hash="54c7bc73376022876a7522e002355a4046777d346fe99270c230fee92cea881f",
             fname="eros_shape_200700_raw.obj",
-            path=os.path.dirname(GravNN.__file__) + "/Files/ShapeModels/Eros/",
+            path=f"{gravNN_dir}/Files/ShapeModels/Eros/",
             processor=reindex_faces,
         )
 
@@ -262,7 +268,7 @@ class Eros(Asteroid):
             url="http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/rss/n15acoeff.tab",
             known_hash="e08068e2ea5167bee685ae00a8596144964e1da71ab16c51f2328f642d0be90e",
             fname="eros_sh_N15A_raw.txt",
-            path=os.path.dirname(GravNN.__file__) + "/Files/GravityModels/Eros/",
+            path=f"{gravNN_dir}/Files/GravityModels/Eros/",
             processor=format_sh,
         )
 

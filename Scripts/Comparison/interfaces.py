@@ -17,7 +17,7 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Networks.Configs import *
 from GravNN.Networks.Model import PINNGravityModel, load_config_and_model
-from GravNN.Networks.Saver import ModelSaver
+from GravNN.Networks.Saver import ModelSaver, count_nonzero_params
 from GravNN.Networks.utils import (
     configure_run_args,
     configure_tensorflow,
@@ -47,6 +47,10 @@ class ModelInterface:
 
     def get_model(self):
         "Get the gravity model that can be evaluated"
+        pass
+
+    def count_params(self):
+        "Function that computes number of parameters in model"
         pass
 
     def evaluate(self, override=False):
@@ -91,6 +95,7 @@ class ModelInterface:
         )
         exp.run(override)
         self.trajectory_exp = exp
+        self.params = self.count_params()
 
 
 class SphericalHarmonicWrapper(ModelInterface):
@@ -148,6 +153,9 @@ class SphericalHarmonicWrapper(ModelInterface):
         self.model = SphericalHarmonics(self.filename, self.degree)
         return self.model
 
+    def count_params(self):
+        return self.degree * (self.degree + 1)
+
 
 class PMWrapper(SphericalHarmonicWrapper):
     def configure(self, config):
@@ -187,6 +195,9 @@ class PMWrapper(SphericalHarmonicWrapper):
         self.model = PM_model
         return PM_model
 
+    def count_params(self):
+        return 1
+
 
 class PolyhedralWrapper(ModelInterface):
     def configure(self, config):
@@ -206,6 +217,11 @@ class PolyhedralWrapper(ModelInterface):
         planet = self.config["planet"][0]
         self.model = Polyhedral(planet, self.shape)
         return self.model
+
+    def count_params(self):
+        return (
+            self.mesh.vertices.shape[0] * 3 + self.mesh.faces.shape[0] * 3 / 2
+        )  # Float + long int
 
 
 class PINNWrapper(ModelInterface):
@@ -241,6 +257,9 @@ class PINNWrapper(ModelInterface):
 
     def get_model(self):
         return self.model
+
+    def count_params(self):
+        return count_nonzero_params(self.model)
 
 
 class NNWrapper(ModelInterface):
@@ -279,6 +298,9 @@ class NNWrapper(ModelInterface):
     def get_model(self):
         return self.model
 
+    def count_params(self):
+        return count_nonzero_params(self.model)
+
 
 class MasconWrapper(ModelInterface):
     def configure(self, config):
@@ -305,6 +327,9 @@ class MasconWrapper(ModelInterface):
         planet = self.config["planet"][0]
         self.model = Mascons(planet, self.filename)
         return self.model
+
+    def count_params(self):
+        return self.regressor.N_masses * 4
 
 
 class ELMWrapper(ModelInterface):
@@ -346,6 +371,9 @@ class ELMWrapper(ModelInterface):
     def get_model(self):
         return self.model
 
+    def count_params(self):
+        return self.model.n_hidden_nodes * 3 + self.model.n_hidden_nodes * 3
+
 
 def make_experiments(exp_list):
     experiments = []
@@ -358,9 +386,9 @@ def make_experiments(exp_list):
 
 
 def select_model(model_name):
-    if model_name.upper() == "PINN":
+    if "PINN" in model_name.upper():
         return PINNWrapper()
-    if model_name.upper() == "NN":
+    if "TNN" in model_name.upper():  # traditional NN
         return NNWrapper()
     elif model_name.upper() == "MASCONS":
         return MasconWrapper()

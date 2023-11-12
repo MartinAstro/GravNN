@@ -222,11 +222,11 @@ class Polyhedral(GravityModelBase):
         self.configure(trajectory)
 
         self.planet = celestial_body
-        self.density = self.planet.density
         obj_file = make_windows_path_posix(obj_file)
         filename, file_extension = os.path.splitext(obj_file)
         self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
         self.scaleFactor = 1e3  # Assume that the mesh is given in km
+        self.density = self.compute_density()
 
         self.facet_dyads = compute_facet_dyads(self.mesh.face_normals)
         self.edge_dyads = compute_edge_dyads(
@@ -261,6 +261,15 @@ class Polyhedral(GravityModelBase):
             + "/"
         )
         pass
+
+    def compute_density(self):
+        volume = self.mesh.volume * 1e9  # m^3
+        mu = self.planet.mu
+        G = 6.67430 * 10**-11
+        density = mu / (G * volume)
+        print("Original Density: ", self.planet.density, "kg/m^3")
+        print("Computed Density: ", density, "kg/m^3")
+        return density
 
     # Debug functions
     def find_vertex(self, value_1, idx_1, value_2, idx_2):
