@@ -82,10 +82,21 @@ class Heatmap3DVisualizer(VisualizationBase):
     def __init__(self, df, **kwargs):
         self.df = df
         super().__init__(**kwargs)
-        plt.rc("font", size=7.0)
+        plt.rc("font", size=6.0)
         self.fig_size = (self.w_tri, self.w_tri)
 
-    def plot(self, x, y, z, query=None, vmin=None, vmax=None, base2=True, **kwargs):
+    def plot(
+        self,
+        x,
+        y,
+        z,
+        query=None,
+        vmin=None,
+        vmax=None,
+        x_base2=True,
+        y_base2=True,
+        **kwargs,
+    ):
         if kwargs.get("newFig", True):
             fig, ax = self.new3DFig()
             ax.set_xlabel(None)
@@ -97,28 +108,34 @@ class Heatmap3DVisualizer(VisualizationBase):
         else:
             df = self.df.copy()
 
-        data_df = df.pivot_table(index=x, columns=y, values=z, fill_value=0)
+        data_df = df.pivot_table(index=x, columns=y, values=z, fill_value=np.nan)
 
         df_stacked = data_df.stack()
         index = np.array(df_stacked.index.tolist()).astype(float)
 
         x_data, y_data = index[:, 0], index[:, 1]
-        if base2:
-            x_data, y_data = np.log2(x_data), np.log2(y_data)
+        if x_base2:
+            x_data = np.log2(x_data)
+        if y_base2:
+            y_data = np.log2(y_data)
 
         dx = np.diff(np.unique(x_data))[0]
         dy = np.diff(np.unique(y_data))[0]
-        if base2:
-            dx = np.ones_like(x_data) * 1
-            dy = np.ones_like(y_data) * 1
+        # if x_base2:
+        #     dx = np.ones_like(x_data) * 1
+        # if y_base2:
+        #     dy = np.ones_like(y_data) * 1
 
         z_data = vmin
         if vmin is None:
             vmin = data_df.values.min()
 
+        # difference the value from the minimum
         dz = df_stacked.values - vmin
         if vmax is not None:
-            dz = np.clip(df_stacked.values, 0, vmax) - vmin
+            # dz = 0 should be green, dz = vmax should be red
+            # the maximum dz should be vmax - vmin
+            dz = np.clip(dz, 0, vmax - vmin)
 
         errors = df_stacked.values
 
@@ -127,8 +144,8 @@ class Heatmap3DVisualizer(VisualizationBase):
         colors = cmap(norm(errors))
         ax = plt.gca()
         ax.bar3d(
-            x_data,
-            y_data,
+            x_data - dx / 2,
+            y_data - dy / 2,
             z_data,
             dx,
             dy,
@@ -142,21 +159,51 @@ class Heatmap3DVisualizer(VisualizationBase):
         az = kwargs.get("azim", 45)
         ax.view_init(elev=el, azim=az)
 
-        if base2:
+        ax.set_xticks(np.unique(x_data))
+        ax.set_yticks(np.unique(y_data))
+
+        if x_base2:
             ax.set_xticklabels(
                 ["$2^{" + str(int(i)) + "}$" for i in np.unique(x_data)],
             )
+        if y_base2:
             ax.set_yticklabels(
                 ["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)],
             )
 
         ax.tick_params(pad=0.0)
 
+        if kwargs.get("annotate_key", None) is not None:
+            annotate_key = kwargs.get("annotate_key")
+            annotate_df = df.pivot_table(
+                index=x,
+                columns=y,
+                values=annotate_key,
+                fill_value=np.nan,
+            )
+            annotate_df = annotate_df.stack()
+
+            bbox = dict(boxstyle="round", fc="0", alpha=0.2, ec=None)
+            for i in range(len(dz)):
+                text = annotate_df.values[i]
+                ax.text(
+                    x_data[i],
+                    y_data[i],
+                    dz[i],
+                    text,
+                    ha="center",
+                    va="center",
+                    color="white",
+                    fontsize=3,
+                    bbox=bbox,
+                )
+
         x_formatted = " ".join(x.split("_"))
         y_formatted = " ".join(y.split("_"))
 
         ax.set_xlabel(x_formatted, labelpad=0.0, loc="right")
         ax.set_ylabel(y_formatted, labelpad=0.0, loc="top")
+        plt.gcf().tight_layout(pad=0.0)
 
         return
 
