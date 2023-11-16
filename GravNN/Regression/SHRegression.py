@@ -121,6 +121,7 @@ class SHRegression:
         self.a = a
         self.mu = mu
         self.M = M
+        self.compute_kaula_matrix()
 
         self.rE = np.zeros((self.N + 2,))
         self.iM = np.zeros((self.N + 2,))
@@ -173,6 +174,29 @@ class SHRegression:
             self.mu,
             remove_deg,
         )
+
+    def compute_kaula_matrix(self):
+        l = self.M + 1
+        m = 0
+        factor = 1e-6
+        q = self.M
+        terms = int((self.N + 1) * (self.N + 2))
+        terms_removed = int((q + 1) * (q + 2))
+        K = np.diag(np.ones((terms - terms_removed)))
+        K_inv = np.diag(np.ones((terms - terms_removed)))
+        for i in range(0, len(K)):  # all coefficients (C and S) excluding C_00, S_00
+            if l != 0:
+                K[i, i] = (factor / l**2) ** 1
+                K_inv[i, i] = (factor / l**2) ** -1
+            # every odd number, increment the m index (because we've iterated over a C and S pair)
+            if (i + 1) % 2 == 0:
+                if l == m:  #
+                    l += 1
+                    m = 0
+                else:
+                    m += 1
+        self.K = K
+        self.K_inv = K_inv
 
     def batch(self, rVec, aVec, iterations=5):
         self.rVec1D = rVec.reshape((-1,))

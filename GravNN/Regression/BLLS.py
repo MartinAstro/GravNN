@@ -25,35 +25,31 @@ def iterate_lstsq(M, aVec, iterations, ridge_factor=None):
 
 
 class BLLS:
-    def __init__(self, max_deg, planet, remove_deg=-1, ridge_factor=None):
+    def __init__(
+        self,
+        max_deg,
+        planet,
+        remove_deg=-1,
+        ridge_factor=None,
+        kaula=True,
+    ):
         self.N = max_deg  # Degree
         self.remove_deg = remove_deg
         self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
         self.ridge_factor = ridge_factor
-        self.compute_kaula_matrix()
+        self.kaula = kaula
 
-    def compute_kaula_matrix(self):
-        l = self.remove_deg + 1
-        m = 0
-        factor = 1e-6
-        q = self.remove_deg
-        terms = int((self.N + 1) * (self.N + 2))
-        terms_removed = int((q + 1) * (q + 2))
-        K = np.diag(np.ones((terms - terms_removed)))
-        K_inv = np.diag(np.ones((terms - terms_removed)))
-        for i in range(0, len(K)):  # all coefficients (C and S) excluding C_00, S_00
-            if l != 0:
-                K[i, i] = (factor / l**2) ** 1
-                K_inv[i, i] = (factor / l**2) ** -1
-            # every odd number, increment the m index (because we've iterated over a C and S pair)
-            if (i + 1) % 2 == 0:
-                if l == m:  #
-                    l += 1
-                    m = 0
-                else:
-                    m += 1
-        self.K = K
-        self.K_inv = K_inv
+    def compute_ridge(self, inv_arg):
+        # (Optional) Ridge Regression
+        if self.ridge_factor is not None:
+            if self.kaula:
+                ridge = self.ridge_factor * self.SHRegressor.K_inv
+            else:
+                I = np.identity(inv_arg.shape[0])
+                ridge = self.ridge_factor * I
+        else:
+            ridge = np.zeros(inv_arg.shape)
+        return ridge
 
     def update(self, rVec, aVec, iterations=5):
         self.rVec1D = rVec.reshape((-1,))
@@ -64,7 +60,12 @@ class BLLS:
             self.rVec1D,
             self.remove_deg,
         )
-        results = iterate_lstsq(M, self.aVec1D, iterations, ridge_factor=self.K_inv)
+
+        inv_arg = M.T @ M
+        self.ridge = self.compute_ridge(inv_arg)
+
+        # Compute the Least Squares Solution
+        results = np.linalg.inv(inv_arg + self.ridge) @ M.T @ self.aVec1D
         return results
 
 
@@ -115,7 +116,13 @@ def test_setup(max_true_degree, regress_degree, remove_degree, ridge_factor=None
         deg_removed=REMOVE_DEG,
     )
 
-    regressor = BLLS(REGRESS_DEG, planet, REMOVE_DEG, ridge_factor=ridge_factor)
+    regressor = BLLS(
+        REGRESS_DEG,
+        planet,
+        REMOVE_DEG,
+        ridge_factor=ridge_factor,
+        kaula=True,
+    )
     start = time.time()
     results = regressor.update(x, a)
     C_lm, S_lm = format_coefficients(results, REGRESS_DEG, REMOVE_DEG)
@@ -159,26 +166,26 @@ def test_setup(max_true_degree, regress_degree, remove_degree, ridge_factor=None
         )
 
     # Print Metrics
-    print("\nC_LM_REGRESS\n")
-    print(np.array2string(C_lm, precision=1))
-    print("\nC_LM_TRUE\n")
-    print(np.array2string(C_lm_true, precision=1))
-    print("\nC_LM_ERROR\n")
-    print(np.array2string(C_lm_error, precision=1))
+    # print("\nC_LM_REGRESS\n")
+    # print(np.array2string(C_lm, precision=1))
+    # print("\nC_LM_TRUE\n")
+    # print(np.array2string(C_lm_true, precision=1))
+    # print("\nC_LM_ERROR\n")
+    # print(np.array2string(C_lm_error, precision=1))
 
-    print("\nS_LM_REGRESS\n")
-    print(np.array2string(S_lm, precision=1))
-    print("\nS_LM_TRUE\n")
-    print(np.array2string(S_lm_true, precision=1))
-    print("\nS_LM_ERROR\n")
-    print(np.array2string(S_lm_error, precision=1))
+    # print("\nS_LM_REGRESS\n")
+    # print(np.array2string(S_lm, precision=1))
+    # print("\nS_LM_TRUE\n")
+    # print(np.array2string(S_lm_true, precision=1))
+    # print("\nS_LM_ERROR\n")
+    # print(np.array2string(S_lm_error, precision=1))
 
-    print(f"\n AVERAGE CLM ERROR: {C_lm_avg_error} \n")
-    print(f"\n AVERAGE SLM ERROR: {S_lm_avg_error} \n")
+    # print(f"\n AVERAGE CLM ERROR: {C_lm_avg_error} \n")
+    # print(f"\n AVERAGE SLM ERROR: {S_lm_avg_error} \n")
 
     print(f"\n ACCELERATION ERROR: {np.mean(error)}")
 
-    return C_lm_avg_error, S_lm_avg_error
+    return C_lm_avg_error, S_lm_avg_error, np.mean(error)
 
 
 def main():
@@ -198,13 +205,47 @@ def main():
     # assert np.isclose(C_err, 1.6180533607033576e-06)
     # assert np.isclose(S_err, 4.275299330063149e-08)
 
+    import matplotlib.pyplot as plt
+
+    # deg_list = []
+    # error_list = []
+    # for degree in range(5, 50, 5):
+    #     _, _, error = test_setup(
+    #         max_true_degree=100,
+    #         regress_degree=degree,
+    #         remove_degree=-1,
+    #         ridge_factor=1e-16,
+    #     )
+    #     deg_list.append(degree)
+    #     error_list.append(error)
+    # plt.plot(deg_list, error_list)
+
+    plt.figure()
+
+    deg_list = []
+    error_list = []
+    for ridge_factor in np.logspace(16, 26, 8, base=10):
+        _, _, error = test_setup(
+            max_true_degree=100,
+            regress_degree=80,
+            remove_degree=-1,
+            ridge_factor=ridge_factor,
+        )
+        deg_list.append(ridge_factor)
+        error_list.append(error)
+    import matplotlib.pyplot as plt
+
+    plt.semilogx(deg_list, error_list)
+    plt.ylim([0, 5])
+    plt.show()
+
     # This breaks!
-    test_setup(
-        max_true_degree=100,
-        regress_degree=90,
-        remove_degree=-1,
-        ridge_factor=1e10,
-    )
+    # test_setup(
+    #     max_true_degree=100,
+    #     regress_degree=90,
+    #     remove_degree=-1,
+    #     ridge_factor=1e10,
+    # )
 
     # test_setup(
     #     max_true_degree=10,
