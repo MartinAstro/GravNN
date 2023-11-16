@@ -1,7 +1,17 @@
 import numpy as np
-from utils import *
 
+from GravNN.Regression.utils import *
 from GravNN.Regression.utils import compute_A, compute_euler, getK
+
+
+def iterate_lstsq(M, aVec, iterations):
+    results = np.linalg.lstsq(M, aVec)[0]
+    delta_a = aVec - np.dot(M, results)
+    for i in range(iterations):
+        delta_coef = np.linalg.lstsq(M, delta_a)[0]
+        results -= delta_coef
+        delta_a = aVec - np.dot(M, results)
+    return results
 
 
 @njit(cache=True)  # , parallel=True)
@@ -106,10 +116,11 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
 
 
 class SHRegression:
-    def __init__(self, N, a, mu):
+    def __init__(self, N, a, mu, M):
         self.N = N
         self.a = a
         self.mu = mu
+        self.M = M
 
         self.rE = np.zeros((self.N + 2,))
         self.iM = np.zeros((self.N + 2,))
@@ -162,3 +173,43 @@ class SHRegression:
             self.mu,
             remove_deg,
         )
+
+    def batch(self, rVec, aVec, iterations=5):
+        self.rVec1D = rVec.reshape((-1,))
+        self.aVec1D = aVec.reshape((-1,))
+        self.P = len(self.rVec1D)
+
+        M = self.SHRegressor.populate_M(
+            self.rVec1D,
+            self.remove_deg,
+        )
+        results = iterate_lstsq(M, self.aVec1D, iterations)
+        return results
+
+    def recursive(self, x, y, init_batch=None):
+        if init_batch is not None:
+            self.batch(x[:init_batch, :], y[:init_batch, :])
+        else:
+            np.zeros((self.N + 2) * (self.N + 1))
+
+        # Reminder: x is the vector of coefficients
+        # y is the acceleration measured
+        # Hk is the partial of da/dCoef(r) | r=r_k
+        xk_m_1 = self.x_hat
+        Pk_m_1 = self.P_hat
+        Rk = self.Rk
+
+        Hk = self.SHRegressor.populate_H_singular(
+            rk,
+            self.remove_deg,
+        )
+        sub_K_inv = np.linalg.inv(Rk + np.dot(Hk, np.dot(Pk_m_1, Hk.T)))
+        Kk = np.dot(Pk_m_1, np.dot(Hk.T, sub_K_inv))
+
+        Pk_sub = np.identity(len(xk_m_1)) - np.dot(Kk, Hk)
+        Pk = np.dot(Pk_sub, np.dot(Pk_m_1, Pk_sub.T))
+
+        self.x_hat = xk_m_1 + np.dot(Kk, yk - np.dot(Hk, xk_m_1))
+        self.P_hat = Pk
+
+        return

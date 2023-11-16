@@ -1,24 +1,59 @@
 import numpy as np
-from SHRegression import SHRegression
 
+from GravNN.Regression.SHRegression import SHRegression
 from GravNN.Regression.utils import format_coefficients, populate_removed_degrees, save
 
 
-def iterate_lstsq(M, aVec, iterations):
-    results = np.linalg.lstsq(M, aVec)[0]
-    delta_a = aVec - np.dot(M, results)
-    for i in range(iterations):
-        delta_coef = np.linalg.lstsq(M, delta_a)[0]
-        results -= delta_coef
-        delta_a = aVec - np.dot(M, results)
+def iterate_lstsq(M, aVec, iterations, ridge_factor=None):
+    if ridge_factor is not None:
+        if isinstance(ridge_factor, np.ndarray):
+            ridge_inv = np.linalg.inv(M.T @ M + ridge_factor)
+        else:
+            I = np.identity(M.shape[1])
+            ridge_inv = np.linalg.inv(M.T @ M + ridge_factor * I)
+        results = ridge_inv @ M.T @ aVec
+    else:
+        results = np.linalg.lstsq(M, aVec)[0]
     return results
+
+    # results = np.linalg.lstsq(M, aVec)[0]
+    # delta_a = aVec - np.dot(M, results)
+    # for i in range(iterations):
+    #     delta_coef = np.linalg.lstsq(M, delta_a)[0]
+    #     results -= delta_coef
+    #     delta_a = aVec - np.dot(M, results)
 
 
 class BLLS:
-    def __init__(self, max_deg, planet, remove_deg=-1):
+    def __init__(self, max_deg, planet, remove_deg=-1, ridge_factor=None):
         self.N = max_deg  # Degree
         self.remove_deg = remove_deg
         self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
+        self.ridge_factor = ridge_factor
+        self.compute_kaula_matrix()
+
+    def compute_kaula_matrix(self):
+        l = self.remove_deg + 1
+        m = 0
+        factor = 1e-6
+        q = self.remove_deg
+        terms = int((self.N + 1) * (self.N + 2))
+        terms_removed = int((q + 1) * (q + 2))
+        K = np.diag(np.ones((terms - terms_removed)))
+        K_inv = np.diag(np.ones((terms - terms_removed)))
+        for i in range(0, len(K)):  # all coefficients (C and S) excluding C_00, S_00
+            if l != 0:
+                K[i, i] = (factor / l**2) ** 1
+                K_inv[i, i] = (factor / l**2) ** -1
+            # every odd number, increment the m index (because we've iterated over a C and S pair)
+            if (i + 1) % 2 == 0:
+                if l == m:  #
+                    l += 1
+                    m = 0
+                else:
+                    m += 1
+        self.K = K
+        self.K_inv = K_inv
 
     def update(self, rVec, aVec, iterations=5):
         self.rVec1D = rVec.reshape((-1,))
@@ -29,7 +64,7 @@ class BLLS:
             self.rVec1D,
             self.remove_deg,
         )
-        results = iterate_lstsq(M, self.aVec1D, iterations)
+        results = iterate_lstsq(M, self.aVec1D, iterations, ridge_factor=self.K_inv)
         return results
 
 
@@ -56,7 +91,7 @@ class BLLS_PM:
         return results
 
 
-def test_setup(max_true_degree, regress_degree, remove_degree):
+def test_setup(max_true_degree, regress_degree, remove_degree, ridge_factor=None):
     import tempfile
     import time
 
@@ -80,7 +115,7 @@ def test_setup(max_true_degree, regress_degree, remove_degree):
         deg_removed=REMOVE_DEG,
     )
 
-    regressor = BLLS(REGRESS_DEG, planet, REMOVE_DEG)
+    regressor = BLLS(REGRESS_DEG, planet, REMOVE_DEG, ridge_factor=ridge_factor)
     start = time.time()
     results = regressor.update(x, a)
     C_lm, S_lm = format_coefficients(results, REGRESS_DEG, REMOVE_DEG)
@@ -163,17 +198,19 @@ def main():
     # assert np.isclose(C_err, 1.6180533607033576e-06)
     # assert np.isclose(S_err, 4.275299330063149e-08)
 
+    # This breaks!
     test_setup(
-        max_true_degree=10,
-        regress_degree=4,
-        remove_degree=1,
+        max_true_degree=100,
+        regress_degree=90,
+        remove_degree=-1,
+        ridge_factor=1e10,
     )
 
-    test_setup(
-        max_true_degree=10,
-        regress_degree=4,
-        remove_degree=-1,
-    )
+    # test_setup(
+    #     max_true_degree=10,
+    #     regress_degree=4,
+    #     remove_degree=-1,
+    # )
 
 
 if __name__ == "__main__":

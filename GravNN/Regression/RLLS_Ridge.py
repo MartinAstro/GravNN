@@ -12,78 +12,7 @@ from GravNN.Regression.utils import (
 from GravNN.Support.ProgressBar import ProgressBar
 
 
-class RLLS:
-    def __init__(self, max_deg, planet, x0, P0, Rk, remove_deg=-1):
-        self.N = max_deg  # Degree
-        self.planet = planet
-        self.remove_deg = remove_deg
-        self.x_hat = x0.reshape((-1,))
-        self.P_hat = P0
-        self.Rk = Rk
-        self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
-        self.initialized = False
-        self.x0 = np.zeros((len(x0),))
-
-    def batch_start(self, x, a):
-        init_degree = self.N if self.N < 10 else 10
-        batch_regressor = BLLS(init_degree, self.planet, self.remove_deg)
-        init_results = batch_regressor.update(x, a)
-        results_dim = len(init_results)
-        self.x_hat[:results_dim] = init_results
-
-    def update_single(self, rk, yk):
-        # Load current estimates
-        xk_m_1 = self.x_hat
-        Pk_m_1 = self.P_hat
-        Rk = self.Rk
-
-        # Populate partials
-        Hk = self.SHRegressor.populate_H_singular(
-            rk,
-            self.remove_deg,
-        )
-        sub_K_inv = np.linalg.inv(Rk + np.dot(Hk, np.dot(Pk_m_1, Hk.T)))
-        Kk = np.dot(Pk_m_1, np.dot(Hk.T, sub_K_inv))
-
-        Pk_sub = np.identity(len(xk_m_1)) - np.dot(Kk, Hk)
-
-        assert np.all(np.isfinite(Pk_m_1))
-        assert np.all(np.isfinite(Hk))
-        assert np.all(np.isfinite(sub_K_inv))
-        assert np.all(np.isfinite(Kk))
-        assert np.all(np.isfinite(Pk_sub))
-
-        # update estimates
-        self.x_hat = xk_m_1 + np.dot(Kk, yk - np.dot(Hk, xk_m_1))
-        self.P_hat = np.dot(Pk_sub, np.dot(Pk_m_1, Pk_sub.T))
-        return
-
-    def update(self, r, y, init_batch=0, history=False):
-        # Record time history of regressor
-        self.x_hat_hist = []
-        self.P_hat_hist = []
-
-        # Populate an initial guess
-        if init_batch > 0:
-            r_start = r[:init_batch, :]
-            y_start = y[:init_batch, :]
-            self.batch_start(r_start, y_start)
-
-        # Update based on incoming data
-        pbar = ProgressBar(len(r), enable=True)
-        for i in range(init_batch, len(r)):
-            self.update_single(r[i], y[i])
-            pbar.update(i)
-
-            # optionally save
-            if history:
-                self.x_hat_hist.append(self.x_hat)
-                self.P_hat_hist.append(np.diag(self.P_hat).tolist())
-
-        return self.x_hat
-
-
-class RLLS2:
+class RLLS_Ridge:
     def __init__(self, max_deg, planet, x0, alpha=1e-8, remove_deg=-1):
         self.N = max_deg  # Degree
         self.planet = planet
@@ -96,12 +25,18 @@ class RLLS2:
 
     def batch_start(self, x, a):
         init_degree = self.N if self.N < 10 else 10
-        batch_regressor = BLLS(init_degree, self.planet, self.remove_deg)
+        batch_regressor = BLLS(
+            init_degree,
+            self.planet,
+            self.remove_deg,
+            ridge_factor=self.alpha,
+        )
         init_results = batch_regressor.update(x, a)
         results_dim = len(init_results)
         self.x_hat[:results_dim] = init_results
 
-        H = self.SHRegressor.populate_M(x, self.remove_deg)
+        x1D = x.reshape((-1,))
+        H = self.SHRegressor.populate_M(x1D, self.remove_deg)
         I = np.identity(len(self.x_hat))
         self.K_inv_k = np.linalg.inv(H.T @ H + self.alpha * I)
 
@@ -115,7 +50,7 @@ class RLLS2:
             self.remove_deg,
         )
 
-        I = np.identity(len(self.x_hat))
+        I = np.identity(len(rk))
         inter_inv = np.linalg.inv(I + Hk @ self.K_inv_k @ Hk.T)
         K_inv_kp1 = self.K_inv_k - self.K_inv_k @ Hk.T @ inter_inv @ Hk @ self.K_inv_k
         xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
@@ -145,7 +80,6 @@ class RLLS2:
             # optionally save
             if history:
                 self.x_hat_hist.append(self.x_hat)
-                self.P_hat_hist.append(np.diag(self.P_hat).tolist())
 
         return self.x_hat
 
@@ -201,7 +135,7 @@ def plot_coef_history(x_hat_hist, P_hat_hist, sh_EGM2008, remove_deg, start_idx=
                 m = 0
 
 
-def test_setup(max_true_degree, regress_degree, remove_degree, P0_diag, initial_batch):
+def test_setup(max_true_degree, regress_degree, remove_degree, initial_batch):
     import matplotlib.pyplot as plt
 
     from GravNN.CelestialBodies.Planets import Earth
@@ -234,14 +168,8 @@ def test_setup(max_true_degree, regress_degree, remove_degree, P0_diag, initial_
     x0 = np.zeros((dim,))
     x0[0] = 0.0 if REMOVE_DEG != -1 else 1.0
 
-    # Define uncertainty
-    P0 = np.identity(dim) * P0_diag
-
-    # Functionally no meas uncertainty, but 1e-16 needed to avoid singularities
-    Rk = np.identity(3) + 1e-16
-
     # Initialize the regressor
-    regressor = RLLS(REGRESS_DEG, planet, x0, P0, Rk, REMOVE_DEG)
+    regressor = RLLS_Ridge(REGRESS_DEG, planet, x0, alpha=1e-3, remove_deg=REMOVE_DEG)
     regressor.update(x, a, init_batch=initial_batch, history=True)
 
     # Format the coefficients
@@ -297,23 +225,29 @@ def test_setup(max_true_degree, regress_degree, remove_degree, P0_diag, initial_
 def main():
     # # Slightly wrong
     a_error = test_setup(
+        max_true_degree=100,
+        regress_degree=90,
+        remove_degree=-1,
+        initial_batch=1000,
+    )
+    assert np.isclose(a_error, 0.0015995795115804907)
+
+    a_error = test_setup(
         max_true_degree=10,
         regress_degree=4,
         remove_degree=1,
-        P0_diag=0,  # assume only uncertainty in measurements (not in initial guess)
         initial_batch=1000,
     )
-    assert np.isclose(a_error, 0.010926797140351335)
+    assert np.isclose(a_error, 0.0015995795115804907)
 
     # Perfect
     a_error = test_setup(
         max_true_degree=4,
         regress_degree=4,
         remove_degree=-1,
-        P0_diag=0,
         initial_batch=500,
     )
-    assert np.isclose(a_error, 2.705730413079536e-11)
+    assert np.isclose(a_error, 1.0390206620479445e-12)
 
 
 if __name__ == "__main__":
