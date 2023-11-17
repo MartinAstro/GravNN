@@ -1,7 +1,16 @@
-import numpy as np
+import tempfile
 
+import numpy as np
+from numba import njit
+
+from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Regression.utils import *
-from GravNN.Regression.utils import compute_A, compute_euler, getK
+from GravNN.Regression.utils import (
+    compute_A,
+    compute_euler,
+    getK,
+    save,
+)
 from GravNN.Support.ProgressBar import ProgressBar
 
 
@@ -178,7 +187,7 @@ class SHRegression:
         diag = np.ones((self.terms_remaining))
         kaula = np.diag(diag)
 
-        for i in range(self.terms_removed, self.terms_total):
+        for i in range(0, self.terms_remaining):
             if l != 0:
                 kaula[i, i] = (1 / l**2) ** -1
 
@@ -207,16 +216,15 @@ class SHRegression:
     def batch(self, rVec, aVec):
         rVec1D = rVec.reshape((-1,))
         aVec1D = aVec.reshape((-1,))
-        self.P = len(rVec1D)
 
         M = self.populate_M(rVec1D)
 
-        inv_arg = M.T @ M
-
         # Compute the Least Squares Solution
-        ridge = self.kaula_factor * self.kaula
         inv_arg = M.T @ M
         ridge = self.kaula_factor * self.kaula
+        if self.M == -1:
+            ridge[0, 0] = 1.0  # Don't regularize the C00 term
+
         K_inv_k = np.linalg.inv(inv_arg + ridge)
 
         self.x_hat = K_inv_k @ M.T @ aVec1D
@@ -269,3 +277,61 @@ class SHRegression:
             results = self.recursive(rVec, aVec)
 
         return results
+
+
+class SHRegressorSequential:
+    def __init__(self, max_degree, max_param, planet):
+        self.N = max_degree
+        self.max_param = max_param
+        self.planet = planet
+        self.compute_intermediate_degrees()
+
+    def compute_intermediate_degrees(self):
+        # Compute which intermediate degrees are needed to keep regression within
+        # defined memory bounds
+
+        # compute total params in a model of degree N
+        params = np.array([i * (i + 1) for i in range(self.N + 1)])
+
+        # see when the number of params exceeds the max
+        remainders = params // self.max_param
+
+        # find the first degree where the number of params exceeds the max
+        diff = np.diff(remainders)
+        degrees = np.where(diff > 0)[0]
+
+        self.Ns = np.concatenate((degrees, [self.N]))
+
+    def remove_current_model(self, x, a, C_lm, S_lm):
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            save(tmpfile.name, self.planet, C_lm, S_lm)
+            regressed_model = SphericalHarmonics(tmpfile.name, len(C_lm) - 1)
+            accelerations = regressed_model.compute_acceleration(x)
+            da = a - accelerations
+        return da
+
+    def update(self, rVec, aVec):
+        all_results = None
+        da = aVec.copy()
+
+        # Only estimate a subset of the coefficients at a time
+        for i, N in enumerate(self.Ns):
+            # Remove the previously regressed coefficients
+            M = -1 if i == 0 else self.Ns[i - 1]
+            regressor = SHRegression(
+                N,
+                M,
+                self.planet.radius,
+                self.planet.mu,
+                kaula_factor=1e3,
+                max_batch_size=100,
+            )
+            results = regressor.update(rVec, da)
+            if all_results is None:
+                all_results = results
+            else:
+                all_results = np.concatenate((all_results, results))
+
+            C_lm, S_lm = format_coefficients(all_results, N, -1)
+            da = self.remove_current_model(rVec, aVec, C_lm, S_lm)
+        return C_lm, S_lm
