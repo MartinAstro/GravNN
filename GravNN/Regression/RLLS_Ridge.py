@@ -22,18 +22,46 @@ def update_K(K_inv_k, Hk, N):
 
 
 class RLLS_Ridge:
-    def __init__(self, max_deg, planet, x0, alpha=1e-8, remove_deg=-1, batch_size=1):
+    def __init__(
+        self,
+        max_deg,
+        planet,
+        x0,
+        alpha=1e-8,
+        remove_deg=-1,
+        batch_size=1,
+        max_param=10000,
+    ):
         self.N = max_deg  # Degree
         self.planet = planet
         self.remove_deg = remove_deg
         self.x_hat = x0.reshape((-1,))
-        self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
+        self.SHRegressor = SHRegression(max_deg, remove_deg, planet.radius, planet.mu)
         self.initialized = False
         self.alpha = alpha
         self.x0 = np.zeros((len(x0),))
         self.batch_size = batch_size
+        self.max_param = max_param
 
-    def batch_start(self, x, a):
+        self.compute_intermediate_degrees()
+
+    def compute_intermediate_degrees(self):
+        # Compute which intermediate degrees are needed to keep regression within
+        # defined memory bounds
+
+        # compute total params in a model of degree N
+        params = np.array([i * (i + 1) for i in range(self.N + 1)])
+
+        # see when the number of params exceeds the max
+        remainders = params // self.max_param
+
+        # find the first degree where the number of params exceeds the max
+        diff = np.diff(remainders)
+        degrees = np.where(diff > 0)[0]
+
+        self.intermediate_N = degrees
+
+    def init_batch_fcn(self, x, a):
         init_degree = self.N  # if self.N < 10 else 10
         batch_regressor = BLLS(
             init_degree,
@@ -55,7 +83,7 @@ class RLLS_Ridge:
         ridge = batch_regressor.compute_ridge(inv_arg)
         self.K_inv_k = np.linalg.inv(inv_arg + ridge)
 
-    def update_batch(self, rk, yk):
+    def update_batch_recursive(self, rk, yk):
         # Load current estimates
         xk = self.x_hat
 
@@ -83,7 +111,7 @@ class RLLS_Ridge:
         if init_batch > 0:
             r_start = r[:init_batch, :]
             y_start = y[:init_batch, :]
-            self.batch_start(r_start, y_start)
+            self.init_batch_fcn(r_start, y_start)
 
         # Update based on incoming data
         pbar = ProgressBar(len(r), enable=True)
@@ -92,7 +120,7 @@ class RLLS_Ridge:
             end_idx = min(i + BS, len(r))
             rBatch = r[i:end_idx].reshape((-1,))
             yBatch = y[i:end_idx].reshape((-1,))
-            self.update_batch(rBatch, yBatch)
+            self.update_batch_recursive(rBatch, yBatch)
             pbar.update(end_idx)
 
             # optionally save
@@ -171,28 +199,12 @@ def main():
     # # Slightly wrong
     a_error = test_setup(
         max_true_degree=100,
-        regress_degree=90,
+        regress_degree=175,
+        # regress_degree=90,
         remove_degree=-1,
         initial_batch=1000,
     )
     assert np.isclose(a_error, 0.0015995795115804907)
-
-    # a_error = test_setup(
-    #     max_true_degree=10,
-    #     regress_degree=4,
-    #     remove_degree=1,
-    #     initial_batch=1000,
-    # )
-    # assert np.isclose(a_error, 0.0015995795115804907)
-
-    # # Perfect
-    # a_error = test_setup(
-    #     max_true_degree=4,
-    #     regress_degree=4,
-    #     remove_degree=-1,
-    #     initial_batch=500,
-    # )
-    # assert np.isclose(a_error, 1.0390206620479445e-12)
 
 
 if __name__ == "__main__":

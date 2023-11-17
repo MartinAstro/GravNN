@@ -35,7 +35,7 @@ class BLLS:
     ):
         self.N = max_deg  # Degree
         self.remove_deg = remove_deg
-        self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
+        self.SHRegressor = SHRegression(max_deg, remove_deg, planet.radius, planet.mu)
         self.ridge_factor = ridge_factor
         self.kaula = kaula
 

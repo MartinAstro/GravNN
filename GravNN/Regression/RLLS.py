@@ -20,7 +20,7 @@ class RLLS:
         self.x_hat = x0.reshape((-1,))
         self.P_hat = P0
         self.Rk = Rk
-        self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
+        self.SHRegressor = SHRegression(max_deg, remove_deg, planet.radius, planet.mu)
         self.initialized = False
         self.x0 = np.zeros((len(x0),))
 
@@ -89,7 +89,7 @@ class RLLS2:
         self.planet = planet
         self.remove_deg = remove_deg
         self.x_hat = x0.reshape((-1,))
-        self.SHRegressor = SHRegression(max_deg, planet.radius, planet.mu, remove_deg)
+        self.SHRegressor = SHRegression(max_deg, remove_deg, planet.radius, planet.mu)
         self.initialized = False
         self.alpha = alpha
         self.x0 = np.zeros((len(x0),))

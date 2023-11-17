@@ -2,6 +2,7 @@ import numpy as np
 
 from GravNN.Regression.utils import *
 from GravNN.Regression.utils import compute_A, compute_euler, getK
+from GravNN.Support.ProgressBar import ProgressBar
 
 
 def iterate_lstsq(M, aVec, iterations):
@@ -116,12 +117,21 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
 
 
 class SHRegression:
-    def __init__(self, N, a, mu, M):
-        self.N = N
-        self.a = a
-        self.mu = mu
-        self.M = M
-        self.compute_kaula_matrix()
+    def __init__(
+        self,
+        max_degree,
+        min_degree,
+        planet_radius,
+        planet_mu,
+        kaula_factor=0.0,
+        max_batch_size=-1,
+    ):
+        self.N = max_degree
+        self.M = min_degree
+        self.a = planet_radius
+        self.mu = planet_mu
+        self.kaula_factor = kaula_factor
+        self.max_batch_size = max_batch_size
 
         self.rE = np.zeros((self.N + 2,))
         self.iM = np.zeros((self.N + 2,))
@@ -131,7 +141,16 @@ class SHRegression:
 
         self.n1 = np.zeros((self.N + 2, self.N + 2))
         self.n2 = np.zeros((self.N + 2, self.N + 2))
+        self.init_calculations()
+        self.count_total_coefficients()
+        self.compute_kaula_matrix()
 
+    def count_total_coefficients(self):
+        self.terms_total = int((self.N + 1) * (self.N + 2))
+        self.terms_removed = int((self.M + 1) * (self.M + 2))
+        self.terms_remaining = self.terms_total - self.terms_removed
+
+    def init_calculations(self):
         for i in range(0, self.N + 2):
             if i == 0:
                 self.A[i, i] = 1.0
@@ -151,7 +170,29 @@ class SHRegression:
                         / ((i + m) * (i - m) * (2.0 * i - 3.0)),
                     )
 
-    def populate_M(self, rVec1D, remove_deg):
+    def compute_kaula_matrix(self):
+        l = self.M + 1
+        m = 0
+
+        # Generate the full matrix up to the max degree
+        diag = np.ones((self.terms_remaining))
+        kaula = np.diag(diag)
+
+        for i in range(self.terms_removed, self.terms_total):
+            if l != 0:
+                kaula[i, i] = (1 / l**2) ** -1
+
+            # every odd number, increment the m index
+            # because we've iterated over a C and S pair
+            if (i + 1) % 2 == 0:
+                if l == m:  #
+                    l += 1
+                    m = 0
+                else:
+                    m += 1
+        self.kaula = kaula
+
+    def populate_M(self, rVec1D):
         return populate_M(
             rVec1D,
             self.A,
@@ -160,80 +201,71 @@ class SHRegression:
             self.N,
             self.a,
             self.mu,
-            remove_deg,
+            self.M,
         )
 
-    def populate_H_singular(self, rVec1D, remove_deg):
-        return populate_H_singular(
-            rVec1D,
-            self.A,
-            self.n1,
-            self.n2,
-            self.N,
-            self.a,
-            self.mu,
-            remove_deg,
-        )
+    def batch(self, rVec, aVec):
+        rVec1D = rVec.reshape((-1,))
+        aVec1D = aVec.reshape((-1,))
+        self.P = len(rVec1D)
 
-    def compute_kaula_matrix(self):
-        l = self.M + 1
-        m = 0
-        factor = 1e-6
-        q = self.M
-        terms = int((self.N + 1) * (self.N + 2))
-        terms_removed = int((q + 1) * (q + 2))
-        K = np.diag(np.ones((terms - terms_removed)))
-        K_inv = np.diag(np.ones((terms - terms_removed)))
-        for i in range(0, len(K)):  # all coefficients (C and S) excluding C_00, S_00
-            if l != 0:
-                K[i, i] = (factor / l**2) ** 1
-                K_inv[i, i] = (factor / l**2) ** -1
-            # every odd number, increment the m index (because we've iterated over a C and S pair)
-            if (i + 1) % 2 == 0:
-                if l == m:  #
-                    l += 1
-                    m = 0
-                else:
-                    m += 1
-        self.K = K
-        self.K_inv = K_inv
+        M = self.populate_M(rVec1D)
 
-    def batch(self, rVec, aVec, iterations=5):
-        self.rVec1D = rVec.reshape((-1,))
-        self.aVec1D = aVec.reshape((-1,))
-        self.P = len(self.rVec1D)
+        inv_arg = M.T @ M
 
-        M = self.SHRegressor.populate_M(
-            self.rVec1D,
-            self.remove_deg,
-        )
-        results = iterate_lstsq(M, self.aVec1D, iterations)
-        return results
+        # Compute the Least Squares Solution
+        ridge = self.kaula_factor * self.kaula
+        inv_arg = M.T @ M
+        ridge = self.kaula_factor * self.kaula
+        K_inv_k = np.linalg.inv(inv_arg + ridge)
 
-    def recursive(self, x, y, init_batch=None):
-        if init_batch is not None:
-            self.batch(x[:init_batch, :], y[:init_batch, :])
-        else:
-            np.zeros((self.N + 2) * (self.N + 1))
+        self.x_hat = K_inv_k @ M.T @ aVec1D
+        self.K_inv_k = K_inv_k
 
-        # Reminder: x is the vector of coefficients
-        # y is the acceleration measured
-        # Hk is the partial of da/dCoef(r) | r=r_k
-        xk_m_1 = self.x_hat
-        Pk_m_1 = self.P_hat
-        Rk = self.Rk
+        return self.x_hat
 
-        Hk = self.SHRegressor.populate_H_singular(
-            rk,
-            self.remove_deg,
-        )
-        sub_K_inv = np.linalg.inv(Rk + np.dot(Hk, np.dot(Pk_m_1, Hk.T)))
-        Kk = np.dot(Pk_m_1, np.dot(Hk.T, sub_K_inv))
+    def recursive_batch(self, rk, yk):
+        # Load current estimates
+        xk = self.x_hat
 
-        Pk_sub = np.identity(len(xk_m_1)) - np.dot(Kk, Hk)
-        Pk = np.dot(Pk_sub, np.dot(Pk_m_1, Pk_sub.T))
+        # Populate partials
+        Hk = self.populate_M(rk)
+        I = np.identity(len(Hk))
+        inter_inv = np.linalg.inv(I + Hk @ self.K_inv_k @ Hk.T)
+        K_inv_kp1 = self.K_inv_k - self.K_inv_k @ Hk.T @ inter_inv @ Hk @ self.K_inv_k
+        xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
 
-        self.x_hat = xk_m_1 + np.dot(Kk, yk - np.dot(Hk, xk_m_1))
-        self.P_hat = Pk
-
+        # update estimates
+        self.x_hat = xk_p1
+        self.K_inv_k = K_inv_kp1
         return
+
+    def recursive(self, r, y):
+        BS = self.max_batch_size
+        r_init = r[:BS]
+        y_init = y[:BS]
+
+        # Need first guess before you can begin
+        # recursive
+        self.batch(r_init, y_init)
+
+        pbar = ProgressBar(len(r), enable=True)
+        for i in range(BS, len(r), BS):
+            end_idx = min(i + BS, len(r))
+            rBatch = r[i:end_idx].reshape((-1,))
+            yBatch = y[i:end_idx].reshape((-1,))
+            self.recursive_batch(rBatch, yBatch)
+            pbar.update(end_idx)
+
+        return self.x_hat
+
+    def update(self, rVec, aVec):
+        unlimited_batch = True if self.max_batch_size == -1 else False
+        small_batch = True if len(rVec) < self.max_batch_size else False
+
+        if unlimited_batch or small_batch:
+            results = self.batch(rVec, aVec)
+        else:
+            results = self.recursive(rVec, aVec)
+
+        return results
