@@ -1,6 +1,7 @@
 import tempfile
 
 import numpy as np
+from numba import njit
 
 from GravNN.Regression.BLLS import BLLS
 from GravNN.Regression.SHRegression import SHRegression
@@ -12,8 +13,16 @@ from GravNN.Regression.utils import (
 from GravNN.Support.ProgressBar import ProgressBar
 
 
+@njit(cache=True)  # , parallel=True)
+def update_K(K_inv_k, Hk, N):
+    I = np.identity(N)
+    inter_inv = np.linalg.inv(I + Hk @ K_inv_k @ Hk.T)
+    K_inv_kp1 = K_inv_k - K_inv_k @ Hk.T @ inter_inv @ Hk @ K_inv_k
+    return K_inv_kp1
+
+
 class RLLS_Ridge:
-    def __init__(self, max_deg, planet, x0, alpha=1e-8, remove_deg=-1):
+    def __init__(self, max_deg, planet, x0, alpha=1e-8, remove_deg=-1, batch_size=1):
         self.N = max_deg  # Degree
         self.planet = planet
         self.remove_deg = remove_deg
@@ -22,19 +31,23 @@ class RLLS_Ridge:
         self.initialized = False
         self.alpha = alpha
         self.x0 = np.zeros((len(x0),))
+        self.batch_size = batch_size
 
     def batch_start(self, x, a):
-        init_degree = self.N if self.N < 10 else 10
+        init_degree = self.N  # if self.N < 10 else 10
         batch_regressor = BLLS(
             init_degree,
             self.planet,
             self.remove_deg,
             ridge_factor=self.alpha,
         )
-        init_results = batch_regressor.update(x, a)
-        results_dim = len(init_results)
-        self.x_hat[:results_dim] = init_results
 
+        # Run a batch update
+        init_coef = batch_regressor.update(x, a)
+        dim = len(init_coef)
+        self.x_hat[:dim] = init_coef
+
+        # compute K_inv
         x1D = x.reshape((-1,))
         H = self.SHRegressor.populate_M(x1D, self.remove_deg)
         inv_arg = H.T @ H
@@ -42,19 +55,18 @@ class RLLS_Ridge:
         ridge = batch_regressor.compute_ridge(inv_arg)
         self.K_inv_k = np.linalg.inv(inv_arg + ridge)
 
-    def update_single(self, rk, yk):
+    def update_batch(self, rk, yk):
         # Load current estimates
         xk = self.x_hat
 
         # Populate partials
-        Hk = self.SHRegressor.populate_H_singular(
+        Hk = self.SHRegressor.populate_M(
             rk,
             self.remove_deg,
         )
 
-        I = np.identity(len(rk))
-        inter_inv = np.linalg.inv(I + Hk @ self.K_inv_k @ Hk.T)
-        K_inv_kp1 = self.K_inv_k - self.K_inv_k @ Hk.T @ inter_inv @ Hk @ self.K_inv_k
+        # Compute estimates
+        K_inv_kp1 = update_K(self.K_inv_k, Hk, len(rk))
         xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
 
         # update estimates
@@ -75,9 +87,13 @@ class RLLS_Ridge:
 
         # Update based on incoming data
         pbar = ProgressBar(len(r), enable=True)
-        for i in range(init_batch, len(r)):
-            self.update_single(r[i], y[i])
-            pbar.update(i)
+        BS = self.batch_size
+        for i in range(init_batch, len(r), BS):
+            end_idx = min(i + BS, len(r))
+            rBatch = r[i:end_idx].reshape((-1,))
+            yBatch = y[i:end_idx].reshape((-1,))
+            self.update_batch(rBatch, yBatch)
+            pbar.update(end_idx)
 
             # optionally save
             if history:
@@ -86,60 +102,7 @@ class RLLS_Ridge:
         return self.x_hat
 
 
-def plot_coef_history(x_hat_hist, P_hat_hist, sh_EGM2008, remove_deg, start_idx=0):
-    import matplotlib.pyplot as plt
-
-    x_hat_hist = np.array(x_hat_hist)
-    P_hat_hist = np.array(P_hat_hist)
-
-    l = remove_deg + 1
-    m = 0
-
-    for i in range(len(x_hat_hist[0])):
-        plt.figure()
-        plt.subplot(2, 1, 1)
-        plt.plot(x_hat_hist[start_idx:, i], c="b")
-        plt.plot(
-            x_hat_hist[start_idx:, i] + 3 * np.sqrt(P_hat_hist[start_idx:, i]),
-            c="r",
-        )
-        plt.plot(
-            x_hat_hist[start_idx:, i] - 3 * np.sqrt(P_hat_hist[start_idx:, i]),
-            c="r",
-        )
-
-        C_lm = sh_EGM2008.C_lm[l, m]
-        S_lm = sh_EGM2008.S_lm[l, m]
-
-        if i % 2 == 0:
-            coef = C_lm
-            plt.suptitle("C" + str(l) + str(m))
-        else:
-            coef = S_lm
-            plt.suptitle("S" + str(l) + str(m))
-
-        plt.subplot(2, 1, 2)
-        plt.plot(x_hat_hist[start_idx:, i] - coef, c="b")
-        plt.plot(
-            x_hat_hist[start_idx:, i] - coef + 3 * np.sqrt(P_hat_hist[start_idx:, i]),
-            c="r",
-        )
-        plt.plot(
-            x_hat_hist[start_idx:, i] - coef - 3 * np.sqrt(P_hat_hist[start_idx:, i]),
-            c="r",
-        )
-
-        if i % 2 != 0:
-            if m < l:
-                m += 1
-            else:
-                l += 1
-                m = 0
-
-
 def test_setup(max_true_degree, regress_degree, remove_degree, initial_batch):
-    import matplotlib.pyplot as plt
-
     from GravNN.CelestialBodies.Planets import Earth
     from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics, get_sh_data
     from GravNN.Trajectories import DHGridDist
@@ -185,19 +148,6 @@ def test_setup(max_true_degree, regress_degree, remove_degree, initial_batch):
     )
 
     # Compute Error + Metrics
-    k = len(C_lm)
-    C_lm_true = sh_EGM2008.C_lm[:k, :k]
-    S_lm_true = sh_EGM2008.S_lm[:k, :k]
-
-    C_lm_error = (C_lm_true - C_lm) / C_lm_true * 100
-    S_lm_error = (S_lm_true - S_lm) / S_lm_true * 100
-
-    C_lm_error[np.isinf(C_lm_error)] = np.nan
-    S_lm_error[np.isinf(S_lm_error)] = np.nan
-
-    C_lm_avg_error = np.nanmean(np.abs(C_lm_error))
-    S_lm_avg_error = np.nanmean(np.abs(S_lm_error))
-
     with tempfile.NamedTemporaryFile() as tmpfile:
         save(tmpfile.name, planet, C_lm, S_lm)
         regressed_model = SphericalHarmonics(tmpfile.name, REGRESS_DEG)
@@ -212,15 +162,8 @@ def test_setup(max_true_degree, regress_degree, remove_degree, initial_batch):
         a_error = (
             np.linalg.norm(accelerations - a, axis=1) / np.linalg.norm(a, axis=1) * 100
         )
-
-        print(f"\n AVERAGE CLM ERROR: {C_lm_avg_error} \n")
-        print(f"\n AVERAGE SLM ERROR: {S_lm_avg_error} \n")
-
         print(f"\n ACCELERATION ERROR: {np.mean(a_error)}")
 
-    # plot_coef_history(regressor.x_hat_hist, regressor.P_hat_hist, sh_EGM2008, REMOVE_DEG, start_idx=0)
-
-    plt.show()
     return np.mean(a_error)
 
 
