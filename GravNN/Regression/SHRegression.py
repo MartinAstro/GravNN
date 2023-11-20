@@ -125,6 +125,15 @@ def populate_M(rVec1D, A, n1, n2, N, a, mu, remove_deg):
     return M
 
 
+@njit(cache=True)
+def update_x_and_K(xk, K_inv_k, Hk, yk):
+    I = np.identity(len(Hk))
+    inter_inv = np.linalg.inv(I + Hk @ K_inv_k @ Hk.T)
+    K_inv_kp1 = K_inv_k - K_inv_k @ Hk.T @ inter_inv @ Hk @ K_inv_k
+    xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
+    return xk_p1, K_inv_kp1
+
+
 class SHRegression:
     def __init__(
         self,
@@ -238,10 +247,11 @@ class SHRegression:
 
         # Populate partials
         Hk = self.populate_M(rk)
-        I = np.identity(len(Hk))
-        inter_inv = np.linalg.inv(I + Hk @ self.K_inv_k @ Hk.T)
-        K_inv_kp1 = self.K_inv_k - self.K_inv_k @ Hk.T @ inter_inv @ Hk @ self.K_inv_k
-        xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
+        # I = np.identity(len(Hk))
+        # inter_inv = np.linalg.inv(I + Hk @ self.K_inv_k @ Hk.T)
+        # K_inv_kp1 = self.K_inv_k - self.K_inv_k @ Hk.T @ inter_inv @ Hk @ self.K_inv_k
+        # xk_p1 = xk + K_inv_kp1 @ Hk.T @ (yk - Hk @ xk)
+        xk_p1, K_inv_kp1 = update_x_and_K(xk, self.K_inv_k, Hk, yk)
 
         # update estimates
         self.x_hat = xk_p1
@@ -308,6 +318,8 @@ class SHRegressorSequential:
             regressed_model = SphericalHarmonics(tmpfile.name, len(C_lm) - 1)
             accelerations = regressed_model.compute_acceleration(x)
             da = a - accelerations
+            da_percent = np.mean(np.linalg.norm(da, axis=1) / np.linalg.norm(a, axis=1))
+            print(f"Current model error: {da_percent*100}% \t {len(C_lm)}")
         return da
 
     def update(self, rVec, aVec):
@@ -334,4 +346,5 @@ class SHRegressorSequential:
 
             C_lm, S_lm = format_coefficients(all_results, N, -1)
             da = self.remove_current_model(rVec, aVec, C_lm, S_lm)
+        self.x_hat = all_results
         return C_lm, S_lm
