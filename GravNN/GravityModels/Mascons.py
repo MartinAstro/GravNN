@@ -42,10 +42,14 @@ class Mascons(GravityModelBase):
 
     def read_mass_csv(self):
         gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
-        with open(
-            f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/" + self.mass_csv,
-            "r",
-        ) as f:
+        # if the filename is absolute, read it from there
+        if os.path.isabs(self.mass_csv):
+            open_file = self.mass_csv
+        else:
+            open_file = (
+                f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/" + self.mass_csv
+            )
+        with open(open_file, "r") as f:
             lines = f.readlines()
             lines = lines[1:]  # Skip header
             lines = [line.strip().split(",") for line in lines]

@@ -125,6 +125,12 @@ class MasconRegressor:
 
     def save(self, name):
         save_data = np.append(self.mu_vec.reshape((-1, 1)), self.r_masses, axis=1)
+
+        # if the filename is absolute, just save it there
+        if os.path.isabs(name):
+            np.savetxt(name, save_data, delimiter=",")
+            return
+
         gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
         os.makedirs(
             f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/",
