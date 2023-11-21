@@ -21,6 +21,7 @@ class ExtrapolationExperiment(ExperimentBase):
         extra_max_radius = np.nan_to_num(self.config.get("extra_radius_max", [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config["radius_min"][0], max_radius]
+        self.extrapolation_bound = kwargs.get("extrapolation_bound", 10)
 
         self.max_radius_scale = kwargs.get("max_radius_scale", 10)
 
@@ -31,7 +32,7 @@ class ExtrapolationExperiment(ExperimentBase):
         original_max_radius = self.config["radius_max"][0]
         augment_data = self.config.get("augment_data_config", [{}])[0]
         extra_max_radius = augment_data.get("radius_max", [0])[0]
-        max_radius = np.max([original_max_radius, extra_max_radius])
+        np.max([original_max_radius, extra_max_radius])
 
         self.config["radius_min"][0]
         obj_file = self.config.get("obj_file", [None])[0]
@@ -44,10 +45,16 @@ class ExtrapolationExperiment(ExperimentBase):
             points=self.points,
             **self.config,
         )
+
+        point_density = self.points / np.diff(self.training_bounds)[0]
+        extrap_R = self.extrapolation_bound * planet.radius
+        training_R = self.training_bounds[1]
+        dr = extrap_R - training_R
+        extrapolation_points = int(point_density * dr)
         extrapolation_dist = RandomDist(
             planet,
-            radius_bounds=[max_radius, max_radius * self.max_radius_scale],
-            points=self.points,
+            radius_bounds=[training_R, extrap_R],
+            points=extrapolation_points,
             **self.config,
         )
 
@@ -73,12 +80,12 @@ class ExtrapolationExperiment(ExperimentBase):
         self.a_test = a
         self.u_test = u
 
-        if not hasattr(self, "test_dist_2_surf_idx"):
-            # Compute distance to COM
-            x_sph = cart2sph(x)
-            self.test_dist_2_COM_idx = np.argsort(x_sph[:, 0])
-            self.test_r_COM = x_sph[self.test_dist_2_COM_idx, 0]
+        # Compute distance to COM
+        x_sph = cart2sph(x)
+        self.test_dist_2_COM_idx = np.argsort(x_sph[:, 0])
+        self.test_r_COM = x_sph[self.test_dist_2_COM_idx, 0]
 
+        if not hasattr(self, "test_dist_2_surf_idx"):
             mesh = interpolation_dist.obj_mesh
 
             def closest_point_fcn(x):
