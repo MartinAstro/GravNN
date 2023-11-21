@@ -263,11 +263,7 @@ class PolyhedralWrapper(ModelInterface):
 
 class PINNWrapper(ModelInterface):
     def configure(self, config):
-        hparams = {
-            "learning_rate": [0.001],
-            "batch_size": [2**11],
-            "epochs": [8192],
-        }
+        hparams = {}
         configure_run_args(config, hparams)
         configure_tensorflow(config)
         self.model = PINNGravityModel(config)

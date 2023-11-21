@@ -29,8 +29,8 @@ def get_default_config(model_name):
     base_config.update(
         {
             "learning_rate": [2**-10],
-            "epochs": [8192],
-            "batch_size": [2**13],
+            "epochs": [8192 * 2],
+            "batch_size": [2**11],
         },
     )
     config.update(base_config)
