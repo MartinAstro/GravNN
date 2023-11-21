@@ -4,7 +4,7 @@ from GravNN.Preprocessors.DummyScaler import DummyScaler
 from GravNN.Preprocessors.UniformScaler import UniformScaler
 
 
-def PINN_I():
+def NN():
     network_config = {
         "basis": [None],
         "mixed_precision": [False],
@@ -15,7 +15,7 @@ def PINN_I():
         "scale_by": ["a"],
         "dummy_transformer": [DummyScaler()],
         "override": [False],
-        "PINN_constraint_fcn": ["pinn_a"],
+        "PINN_constraint_fcn": ["pinn_00"],
         "layers": [[3, 20, 20, 20, 20, 20, 20, 20, 20, 1]],
         "activation": ["tanh"],
         "epochs": [7500],
@@ -44,6 +44,15 @@ def PINN_I():
         "enforce_bc": [False],
     }
     return network_config
+
+
+def PINN_I():
+    config = NN()
+    network_config = {
+        "PINN_constraint_fcn": ["pinn_a"],
+    }
+    config.update(network_config)
+    return config
 
 
 def PINN_II():
