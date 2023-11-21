@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
@@ -9,7 +11,6 @@ class OS_ELM:
         self.n_input_nodes = n_input_nodes
         self.n_hidden_nodes = n_hidden_nodes
         self.n_output_nodes = n_output_nodes
-        self.activation = lambda x: 1 / (1 + np.exp(-x))
         self.input_scaler = MinMaxScaler()
         self.output_scaler = MinMaxScaler()
 
@@ -22,6 +23,9 @@ class OS_ELM:
         self.beta = np.zeros(shape=(self.n_output_nodes, self.n_hidden_nodes))
         self.c = 1.0 / k
         self.K_inv = np.zeros(shape=(self.n_hidden_nodes, self.n_hidden_nodes))
+
+    def activation(self, x):
+        return 1 / (1 + np.exp(-x))
 
     def predict(self, x):
         if x.ndim == 1:
@@ -51,7 +55,7 @@ class OS_ELM:
         x = self.input_scaler.fit_transform(x.T).T
         y = self.output_scaler.fit_transform(y.T).T
 
-        H = self.activation(self.w * x + self.bias)
+        H = self.activation(self.w @ x + self.bias)
         Ht = np.transpose(H)
         K = H @ Ht + np.eye((len(H)), dtype=H.dtype) / self.c
         K_inv = np.linalg.inv(K)
@@ -69,7 +73,7 @@ class OS_ELM:
         y = self.output_scaler.transform(y.T).T
 
         # If you want to solve for Beta, then transpose everything
-        H = self.activation(self.w * x + self.bias)
+        H = self.activation(self.w @ x + self.bias)
         Ht = np.transpose(H)
         Kk_inv = self.K_inv
 
@@ -89,9 +93,26 @@ class OS_ELM:
         self.K_inv = new_K_inv
 
     def update(self, x, y, init_batch):
-        self.init_train(x[:init_batch], y[:init_batch])
+        if x.shape[0] != self.n_input_nodes:
+            x = x.T
+        if y.shape[0] != self.n_output_nodes:
+            y = y.T
+
+        self.init_train(x[:, :init_batch], y[:, :init_batch])
         for i in range(init_batch, len(x), init_batch):
-            self.seq_train(x[i : i + init_batch], y[i : i + init_batch])
+            self.seq_train(x[:, i : i + init_batch], y[:, i : i + init_batch])
+
+    def save(self, name):
+        params = {
+            "w": self.w,
+            "bias": self.bias,
+            "beta": self.beta,
+        }
+
+        with open(name, "wb") as f:
+            pickle.dump(params, f)
+            pickle.dump(self.input_scaler, f)
+            pickle.dump(self.output_scaler, f)
 
 
 def main():
@@ -119,9 +140,6 @@ def main():
         # return np.sin(5 * x)
         return x**2  # + np.sin(5*x)
         return x
-
-    def noisy_fcn(x):
-        return fcn(x) + 0.01 * np.random.uniform(x.shape)
 
     x = np.random.uniform(size=(N, n_input_nodes))
     y = fcn(x)
@@ -154,10 +172,6 @@ def main():
     plt.figure()
     plt.scatter(x, y, s=2)
     plt.scatter(x, os_elm.predict(x.T), s=2)
-
-    # plt.figure()
-    # plt.scatter(x_test, y_test, s=2)
-    # plt.scatter(x_test, os_elm.predict(x_test), s=2)
     plt.show()
 
 
