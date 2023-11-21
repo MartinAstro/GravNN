@@ -1,4 +1,4 @@
-from experiment_setup import setup_experiments
+from experiment_setup import *
 from interfaces import select_model
 
 from GravNN.Networks.Configs import *
@@ -7,30 +7,24 @@ from GravNN.Networks.utils import populate_config_objects
 
 
 def run(experiment, idx):
-    config = get_default_eros_config()
-    config.update({"obj_file": [Eros().obj_200k]})
+    model_name = experiment["model_name"][0]
 
-    # config['N_dist'] = [1000]
-    # config["radius_min"] = [Eros().radius * 10]
-    # config["radius_max"] = [Eros().radius * 15]
-    config.update(PINN_III())
-    config.update(ReduceLrOnPlateauConfig())
+    config = get_default_config(model_name)
     config.update(experiment)
     config = populate_config_objects(config)
     config["comparison_idx"] = [idx]
 
     data = DataSet(config)
 
-    model_name = config["model_name"][0]
     wrapper = select_model(model_name)
     wrapper.configure(config)
     wrapper.train(data)
     wrapper.save()
-    wrapper.evaluate(override=True)
+    wrapper.evaluate(override=False)
 
 
 def main():
-    experiments = setup_experiments()
+    experiments = setup_debug_experiments()
 
     for idx, exp in enumerate(experiments):
         run(exp, idx)
