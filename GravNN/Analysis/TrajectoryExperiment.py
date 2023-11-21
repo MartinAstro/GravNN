@@ -170,7 +170,7 @@ class TrajectoryExperiment:
         self.tol = tol
         self.omega_vec = omega_vec
 
-    def run(self, override=False):
+    def run(self, override=False, override_truth=False):
         self.true_orbit = TrajectoryPropagator(
             self.true_model,
             initial_state=self.initial_state,
@@ -181,7 +181,11 @@ class TrajectoryExperiment:
             omega_vec=self.omega_vec,
             pbar=self.pbar,
         )
-        self.true_orbit.run(override=override)
+
+        # Optionally avoid ov
+        if not override_truth:
+            override_truth = override
+        self.true_orbit.run(override=override_truth)
 
         for i, model in enumerate(self.test_models):
             orbit = TrajectoryPropagator(
@@ -239,8 +243,6 @@ def main():
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 
-    test_pinn_model.compute_acceleration = lambda x: np.ones_like(x) * np.inf
-
     poly_test = TestModel(test_poly_model, "Poly", "r")
     pinn_test = TestModel(test_pinn_model, "PINN", "g")
     test_models = [poly_test, pinn_test]
@@ -251,7 +253,7 @@ def main():
         test_models,
         initial_state=init_state,
         # period=24 * 3600,  # 24 * 3600,
-        period=1 * 3600,  # 24 * 3600,
+        period=24 * 3600,  # 24 * 3600,
     )
     experiment.run()
 
