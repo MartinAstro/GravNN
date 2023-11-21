@@ -1,3 +1,5 @@
+import sys
+
 from experiment_setup import *
 from interfaces import select_model
 
@@ -25,9 +27,9 @@ def run(experiment, idx):
 
 def main():
     experiments = setup_experiments()
-
-    for idx, exp in enumerate(experiments):
-        run(exp, idx)
+    idx = int(sys.argv[1])
+    exp = experiments[idx]
+    run(exp, idx)
 
 
 if __name__ == "__main__":

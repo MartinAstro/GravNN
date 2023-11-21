@@ -45,7 +45,7 @@ def setup_experiments():
             {
                 "model_name": ["PM"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
             },
         ),
     )
@@ -55,7 +55,7 @@ def setup_experiments():
             {
                 "model_name": ["SH"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "deg": [15, 175],
             },
         ),
@@ -66,7 +66,7 @@ def setup_experiments():
             {
                 "model_name": ["MASCONS"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "elements": [55, 7500],
             },
         ),
@@ -79,7 +79,7 @@ def setup_experiments():
             {
                 "model_name": ["POLYHEDRAL"],
                 "N_train": [500],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "shape": [Eros().obj_77, Eros().obj_20k],
             },
         ),
@@ -91,7 +91,7 @@ def setup_experiments():
             {
                 "model_name": ["ELM"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [40, 5100],
             },
         ),
@@ -104,7 +104,7 @@ def setup_experiments():
             {
                 "model_name": ["TNN_Small"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [8],
                 "layers": [[3, 1, 1, 3]],
             },
@@ -116,7 +116,7 @@ def setup_experiments():
             {
                 "model_name": ["TNN_Large"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [64],
                 "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
             },
@@ -130,7 +130,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_I_Small"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [8],
                 "layers": [[3, 1, 1, 3]],
             },
@@ -142,7 +142,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_I_Large"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [64],
                 "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
             },
@@ -156,7 +156,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_II_Small"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [8],
                 "layers": [[3, 1, 1, 3]],
             },
@@ -168,7 +168,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_II_Large"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [64],
                 "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
             },
@@ -182,7 +182,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_III_Small"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [8],
                 "layers": [[3, 1, 1, 3]],
             },
@@ -194,7 +194,7 @@ def setup_experiments():
             {
                 "model_name": ["PINN_III_Large"],
                 "N_train": [500, 50000],
-                "acc_noise": [0.0],
+                "acc_noise": [0.0, 0.1],
                 "num_units": [64],
                 "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
             },
