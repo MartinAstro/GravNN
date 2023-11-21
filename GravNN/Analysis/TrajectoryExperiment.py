@@ -83,10 +83,17 @@ class TrajectoryPropagator(ExperimentBase):
 
             dxdt = np.hstack((V, a_N)).squeeze()
 
+            is_nan = np.isnan(y).any()
+            diverging = np.abs(y).max() > 1e30
+            diverged = np.isinf(np.abs(y))
+            if is_nan or diverging or diverged.any():
+                raise ValueError("Non-feasible values encountered in integration")
+
             if t > t_eval[fun.t_eval_idx]:
                 fun.elapsed_time.append(time.time() - fun.start_time)
                 fun.pbar.update(t_eval[fun.t_eval_idx])
                 fun.t_eval_idx += 1
+
             return dxdt
 
         fun.t_eval_idx = 0
@@ -97,18 +104,26 @@ class TrajectoryPropagator(ExperimentBase):
         model.compute_acceleration(np.array([[100.0, 100.0, 100.0]]))
         fun.start_time = time.time()
 
-        sol = solve_ivp(
-            fun,
-            [0, t_eval[-1]],
-            X0.reshape((-1,)),
-            t_eval=t_eval,
-            atol=self.tol,
-            rtol=self.tol,
-        )
-        fun.elapsed_time.append(time.time() - fun.start_time)
-        fun.pbar.update(t_eval[-1])
-        fun.pbar.close()
-        return sol, fun.elapsed_time
+        try:
+            sol = solve_ivp(
+                fun,
+                [0, t_eval[-1]],
+                X0.reshape((-1,)),
+                t_eval=t_eval,
+                atol=self.tol,
+                rtol=self.tol,
+            )
+            fun.elapsed_time.append(time.time() - fun.start_time)
+            fun.pbar.update(t_eval[-1])
+            fun.pbar.close()
+
+            dt = fun.elapsed_time
+        except ValueError as e:
+            print("Integration Stopped:", e)
+            sol = None
+            dt = np.nan
+
+        return sol, dt
 
     def generate_data(self):
         if not hasattr(self, "solution"):
@@ -185,10 +200,20 @@ class TrajectoryExperiment:
         self.true_sol = self.true_orbit.solution
         for i, test_model in enumerate(self.test_models):
             test_sol = test_model.orbit.solution
-            dy = test_sol.y - self.true_sol.y
+
+            if test_model.orbit.solution is not None:
+                # if the orbit completed
+                dy = test_sol.y - self.true_sol.y
+                pos_diff = np.cumsum(np.linalg.norm(dy[0:3, :], axis=0))
+                state_diff = np.cumsum(np.linalg.norm(dy, axis=0))
+            else:
+                # if the propagation terminated early
+                pos_diff = np.nan
+                state_diff = np.nan
+
             metrics = {
-                "pos_diff": np.cumsum(np.linalg.norm(dy[0:3, :], axis=0)),
-                "state_diff": np.cumsum(np.linalg.norm(dy, axis=0)),
+                "pos_diff": pos_diff,
+                "state_diff": state_diff,
             }
             self.test_models[i].metrics = metrics
 
@@ -214,15 +239,19 @@ def main():
     model_id = df.id.values[-1]
     config, test_pinn_model = load_config_and_model(df, model_id)
 
+    test_pinn_model.compute_acceleration = lambda x: np.ones_like(x) * np.inf
+
     poly_test = TestModel(test_poly_model, "Poly", "r")
     pinn_test = TestModel(test_pinn_model, "PINN", "g")
     test_models = [poly_test, pinn_test]
+    test_models = [pinn_test]
 
     experiment = TrajectoryExperiment(
         true_model,
         test_models,
         initial_state=init_state,
-        period=24 * 3600,  # 24 * 3600,
+        # period=24 * 3600,  # 24 * 3600,
+        period=1 * 3600,  # 24 * 3600,
     )
     experiment.run()
 
