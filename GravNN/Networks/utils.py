@@ -7,7 +7,6 @@ import zipfile
 from copy import deepcopy
 
 import pandas as pd
-import trimesh
 from colorama import Fore, deinit, init
 from colorama.ansi import Back
 
@@ -291,17 +290,17 @@ def check_config_combos(config):
         ), "Inception network requires layers with multiple sizes, i.e. [[3, [3,7,11], \
             [3,7,11], 1]]"
 
-    from GravNN.CelestialBodies.Asteroids import Asteroid
-    from GravNN.GravityModels.Polyhedral import Polyhedral
+    # from GravNN.CelestialBodies.Asteroids import Asteroid
+    # from GravNN.GravityModels.Polyhedral import Polyhedral
 
-    planet = config["planet"][0]
-    if isinstance(planet, Asteroid):
-        obj_file = config["obj_file"][0]
-        model = Polyhedral(planet, obj_file)
-        volume = trimesh.load_mesh(model.obj_file).volume * 1e9
-        G = 6.67430 * 10**-11
-        config["mu"] = [volume * planet.density * G]
-        print("Modified Mu to reflect shape file: ", config["mu"])
+    # planet = config["planet"][0]
+    # if isinstance(planet, Asteroid):
+    #     obj_file = config["obj_file"][0]
+    #     model = Polyhedral(planet, obj_file)
+    #     volume = trimesh.load_mesh(model.obj_file).volume * 1e9
+    #     G = 6.67430 * 10**-11
+    #     config["mu"] = [volume * planet.density * G]
+    #     print("Modified Mu to reflect shape file: ", config["mu"])
 
 
 def save_df_row(dictionary, df_file):
