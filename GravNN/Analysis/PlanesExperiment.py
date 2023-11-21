@@ -73,6 +73,13 @@ class PlanesExperiment(ExperimentBase):
             self.a_pred = self.a_pred.numpy().astype(float)
             self.u_pred = self.u_pred.numpy().astype(float)
 
+            # Traditional Network Doesn't have U
+            u_pred_2D = self.u_pred.ndim == 2
+            if u_pred_2D:
+                u_pred_TNN = np.shape(self.u_pred)[1] == 3
+                if u_pred_TNN:
+                    self.u_pred = self.u_pred[:, 0] * np.nan
+
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):
             diff_mag = np.linalg.norm(x_true - x_hat, axis=1)

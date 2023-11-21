@@ -58,8 +58,8 @@ def scale_by_acceleration(data_dict, config):
     a_bar_transformer = config["a_transformer"][0]
 
     # Scale (a,u) with a_transformer
-    u_train_vals = np.repeat(data_dict["u_train"], 3, axis=1)
-    u_valid_vals = np.repeat(data_dict["u_val"], 3, axis=1)
+    u_train_vals = np.repeat(data_dict["u_train"].reshape((-1, 1)), 3, axis=1)
+    u_valid_vals = np.repeat(data_dict["u_val"].reshape((-1, 1)), 3, axis=1)
 
     x_train = x_transformer.fit_transform(data_dict["x_train"])
     a_train = a_transformer.fit_transform(data_dict["a_train"])
@@ -146,8 +146,8 @@ def scale_by_non_dimensional(data_dict, config):
     u_transformer = config["u_transformer"][0]
     # a_bar_transformer = config["a_transformer"][0]
 
-    u_train_vals = np.repeat(data_dict["u_train"], 3, axis=1)
-    u_valid_vals = np.repeat(data_dict["u_val"], 3, axis=1)
+    u_train_vals = np.repeat(data_dict["u_train"].reshape((-1, 1)), 3, axis=1)
+    u_valid_vals = np.repeat(data_dict["u_val"].reshape((-1, 1)), 3, axis=1)
 
     # Designed to make position, acceleration, and potential all exist between [-1,1]
     x_train = x_transformer.fit_transform(data_dict["x_train"])
