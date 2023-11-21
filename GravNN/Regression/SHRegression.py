@@ -260,18 +260,24 @@ class SHRegression:
 
     def recursive(self, r, y):
         BS = self.max_batch_size
-        r_init = r[:BS]
-        y_init = y[:BS]
+
+        r_mag = np.linalg.norm(r, axis=1)
+        brill_mask = r_mag > self.a
+        r_subset = r[brill_mask]
+        y_subset = y[brill_mask]
+
+        r_init = r_subset[:BS]
+        y_init = y_subset[:BS]
 
         # Need first guess before you can begin
         # recursive
         self.batch(r_init, y_init)
 
-        pbar = ProgressBar(len(r), enable=True)
-        for i in range(BS, len(r), BS):
-            end_idx = min(i + BS, len(r))
-            rBatch = r[i:end_idx].reshape((-1,))
-            yBatch = y[i:end_idx].reshape((-1,))
+        pbar = ProgressBar(len(r_subset), enable=True)
+        for i in range(BS, len(r_subset), BS):
+            end_idx = min(i + BS, len(r_subset))
+            rBatch = r_subset[i:end_idx].reshape((-1,))
+            yBatch = y_subset[i:end_idx].reshape((-1,))
             self.recursive_batch(rBatch, yBatch)
             pbar.update(end_idx)
 
@@ -318,8 +324,11 @@ class SHRegressorSequential:
             regressed_model = SphericalHarmonics(tmpfile.name, len(C_lm) - 1)
             accelerations = regressed_model.compute_acceleration(x)
             da = a - accelerations
-            da_percent = np.mean(np.linalg.norm(da, axis=1) / np.linalg.norm(a, axis=1))
-            print(f"Current model error: {da_percent*100}% \t {len(C_lm)}")
+            da_percent = np.linalg.norm(da, axis=1) / np.linalg.norm(a, axis=1)
+            da_percent_avg = np.mean(da_percent)
+            brill_mask = np.linalg.norm(x, axis=1) > self.planet.radius
+            print(f"Current model error: {da_percent_avg*100}% \t {len(C_lm)}")
+            print(f"Outside Brillouin Sphere: {np.mean(da_percent[brill_mask]) * 100}")
         return da
 
     def update(self, rVec, aVec):
@@ -347,4 +356,4 @@ class SHRegressorSequential:
             C_lm, S_lm = format_coefficients(all_results, N, -1)
             da = self.remove_current_model(rVec, aVec, C_lm, S_lm)
         self.x_hat = all_results
-        return C_lm, S_lm
+        return all_results
