@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
+from GravNN.Support.ProgressBar import ProgressBar
+
 np.random.seed(1234)
 
 
@@ -97,10 +99,18 @@ class OS_ELM:
             x = x.T
         if y.shape[0] != self.n_output_nodes:
             y = y.T
+        BS = init_batch
+        x_init = x[:, :BS]
+        y_init = y[:, :BS]
 
-        self.init_train(x[:, :init_batch], y[:, :init_batch])
-        for i in range(init_batch, len(x), init_batch):
-            self.seq_train(x[:, i : i + init_batch], y[:, i : i + init_batch])
+        self.init_train(x_init, y_init)
+        pbar = ProgressBar(len(x[0]), True)
+        for i in range(BS, len(x[0]), BS):
+            end_idx = min(i + BS, len(x[0]))
+            x_batch = x[:, i:end_idx]
+            y_batch = y[:, i:end_idx]
+            self.seq_train(x_batch, y_batch)
+            pbar.update(end_idx)
 
     def save(self, name):
         params = {
@@ -146,24 +156,9 @@ def main():
 
     x_test = np.random.uniform(size=(N_test, n_input_nodes))
     y_test = fcn(x_test)
-
-    x_init = x[:init_batch]
-    y_init = y[:init_batch]
-    os_elm.init_train(x_init.T, y_init.T)
+    os_elm.update(x.T, y.T, init_batch=init_batch)
 
     y_hat = os_elm.predict(x_test.T)
-    L = np.mean(np.square(y_test - y_hat))
-    print(L)
-
-    # iterate through remainder of the vectors in batches of 10
-    step = 1000
-    for i in range(init_batch, len(x), step):
-        x_seq = x[i : i + step]
-        y_seq = y[i : i + step]
-        os_elm.seq_train(x_seq.T, y_seq.T)
-
-    # 'predict' method returns raw values of output nodes.
-    y_hat = os_elm.predict(x_test)
     L = np.mean(np.square(y_test - y_hat))
     print(L)
 
