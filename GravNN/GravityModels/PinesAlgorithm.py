@@ -4,6 +4,8 @@ from functools import partial
 import numpy as np
 from numba import njit
 
+from GravNN.Support.slurm_utils import get_available_cores
+
 
 def getK(x):
     return 1.0 if (x == 0) else 2.0
@@ -141,7 +143,8 @@ def compute_acc(positions, N, mu, a, n1, n2, n1q, n2q, cbar, sbar):
     if len(positions_Nx3) == 1:
         results = [compute_acc_partial(positions_Nx3[0])]
     else:
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+        cores = get_available_cores()
+        with mp.Pool(processes=cores) as pool:
             results = pool.map(compute_acc_partial, positions_Nx3)
 
     for i, result in enumerate(results):
