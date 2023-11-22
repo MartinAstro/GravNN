@@ -208,6 +208,8 @@ def configure_optimizer(config, mixed_precision):
 
 
 def permutate_dict(dictionary):
+    if len(dictionary) == 0:
+        return [dictionary]
     keys, values = zip(*dictionary.items())
     permutations_dicts = [dict(zip(keys, v)) for v in itertools.product(*values)]
     return permutations_dicts
