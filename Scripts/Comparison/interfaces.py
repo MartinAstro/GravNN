@@ -169,7 +169,12 @@ class SphericalHarmonicWrapper(ModelInterface):
         REMOVE_DEG = -1
 
         # Initialize the regressor
-        self.regressor = SHRegressorSequential(N, max_param=5000, planet=self.planet)
+        self.regressor = SHRegressorSequential(
+            N,
+            max_param=5000,
+            planet=self.planet,
+            max_batch_size=100,
+        )
         results = self.regressor.update(x, a)
 
         self.C_lm, self.S_lm = format_coefficients(results, self.degree, REMOVE_DEG)

@@ -296,10 +296,11 @@ class SHRegression:
 
 
 class SHRegressorSequential:
-    def __init__(self, max_degree, max_param, planet):
+    def __init__(self, max_degree, max_param, planet, max_batch_size=100):
         self.N = max_degree
         self.max_param = max_param
         self.planet = planet
+        self.max_batch_size = max_batch_size
         self.compute_intermediate_degrees()
 
     def compute_intermediate_degrees(self):
@@ -345,9 +346,12 @@ class SHRegressorSequential:
                 self.planet.radius,
                 self.planet.mu,
                 kaula_factor=1e3,
-                max_batch_size=100,
+                max_batch_size=self.max_batch_size,
             )
             results = regressor.update(rVec, da)
+            contains_nan = np.isnan(results).any()
+            print(f"Contains NaN: {contains_nan}")
+
             if all_results is None:
                 all_results = results
             else:
