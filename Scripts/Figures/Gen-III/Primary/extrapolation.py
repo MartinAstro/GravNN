@@ -5,11 +5,12 @@ from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Configs.Eros_Configs import get_default_eros_config
+from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
-def plot_extrapolation(config, model, label, new_fig=True):
+def plot_extrapolation(config, model, label, color, new_fig=True):
     # evaluate the error at "training" altitudes and beyond
     extrapolation_exp = ExtrapolationExperiment(
         model,
@@ -37,6 +38,7 @@ def plot_extrapolation(config, model, label, new_fig=True):
         annotate=False,
         linewidth=1,
         label=label,
+        color=color,
     )
     plt.ylim([1e-4, 1e2])
     plt.legend()
@@ -45,17 +47,23 @@ def plot_extrapolation(config, model, label, new_fig=True):
 
 if __name__ == "__main__":
     planet = Eros()
-    obj_file = planet.obj_8k
+    obj_file = planet.obj_200k
 
     config = get_default_eros_config()
     true_model = generate_heterogeneous_model(planet, obj_file)
     poly_model = Polyhedral(planet, obj_file)
-    # pinn_II_config, pinn_II_model = load_config_and_model()
-    # pinn_III_config, pinn_III_model = load_config_and_model()
+    pinn_II_config, pinn_II_model = load_config_and_model(
+        "Data/Dataframes/pinn_primary_figure_II.data",
+        idx=-1,
+    )
+    pinn_III_config, pinn_III_model = load_config_and_model(
+        "Data/Dataframes/pinn_primary_figure_III.data",
+        idx=-1,
+    )
 
-    plot_extrapolation(config, poly_model, "Polyhedral")
-    # plot_extrapolation(config, pinn_II_model, "PINN II", new_fig=False)
-    # plot_extrapolation(config, pinn_III_model, "PINN III", new_fig=False)
+    plot_extrapolation(config, poly_model, "Polyhedral", "r")
+    plot_extrapolation(config, pinn_II_model, "PINN II", "b", new_fig=False)
+    plot_extrapolation(config, pinn_III_model, "PINN III", "g", new_fig=False)
 
     vis = VisualizationBase()
     save_name = "primary_extrapolation"

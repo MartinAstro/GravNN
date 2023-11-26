@@ -11,16 +11,18 @@ def width_depth():
 
     # Identify the length of the layers list
     df["layers_length"] = df["layers"].apply(lambda x: len(x) - 2)
+    df.val_loss = df.val_loss.astype(float) * 100
 
     df = df.rename(
         columns={
             "num_units": "Nodes",
             "layers_length": "Layers",
+            "params": "Params",
+            "time_delta": "Training Time [s]",
             # "val_loss" : "Percent Error",
         },
     )
 
-    df.val_loss = df.val_loss.astype(float) * 100
     # df.time_delta = df.time_delta.astype(int)
     v_min = 0  # np.min(df.val_loss)
     v_max = 3
@@ -35,7 +37,7 @@ def width_depth():
         vmin=v_min,
         vmax=v_max,
         y_base2=False,
-        annotate_key="params",
+        annotate_key="Params",
     )
 
     file_name = df_file.split("/")[-1].split("all_ablation_")[-1].split(".")[0]
@@ -45,16 +47,18 @@ def width_depth():
 def batch_learning():
     df_file = "Data/Dataframes/all_ablation_batch_learning.data"
     df = pd.read_pickle(df_file)
+    df.val_loss = df.val_loss.astype(float) * 100
+    df.time_delta = df.time_delta.astype(int)
 
     df = df.rename(
         columns={
             "learning_rate": "Learning Rate",
             "batch_size": "Batch Size",
+            "params": "Params",
+            "time_delta": "Training Time [s]",
         },
     )
 
-    df.val_loss = df.val_loss.astype(float) * 100
-    df.time_delta = df.time_delta.astype(int)
     v_min = 0  # np.min(df.val_loss)
     v_max = 5.6
 
@@ -68,7 +72,7 @@ def batch_learning():
         vmin=v_min,
         vmax=v_max,
         azim=-45,
-        annotate_key="time_delta",
+        annotate_key="Training Time [s]",
     )
 
     file_name = df_file.split("/")[-1].split("all_ablation_")[-1].split(".")[0]
@@ -77,16 +81,18 @@ def batch_learning():
 
 def data_epochs(df_file):
     df = pd.read_pickle(df_file)
+    df.val_loss = df.val_loss.astype(float) * 100
+    df.time_delta = df.time_delta.astype(int)
     df = df.rename(
         columns={
             "N_train": "Data",
             "epochs": "Epochs",
+            "params": "Parameters",
+            "time_delta": "Training Time [s]",
             # "val_loss" : "Percent Error",
         },
     )
 
-    df.val_loss = df.val_loss.astype(float) * 100
-    df.time_delta = df.time_delta.astype(int)
     v_min = 0  # np.min(df.val_loss)
     v_max = 5.6
 
@@ -99,7 +105,7 @@ def data_epochs(df_file):
         z="val_loss",
         vmin=v_min,
         vmax=v_max,
-        annotate_key="time_delta",
+        annotate_key="Training Time [s]",
     )
     file_name = df_file.split("/")[-1].split("all_ablation_")[-1].split(".")[0]
     vis.save(plt.gcf(), file_name)
@@ -110,6 +116,8 @@ def noise_loss(df_file, linestyle="-"):
     # df = df.rename(columns={
     #     "N_train": "Data",
     #     "epochs": "Epochs",
+    # "params" : "Parameters",
+    # "time_delta" : "Training Time [s]"
     #     # "val_loss" : "Percent Error",
     #     })
 
