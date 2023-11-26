@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 import GravNN
-from GravNN.CelestialBodies.Planets import Earth
+from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
 from GravNN.Support.transformations import cart2sph
 
@@ -100,7 +100,7 @@ class Mascons(GravityModelBase):
 
     def compute_potential_value(self, position):
         dr = position - self.masses_position
-        dr_mag = np.linalg.norm(dr, axis=1)
+        dr_mag = np.linalg.norm(dr, axis=1, keepdims=True)
         u_mass_i = -self.masses_mu / dr_mag
         u_mass = np.sum(u_mass_i)
         return u_mass
@@ -110,8 +110,10 @@ def main():
     import time
 
     start = time.time()
-    planet = Earth()
-    mascons = Mascons(planet)
+    planet = Eros()
+    GravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
+    mass_csv = f"{GravNN_dir}/../Data/Comparison/MASCONS_55_500_0.0.csv"
+    mascons = Mascons(planet, mass_csv=mass_csv)
     print(time.time() - start)
 
     position = (
@@ -121,6 +123,7 @@ def main():
     print(position)
     start = time.time()
     mascons.compute_acceleration(position)
+    mascons.compute_potential(position)
 
 
 if __name__ == "__main__":
