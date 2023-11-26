@@ -52,7 +52,7 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().yaxis.set_label_position("right")
         # plt.legend()
 
-    def plot_orbit(self, model, az=235, el=35):
+    def plot_orbit(self, model, az=235, el=35, **kwargs):
         sol = model.orbit.solution
         omega_vec = model.orbit.omega_vec
 
@@ -69,7 +69,17 @@ class TrajectoryVisualizer(VisualizationBase):
         label = model.label
         color = model.color
         linestyle = model.linestyle
-        plt.plot(X, Y, Z, label=label, color=color, linestyle=linestyle)
+        linewidth = kwargs.get("linewidth", 1)
+
+        plt.plot(
+            X,
+            Y,
+            Z,
+            label=label,
+            color=color,
+            linestyle=linestyle,
+            linewidth=linewidth,
+        )
 
         plt.legend()
 
@@ -153,8 +163,8 @@ if __name__ == "__main__":
         ],
     )
 
-    true_model = generate_heterogeneous_model(planet, planet.obj_8k)
-    test_poly_model = Polyhedral(planet, planet.obj_8k)
+    true_model = generate_heterogeneous_model(planet, planet.obj_200k)
+    test_poly_model = Polyhedral(planet, planet.obj_200k)
 
     df = pd.read_pickle("Data/Dataframes/eros_poly_071123.data")
     model_id = df.id.values[-1]

@@ -100,7 +100,7 @@ class ExtrapolationVisualizer(VisualizationBase):
 
         if kwargs.get("new_fig", True):
             self.newFig()
-        plt.scatter(x, value, alpha=0.2, s=2)
+        plt.scatter(x, value, c=color, alpha=0.2, s=2)
         self.plot_fcn(x, avg_line, label=label, linewidth=linewidth, color=color)
 
         if kwargs.get("plot_std", True):

@@ -171,8 +171,6 @@ class Heatmap3DVisualizer(VisualizationBase):
                 ["$2^{" + str(int(i)) + "}$" for i in np.unique(y_data)],
             )
 
-        ax.tick_params(pad=0.0)
-
         if kwargs.get("annotate_key", None) is not None:
             annotate_key = kwargs.get("annotate_key")
             annotate_df = df.pivot_table(
@@ -198,11 +196,24 @@ class Heatmap3DVisualizer(VisualizationBase):
                     bbox=bbox,
                 )
 
+            plt.gcf().text(
+                0.85,
+                0.85,
+                s=annotate_key,
+                horizontalalignment="right",
+                verticalalignment="top",
+                bbox=bbox,
+                fontsize=3,
+            )
+
+        # move the ticks closer to the axis
+        ax.tick_params(pad=-5)
+
         x_formatted = " ".join(x.split("_"))
         y_formatted = " ".join(y.split("_"))
 
-        ax.set_xlabel(x_formatted, labelpad=0.0, loc="right")
-        ax.set_ylabel(y_formatted, labelpad=0.0, loc="top")
+        ax.set_xlabel(x_formatted, labelpad=-10, loc="right")
+        ax.set_ylabel(y_formatted, labelpad=-10, loc="top")
         plt.gcf().tight_layout(pad=0.0)
 
         return

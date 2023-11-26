@@ -182,8 +182,8 @@ class VisualizationBase(ABC):
         # Save the figure in both PDF and PNG formats
         fig.tight_layout(pad=0.0)
         try:
-            fig.savefig(pdf_path, format="pdf", bbox_inches="tight")
-            fig.savefig(png_path, format="png", dpi=250, bbox_inches="tight")
+            fig.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
+            fig.savefig(png_path, format="png", dpi=300, bbox_inches="tight")
             print(f"Figure saved as:\n{pdf_path}\n{png_path}")
         except Exception as e:
             print(f"Couldn't save the figure {name}\nError: {e}")
