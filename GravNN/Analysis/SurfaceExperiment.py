@@ -28,19 +28,10 @@ class SurfaceExperiment(ExperimentBase):
     def get_model_data(self):
         if not hasattr(self, "a_pred"):
             self.a_pred = self.model.compute_acceleration(self.x_true)
-            self.u_pred = self.model.compute_potential(self.x_true)
         try:
             self.a_pred = self.a_pred.numpy()
-            self.u_pred = self.u_pred.numpy()
         except Exception:
             pass
-
-        # Traditional Network Doesn't have U
-        u_pred_2D = self.u_pred.ndim == 2
-        if u_pred_2D:
-            u_pred_TNN = np.shape(self.u_pred)[1] == 3
-            if u_pred_TNN:
-                self.u_pred = self.u_pred[:, 0] * np.nan
 
     def compute_percent_error(self):
         def percent_error(x_hat, x_true):
@@ -50,10 +41,6 @@ class SurfaceExperiment(ExperimentBase):
             return percent_error
 
         self.percent_error_acc = percent_error(self.a_pred, self.a_true)
-        self.percent_error_pot = percent_error(
-            self.u_pred.reshape((-1, 1)),
-            self.u_true.reshape((-1, 1)),
-        )
 
     def generate_data(self):
         self.get_true_data()
@@ -61,7 +48,6 @@ class SurfaceExperiment(ExperimentBase):
         self.compute_percent_error()
         data = {
             "a_pred": self.a_pred,
-            "u_pred": self.u_pred,
         }
         return data
 
