@@ -182,9 +182,6 @@ class TrajectoryExperiment:
             pbar=self.pbar,
         )
 
-        # Optionally avoid ov
-        if not override_truth:
-            override_truth = override
         self.true_orbit.run(override=override_truth)
 
         for i, model in enumerate(self.test_models):
