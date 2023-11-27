@@ -1,32 +1,31 @@
 import os
+import tempfile
 
 import numpy as np
 import trimesh
-from numba import njit
-from scipy.optimize import nnls
 
 import GravNN
 from GravNN.CelestialBodies.Asteroids import Eros
+from GravNN.GravityModels.Mascons import Mascons
 from GravNN.GravityModels.Polyhedral import Polyhedral
+from GravNN.Support.ProgressBar import ProgressBar
 from GravNN.Trajectories.RandomDist import RandomDist
 
 np.random.seed(10)
 
 
-@njit(cache=True)
-def populate_M(r_vec, r_masses, a_vec):
+# @njit(cache=True)
+def populate_M(r_points, r_masses):
     N_masses = len(r_masses)
-    N_meas = len(a_vec) * 3
-    M = np.zeros((N_meas, N_masses))
+    N_meas = len(r_points)
+    M = np.zeros((3 * N_meas, N_masses))
 
-    for i, r_i in enumerate(r_vec):
-        A_i = np.zeros((3, N_masses))
-        for j in range(3):
-            for k in range(N_masses):
-                dr = r_i - r_masses[k]
-                dr_mag = np.linalg.norm(dr)
-                A_i[j, k] = -dr[j] / dr_mag**3
-        M[i * 3 : (i + 1) * 3, :] = A_i
+    for i, r_i in enumerate(r_points):
+        dr = r_i - r_masses
+        dr_mag = np.linalg.norm(dr, axis=1, keepdims=True)
+
+        M[3 * i : 3 * (i + 1), :] = np.transpose(-dr / dr_mag**3)
+
     return M
 
 
@@ -38,6 +37,100 @@ def iterate_lstsq(M, aVec, iterations):
         results -= delta_coef
         delta_a = aVec - np.dot(M, results)
     return results
+
+
+class MasconRegressorSequential:
+    def __init__(self, planet, obj_file, N_masses):
+        self.planet = planet
+        self.radius = planet.radius
+        self.mu = planet.mu
+        self.obj_file = obj_file
+        self.N_masses = N_masses
+
+        self.filename = os.path.basename(self.obj_file)
+
+    def remove_current_model(self, x, a, mu_list, r_masses):
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            save_data = np.append(mu_list.reshape((-1, 1)), r_masses, axis=1)
+            np.savetxt(
+                tmpfile.name,
+                save_data,
+                delimiter=",",
+            )
+            regressed_model = Mascons(self.planet, tmpfile.name)
+            accelerations = regressed_model.compute_acceleration(x)
+            da = a - accelerations
+            da_percent = np.linalg.norm(da, axis=1) / np.linalg.norm(a, axis=1)
+            da_percent_avg = np.mean(da_percent)
+            brill_mask = np.linalg.norm(x, axis=1) > self.planet.radius
+            print(f"Current model error: {da_percent_avg*100}% \t {len(mu_list)}")
+            print(f"Outside Brillouin Sphere: {np.mean(da_percent[brill_mask]) * 100}")
+        return da
+
+    def batches(self, batch_size):
+        # divide N_masses into batches of mass_batch_size
+        full_batches = self.N_masses // batch_size
+        batches = np.ones((full_batches,), dtype=int) * batch_size
+        if self.N_masses % batch_size != 0:
+            batches = np.append(batches, self.N_masses % batch_size)
+        return batches
+
+    def update(self, r_vec, a_vec, mass_batch_size=1000):
+        batches = self.batches(mass_batch_size)
+
+        mu_list = None
+        r_masses = None
+
+        da = a_vec.copy()
+
+        # Iterate over the batches and continuously update the model
+        pbar = ProgressBar(len(batches), enable=True)
+        for i, mass_batch in enumerate(batches):
+            regressor = MasconRegressorFancy(self.planet, self.obj_file, mass_batch)
+            mu_vec = regressor.update(r_vec, da, mass_batch / self.N_masses)
+            # regressor = MasconRegressor(self.planet, self.obj_file, mass_batch)
+            # mu_vec = regressor.update(r_vec, da)
+
+            # if i != len(batches) - 1:
+            #     mu_vec *= mass_batch / self.N_masses
+
+            # save off the masses
+            if mu_list is None:
+                mu_list = mu_vec
+                r_masses = regressor.r_masses
+            else:
+                mu_list = np.concatenate((mu_list, mu_vec))
+                r_masses = np.concatenate((r_masses, regressor.r_masses))
+
+            # remove the current model from the acceleration
+            da = self.remove_current_model(r_vec, a_vec, mu_list, r_masses)
+            pbar.update(i)
+
+        # save values for saving
+        self.mu_vec = mu_list
+        self.r_masses = r_masses
+
+        # count number of zeros in mu
+        print("Number of Zero Mascons: ", np.sum(mu_list == 0))
+
+    def save(self, name):
+        save_data = np.append(self.mu_vec.reshape((-1, 1)), self.r_masses, axis=1)
+
+        # if the filename is absolute, just save it there
+        if os.path.isabs(name):
+            np.savetxt(name, save_data, delimiter=",")
+            return
+
+        gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__))
+        os.makedirs(
+            f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/",
+            exist_ok=True,
+        )
+        np.savetxt(
+            f"{gravNN_dir}/Files/GravityModels/Regressed/Mascons/{name}",
+            save_data,
+            delimiter=",",
+        )
 
 
 class MasconRegressor:
@@ -115,12 +208,12 @@ class MasconRegressor:
             positions[mask] = self.recursively_remove_exterior_points(new_positions)
         return positions
 
-    def update(self, r_vec, a_vec, iterations=5):
-        M = populate_M(r_vec, self.r_masses, a_vec)
+    def update(self, r_vec, a_vec):
+        M = populate_M(r_vec, self.r_masses)
         a_vec_1D = a_vec.reshape((-1,))
-        mu_vec, rnorm = nnls(M, a_vec_1D)
+        # mu_vec, rnorm = nnls(M, a_vec_1D)
+        mu_vec = iterate_lstsq(M, a_vec_1D, 1)
         self.mu_vec = mu_vec
-        # results = iterate_lstsq(M, a_vec_1D, iterations)
         return mu_vec
 
     def save(self, name):
@@ -141,6 +234,19 @@ class MasconRegressor:
             save_data,
             delimiter=",",
         )
+
+
+class MasconRegressorFancy(MasconRegressor):
+    def __init__(self, planet, obj_file, N_masses):
+        super().__init__(planet, obj_file, N_masses)
+
+    def update(self, r_vec, a_vec, mu_frac):
+        M = populate_M(r_vec, self.r_masses)
+        a_vec_1D = a_vec.reshape((-1,))
+        # mu_vec, rnorm = nnls(M, a_vec_1D)
+        mu_vec = iterate_lstsq(M, a_vec_1D, 1)
+        self.mu_vec = mu_vec
+        return mu_vec
 
 
 def main():
@@ -167,9 +273,9 @@ def main():
     mu_vec = regressor.update(x, a)
     regressor.save(filename)
 
-    print(regressor.r_masses)
-    print(mu_vec)
-    print(time.time() - start)
+    print("Mass Positions:", regressor.r_masses)
+    print("Mu Vec:", mu_vec)
+    print("Elapsed Time:", time.time() - start)
 
     from GravNN.GravityModels.Mascons import Mascons
 
@@ -181,5 +287,70 @@ def main():
     print(np.average(percent_error))
 
 
+def test_sequential(N_masses, N_batch):
+    planet = Eros()
+    obj_file = planet.obj_8k
+
+    poly_gm = Polyhedral(planet, obj_file)
+    traj = RandomDist(
+        planet,
+        [planet.radius, planet.radius * 2],
+        5000,
+        obj_file=obj_file,
+    )
+
+    x = traj.positions
+    a = poly_gm.compute_acceleration(x)
+
+    filename = "Mascon_Eros_10_test.csv"
+    regressor = MasconRegressorSequential(planet, obj_file, N_masses)
+    regressor.update(x, a, N_batch)
+    regressor.save(filename)
+
+    # print("Mass Positions:", regressor.r_masses)
+    # print("Mu Vec:", mu_vec)
+    # print("Elapsed Time:", time.time() - start)
+
+    from GravNN.GravityModels.Mascons import Mascons
+
+    mascons = Mascons(planet, filename)
+
+    # validation Data
+    traj = RandomDist(
+        planet,
+        [planet.radius, planet.radius * 2],
+        1000,
+        obj_file=obj_file,
+    )
+    x_val = traj.positions
+    a_val = poly_gm.compute_acceleration(x_val)
+    a_mascons = mascons.compute_acceleration(x_val)
+    da = a_val - a_mascons
+    percent_error = np.linalg.norm(da, axis=1) / np.linalg.norm(a_val, axis=1) * 100
+    print("Masses:", N_masses, "\t Batch Size:", N_batch)
+    print("Error:", np.average(percent_error))
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+
+    # test_sequential(
+    #     N_masses=500,
+    #     N_batch=100,
+    # )
+    # test_sequential(
+    #     N_masses=1000,
+    #     N_batch=1000,
+    # )
+    # test_sequential(
+    #     N_masses=1000,
+    #     N_batch=500,
+    # )
+    # test_sequential(
+    #     N_masses=1000,
+    #     N_batch=100,
+    # )
+    test_sequential(
+        N_masses=1000,
+        N_batch=100,
+    )

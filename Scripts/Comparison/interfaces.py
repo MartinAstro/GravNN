@@ -28,7 +28,7 @@ from GravNN.Networks.utils import (
 )
 from GravNN.Regression.BLLS import BLLS_PM, format_coefficients
 from GravNN.Regression.ELMRegressor import OS_ELM
-from GravNN.Regression.MasconRegressor import MasconRegressor
+from GravNN.Regression.MasconRegressor import MasconRegressorSequential
 from GravNN.Regression.SHRegression import SHRegressorSequential
 from GravNN.Regression.utils import save
 
@@ -311,7 +311,7 @@ class MasconWrapper(ModelInterface):
         acc_noise = config["acc_noise"][0]
         N_train = config["N_train"][0]
         self.config = config
-        self.regressor = MasconRegressor(planet, obj_file, N_masses)
+        self.regressor = MasconRegressorSequential(planet, obj_file, N_masses)
         unique_idx = f"{model_name}_{N_masses}_{N_train}_{acc_noise}"
         self.save_location(unique_idx, "csv")
 
@@ -319,7 +319,7 @@ class MasconWrapper(ModelInterface):
     def train(self, dataset):
         x = dataset.raw_data["x_train"]
         a = dataset.raw_data["a_train"]
-        self.regressor.update(x, a)
+        self.regressor.update(x, a, mass_batch_size=1000)
 
     @save_time
     def save(self):
