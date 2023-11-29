@@ -120,14 +120,19 @@ def main():
 
     metrics_list = []
     for idx, exp in enumerate(experiments):
+        print("IDX: ", idx)
+        print(exp)
+
         model_name = exp["model_name"][0]
         config = get_default_config(model_name)
         config.update(exp)
         config = populate_config_objects(config)
+
         config["comparison_idx"] = [idx]
 
         model = load_experiment(exp, config)
         metrics = extract_metrics(model)
+        metrics.update(exp)
         metrics.update({"model_name": model_name})
         metrics_list.append(metrics)
 
