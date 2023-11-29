@@ -61,6 +61,7 @@ def test_setup(max_true_degree, regress_degree, remove_degree, sequential_params
             REGRESS_DEG,
             SEQ_PARAMS,
             planet,
+            max_batch_size=100,
         )
     regressor.update(x, a)
 
@@ -119,11 +120,24 @@ def main():
     # )
     # assert np.isclose(a_error, 0.0012637670031650306)
 
+    # test_setup(
+    #     max_true_degree=100,
+    #     regress_degree=10,
+    #     remove_degree=-1,
+    #     sequential_params=45,
+    # )
+
+    import tempfile
+
+    with tempfile.NamedTemporaryFile() as f:
+        print(f.name)
+        pass
+
     test_setup(
         max_true_degree=100,
-        regress_degree=10,
+        regress_degree=175,
         remove_degree=-1,
-        sequential_params=45,
+        sequential_params=5000,
     )
 
 
