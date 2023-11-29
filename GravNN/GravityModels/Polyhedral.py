@@ -372,7 +372,8 @@ class Polyhedral(GravityModelBase):
         return self.potentials
 
     def compute_values(self, position):
-        G = 6.67408 * 1e-11  # m^3/(kg s^2)
+        G = 6.67430 * 10**-11  # m^3/(kg s^2)
+
         point_scaled = position / self.scaleFactor
         acc = np.zeros((3,))
         pot = 0.0
