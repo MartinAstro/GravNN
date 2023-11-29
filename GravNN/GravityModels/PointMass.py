@@ -4,7 +4,6 @@ import numpy as np
 
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.GravityModelBase import GravityModelBase
-from GravNN.Support.transformations import cart2sph
 
 
 def get_pm_data(trajectory, gravity_file, **kwargs):
@@ -60,7 +59,6 @@ class PointMass(GravityModelBase):
         if positions is None:
             positions = self.trajectory.positions
 
-        positions = cart2sph(positions)
         self.potentials = np.zeros(len(positions))
         for i in range(len(self.potentials)):
             self.potentials[i] = self.compute_potential_value(positions[i])
@@ -72,9 +70,10 @@ class PointMass(GravityModelBase):
         # U = -mu/r
         # dU/dx = mu/r^2
         # a = -dU/dx = -mu/r^2
-        return (
-            -self.mu * position / np.linalg.norm(position, axis=0) ** 3
-        )  # [a_r, theta, phi] -- theta and phi are needed to convert back to cartesian
+        return -self.mu * position / np.linalg.norm(position, axis=0) ** 3
+
+    def compute_potential_value(self, position):
+        return -self.mu / np.linalg.norm(position, axis=0)
 
     def compute_dfdx(self, positions):
         """Compute gradient of the acceleration"""
@@ -98,9 +97,6 @@ class PointMass(GravityModelBase):
         )
 
         return dfdx
-
-    def compute_potential_value(self, position):
-        return -self.mu / position[0]
 
 
 def main():
