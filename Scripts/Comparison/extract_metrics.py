@@ -84,6 +84,13 @@ def get_training_metrics(model):
     }
 
 
+def get_model_params(model):
+    num_params = model.count_params()
+    return {
+        "num_params": num_params,
+    }
+
+
 def extract_metrics(model):
     metrics = {}
     metrics.update(get_planes_metrics(model.plane_exp))
@@ -91,6 +98,7 @@ def extract_metrics(model):
     metrics.update(get_traj_metrics(model.trajectory_exp))
     metrics.update(get_surface_metrics(model.surface_exp))
     metrics.update(get_training_metrics(model))
+    metrics.update(get_model_params(model))
     return metrics
 
 
