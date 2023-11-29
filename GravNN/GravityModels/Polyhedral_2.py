@@ -46,11 +46,12 @@ def get_poly_data(trajectory, obj_mesh_file, **kwargs):
 
 @njit(cache=True, parallel=False)
 def get_values(faces, vertices, point_scaled):
-    U = 0.0
-    acc = np.zeros((3,), dtype=point_scaled.dtype)
+    U = np.float64(0.0)
+    acc = np.zeros((3,), dtype=np.float64)
     for face_idx, face in enumerate(faces):
         i, j, k = face[0:3]  # vertex index
         # vertex locations
+        vertices = vertices
         r_i, r_j, r_k = vertices[face[0:3], :] - point_scaled
 
         # Edges
@@ -88,7 +89,8 @@ def get_values(faces, vertices, point_scaled):
             Ee = np.outer(n_f, n21)
 
             # Compute Edge Performance Factor
-            Le = np.log((a + b + e) / (a + b - e))
+            # Le = np.log((a + b + e) / (a + b - e))
+            Le = np.log(a + b + e) - np.log(a + b - e)
 
             # Add to edge acceleration and potential
             acc -= Le * Ee @ r_e
@@ -150,7 +152,11 @@ class Polyhedral_2(GravityModelBase):
         self.planet = celestial_body
         obj_file = make_windows_path_posix(obj_file)
         filename, file_extension = os.path.splitext(obj_file)
-        self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:])
+        self.mesh = trimesh.load_mesh(
+            obj_file,
+            file_type=file_extension[1:],
+            dtype=np.float64,
+        )
         # self.mesh = trimesh.load_mesh(obj_file, file_type=file_extension[1:], process=False)
         self.scaleFactor = 1e3  # Assume that the mesh is given in km
         self.volume = self.compute_volume()
