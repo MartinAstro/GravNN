@@ -20,13 +20,13 @@ def run(experiment, idx):
     wrapper.configure(config)
     wrapper.train(data)
     wrapper.save()
-    wrapper.evaluate(override=False)
+    wrapper.evaluate(override=True)
 
 
 def main():
     experiments = setup_experiments()
-
     for idx, exp in enumerate(experiments):
+        print(exp)
         run(exp, idx)
 
 
