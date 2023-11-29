@@ -9,6 +9,7 @@ from GravNN.Networks.utils import populate_config_objects
 
 
 def run(experiment, idx):
+    print(experiment)
     model_name = experiment["model_name"][0]
 
     config = get_default_config(model_name)
