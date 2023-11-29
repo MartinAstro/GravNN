@@ -111,7 +111,7 @@ def plot_trajectory(true_model, models):
         period=24 * 3600,  # 24 * 3600,
         omega_vec=np.array([0, 0, rot_rate * 10]),
     )
-    trajectory_exp.run()
+    trajectory_exp.run(override=False, override_truth=False)
 
     vis = TrajectoryVisualizerMod(trajectory_exp, obj_file=planet.obj_8k, frame="B")
     vis.plot()
@@ -137,6 +137,7 @@ if __name__ == "__main__":
     pinn_II_test = TestModel(pinn_II_model, "PINN II", "b")
     pinn_III_test = TestModel(pinn_III_model, "PINN III", "g")
     models = [poly_test, pinn_II_test, pinn_III_test]
+    # models = [pinn_II_test, pinn_III_test]
 
     plot_trajectory(true_model, models)
 
