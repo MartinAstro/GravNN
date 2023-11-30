@@ -74,6 +74,13 @@ class RandomDist(TrajectoryBase):
         rad_bounds = self.radius_bounds
         uniform_vol = self.uniform_volume
         self.trajectory_name = f"{directory_name}/{body}_{model_name}_N_{N_points}"
+
+        # If the first value is 0, then make sure it's saved as 0.0
+        # to allow for proper loading
+        bounds_str = str(rad_bounds)
+        if "[0," in bounds_str:
+            bounds_str = bounds_str.replace("[0,", "[0.0,")
+
         self.trajectory_name += f"_RadBounds{rad_bounds}_UVol_{uniform_vol}"
         self.file_directory += self.trajectory_name + "/"
 

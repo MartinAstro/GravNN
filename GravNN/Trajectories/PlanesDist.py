@@ -15,9 +15,14 @@ class PlanesDist(TrajectoryBase):
         pass
 
     def generate_full_file_directory(self):
+        # Often saved with .0 in the bounds on linux, that prevents proper loading
+        # This is a hack to remove that
+        bounds_str = str(self.bounds)
+        if ".0]" in bounds_str:
+            bounds_str = bounds_str.replace(".0", ".")
         self.trajectory_name = (
             os.path.splitext(os.path.basename(__file__))[0]
-            + f"/{self.celestial_body.body_name}_Bounds_{self.bounds}_{self.samples_1d}"
+            + f"/{self.celestial_body.body_name}_Bounds_{bounds_str}_{self.samples_1d}"
         )
         self.file_directory += self.trajectory_name + "/"
         pass
