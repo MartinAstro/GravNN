@@ -20,6 +20,7 @@ class PlanesDist(TrajectoryBase):
         bounds_str = str(self.bounds)
         if ".0]" in bounds_str:
             bounds_str = bounds_str.replace(".0", ".")
+            bounds_str = bounds_str.replace(",", " ")
         self.trajectory_name = (
             os.path.splitext(os.path.basename(__file__))[0]
             + f"/{self.celestial_body.body_name}_Bounds_{bounds_str}_{self.samples_1d}"
