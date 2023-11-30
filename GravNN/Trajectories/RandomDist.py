@@ -81,7 +81,7 @@ class RandomDist(TrajectoryBase):
         if "[0," in bounds_str:
             bounds_str = bounds_str.replace("[0,", "[0.0,")
 
-        self.trajectory_name += f"_RadBounds{rad_bounds}_UVol_{uniform_vol}"
+        self.trajectory_name += f"_RadBounds{bounds_str}_UVol_{uniform_vol}"
         self.file_directory += self.trajectory_name + "/"
 
     def sample_volume(self, points):
