@@ -36,9 +36,8 @@ def NN():
         "eager": [False],
         "dtype": ["float32"],
         "network_arch": ["traditional"],
-        "loss_fcns": [["mse"]],
+        "loss_fcns": [["rms"]],
         "trainable_tanh": [False],
-        "tanh_k": [0.0],
         "scale_nn_potential": [False],
         "fuse_models": [False],
         "enforce_bc": [False],
@@ -76,9 +75,7 @@ def PINN_III():
     config = PINN_II()
     network_config = {
         "scale_by": ["non_dim_v3"],
-        # "loss_fcns" : [['rms', 'percent']],
-        "loss_fcns": [["percent"]],
-        # "preprocessing" : [['pines', 'r_normalize', 'r_inv']],
+        "loss_fcns": [["rms", "percent"]],
         "preprocessing": [["pines", "r_inv"]],
         "freq_decay": [False],
         "lr_anneal": [False],
@@ -88,7 +85,7 @@ def PINN_III():
         "fuse_models": [True],
         "enforce_bc": [True],
         "trainable_tanh": [True],
-        "tanh_k": [0.1],
+        "tanh_k": [1.0],
     }
     config.update(network_config)
     return config
