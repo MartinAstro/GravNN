@@ -90,7 +90,7 @@ class ModelInterface:
             model,
             self.config,
             points=4500,
-            extrapolation_bound=10,
+            extrapolation_bound=100,
         )
         exp.test_dist_2_surf_idx = None  # hack to avoid needing to reorder indices
         exp.test_r_surf = None
@@ -102,7 +102,7 @@ class ModelInterface:
         exp = PlanesExperiment(
             model,
             self.config,
-            bounds=[-5 * R, 5 * R],
+            bounds=[-3 * R, 3 * R],
             samples_1d=200,
         )
         exp.run(override)

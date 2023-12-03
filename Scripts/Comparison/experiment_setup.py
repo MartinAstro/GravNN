@@ -9,6 +9,7 @@ def get_default_config(model_name):
     config.update(
         {
             "obj_file": [Eros().obj_200k],
+            "radius_max": [Eros().radius * 10],
             "N_dist": [100000],
             "N_val": [4096],
         },
