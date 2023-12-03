@@ -85,7 +85,7 @@ def PINN_III():
         "fuse_models": [True],
         "enforce_bc": [True],
         "trainable_tanh": [True],
-        "tanh_k": [1.0],
+        "tanh_k": [0.1],
     }
     config.update(network_config)
     return config
