@@ -14,7 +14,7 @@ class SurfaceVisualizer(PolyVisualization):
             self.experiment.a_pred,
             label="Predicted Acceleration ($m/s^2$)",
             cmap="bwr",
-            kwargs=kwargs,
+            **kwargs,
         )
 
     def plot_true_model(self, **kwargs):
@@ -23,7 +23,7 @@ class SurfaceVisualizer(PolyVisualization):
             self.experiment.a_true,
             label="True Acceleration ($m/s^2$)",
             cmap="bwr",
-            kwargs=kwargs,
+            **kwargs,
         )
 
     def plot_percent_error(self, **kwargs):
@@ -32,7 +32,7 @@ class SurfaceVisualizer(PolyVisualization):
             self.experiment.percent_error_acc,
             label="Acceleration Error (\%)",
             percent=True,
-            kwargs=kwargs,
+            **kwargs,
         )
         pass
 
