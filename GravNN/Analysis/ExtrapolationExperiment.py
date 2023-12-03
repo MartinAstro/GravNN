@@ -23,8 +23,6 @@ class ExtrapolationExperiment(ExperimentBase):
         self.training_bounds = [config["radius_min"][0], max_radius]
         self.extrapolation_bound = kwargs.get("extrapolation_bound", 10)
 
-        self.max_radius_scale = kwargs.get("max_radius_scale", 10)
-
         np.random.seed(random_seed)
 
     def get_test_data(self):

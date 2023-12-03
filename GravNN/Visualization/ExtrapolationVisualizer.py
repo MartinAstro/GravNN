@@ -187,6 +187,19 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.ylabel("Percent Error")
         plt.xlabel(self.x_label)
 
+    def plot_extrapolation_acc(self, **kwargs):
+        R_max = self.experiment.config["radius_max"][0] / self.radius
+        a = self.experiment.a_pred[self.idx_test]
+        a_mag = np.linalg.norm(a, axis=1)
+        self.plot(
+            self.x_test,
+            a_mag,
+            critical_radius=R_max,
+            **kwargs,
+        )
+        plt.ylabel("Acceleration Magnitude")
+        plt.xlabel(self.x_label)
+
 
 def main():
     # df = pd.read_pickle("Data/Dataframes/LR_Anneal_With_Noise_032223.data")
