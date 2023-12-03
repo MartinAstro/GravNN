@@ -224,8 +224,8 @@ class Eros(Asteroid):
         gravNN_dir = os.path.dirname(GravNN.__file__)
 
         # Test Models
-        self.obj_77 = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_77.obj"
-        self.obj_20k = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_20000.obj"
+        self.obj_66 = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_66.obj"
+        self.obj_10k = f"{gravNN_dir}/Files/ShapeModels/Eros/eros_shape_10000.obj"
 
         self.obj_8k = pooch.retrieve(
             url="http://sbnarchive.psi.edu/pds3/near/NEAR_A_5_COLLECTED_MODELS_V1_0/data/msi/eros007790.tab",
