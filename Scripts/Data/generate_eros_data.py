@@ -91,14 +91,24 @@ def generate_near_data(planet, obj_file):
 if __name__ == "__main__":
     print_slurm_info()
     planet = Eros()
+    obj_file = planet.obj_66
+    generate_random_data(planet, obj_file)
+    generate_planes_data(planet, obj_file)
+    generate_surface_data(planet, obj_file)
+
     obj_file = planet.obj_8k
     generate_random_data(planet, obj_file)
     generate_planes_data(planet, obj_file)
     generate_surface_data(planet, obj_file)
-    generate_near_data(planet, obj_file)
+    # generate_near_data(planet, obj_file)
+
+    obj_file = planet.obj_10k
+    generate_random_data(planet, obj_file)
+    generate_planes_data(planet, obj_file)
+    generate_surface_data(planet, obj_file)
 
     obj_file = planet.obj_200k
     generate_random_data(planet, obj_file)
     generate_planes_data(planet, obj_file)
     generate_surface_data(planet, obj_file)
-    generate_near_data(planet, obj_file)
+    # generate_near_data(planet, obj_file)
