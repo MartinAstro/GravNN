@@ -85,21 +85,21 @@ def main():
     config, model = load_config_and_model(df, idx=-1)  #
     plot(config, model, "V: Fusing", new_fig=False)
 
-    # plt.figure(1)
-    # plt.savefig("Plots/PINNIII/PINN_III_Mods_extrapolation.pdf", pad_inches=0.0)
-    # plt.savefig(
-    #     "Plots/PINNIII/PINN_III_Mods_extrapolation.png",
-    #     pad_inches=0.0,
-    #     dpi=300,
-    # )
+    plt.figure(1)
+    plt.savefig("Plots/PINNIII/PINN_III_Mods_extrapolation.pdf", pad_inches=0.0)
+    plt.savefig(
+        "Plots/PINNIII/PINN_III_Mods_extrapolation.png",
+        pad_inches=0.0,
+        dpi=300,
+    )
 
-    # plt.figure(2)
-    # plt.savefig("Plots/PINNIII/PINN_III_Mods_interpolation.pdf", pad_inches=0.0)
-    # plt.savefig(
-    #     "Plots/PINNIII/PINN_III_Mods_interpolation.png",
-    #     pad_inches=0.0,
-    #     dpi=300,
-    # )
+    plt.figure(2)
+    plt.savefig("Plots/PINNIII/PINN_III_Mods_interpolation.pdf", pad_inches=0.0)
+    plt.savefig(
+        "Plots/PINNIII/PINN_III_Mods_interpolation.png",
+        pad_inches=0.0,
+        dpi=300,
+    )
 
 
 if __name__ == "__main__":

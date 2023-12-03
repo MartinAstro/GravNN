@@ -75,7 +75,7 @@ def main():
     run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_BC.data"
-    hparams.update({"enforce_bc": [True], "tanh_k": [1.0], "trainable": [False]})
+    hparams.update({"enforce_bc": [True], "tanh_k": [0.1], "trainable": [True]})
     run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_fuse.data"
