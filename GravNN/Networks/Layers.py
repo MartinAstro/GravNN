@@ -31,7 +31,17 @@ def H(x, r, k):
 
 def G(x, r, k):
     # assuming k > 0 this goes from 1 -> 0 as x->inf
-    return 1 - H(x, r, k)
+    return 1.0 - H(x, r, k)
+
+
+def Hss(x, r_min, r_max):
+    h = smooth_step(x, r_min, r_max)
+    return h
+
+
+def Gss(x, r_min, r_max):
+    g = 1.0 - Hss(x, r_min, r_max)
+    return g
 
 
 def fuse(r, a, b, r0, k):
@@ -54,14 +64,15 @@ def linear_map(r, a, b):
 def smooth_step(r, r_ref_min, r_ref_max):
     x = linear_map(r, r_ref_min, r_ref_max)
     x = tf.clip_by_value(x, 0.0, 1.0)
-    phi = 3 * tf.pow(x, 2) - 2 * tf.pow(x, 3)
+    # phi = 3 * tf.pow(x, 2) - 2 * tf.pow(x, 3)
+    phi_fifth_order = 6 * tf.pow(x, 5) - 15 * tf.pow(x, 4) + 10 * tf.pow(x, 3)
 
     # phi is only valid in the domain of x = [0, 1]
     # phi = tf.where(x > 1.0, 1.0, phi)
     # phi = tf.where(x < 0.0, 0.0, phi)
     # phi = tf.where(phi < 0.0, 0.0, phi)
     # phi = tf.where(phi > 1.0, 1.0, phi)
-    return phi
+    return phi_fifth_order
 
 
 def blend_smooth(r, f, g, r_ref_min=0.0, r_ref_max=1.0):
@@ -277,6 +288,37 @@ class AnalyticModelLayer(tf.keras.layers.Layer):
         return config
 
 
+class NetworkBoundingLayer(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        dtype = kwargs.get("dtype")[0]
+        super(NetworkBoundingLayer, self).__init__(dtype=dtype)
+
+        # defaults to zero
+        self.mu = kwargs.get("mu_non_dim", [0.0])[0]
+
+        # ensure proper dtype
+        self.mu = tf.constant(self.mu, dtype=dtype).numpy()
+
+        a, b, e = compute_shape_parameters(**kwargs)
+        self.b = tf.constant(b, dtype=dtype).numpy()
+
+    def call(self, u_nn):
+        # Never let the neural network produce a value of the potential that exceeds
+        # mu / semi-minor axis. This is a hard constraint that must be satisfied.
+        u_nn_bound = tf.clip_by_value(u_nn, -self.mu / self.b, self.mu / self.b)
+        return u_nn_bound
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update(
+            {
+                "mu": self.mu,
+                "a": self.b,
+            },
+        )
+        return config
+
+
 class ScaleNNPotential(tf.keras.layers.Layer):
     def __init__(self, power, **kwargs):
         dtype = kwargs["dtype"][0]
@@ -364,8 +406,15 @@ class EnforceBoundaryConditions(tf.keras.layers.Layer):
         self.enforce_bc = kwargs["enforce_bc"][0]
         r_max = kwargs.get("ref_radius_analytic", [np.nan])[0]
         self.trainable_tanh = kwargs.get("trainable_tanh")[0]
-        self.k_init = kwargs.get("tanh_k", [1.0])[0]
+        # self.r_max = kwargs.get("tanh_r", [r_max])[0]
+        # self.k_init = kwargs.get("tanh_k", [1.0])[0]
+        # self.r_max -= 1.0
+
+        # if kwargs['fuse_models']:
+        #     self.k_init = 1.0/ self.k_init
+
         self.r_max = kwargs.get("tanh_r", [r_max])[0]
+        self.k_init = kwargs.get("tanh_k", [1.0])[0]
 
     def build(self, input_shapes):
         self.radius = self.add_weight(
