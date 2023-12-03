@@ -41,47 +41,41 @@ def run_and_save(df_file, hparams, config):
 
 def main():
     config = get_default_eros_config()
-    config.update(PINN_III())
+    config.update(PINN_II())
     config.update(ReduceLrOnPlateauConfig())
     hparams = {
         "N_dist": [6000],
-        "N_train": [1000],
+        "N_train": [5000],
         "N_val": [1000],
         "num_units": [20],
         "radius_max": [Eros().radius * 15],
-        "loss_fcns": [["mse"]],
-        "jit_compile": [True],
-        "eager": [False],
-        # "jit_compile": [False],
-        # "eager": [True],
-        "lr_anneal": [False],
-        "learning_rate": [0.001],
-        "dropout": [0.0],
-        "batch_size": [2**18],
-        "epochs": [5000],
-        "acc_noise": [0.0],
-        "preprocessing": [["pines", "r_inv"]],
-        "PINN_constraint_fcn": ["pinn_a"],
-        "scale_nn_potential": [False],
-        "trainable": [False],
-        "fuse_models": [False],
-        "enforce_bc": [False],
-        "uniform_volume": [False],
+        "batch_size": [2**11],
+        "epochs": [10000],
     }
 
-    df_file = "Data/Dataframes/pinn_III_mods_RMS.data"
-    # run_and_save(df_file, hparams, config)
+    df_file = "Data/Dataframes/pinn_III_mods_PINN_II.data"
+    run_and_save(df_file, hparams, config)
+
+    df_file = "Data/Dataframes/pinn_III_mods_features.data"
+    hparams.update(
+        {
+            "preprocessing": [["pines", "r_inv"]],
+            "final_layer_initializer": ["zeros"],
+            "scale_by": ["non_dim_v3"],
+        },
+    )
+    run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_percent.data"
-    hparams.update({"loss_fcns": [["percent"]]})
-    # run_and_save(df_file, hparams, config)
+    hparams.update({"loss_fcns": [["percent", "rms"]]})
+    run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_scaling.data"
     hparams.update({"scale_nn_potential": [True]})
     run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_BC.data"
-    hparams.update({"enforce_bc": [True], "tanh_k": [0.1]})
+    hparams.update({"enforce_bc": [True], "tanh_k": [1.0], "trainable": [False]})
     run_and_save(df_file, hparams, config)
 
     df_file = "Data/Dataframes/pinn_III_mods_fuse.data"
