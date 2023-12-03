@@ -10,7 +10,6 @@ def default_config():
     config.update(ReduceLrOnPlateauConfig())
     config.update(
         {
-            # "N_dist": [150000],
             "N_dist": [150000],
             "N_train": [2**15],  # 32,768
             "N_val": [2**12],  # 4096
@@ -18,8 +17,6 @@ def default_config():
             "batch_size": [2**13],
             "learning_rate": [2**-13],
             "epochs": [2**13],  # 8192
-            # "eager": [True],
-            # "jit_compile": [False],
         },
     )
     return config
@@ -31,7 +28,6 @@ def optimized_config():
     config.update(ReduceLrOnPlateauConfig())
     config.update(
         {
-            # "N_dist": [150000],
             "N_dist": [150000],
             "N_train": [2**15],  # 32,768
             "N_val": [2**12],  # 4096
@@ -41,8 +37,6 @@ def optimized_config():
             "epochs": [2**13],  # 8192
             "layers": [[3, 1, 1, 1, 1, 1, 1, 1]],
             "num_units": [32],
-            # "eager": [True],
-            # "jit_compile": [False],
         },
     )
     return config
@@ -54,7 +48,6 @@ def optimized_config():
     config.update(ReduceLrOnPlateauConfig())
     config.update(
         {
-            # "N_dist": [150000],
             "N_dist": [150000],
             "N_train": [2**15],  # 32,768
             "N_val": [2**12],  # 4096
@@ -64,8 +57,6 @@ def optimized_config():
             "epochs": [2**13],  # 8192
             "layers": [[3, 1, 1, 1, 1, 1, 1, 1]],
             "num_units": [32],
-            # "eager": [True],
-            # "jit_compile": [False],
         },
     )
     return config
