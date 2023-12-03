@@ -14,7 +14,7 @@ def plot(config, model, file_name, new_fig=True):
         model,
         config,
         points=1000,
-        max_radius_scale=10,
+        extrapolation_bound=100,
     )
     extrapolation_exp.run(override=False)
 
@@ -85,7 +85,7 @@ def main():
     plt.savefig(
         "Plots/PINNIII/PINN_III_Mods_extrapolation.png",
         pad_inches=0.0,
-        dpi=250,
+        dpi=300,
     )
 
     plt.figure(2)
@@ -93,7 +93,7 @@ def main():
     plt.savefig(
         "Plots/PINNIII/PINN_III_Mods_interpolation.png",
         pad_inches=0.0,
-        dpi=250,
+        dpi=300,
     )
 
 
