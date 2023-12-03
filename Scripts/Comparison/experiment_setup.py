@@ -80,7 +80,7 @@ def setup_experiments():
                 "model_name": ["POLYHEDRAL"],
                 "N_train": [500],
                 "acc_noise": [0.0, 0.1],
-                "shape": [Eros().obj_77, Eros().obj_20k],
+                "shape": [Eros().obj_66, Eros().obj_10k],
             },
         ),
     )
@@ -106,7 +106,7 @@ def setup_experiments():
                 "N_train": [500, 50000],
                 "acc_noise": [0.0, 0.1],
                 "num_units": [8],
-                "layers": [[3, 1, 1, 3]],
+                "layers": [[3, 1, 1, 1, 1, 3]],
             },
         ),
     )
@@ -132,7 +132,7 @@ def setup_experiments():
                 "N_train": [500, 50000],
                 "acc_noise": [0.0, 0.1],
                 "num_units": [8],
-                "layers": [[3, 1, 1, 3]],
+                "layers": [[3, 1, 1, 1, 1, 3]],
             },
         ),
     )
