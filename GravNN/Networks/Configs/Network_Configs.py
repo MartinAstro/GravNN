@@ -22,7 +22,7 @@ def NN():
         "initializer": ["glorot_normal"],
         "optimizer": ["adam"],
         "batch_size": [131072 // 2],
-        "learning_rate": [0.001 * 2],
+        "learning_rate": [0.005],
         "dropout": [0.0],
         "skip_normalization": [False],
         "lr_anneal": [False],
