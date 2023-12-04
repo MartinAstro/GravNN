@@ -71,5 +71,7 @@ def run(config, hparams, df_file):
 
 if __name__ == "__main__":
     # To be run after hparam_ablation.py and optimized hparams are selected
-    data_epochs_small("Data/Dataframes/ablation_data_epochs_small_120323.data")
-    data_epochs_large("Data/Dataframes/ablation_data_epochs_large_120323.data")
+    if int(sys.argv[2]) == 0:
+        data_epochs_small("Data/Dataframes/ablation_data_epochs_small_120323.data")
+    else:
+        data_epochs_large("Data/Dataframes/ablation_data_epochs_large_120323.data")

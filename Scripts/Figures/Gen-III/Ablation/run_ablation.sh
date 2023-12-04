@@ -29,7 +29,11 @@ echo "== Run data generation =="
 
 echo "Running orbit search"
 
-srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/data_ablation.py $SLURM_ARRAY_TASK_ID
+# srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/hparam_ablation.py $SLURM_ARRAY_TASK_ID
+
+srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/data_ablation.py $SLURM_ARRAY_TASK_ID 0
+srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/data_ablation.py $SLURM_ARRAY_TASK_ID 1
+
 
 wait # Necessary to wait for all processes to finish
 echo "== End of Job =="
