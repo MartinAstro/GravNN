@@ -1,5 +1,3 @@
-import sys
-
 from Trainer import HPCTrainer
 
 from GravNN.Networks.Configs import *
@@ -21,6 +19,7 @@ def default_config():
             "epochs": [2**13],  # 8192
             "num_units": [32],
             "layers": [[3, 1, 1, 1, 1, 1, 1, 1]],
+            "obj_file": [Eros().obj_200k],
         },
     )
     return config
