@@ -23,7 +23,7 @@ def main():
     ]  # , "data_epochs_small", "data_epochs_large", "noise_loss_large", "noise_loss_small"]
     date = "120323"
     for suffix in suffix_list:
-        glob_str = GravNN_dir + f"/../Data/Dataframes/ablation_{suffix}*{date}.data"
+        glob_str = GravNN_dir + f"/../Data/Dataframes/ablation_{suffix}*{date}*.data"
         output_df_name = (
             GravNN_dir + f"/../Data/Dataframes/all_ablation_{suffix}{date}.data"
         )
