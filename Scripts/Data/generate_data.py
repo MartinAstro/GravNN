@@ -49,7 +49,7 @@ def generate_random_data(planet, obj_file):
     extrapolation_traj = RandomDist(
         planet,
         [0, 10 * R],
-        points=4500,
+        points=5000,
         obj_file=obj_file,
     )
     model = generate_heterogeneous_model(
@@ -61,7 +61,7 @@ def generate_random_data(planet, obj_file):
     print("Extrapolation Finished 1")
 
     dr = 100 * R - 10 * R
-    point_density = 4500 / (10 * R)
+    point_density = 5000 / (10 * R)
     extrap_points = int(dr * point_density)
     extrapolation_traj = RandomDist(
         planet,

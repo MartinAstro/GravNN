@@ -89,7 +89,7 @@ class ModelInterface:
         exp = ExtrapolationExperiment(
             model,
             self.config,
-            points=4500,
+            points=5000,
             extrapolation_bound=100,
         )
         exp.test_dist_2_surf_idx = None  # hack to avoid needing to reorder indices
