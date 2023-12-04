@@ -58,5 +58,5 @@ def run(config, hparams, df_file):
 if __name__ == "__main__":
     # Run this to determine optimal hparams
     # Run data_ablation afterwords.
-    width_depth("Data/Dataframes/ablation_width_depth.data")
-    batch_learning("Data/Dataframes/ablation_batch_learning.data")
+    width_depth("Data/Dataframes/ablation_width_depth_120323.data")
+    batch_learning("Data/Dataframes/ablation_batch_learning_120323.data")

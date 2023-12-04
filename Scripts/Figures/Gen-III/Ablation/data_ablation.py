@@ -96,8 +96,8 @@ def run(config, hparams, df_file):
 
 if __name__ == "__main__":
     # To be run after hparam_ablation.py and optimized hparams are selected
-    data_epochs_small("Data/Dataframes/ablation_data_epochs_small.data")
-    data_epochs_large("Data/Dataframes/ablation_data_epochs_large.data")
+    data_epochs_small("Data/Dataframes/ablation_data_epochs_small_120323.data")
+    data_epochs_large("Data/Dataframes/ablation_data_epochs_large_120323.data")
 
-    noise_loss_small("Data/Dataframes/ablation_noise_loss_small.data")
-    noise_loss_large("Data/Dataframes/ablation_noise_loss_large.data")
+    noise_loss_small("Data/Dataframes/ablation_noise_loss_small_120323.data")
+    noise_loss_large("Data/Dataframes/ablation_noise_loss_large_120323.data")
