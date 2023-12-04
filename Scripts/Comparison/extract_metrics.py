@@ -9,6 +9,7 @@ from experiment_setup import (
 )
 from interfaces import select_model
 
+import GravNN
 from GravNN.Networks.Configs import *
 from GravNN.Networks.Data import DataSet
 from GravNN.Networks.utils import populate_config_objects
@@ -84,6 +85,16 @@ def get_training_metrics(model):
     }
 
 
+def get_time_metrics(exp):
+    dt_batch = exp.dt_a_batch
+    dt_single = exp.dt_a_batch
+
+    return {
+        "dt_a_batch": dt_batch,
+        "dt_a_single": dt_single,
+    }
+
+
 def get_model_params(model):
     num_params = model.count_params()
     return {
@@ -97,9 +108,20 @@ def extract_metrics(model):
     metrics.update(get_extrap_metrics(model.extrap_exp))
     metrics.update(get_traj_metrics(model.trajectory_exp))
     metrics.update(get_surface_metrics(model.surface_exp))
+    metrics.update(get_time_metrics(model.time_exp))
     metrics.update(get_training_metrics(model))
     metrics.update(get_model_params(model))
     return metrics
+
+
+def save_metrics(metrics, idx):
+    # save metrics to a file with the idx
+    gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__)).join(
+        "/../Data/Comparison/",
+    )
+    save_file = gravNN_dir + "metrics_" + str(idx) + ".pkl"
+    with open(save_file, "wb") as f:
+        pickle.dump(metrics, f)
 
 
 def load_experiment(experiment, config):

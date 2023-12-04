@@ -71,17 +71,17 @@ class TimeEvaluationExperiment(ExperimentBase):
     def time(self):
         a_fcn = self.model.compute_acceleration
 
-        df_a_batch = self.batch_test(a_fcn, self.x_test)
-        df_a_single = self.single_test(a_fcn, self.x_test)
+        self.dt_a_batch = self.batch_test(a_fcn, self.x_test)
+        self.dt_a_single = self.single_test(a_fcn, self.x_test)
 
-        # df_u_batch = self.batch_test(u_fcn, self.x_test)
-        # df_u_single = self.single_test(u_fcn, self.x_test)
+        # self.dt_u_batch = self.batch_test(u_fcn, self.x_test)
+        # self.dt_u_single = self.single_test(u_fcn, self.x_test)
 
         metrics = {
-            "a_batch_time": df_a_batch,
-            "a_single_time": df_a_single,
-            # "u_batch_time": df_u_batch,
-            # "u_single_time": df_u_single,
+            "a_batch_time": self.dt_a_batch,
+            "a_single_time": self.dt_a_single,
+            # "u_batch_time": self.dt_u_batch,
+            # "u_single_time": self.dt_u_single,
         }
         return metrics
 

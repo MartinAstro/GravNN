@@ -10,6 +10,7 @@ import GravNN
 from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
 from GravNN.Analysis.PlanesExperiment import PlanesExperiment
 from GravNN.Analysis.SurfaceExperiment import SurfaceExperiment
+from GravNN.Analysis.TimeEvaluationExperiment import TimeEvaluationExperiment
 from GravNN.Analysis.TrajectoryExperiment import TestModel, TrajectoryExperiment
 from GravNN.GravityModels.ELM import ELM
 from GravNN.GravityModels.HeterogeneousPoly import (
@@ -138,6 +139,9 @@ class ModelInterface:
         surface_exp = SurfaceExperiment(model, true_model)
         surface_exp.run(override)
         self.surface_exp = surface_exp
+
+        self.time_exp = TimeEvaluationExperiment(model, 1000, R)
+        self.time_exp.run(override)
 
         self.params = self.count_params()
 
