@@ -186,6 +186,7 @@ class SphericalHarmonics(GravityModelBase):
         return
 
     def loadSH_csv(self):
+        need_whitespace_fix = False
         with open(self.file, "r") as csvfile:
             gravReader = csv.reader(csvfile, delimiter=",")
             firstRow = next(gravReader)
@@ -196,13 +197,22 @@ class SphericalHarmonics(GravityModelBase):
             try:
                 int(firstRow[0])
             except ValueError:
-                self.mu = float(firstRow[1])
-                self.radEquator = float(firstRow[0])
+                try:
+                    self.mu = float(firstRow[1])
+                    self.radEquator = float(firstRow[0])
+                except IndexError:
+                    need_whitespace_fix = True
+                    split_first_row = firstRow[0].split()
+                    self.mu = float(split_first_row[1])
+                    self.radEquator = float(split_first_row[0])
 
             clmRow = []
             slmRow = []
             currDeg = 0
             for gravRow in gravReader:
+                if need_whitespace_fix:
+                    gravRow = gravRow[0].split()
+
                 # TODO: Check if this results in correct behavior
                 if self.degree is not None:
                     # if loading coefficients beyond the maximum desired
