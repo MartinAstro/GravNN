@@ -16,21 +16,10 @@ def optimized_config():
             "num_units": [32],
             # These are the best hparams
             "batch_size": [2**11],
-            "learning_rate": [2**-10],
+            "learning_rate": [2**-8],
         },
     )
     return config
-
-
-def noise_loss_hparams():
-    hparams = {
-        "batch_size": [2**15],
-        "acc_noise": [0.1],
-        "N_train": [2**i for i in range(9, 18)],
-        "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
-        "early_stop": [True],
-    }
-    return hparams
 
 
 def data_epoch_hparams():
@@ -73,20 +62,6 @@ def data_epochs_large(df_file):
     run(config, hparams, df_file)
 
 
-def noise_loss_small(df_file):
-    config = optimized_config()
-    hparams = noise_loss_hparams()
-    hparams.update(small_network())
-    run(config, hparams, df_file)
-
-
-def noise_loss_large(df_file):
-    config = optimized_config()
-    hparams = noise_loss_hparams()
-    hparams.update(large_network())
-    run(config, hparams, df_file)
-
-
 def run(config, hparams, df_file):
     hparams_permutations = permutate_dict(hparams)
     hpc_trainer = HPCTrainer(config, hparams_permutations, df_file)
@@ -98,6 +73,3 @@ if __name__ == "__main__":
     # To be run after hparam_ablation.py and optimized hparams are selected
     data_epochs_small("Data/Dataframes/ablation_data_epochs_small_120323.data")
     data_epochs_large("Data/Dataframes/ablation_data_epochs_large_120323.data")
-
-    noise_loss_small("Data/Dataframes/ablation_noise_loss_small_120323.data")
-    noise_loss_large("Data/Dataframes/ablation_noise_loss_large_120323.data")
