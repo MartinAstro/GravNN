@@ -116,8 +116,8 @@ def extract_metrics(model):
 
 def save_metrics(metrics, idx):
     # save metrics to a file with the idx
-    gravNN_dir = os.path.abspath(os.path.dirname(GravNN.__file__)).join(
-        "/../Data/Comparison/",
+    gravNN_dir = "".join(
+        [os.path.abspath(os.path.dirname(GravNN.__file__)), "/../Data/Comparison/"],
     )
     save_file = gravNN_dir + "metrics_" + str(idx) + ".pkl"
     with open(save_file, "wb") as f:
