@@ -15,6 +15,7 @@ class OS_ELM:
         self.n_output_nodes = n_output_nodes
         self.input_scaler = MinMaxScaler()
         self.output_scaler = MinMaxScaler()
+        self.max_pred_batch = int(50e6 // n_hidden_nodes)  # ~50 Mb
 
         self.w = np.random.uniform(
             -1,
@@ -30,18 +31,32 @@ class OS_ELM:
         return 1 / (1 + np.exp(-x))
 
     def predict(self, x):
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-        if x.shape[0] != self.n_input_nodes:
-            x = x.T
+        def pred_mini_batch(x_i):
+            if x_i.ndim == 1:
+                x_i = x_i.reshape(1, -1)
+            if x_i.shape[0] != self.n_input_nodes:
+                x_i = x_i.T
 
-        x_nd = self.input_scaler.transform(x.T).T
+            x_nd = self.input_scaler.transform(x_i.T).T
 
-        H = self.activation(self.w @ x_nd + self.bias)
-        y_nd = self.beta @ H
+            H = self.activation(self.w @ x_nd + self.bias)
+            y_nd = self.beta @ H
 
-        y = self.output_scaler.inverse_transform(y_nd.T).T
-        return y
+            y_i = self.output_scaler.inverse_transform(y_nd.T).T
+            return y_i
+
+        N_samples = x.shape[1]
+        if N_samples > self.max_pred_batch:
+            y = np.zeros((self.n_output_nodes, N_samples))
+            for i in range(0, N_samples, self.max_pred_batch):
+                end_idx = min(i + self.max_pred_batch, N_samples)
+                x_batch = x[:, i:end_idx]
+                y_batch = pred_mini_batch(x_batch)
+                y[:, i:end_idx] = y_batch
+        else:
+            y = pred_mini_batch(x)
+
+        return y.T
 
     def init_train(self, x, y):
         # * is element wise
@@ -86,7 +101,7 @@ class OS_ELM:
         new_K_inv = Kk_inv - dK
 
         # Correct Beta
-        y_hat = self.predict(x)
+        y_hat = self.predict(x).T
         dy = y - y_hat
         dBeta = new_K_inv @ H @ np.transpose(dy)
         new_beta = self.beta + np.transpose(dBeta)
@@ -111,6 +126,8 @@ class OS_ELM:
             y_batch = y[:, i:end_idx]
             self.seq_train(x_batch, y_batch)
             pbar.update(end_idx)
+        pbar.update(len(x[0]))
+        pbar.close()
 
     def save(self, name):
         params = {
@@ -127,11 +144,11 @@ class OS_ELM:
 
 def main():
     n_input_nodes = 1
-    n_hidden_nodes = 100
+    n_hidden_nodes = 1000
     n_output_nodes = 1
 
-    N = 5000
-    N_test = 100
+    N = 50000
+    N_test = 10000
     init_batch = 1000
 
     # Regularization Factor C = 5*10**5
@@ -147,14 +164,15 @@ def main():
     )
 
     def fcn(x):
-        # return np.sin(5 * x)
         return x**2  # + np.sin(5*x)
+        return 1 / np.linalg.norm(x, axis=1, keepdims=True)
+        return np.sin(5 * x)
         return x
 
-    x = np.random.uniform(size=(N, n_input_nodes))
+    x = np.random.uniform(0, 1, size=(N, n_input_nodes))
     y = fcn(x)
 
-    x_test = np.random.uniform(size=(N_test, n_input_nodes))
+    x_test = np.random.uniform(0, 1, size=(N_test, n_input_nodes))
     y_test = fcn(x_test)
     os_elm.update(x.T, y.T, init_batch=init_batch)
 
@@ -164,9 +182,16 @@ def main():
 
     import matplotlib.pyplot as plt
 
+    y_hat = os_elm.predict(x.T)
+
+    x_mag = np.linalg.norm(x, axis=1)
     plt.figure()
-    plt.scatter(x, y, s=2)
-    plt.scatter(x, os_elm.predict(x.T), s=2)
+    plt.scatter(x_mag, y, s=2)
+    plt.scatter(x_mag, y_hat, s=2)
+
+    plt.figure()
+    plt.scatter(x_mag, (y - y_hat) / y * 100, s=2)
+
     plt.show()
 
 
