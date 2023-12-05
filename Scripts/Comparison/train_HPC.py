@@ -1,6 +1,7 @@
 import sys
 
 from experiment_setup import *
+from extract_metrics import extract_metrics, save_metrics
 from interfaces import select_model
 
 from GravNN.Networks.Configs import *
@@ -24,6 +25,9 @@ def run(experiment, idx):
     wrapper.train(data)
     wrapper.save()
     wrapper.evaluate(override=False)
+
+    metrics = extract_metrics(wrapper)
+    save_metrics(metrics, idx)
 
 
 def main():
