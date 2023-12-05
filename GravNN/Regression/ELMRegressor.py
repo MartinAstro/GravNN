@@ -37,7 +37,7 @@ class OS_ELM:
 
         x_nd = self.input_scaler.transform(x.T).T
 
-        H = self.activation(self.w * x_nd + self.bias)
+        H = self.activation(self.w @ x_nd + self.bias)
         y_nd = self.beta @ H
 
         y = self.output_scaler.inverse_transform(y_nd.T).T
