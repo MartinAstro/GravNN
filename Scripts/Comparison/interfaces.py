@@ -277,8 +277,8 @@ class PINNWrapper(ModelInterface):
         configure_tensorflow(config)
 
         # if the data is noisy, implement an early stop
-        if self.config["acc_noise"][0] == 0.1:
-            self.config["early_stop"] = [True]
+        if config["acc_noise"][0] == 0.1:
+            config["early_stop"] = [True]
 
         self.model = PINNGravityModel(config)
         self.config = config
