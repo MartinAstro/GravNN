@@ -6,7 +6,9 @@
 #SBATCH --array=0-64
 #SBATCH --account=ucb387_asc1
 #SBATCH --time=02:00:00
-#SBATCH --output=SlurmFiles/Comparison/comparison-%j.out
+#SBATCH --output=SlurmFiles/Comparison/comparison-%A-%a.out
+
+# --dependency=afterok:3840518_0
 module purge
 
 echo "== Load Anaconda =="
