@@ -15,7 +15,7 @@ class OS_ELM:
         self.n_output_nodes = n_output_nodes
         self.input_scaler = MinMaxScaler()
         self.output_scaler = MinMaxScaler()
-        self.max_pred_batch = int(50e6 // n_hidden_nodes)  # ~50 Mb
+        self.max_pred_batch = int(10e6 // n_hidden_nodes)  # ~50 Mb
 
         self.w = np.random.uniform(
             -1,
