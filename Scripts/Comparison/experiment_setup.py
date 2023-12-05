@@ -29,8 +29,8 @@ def get_default_config(model_name):
     base_config.update(ReduceLrOnPlateauConfig())
     base_config.update(
         {
-            "learning_rate": [2**-10],
-            "epochs": [8192 * 2],
+            "learning_rate": [2**-8],
+            "epochs": [2**15],
             "batch_size": [2**11],
         },
     )
