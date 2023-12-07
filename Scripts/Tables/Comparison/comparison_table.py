@@ -7,6 +7,9 @@ import pandas as pd
 
 import GravNN
 
+GRAY_RGBA = plt.get_cmap("gray")(0.9)
+RED_RGBA = plt.get_cmap("RdYlGn").reversed()(1.0)
+
 
 def get_color(value, min_val, max_val):
     # Non-numeric value, return red color
@@ -15,19 +18,15 @@ def get_color(value, min_val, max_val):
     norm = plt.Normalize(min_val, max_val)
     cmap = plt.get_cmap("RdYlGn").reversed()  # Red to Green colormap
 
-    gray_rgba = plt.get_cmap("gray")(0.5)
-
+    # If unable to convert value to number, make red
     try:
-        # try converting to a number
         value = float(value)
-    except:
-        # if unsuccessful, return red
-        red_rgba = cmap(1.0)
-        return "{}".format(",".join([f"{c:.2f}" for c in red_rgba[:3]]))
+    except Exception:
+        return "{}".format(",".join([f"{c:.2f}" for c in RED_RGBA[:3]]))
 
-    # or if the value is NaN, return gray
+    # If the value is NaN, return gray
     if np.isnan(value):
-        return "{}".format(",".join([f"{c:.2f}" for c in gray_rgba[:3]]))
+        return "{}".format(",".join([f"{c:.2f}" for c in GRAY_RGBA[:3]]))
 
     # otherwise, normalize the color with respect to the min and max values
     value_norm = norm(value)
@@ -42,6 +41,24 @@ def get_color(value, min_val, max_val):
 
     # Convert RGBA to LaTeX compatible RGB format (0-1 scale)
     return "{}".format(",".join([f"{c:.2f}" for c in rgba[:3]]))
+
+
+def get_bold_df(df):
+    bold_df = pd.DataFrame(index=df.index, columns=df.columns)
+    bold_df = bold_df.fillna(False)
+
+    for col in df.columns:
+        if col == "model_name":
+            bold_df[col] = df[col]
+            continue
+
+        # Convert column to float
+        float_col = pd.to_numeric(df[col], errors="coerce")
+        min_val = np.nanmin(float_col)
+
+        # change the bold_df value to True if equal to min_val
+        bold_df[col] = float_col.apply(lambda x: x == min_val)
+    return bold_df
 
 
 def apply_color_per_column(df):
@@ -98,20 +115,47 @@ def apply_color_per_column(df):
     return colored_df
 
 
-def condense_sci_notation(value):
+def shorten_sci_notation(value):
     str_value = str(value)
     if "e+0" in str_value:
         str_value = str_value.replace("e+0", "e")
     return str_value
 
 
-def df_to_latex(df, df_colored):
+def replace_nan_w_na(value):
+    str_value = str(value)
+    if "nan" in str_value:
+        str_value = str_value.replace("nan", "NA")
+    return str_value
+
+
+def apply_bold(value, bold):
+    if bold:
+        if value == "nan":
+            return value
+        return "\\textbf{" + value + "}"
+    else:
+        return value
+
+
+def df_to_latex(df, df_colored, df_bold):
     latex_df = df.copy()
     for i in range(len(df)):
         for j in range(len(df.columns)):
             original_value = df.iloc[i, j]
-            str_value = condense_sci_notation(original_value)
+            is_bold = df_bold.iloc[i, j]
+            str_value = shorten_sci_notation(original_value)
+            str_value = apply_bold(str_value, is_bold)
+            str_value = replace_nan_w_na(str_value)
             color_str = df_colored.iloc[i, j]
+
+            # If the value was never populated, make it gray
+            if isinstance(color_str, float):
+                if np.isnan(color_str):
+                    color_str = "{}".format(
+                        ",".join([f"{c:.2f}" for c in GRAY_RGBA[:3]]),
+                    )
+
             latex_df.iloc[i, j] = r"\cellcolor[rgb]{" + color_str + "} " + str_value
 
     column_format = "r" + "l" * len(df.columns)
@@ -192,38 +236,6 @@ def mark_diverged(x):
     return y
 
 
-def process_df(df):
-    ###################
-    # PREPROCESSING
-    ###################
-
-    # Unwrap any wrapped variables
-    df.model_name = df.model_name.apply(lambda x: x[0])
-    df.N_train = df.N_train.apply(lambda x: x[0])
-    df.acc_noise = df.acc_noise.apply(lambda x: x[0])
-
-    # Add a new column that categorizes the model into Big or Small
-    df["size"] = df["model_params"].apply(lambda x: "Small" if x < 10000 else "Large")
-
-    # make position error in km
-    df["pos_error"] = df["pos_error"] / 1000
-
-    # make queriable idx
-    df["idx"] = df.index
-
-    # Set data precision
-    df = df.round(1)
-
-    # Mark diverged value for only some columns
-    df["percent_surface"] = df["percent_surface"].apply(mark_diverged)
-    df["percent_interior"] = df["percent_interior"].apply(mark_diverged)
-    df["percent_exterior"] = df["percent_exterior"].apply(mark_diverged)
-    df["percent_planes"] = df["percent_planes"].apply(mark_diverged)
-    df["percent_extrapolation"] = df["percent_extrapolation"].apply(mark_diverged)
-
-    return df
-
-
 def update_index(df):
     masked_df = df.reset_index()
     masked_df = masked_df.set_index("model_name")
@@ -262,41 +274,87 @@ def update_index(df):
     return masked_df
 
 
-def main(noise, size, N_train, include_header_row=False, include_footer_row=False):
-    directory = os.path.dirname(GravNN.__file__)
-    df = pd.read_pickle(directory + "/../Data/Dataframes/comparison_metrics.data")
+def process_df(df, primary_query):
+    ###################
+    # PREPROCESSING
+    ###################
 
-    processed_df = process_df(df)
+    # Unwrap any wrapped variables
+    if isinstance(df.model_name[0], list):
+        df.model_name = df.model_name.apply(lambda x: x[0])
+    if isinstance(df.N_train[0], list):
+        df.N_train = df.N_train.apply(lambda x: x[0])
+    if isinstance(df.acc_noise[0], list):
+        df.acc_noise = df.acc_noise.apply(lambda x: x[0])
+
+    # Add a new column that categorizes the model into Big or Small
+    df["size"] = df["num_params"].apply(lambda x: "Small" if x < 10000 else "Large")
+
+    # make position error in km
+    df["pos_error"] = df["pos_error"] / 1000
+
+    # make queriable idx
+    df["idx"] = df.index
+
+    # Set data precision
+    df = df.round(1)
+
+    # Mark diverged value for only some columns
+    df["percent_surface"] = df["percent_surface"].apply(mark_diverged)
+    df["percent_interior"] = df["percent_interior"].apply(mark_diverged)
+    df["percent_exterior"] = df["percent_exterior"].apply(mark_diverged)
+    df["percent_planes"] = df["percent_planes"].apply(mark_diverged)
+    df["percent_extrapolation"] = df["percent_extrapolation"].apply(mark_diverged)
 
     # I need to duplicate the PM model so they also get selected into the size == 'Large' queries
     # I need to duplicate Polyhedral so they also get selected into the N_train == 50000 queries
     query = "model_name == 'PM'"
-    PM_rows = copy.deepcopy(processed_df.query(query))
+    PM_rows = copy.deepcopy(df.query(query))
     PM_rows["size"] = "Large"
-    PM_rows["idx"] = len(processed_df) + np.arange(0, len(PM_rows["idx"]), 1, dtype=int)
-    processed_df = pd.concat([processed_df, PM_rows])
+    PM_rows["idx"] = len(df) + np.arange(0, len(PM_rows["idx"]), 1, dtype=int)
+    df = pd.concat([df, PM_rows])
 
     query = "model_name == 'POLYHEDRAL'"
-    poly_rows = copy.deepcopy(processed_df.query(query))
+    poly_rows = copy.deepcopy(df.query(query))
     poly_rows["N_train"] = 50000
-    poly_rows["idx"] = len(processed_df) + np.arange(
-        0,
-        len(poly_rows["idx"]),
-        1,
-        dtype=int,
-    )
-    processed_df = pd.concat([processed_df, poly_rows])
+    idx_col = np.arange(0, len(poly_rows["idx"]), 1, dtype=int)
+    poly_rows["idx"] = len(df) + idx_col
+    df = pd.concat([df, poly_rows])
 
-    processed_df = processed_df.set_index("idx")
+    df = df.set_index("idx")
 
     # Set polyhedral train duration to NaN
-    processed_df.loc[
-        processed_df["model_name"] == "POLYHEDRAL",
+    df.loc[
+        df["model_name"] == "POLYHEDRAL",
         "train_duration",
     ] = np.nan
 
+    # The polyhedral is not applicable for the 0.1 noise case
+    if "acc_noise == 0.1" in primary_query:
+        df.loc[df["model_name"] == "POLYHEDRAL", :] = np.nan
+
+    # The PM is not applicable for the Large size case
+    if "size == 'Large'" in primary_query:
+        df.loc[df["model_name"] == "PM", :] = np.nan
+
+    return df
+
+
+def produce_table(
+    noise,
+    size,
+    N_train,
+    include_header_row=False,
+    include_footer_row=False,
+):
+    directory = os.path.dirname(GravNN.__file__)
+    # df = pd.read_pickle(directory + "/../Data/Dataframes/comparison_metrics.data")
+    df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
+
     # query for noise, size, and training data
     query = f"acc_noise == {noise} and size == {size} and N_train == {N_train}"
+
+    processed_df = process_df(df, query)
 
     # Use the query to make a mask that can applied to other dataframes
     # without using the index
@@ -310,11 +368,11 @@ def main(noise, size, N_train, include_header_row=False, include_footer_row=Fals
 
     masked_df = processed_df.iloc[mask]
     colors_df = df_colored.iloc[mask]
+    bold_df = get_bold_df(masked_df)
 
     masked_df = update_index(masked_df)
     colors_df = update_index(colors_df)
-
-    # NaN polyhedral train_duration
+    bold_df = update_index(bold_df)
 
     # Drop unused columns
     column_rename = {
@@ -325,31 +383,35 @@ def main(noise, size, N_train, include_header_row=False, include_footer_row=Fals
         "percent_surface": ("Surface", "Error[\%]"),
         "pos_error": ("Trajectory", "Position Error[km]"),
         "dt": ("Trajectory", "Propagation Time[s]"),
+        # "dt_a_single": ("Trajectory", "Evaluation Time[s]"),
         # "size": ('Training', 'Size'),
         "N_train": ("Auxillary", "Samples"),
         "acc_noise": ("Auxillary", "Noise[\%]"),
-        "model_params": ("Auxillary", "Params"),
+        "num_params": ("Auxillary", "Params"),
         "train_duration": ("Auxillary", "Regression Time[s]"),
     }
 
     # Reorder columns
     masked_df = masked_df[list(column_rename.keys())]
     colors_df = colors_df[list(column_rename.keys())]
+    bold_df = bold_df[list(column_rename.keys())]
 
     # Rename / Group some of the columns via MultiIndex
     masked_df.columns = pd.MultiIndex.from_tuples(list(column_rename.values()))
     colors_df.columns = pd.MultiIndex.from_tuples(list(column_rename.values()))
+    bold_df.columns = pd.MultiIndex.from_tuples(list(column_rename.values()))
 
     drop_columns = [("Auxillary", "Noise[\%]"), ("Auxillary", "Samples")]
     processed_df = masked_df.drop(columns=drop_columns)
     df_colored = colors_df.drop(columns=drop_columns)
+    df_bold = bold_df.drop(columns=drop_columns)
 
-    # Wrap a red to green color cell mapping around the data such that when printed
-    # with to_latex, the colors are compiled
-    latex_table = df_to_latex(processed_df, df_colored)
+    # Wrap a red to green color cell mapping around the data
+    latex_table = df_to_latex(processed_df, df_colored, df_bold)
     latex_table = rotate_headers(latex_table, angle=65)
 
     header = f"N = {N_train} Samples; \t Noise = {noise} \%; \t Model Size = {size}"
+    header = f"N = {N_train} Samples; \quad Model Size = {size}"
     new_header_col_len = len(column_rename) - len(drop_columns) + 1
     new_header = (
         "\\multicolumn{" + str(new_header_col_len) + "}{c}{" + header + "} \\\\"
@@ -373,22 +435,38 @@ def main(noise, size, N_train, include_header_row=False, include_footer_row=Fals
     return latex_table
 
 
-if __name__ == "__main__":
-
+def main():
     def save_table(acc_noise):
         latex_table = "\n"
-        latex_table_0 = main(acc_noise, "'Small'", 500, include_header_row=True)
-        latex_table_1 = main(acc_noise, "'Small'", 50000)
-        latex_table_2 = main(acc_noise, "'Large'", 500)
-        latex_table_3 = main(acc_noise, "'Large'", 50000, include_footer_row=True)
-
-        # add the tables together
-        latex_table = (
-            latex_table + latex_table_0 + latex_table_1 + latex_table_2 + latex_table_3
+        latex_table += produce_table(
+            acc_noise,
+            "'Small'",
+            50000,
+            include_header_row=True,
         )
-        path = f"~/Documents/Research/Papers/Journal/PINN_III/Snippets/table_{acc_noise}.tex"
+        latex_table += produce_table(
+            acc_noise,
+            "'Large'",
+            50000,
+            include_footer_row=False,
+        )
+        latex_table += produce_table(
+            acc_noise,
+            "'Small'",
+            500,
+            include_footer_row=False,
+        )
+        latex_table += produce_table(acc_noise, "'Large'", 500, include_footer_row=True)
+
+        # Get home directory
+        home_dir = os.path.expanduser("~")
+        path = f"{home_dir}/Documents/Research/Papers/Journal/PINN_III/Snippets/table_{acc_noise}.tex"
         with open(path, "w") as f:
             f.write(latex_table)
 
     save_table(0)
     save_table(0.1)
+
+
+if __name__ == "__main__":
+    main()
