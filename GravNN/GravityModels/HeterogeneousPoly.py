@@ -42,7 +42,42 @@ def get_hetero_poly_data(trajectory, obj_shape_file, **kwargs):
     return x, a, u
 
 
-def generate_heterogeneous_model(planet, obj_file, trajectory=None):
+def generate_heterogeneous_model(planet, obj_file, trajectory=None, symmetric=False):
+    if symmetric:
+        return generate_symmetric_heterogeneous_model(planet, obj_file, trajectory)
+    else:
+        return generate_asymmetric_heterogeneous_model(planet, obj_file, trajectory)
+
+
+def generate_asymmetric_heterogeneous_model(planet, obj_file, trajectory=None):
+    # Force the following mass inhomogeneity
+
+    mass_1 = copy.deepcopy(planet)
+    mass_1.mu = mass_1.mu / 10
+    r_offset_1 = [mass_1.radius / 2, 0, 0]
+
+    mass_2 = copy.deepcopy(planet)
+    mass_2.mu = -mass_2.mu / 10
+    r_offset_2 = [-mass_2.radius / 2, 0, 0]
+
+    point_mass_1 = PointMass(mass_1)
+    point_mass_2 = PointMass(mass_2)
+
+    mascon_1 = Heterogeneity(point_mass_1, r_offset_1)
+    mascon_2 = Heterogeneity(point_mass_2, r_offset_2)
+
+    heterogeneities = [mascon_1, mascon_2]
+    poly_r0_gm = HeterogeneousPoly(
+        planet,
+        obj_file,
+        heterogeneities,
+        trajectory=trajectory,
+    )
+
+    return poly_r0_gm
+
+
+def generate_symmetric_heterogeneous_model(planet, obj_file, trajectory=None):
     # Force the following mass inhomogeneity
     mass_0 = copy.deepcopy(planet)
     mass_0.mu = -2 * mass_0.mu / 20
