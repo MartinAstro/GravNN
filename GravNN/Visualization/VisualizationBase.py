@@ -135,10 +135,15 @@ class VisualizationBase(ABC):
         plt.rc("grid", linestyle="--")
         plt.rc("grid", linewidth="0.1")
         plt.rc("grid", color=".25")
-        plt.rc("text", usetex=True)
 
+        plt.rc("text.latex", preamble=r"\usepackage{amsmath}")
+        plt.rc("text", usetex=True)
+        # plt.rc('text.latex', unicode = True)
+        # plt.rc('text.latex', verbose = True)
         if halt_formatting:
             plt.rc("text", usetex=False)
+            # plt.rc('text.latex', unicode = False)
+            # plt.rc('text.latex', verbose = False)
 
         return
 

@@ -101,7 +101,8 @@ class ExtrapolationVisualizer(VisualizationBase):
         if kwargs.get("new_fig", True):
             self.newFig()
         plt.scatter(x, value, c=color, alpha=0.1, s=1)
-        self.plot_fcn(x, avg_line, label=label, linewidth=linewidth, color=color)
+        line_color = kwargs.get("line_color", color)
+        self.plot_fcn(x, avg_line, label=label, linewidth=linewidth, color=line_color)
 
         if kwargs.get("plot_std", True):
             y_std_upper = np.squeeze(avg_line + 1 * std_line)
@@ -143,23 +144,23 @@ class ExtrapolationVisualizer(VisualizationBase):
         plt.ylabel("Loss")
         plt.xlabel(self.x_label)
 
-    def plot_interpolation_mse(self, **kwargs):
+    def plot_interpolation_rms(self, **kwargs):
         self.plot(
             self.x_test[: self.max_idx],
-            self.experiment.losses["mse"][self.idx_test][: self.max_idx],
+            self.experiment.losses["rms"][self.idx_test][: self.max_idx],
             **kwargs,
         )
         plt.gca().set_yscale("log")
         plt.xlim(self.training_bounds / self.radius)
-        plt.ylabel("MSE [$m/s^2$]")
+        plt.ylabel("RMS [$m/s^2$]")
         plt.xlabel(self.x_label)
         plt.ylim([0, None])
         # self.plot_histogram(self.x_train)
 
-    def plot_extrapolation_mse(self, **kwargs):
-        self.plot(self.x_test, self.experiment.losses["mse"][self.idx_test], **kwargs)
+    def plot_extrapolation_rms(self, **kwargs):
+        self.plot(self.x_test, self.experiment.losses["rms"][self.idx_test], **kwargs)
         plt.gca().set_yscale("log")
-        plt.ylabel("MSE [$m/s^2$]")
+        plt.ylabel("RMS [$m/s^2$]")
         plt.xlabel(self.x_label)
 
     def plot_interpolation_percent_error(self, **kwargs):

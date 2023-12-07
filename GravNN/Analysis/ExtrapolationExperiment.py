@@ -9,8 +9,23 @@ from GravNN.Trajectories.RandomDist import RandomDist
 
 
 class ExtrapolationExperiment(ExperimentBase):
-    def __init__(self, model, config, points, random_seed=1234, **kwargs):
-        super().__init__(model, config, points, random_seed=1234, **kwargs)
+    def __init__(
+        self,
+        model,
+        config,
+        points,
+        extrapolation_bound=10,
+        random_seed=1234,
+        **kwargs,
+    ):
+        super().__init__(
+            model,
+            config,
+            points,
+            extrapolation_bound,
+            random_seed=1234,
+            **kwargs,
+        )
         self.config = config
         self.model = model
         self.points = points
@@ -21,7 +36,7 @@ class ExtrapolationExperiment(ExperimentBase):
         extra_max_radius = np.nan_to_num(self.config.get("extra_radius_max", [0])[0], 0)
         max_radius = np.max([original_max_radius, extra_max_radius])
         self.training_bounds = [config["radius_min"][0], max_radius]
-        self.extrapolation_bound = kwargs.get("extrapolation_bound", 10)
+        self.extrapolation_bound = extrapolation_bound
 
         np.random.seed(random_seed)
 
