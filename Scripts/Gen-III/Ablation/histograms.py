@@ -5,8 +5,7 @@ from GravNN.Visualization.HeatmapVisualizer import Heatmap3DVisualizer
 from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 
-def width_depth():
-    df_file = "Data/Dataframes/all_ablation_width_depth.data"
+def width_depth(df_file):
     df = pd.read_pickle(df_file)
 
     # Identify the length of the layers list
@@ -25,7 +24,7 @@ def width_depth():
 
     # df.time_delta = df.time_delta.astype(int)
     v_min = 0  # np.min(df.val_loss)
-    v_max = 3
+    v_max = 1.5
 
     vis = Heatmap3DVisualizer(df)
     vis.fig_size = (vis.w_half, vis.w_half)
@@ -44,8 +43,7 @@ def width_depth():
     vis.save(plt.gcf(), file_name)
 
 
-def batch_learning():
-    df_file = "Data/Dataframes/all_ablation_batch_learning.data"
+def batch_learning(df_file):
     df = pd.read_pickle(df_file)
     df.val_loss = df.val_loss.astype(float) * 100
     df.time_delta = df.time_delta.astype(int)
@@ -60,7 +58,7 @@ def batch_learning():
     )
 
     v_min = 0  # np.min(df.val_loss)
-    v_max = 5.6
+    v_max = 1.5
 
     vis = Heatmap3DVisualizer(df)
     vis.fig_size = (vis.w_half, vis.w_half)
@@ -146,10 +144,10 @@ def noise_loss(df_file, linestyle="-"):
 
 
 def main():
-    width_depth()
-    batch_learning()
-    data_epochs("Data/Dataframes/all_ablation_data_epochs_small.data")
-    data_epochs("Data/Dataframes/all_ablation_data_epochs_large.data")
+    # width_depth("Data/Dataframes/all_ablation_width_depth120323.data")
+    # batch_learning("Data/Dataframes/all_ablation_batch_learning120323.data")
+    data_epochs("Data/Dataframes/all_ablation_data_epochs_small120323.data")
+    data_epochs("Data/Dataframes/all_ablation_data_epochs_large120323.data")
 
     # vis = VisualizationBase()
     # vis.newFig()
