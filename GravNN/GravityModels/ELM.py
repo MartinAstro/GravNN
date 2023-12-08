@@ -114,7 +114,7 @@ def main():
 
     elm = ELM(filename)
 
-    y_hat = elm.compute_acceleration(x_test.T)
+    y_hat = elm.compute_acceleration(x_test)
     L = np.mean(np.square(y_test - y_hat))
     print(L)
 
@@ -127,7 +127,7 @@ def main():
 
     plt.figure()
     plt.scatter(x, y, s=2)
-    plt.scatter(x, elm.compute_acceleration(x.T), s=2)
+    plt.scatter(x, elm.compute_acceleration(x), s=2)
     plt.show()
 
 

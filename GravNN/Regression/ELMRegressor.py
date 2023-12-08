@@ -177,13 +177,13 @@ def main():
     y_test = fcn(x_test)
     os_elm.update(x.T, y.T, init_batch=init_batch)
 
-    y_hat = os_elm.predict(x_test.T)
+    y_hat = os_elm.predict(x_test)
     L = np.mean(np.square(y_test - y_hat))
     print(L)
 
     import matplotlib.pyplot as plt
 
-    y_hat = os_elm.predict(x.T)
+    y_hat = os_elm.predict(x)
 
     x_mag = np.linalg.norm(x, axis=1)
     plt.figure()
