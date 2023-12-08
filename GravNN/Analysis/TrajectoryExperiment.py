@@ -84,7 +84,7 @@ class TrajectoryPropagator(ExperimentBase):
             dxdt = np.hstack((V, a_N)).squeeze()
 
             is_nan = np.isnan(y).any()
-            diverging = np.abs(y).max() > 1e30
+            diverging = np.abs(a_N).max() > 1e6
             diverged = np.isinf(np.abs(y))
             if is_nan or diverging or diverged.any():
                 raise ValueError("Non-feasible values encountered in integration")
