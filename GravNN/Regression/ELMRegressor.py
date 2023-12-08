@@ -53,7 +53,7 @@ class OS_ELM:
                 x_batch = x[i:end_idx, :]
                 y_batch = pred_mini_batch(x_batch)
                 y[i:end_idx, :] = y_batch.T  # (batch, 3)
-                y = y.T  # (3, N)
+            y = y.T  # (3, N)
         else:
             y = pred_mini_batch(x)  # (3, N)
 
