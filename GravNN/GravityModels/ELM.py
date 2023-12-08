@@ -17,7 +17,7 @@ class ELM(GravityModelBase):
         self.n_input_nodes = self.w.shape[1]
         self.n_hidden_nodes = self.w.shape[0]
         self.n_output_nodes = self.beta.shape[0]
-        self.max_pred_batch = int(10e6 // self.n_hidden_nodes)  # ~50 Mb
+        self.max_pred_batch = 500  # ~50 Mb
         super().__init__(
             filename,
             self.n_input_nodes,
