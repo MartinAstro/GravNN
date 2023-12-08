@@ -386,7 +386,11 @@ class ELMWrapper(ModelInterface):
         return self.model
 
     def count_params(self):
-        return self.model.n_hidden_nodes * 3 + self.model.n_hidden_nodes * 3
+        return (
+            self.model.n_hidden_nodes * 3
+            + self.model.n_hidden_nodes * 3
+            + self.model.n_hidden_nodes
+        )  # in, out, bias
 
 
 def make_experiments(exp_list):
