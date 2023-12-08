@@ -536,7 +536,7 @@ class DataSet:
             trajectory = distribution(
                 planet,
                 make_windows_path_posix(obj_file),
-                **self.config,
+                # **self.config,
             )
         else:
             trajectory = distribution(
