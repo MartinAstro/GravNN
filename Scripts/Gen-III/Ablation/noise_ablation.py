@@ -9,7 +9,8 @@ from GravNN.Networks.utils import permutate_dict
 
 def noise_loss_hparams():
     hparams = {
-        "batch_size": [2**15],
+        "batch_size": [2**11],
+        "learning_rate": [2**-8],
         "acc_noise": [0.1],
         "N_train": [2**i for i in range(9, 18)],
         "PINN_constraint_fcn": ["pinn_a", "pinn_al"],
@@ -41,5 +42,7 @@ def run(config, hparams, df_file):
 
 if __name__ == "__main__":
     # To be run after hparam_ablation.py and optimized hparams are selected
-    noise_loss_small("Data/Dataframes/ablation_noise_loss_small_120323.data")
-    noise_loss_large("Data/Dataframes/ablation_noise_loss_large_120323.data")
+    if int(sys.argv[2]) == 0:
+        noise_loss_small("Data/Dataframes/ablation_noise_loss_small_120323.data")
+    else:
+        noise_loss_large("Data/Dataframes/ablation_noise_loss_large_120323.data")
