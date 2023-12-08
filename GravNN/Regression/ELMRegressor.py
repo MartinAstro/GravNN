@@ -47,16 +47,17 @@ class OS_ELM:
 
         N_samples = np.max(x.shape)
         if N_samples > self.max_pred_batch:
-            y = np.zeros((self.n_output_nodes, N_samples))
+            y = np.zeros((N_samples, self.n_output_nodes))
             for i in range(0, N_samples, self.max_pred_batch):
                 end_idx = min(i + self.max_pred_batch, N_samples)
-                x_batch = x[:, i:end_idx]
+                x_batch = x[i:end_idx, :]
                 y_batch = pred_mini_batch(x_batch)
-                y[:, i:end_idx] = y_batch
+                y[i:end_idx, :] = y_batch.T  # (batch, 3)
+                y = y.T  # (3, N)
         else:
-            y = pred_mini_batch(x)
+            y = pred_mini_batch(x)  # (3, N)
 
-        return y.T
+        return y.T  # (N, 3)
 
     def init_train(self, x, y):
         # * is element wise
