@@ -2,12 +2,12 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
-#SBATCH --array=0-16
+#SBATCH --cpus-per-task=3
+#SBATCH --array=0-18
 #SBATCH --account=ucb387_asc1
 #SBATCH --gres=gpu:1
 #SBATCH --partition=aa100
-#SBATCH --time=01:30:00
+#SBATCH --time=02:30:00
 #SBATCH --output=SlurmFiles/Ablation/ablation-%j-%a.out
 
 module purge
@@ -31,8 +31,8 @@ echo "Running orbit search"
 
 # srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/hparam_ablation.py $SLURM_ARRAY_TASK_ID
 
-srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/data_ablation.py $SLURM_ARRAY_TASK_ID 0
-srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/data_ablation.py $SLURM_ARRAY_TASK_ID 1
+srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/noise_ablation.py $SLURM_ARRAY_TASK_ID 0 &
+srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/noise_ablation.py $SLURM_ARRAY_TASK_ID 1 &
 
 
 wait # Necessary to wait for all processes to finish
