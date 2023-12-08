@@ -45,7 +45,7 @@ class OS_ELM:
             y_i = self.output_scaler.inverse_transform(y_nd.T).T
             return y_i
 
-        N_samples = x.shape[1]
+        N_samples = np.max(x.shape)
         if N_samples > self.max_pred_batch:
             y = np.zeros((self.n_output_nodes, N_samples))
             for i in range(0, N_samples, self.max_pred_batch):
