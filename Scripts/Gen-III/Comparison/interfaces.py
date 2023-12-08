@@ -86,7 +86,10 @@ class ModelInterface:
         raise NotImplementedError("Must implement train method")
 
     def evaluate(self, override=False):
+        print("INFO: Getting Model")
         model = self.get_model()
+
+        print("INFO: Running Extrapolation Experiment")
         exp = ExtrapolationExperiment(
             model,
             self.config,
@@ -98,6 +101,7 @@ class ModelInterface:
         exp.run(override)
         self.extrap_exp = exp
 
+        print("INFO: Running Planes Experiment")
         planet = self.config["planet"][0]
         R = planet.radius
         exp = PlanesExperiment(
@@ -109,6 +113,7 @@ class ModelInterface:
         exp.run(override)
         self.plane_exp = exp
 
+        print("INFO: Running Trajectory Experiment")
         true_model = generate_heterogeneous_model(planet, planet.obj_200k)
         initial_state = np.array(
             [
@@ -136,10 +141,12 @@ class ModelInterface:
         exp.run(override)
         self.trajectory_exp = exp
 
+        print("INFO: Running Surface Experiment")
         surface_exp = SurfaceExperiment(model, true_model)
         surface_exp.run(override)
         self.surface_exp = surface_exp
 
+        print("INFO: Running Timing Experiment")
         self.time_exp = TimeEvaluationExperiment(model, 1000, R)
         self.time_exp.run(override)
 
