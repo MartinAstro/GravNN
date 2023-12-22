@@ -20,8 +20,8 @@ def main():
     mask = r > 1
     mask_inv = r < 1
 
-    plt.plot(r[mask], r[mask], color="black", linestyle="--", label="$r$")
-    plt.plot(r[mask_inv], r_inv[mask_inv], color="black", linestyle="--", label="$1/r$")
+    plt.plot(r[mask], r[mask], color="black", linestyle="--")
+    plt.plot(r[mask_inv], r_inv[mask_inv], color="black", linestyle="--")
 
     # Shade the region where r < 1
     y_max = 2

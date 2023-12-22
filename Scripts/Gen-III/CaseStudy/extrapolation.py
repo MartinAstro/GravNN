@@ -4,7 +4,6 @@ from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Networks.Configs.Eros_Configs import get_default_eros_config
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
 from GravNN.Visualization.VisualizationBase import VisualizationBase
@@ -15,9 +14,11 @@ def plot_extrapolation(config, model, label, color, new_fig=True):
     extrapolation_exp = ExtrapolationExperiment(
         model,
         config,
-        points=1000,
-        max_radius_scale=10,
+        points=5000,
+        extrapolation_bound=100,
     )
+    extrapolation_exp.test_dist_2_surf_idx = None  # hack to avoid sorting
+    extrapolation_exp.test_r_surf = None  # hack to avoid sorting
     extrapolation_exp.run(override=False)
 
     # visualize error @ training altitude and beyond
@@ -31,7 +32,8 @@ def plot_extrapolation(config, model, label, color, new_fig=True):
     if not new_fig:
         plt.figure(1)
 
-    vis.plot_extrapolation_percent_error(
+    # vis.plot_extrapolation_percent_error(
+    vis.plot_interpolation_percent_error(
         plot_std=False,
         plot_max=False,
         new_fig=new_fig,
@@ -49,7 +51,6 @@ if __name__ == "__main__":
     planet = Eros()
     obj_file = planet.obj_200k
 
-    config = get_default_eros_config()
     true_model = generate_heterogeneous_model(planet, obj_file)
     poly_model = Polyhedral(planet, obj_file)
     pinn_II_config, pinn_II_model = load_config_and_model(
@@ -61,12 +62,13 @@ if __name__ == "__main__":
         idx=-1,
     )
 
-    plot_extrapolation(config, poly_model, "Polyhedral", "r")
-    plot_extrapolation(config, pinn_II_model, "PINN II", "b", new_fig=False)
-    plot_extrapolation(config, pinn_III_model, "PINN III", "g", new_fig=False)
+    plot_extrapolation(pinn_III_config, poly_model, "Polyhedral", "r")
+    plot_extrapolation(pinn_III_config, pinn_II_model, "PINN II", "b", new_fig=False)
+    plot_extrapolation(pinn_III_config, pinn_III_model, "PINN III", "g", new_fig=False)
 
     vis = VisualizationBase()
+    vis.fig_size = (vis.w_full, vis.w_half)
     save_name = "primary_extrapolation"
     vis.save(plt.gcf(), save_name)
 
-    plt.show()
+    # plt.show()

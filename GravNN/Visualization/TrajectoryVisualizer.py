@@ -32,8 +32,11 @@ class TrajectoryVisualizer(VisualizationBase):
             dr = model.metrics["pos_diff"]
             plt.semilogy(time, dr / 1000.0, label=label, color=color)
 
-        plt.ylabel("$|\Delta r|$ Error [km]")
-        plt.xlabel("Time [s]")
+            print("Model: ", label, " dR: ", dr[-1])
+            print("Model: ", label, " dR_i: ", model.metrics["pos_diff_inst"][-1])
+
+        plt.ylabel("$\sum |\Delta r|$ Error [km]")
+        plt.xlabel("Simulated Time [s]")
         plt.gca().yaxis.tick_right()
         plt.gca().yaxis.set_label_position("right")
 
@@ -45,6 +48,8 @@ class TrajectoryVisualizer(VisualizationBase):
             label = model.label
             color = model.color
             plt.semilogy(time_sim, time_real, label=label, color=color)
+
+            print("Model: ", label, " Time: ", time_real[-1])
 
         plt.ylabel("Real Time [s]")
         plt.xlabel("Simulated Time [s]")

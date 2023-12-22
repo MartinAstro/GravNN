@@ -1,5 +1,3 @@
-import sys
-
 from experiment_setup import *
 from extract_metrics import extract_metrics, save_metrics
 from interfaces import select_model
@@ -32,7 +30,8 @@ def run(experiment, idx):
 
 def main():
     experiments = setup_experiments()
-    idx = int(sys.argv[1])
+    # idx = int(sys.argv[1])
+    idx = 25
     exp = experiments[idx]
     run(exp, idx)
 

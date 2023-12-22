@@ -1,7 +1,6 @@
 import os
 from pprint import pprint
 
-from GravNN.GravityModels.HeterogeneousPoly import get_hetero_poly_data
 from GravNN.Networks.Configs import *
 from GravNN.Networks.script_utils import save_training
 from GravNN.Networks.utils import configure_run_args
@@ -16,27 +15,20 @@ def main():
     config.update(ReduceLrOnPlateauConfig())
 
     hparams = {
-        "N_dist": [50000],
-        "N_train": [2**15],
+        "N_dist": [100000],
+        "radius_max": [Eros().radius * 10],
+        # "N_train": [2**15],
+        "N_train": [4096],
         "N_val": [4096],
+        "obj_file": [Eros().obj_200k],
+        "batch_size": [2**11],
+        "learning_rate": [2**-8],
+        "epochs": [2**13],
+        # "num_units": [32],
+        # "layers": [[3, 1, 1, 1, 1, 1, 1, 3]],
         "num_units": [16],
-        "layers": [[3, 1, 1, 1, 1, 1, 1, 3]],
-        "loss_fcns": [["percent", "mse"]],
-        "jit_compile": [True],
-        "lr_anneal": [False],
-        "eager": [False],
-        "learning_rate": [0.0001],
-        "dropout": [0.0],
-        # "batch_size": [2**11],
-        "batch_size": [2**16],
-        # "batch_size": [4500],
-        "epochs": [200],
-        "acc_noise": [0.0],
-        "gravity_data_fcn": [get_hetero_poly_data],
-        "preprocessing": [["pines", "r_inv"]],
-        "PINN_constraint_fcn": ["pinn_a"],
-        "tanh_k": [0.1],
-        "early_stop": [True],
+        "layers": [[3, 1, 1, 1, 1, 1, 1, 1, 1, 3]],
+        "loss_fcns": [["percent", "rms"]],
     }
     args = configure_run_args(config, hparams)
 
@@ -69,11 +61,13 @@ def run(config):
     model = PINNGravityModel(config)
     history = model.train(data)
     model.config["val_loss"] = history.history["val_percent_mean"][-1]
+    print("val_loss: ", history.history["val_percent_mean"][-1])
 
     saver = ModelSaver(model, history)
     saver.save(df_file=None)
 
     print(f"Model ID: [{model.config['id']}]")
+    print("Model Size", model.config["params"][0])
     return model.config
 
 

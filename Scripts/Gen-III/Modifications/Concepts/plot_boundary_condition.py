@@ -29,7 +29,7 @@ def main():
         r_int,
         color="blue",
         linewidth=1.5,
-        label=r"$w_{\text{LF}}$",
+        label=r"$w_{\text{BC}}$",
     )  # , label='$H(x)$')
     plt.plot(
         x,

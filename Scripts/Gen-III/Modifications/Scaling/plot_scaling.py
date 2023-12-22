@@ -52,7 +52,7 @@ def plot(x, y, label, new_fig=True):
     if new_fig:
         vis.newFig()
     plt.scatter(x, y, alpha=0.3, s=1, label=label)
-    plt.xlabel("Distance from C.O.M. [Radii]")
+    plt.xlabel("Distance from COM [Radii]")
     plt.tight_layout()
     # plt.gca().set_xscale("log")
 
@@ -85,7 +85,7 @@ def main():
     plt.plot(
         r_line / R,
         u_analytic,
-        label="$U$ PM",
+        label=r"$U_{\text{PM}}$",
         color="black",
         linewidth=0.5,
     )
@@ -97,7 +97,7 @@ def main():
     u_train_ND = u_train / u_brill
     u_train_ND_scaled = u_train_ND * r_plot
     plot(r_plot, u_train_ND_scaled, "$U * n(r)$")
-    plt.ylabel("Proxy Potential, $\hat{U}_{NN}$")
+    plt.ylabel(r"Proxy Potential, $\hat{U}_{\text{NN}}$")
     plt.xlim([0.5, 10])
     vis.save(plt.gcf(), "Scaled_Potential")
 
