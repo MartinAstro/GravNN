@@ -8,84 +8,104 @@ import sigfig
 
 import GravNN
 
-GRAY_RGBA = plt.get_cmap("gray")(0.9)
-RED_RGBA = plt.get_cmap("RdYlGn").reversed()(1.0)
 
+def transform_to_colormap(data, **kwargs):
+    data_rank = data.rank(method="max")
 
-def transform_to_colormap(data, min_value, mid_value=None, max_value=None):
-    # throw error if mid_value and max_value are both provided
-    if mid_value is not None and max_value is not None:
-        raise ValueError("Cannot provide both mid_value and max_value")
-
-    # generate a linear transform using either the min and mid or min and max value
-    if mid_value is None:
-        slope = 1 / (max_value - min_value)
-        intercept = -slope * min_value
+    # get the colormap
+    invert = kwargs.get("invert", True)
+    colormap = kwargs.get("colormap", "RdYlGn")
+    colormap = kwargs.get("colormap", "Spectral")
+    if invert:
+        map = plt.get_cmap(colormap).reversed()
     else:
-        slope = 0.5 / (mid_value - min_value)
-        intercept = -slope * min_value
+        map = plt.get_cmap(colormap)
 
-    # apply the linear transform to the data
-    data = data.apply(lambda x: slope * x + intercept)
+    # compute transform constants
+    unique_ranks = np.unique(data_rank.values)
+    unique_max = unique_ranks[-2]
+    unique_min = unique_ranks[0]
 
-    # clip the data after 1 and before 0
-    data = data.apply(lambda x: 1 if x > 1 else x)
-    data = data.apply(lambda x: 0 if x < 0 else x)
+    if len(unique_ranks) <= 2:
+        unique_max = data_rank.max()
+        unique_min = data_rank.min()
 
-    # apply the colormap to the data
-    data = data.apply(lambda x: plt.get_cmap("RdYlGn").reversed()(x))
+    # transform data to 0 - 1
+    slope = 1 / (unique_max - unique_min)
+    intercept = -slope * data_rank.min()
+    data_rank = data_rank.apply(lambda x: slope * x + intercept)
+    data_rank = data_rank.apply(lambda x: 1 if x > 1 else x)
+
+    # apply colormap
+    data_rank = data_rank.apply(lambda x: map(x))
+    return data_rank
+
+
+def round_values(data, **kwargs):
+    def apply_int(x):
+        try:
+            if np.isinf(x):
+                return str(x)
+            else:
+                return str(int(x))
+        except:
+            return str(x)
+
+    def apply_round(x):
+        if x == "D" or np.isinf(x):
+            return x
+        else:
+            too_big = np.log10(x) > 5
+            too_small = np.log(x) < -3
+            not_zero = x != 0
+            if (too_big or too_small) and not_zero:
+                notation = "scientific"
+            else:
+                notation = "standard"
+            rounded_value = sigfig.round(
+                x,
+                kwargs.get("sig_figs", 2),
+                notation=notation,
+            )
+            return rounded_value
+
+    if data.name == "score" or kwargs.get("int", False):
+        data = data.apply(lambda x: apply_int(x))
+    else:
+        data = data.apply(lambda x: apply_round(x))
     return data
 
 
-def format_data(data, divergent_value, **kwargs):
-    data = data.apply(lambda x: "D" if x > divergent_value else x)
-    if "sig_figs" in kwargs:
-        notation = kwargs.get("notation", "standard")
-        data = data.apply(
-            lambda x: sigfig.round(x, kwargs["sig_figs"], notation=notation),
-        )
+def format_data(data, **kwargs):
+    divergent_value = kwargs.get("divergent_value", np.inf)
+    data = data.replace([np.inf, -np.inf], np.nan)
+    data = data.apply(lambda x: np.inf if x > divergent_value or np.isnan(x) else x)
+    # data = data.apply(lambda x: "D" if x >= divergent_value else x)
     return data
 
 
-def color_metrics(metric_df, color_df):
-    # wrap the cell with the color
+def wrap_metrics_in_color(metric_df, color_df):
     latex_df = copy.deepcopy(metric_df)
     for i in range(latex_df.shape[0]):
         str_value = str(latex_df.iloc[i])
+        if str_value == "nan":
+            str_value = ""
         color = color_df.iloc[i]
         color_str = "{}".format(",".join([f"{c:.2f}" for c in color[:3]]))
         latex_df.iloc[i] = r"\cellcolor[rgb]{" + color_str + "} " + str_value
-
     return latex_df
 
 
 def color_data(
     df,
     column,
-    min_value,
-    mid_value,
-    max_value,
-    divergent_value,
-    log,
-    format,
+    **kwargs,
 ):
     raw_df = copy.deepcopy(df[column])
-    raw_df = raw_df.replace([np.inf, -np.inf], np.nan)
-    raw_df = raw_df.apply(
-        lambda x: divergent_value if x > divergent_value or np.isnan(x) else x,
-    )
-
-    # processed data used to compute colors
-    if log:
-        processed_df = raw_df.apply(lambda x: np.log10(x))
-    else:
-        processed_df = copy.deepcopy(raw_df)
-
-    color_df = transform_to_colormap(processed_df, min_value, mid_value, max_value)
-
-    # formatted raw data is used in the table
-    formatted_raw_df = format_data(raw_df, divergent_value, **format)
-    colored_metric_df = color_metrics(formatted_raw_df, color_df)
+    color_df = transform_to_colormap(raw_df, **kwargs)
+    formatted_raw_df = format_data(raw_df, **kwargs)
+    formatted_raw_df = round_values(formatted_raw_df, **kwargs)
+    colored_metric_df = wrap_metrics_in_color(formatted_raw_df, color_df)
     return colored_metric_df
 
 
@@ -109,13 +129,73 @@ def save_data(df, table_name):
         file.write(latex_str)
 
 
-def main():
-    directory = os.path.dirname(GravNN.__file__)
-    df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
-    # sort by percent_planes
-    df = df.sort_values(by="percent_planes")
-    # df = df.sort_values(by="percent_extrapolation")
+def format_model_name(df):
+    def append_size(row):
+        small_in_name = "Small" in row["model_name"]
+        large_in_name = "Large" in row["model_name"]
 
+        small_model = row["num_params"] < 1e3
+        point_mass_model = "PM" in row["model_name"]
+        if small_in_name or large_in_name:
+            row["model_name"] = (
+                row["model_name"].replace("_Small", "").replace("_Large", "")
+            )
+            row["model_name"] = (
+                row["model_name"].replace("Small", "").replace("Large", "")
+            )
+
+        if point_mass_model:
+            return row["model_name"] + " -"
+
+        if small_model:
+            return row["model_name"] + " S"  # " Small"
+        else:
+            return row["model_name"] + " L"  # " Large"
+
+    def abbreviate_poly(row):
+        if "POLYHEDRAL" in row["model_name"]:
+            row["model_name"] = row["model_name"].replace("POLYHEDRAL", "POLY")
+        return row["model_name"]
+
+    def bold_PINN_III(row):
+        return row["model_name"]
+        if "PINN_III" in row["model_name"]:
+            row["model_name"] = r"\textbf{" + row["model_name"] + "}"
+        return row["model_name"]
+
+    df["model_name"] = df.apply(lambda row: append_size(row), axis=1)
+    df["model_name"] = df.apply(lambda row: abbreviate_poly(row), axis=1)
+    df["model_name"] = df.apply(lambda row: bold_PINN_III(row), axis=1)
+    return df
+
+
+def format_column_names(df):
+    # Rename all percent values
+    for column in df.columns:
+        if "percent" in column:
+            metric_name = column.replace("percent_", "").capitalize()
+            metric_name = r"\makecell{" + metric_name + r" \\ (\%)}"
+            if "Extrapolation" in metric_name:
+                metric_name = metric_name.replace("Extrapolation", "Extrap.")
+
+            df = df.rename(columns={column: metric_name})
+
+    new_names = {
+        "score": "Score",
+        "model_name": "Model",
+        "num_params": "Params",
+        "N_train": "N",
+        "acc_noise": r"\makecell{Error \\ (\%)}",
+        "pos_error": r"\makecell{$\Delta X$ \\ (km)}",
+        "dt": r"\makecell{$\Delta t$ \\ (s)}",
+        "train_duration": "Train Time (s)",
+    }
+    df = df.rename(columns=new_names)
+
+    return df
+
+
+def compute_rank(df, method):
     # ranking columns
     ranking_columns = [
         "percent_planes",
@@ -124,237 +204,165 @@ def main():
         "percent_extrapolation",
         "percent_surface",
         "pos_error",
-        "dt",
+        # "dt",
     ]
+    # replace nans with infs
+    rank_df = df.replace(np.nan, np.inf)
+    rank = rank_df[ranking_columns].rank(method="max")
+    if method == "sum":
+        df["score"] = rank.sum(axis=1)
+    if method == "mean":
+        df["score"] = rank.mean(axis=1)
+    else:
+        KeyError("Method not implemented")
 
-    # generate a rank for each model based on the ranking columns
-    # then compute the average rank for each model
-    # and sort the dataframe by average rank (the lower the number, the better the rank)
-    df["rank"] = df[ranking_columns].rank().mean(axis=1)
-    df = df.sort_values(by="rank")
+    df = df.replace(np.inf, np.nan)
+    return df
+
+
+def color_metadata(df, latex_df):
+    # format the training data
+    red_hue = plt.get_cmap("Reds").reversed()(0.8)
+    white_hue = plt.get_cmap("Greys")(0)
+    gray_hue = plt.get_cmap("Greys")(0.5)
+
+    poly_models = df[df["model_name"].str.contains("POLY")][
+        df["num_params"] > 1e3
+    ].index
+    latex_df = latex_df.drop(index=poly_models[0])
+
+    poly_models = df[df["model_name"].str.contains("POLY")][
+        df["num_params"] < 1e3
+    ].index
+    latex_df = latex_df.drop(index=poly_models[0])
+
+    poly_models = df[df["model_name"].str.contains("POLY")].index
+    for index in poly_models:
+        df.at[index, "N_train"] = np.nan
+        df.at[index, "acc_noise"] = np.nan
+
+    training_data = df["N_train"]
+    color_df = training_data.apply(
+        lambda x: red_hue if x == 500 else (gray_hue if np.isnan(x) else white_hue),
+    )
+    training_data_latex = wrap_metrics_in_color(training_data, color_df)
+    training_data_latex = training_data_latex.apply(
+        lambda x: x.replace("50000.0", "50000").replace("500.0", "500"),
+    )
+    latex_df["N_train"] = training_data_latex
+
+    training_data = df["acc_noise"] * 100
+    color_df = training_data.apply(
+        lambda x: red_hue if x == 10.0 else (gray_hue if np.isnan(x) else white_hue),
+    )
+    training_data_latex = wrap_metrics_in_color(training_data, color_df)
+    training_data_latex = training_data_latex.apply(
+        lambda x: x.replace("10.0", "10").replace("0.0", "0"),
+    )
+    latex_df["acc_noise"] = training_data_latex
+
+    return latex_df
+
+
+def main(rank, score):
+    directory = os.path.dirname(GravNN.__file__)
+    df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
+    df = compute_rank(df, score)
+    df = df.sort_values(by="score")
 
     latex_df = copy.deepcopy(df)
 
-    # conversions = [
-    #     {
-    #         "column": "percent_planes",
-    #         "min_value": 0,
-    #         "mid_value": 1,
-    #         "max_value": None,
-    #         "divergent_value": 100,
-    #         "log": True,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "percent_interior",
-    #         "min_value": 0,
-    #         "mid_value": 1,
-    #         "max_value": None,
-    #         "divergent_value": 100,
-    #         "log": True,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "percent_exterior",
-    #         "min_value": 0,
-    #         "mid_value": 1,
-    #         "max_value": None,
-    #         "divergent_value": 100,
-    #         "log": True,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "percent_extrapolation",
-    #         "min_value": 0,
-    #         "mid_value": 3,
-    #         "max_value": None,
-    #         "divergent_value": 100,
-    #         "log": False,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "percent_surface",
-    #         "min_value": 0,
-    #         "mid_value": 20,
-    #         "max_value": None,
-    #         "divergent_value": 100,
-    #         "log": False,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "pos_error",
-    #         "min_value": 3,
-    #         "mid_value": None,
-    #         "max_value": 8,
-    #         "divergent_value": 1e8,
-    #         "log": True,
-    #         "format": {"sig_figs": 2, "notation": "scientific"},
-    #     },
-    #     {
-    #         "column": "dt",
-    #         "min_value": 1,
-    #         "mid_value": None,
-    #         "max_value": 30,
-    #         "divergent_value": 100,
-    #         "log": False,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "train_duration",
-    #         "min_value": 0,
-    #         "mid_value": 1,
-    #         "max_value": None,
-    #         "divergent_value": 600,
-    #         "log": True,
-    #         "format": {"sig_figs": 2},
-    #     },
-    #     {
-    #         "column": "rank",
-    #         "min_value": 9.7,
-    #         "mid_value": None,
-    #         "max_value": 55,
-    #         "divergent_value": 56,
-    #         "log": False,
-    #         "format": {"sig_figs": 2},
-    #     },
-    # ]
-
     conversions = [
-        {
-            "column": "percent_planes",
-            "min_value": df["percent_planes"].min(),
-            "mid_value": df["percent_planes"][df["percent_planes"] < 100].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "percent_interior",
-            "min_value": df["percent_interior"].min(),
-            "mid_value": df["percent_interior"][df["percent_interior"] < 100].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "percent_exterior",
-            "min_value": df["percent_exterior"].min(),
-            "mid_value": df["percent_exterior"][df["percent_exterior"] < 100].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "percent_extrapolation",
-            "min_value": df["percent_extrapolation"].min(),
-            "mid_value": df["percent_extrapolation"][
-                df["percent_extrapolation"] < 100
-            ].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "percent_surface",
-            "min_value": df["percent_surface"].min(),
-            "mid_value": df["percent_surface"][df["percent_surface"] < 100].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "pos_error",
-            "min_value": df["pos_error"].min(),
-            "mid_value": df["pos_error"][df["pos_error"] < 1e8].median(),
-            "max_value": None,
-            "divergent_value": 1e8,
-            "log": False,
-            "format": {"sig_figs": 2, "notation": "scientific"},
-        },
-        {
-            "column": "dt",
-            "min_value": df["dt"].min(),
-            "mid_value": df["dt"][df["dt"] < 100].median(),
-            "max_value": None,
-            "divergent_value": 100,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "train_duration",
-            "min_value": df["train_duration"].min(),
-            "mid_value": df["train_duration"][df["train_duration"] < 600].median(),
-            "max_value": None,
-            "divergent_value": 600,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
-        {
-            "column": "rank",
-            "min_value": df["rank"].min(),
-            "mid_value": df["rank"][df["rank"] < 56].median(),
-            "max_value": None,
-            "divergent_value": 56,
-            "log": False,
-            "format": {"sig_figs": 2},
-        },
+        {"column": "percent_planes"},
+        {"column": "percent_interior"},
+        {"column": "percent_exterior"},
+        {"column": "percent_extrapolation"},
+        {"column": "percent_surface"},
+        {"column": "pos_error"},
+        {"column": "dt"},
+        {"column": "train_duration"},
+        {"column": "score"},
     ]
 
+    # color columns
     for conversion in conversions:
         column = conversion["column"]
-        latex_df[column] = color_data(
-            df,
-            column,
-            min_value=conversion["min_value"],
-            mid_value=conversion["mid_value"],
-            max_value=conversion["max_value"],
-            divergent_value=conversion["divergent_value"],
-            log=conversion["log"],
-            format=conversion["format"],
-        )
-        print(column)
+        if rank:
+            df[column] = df[column].rank(method="max")
+        latex_df[column] = color_data(df, **conversion)
+
+    latex_df = color_metadata(df, latex_df)
+
+    column_order = [
+        "model_name",
+        "num_params",
+        "N_train",
+        "acc_noise",
+        "score",
+        "percent_planes",
+        "percent_interior",
+        "percent_exterior",
+        "percent_extrapolation",
+        "percent_surface",
+        "pos_error",
+        # "dt",
+        "train_duration",
+    ]
+
+    latex_df = latex_df[column_order]
 
     # assign model_name as index
-    latex_df = latex_df.set_index("model_name")
-    # sort by name
-    # latex_df = latex_df.sort_index()
+    latex_df = format_model_name(latex_df)
+    latex_df = format_column_names(latex_df)
 
-    drop_columns = [
-        "dt_a_single",
-        "dt_a_batch",
-        "layers",
-        "shape",
-        "elements",
-        "deg",
-        "state_error",
-        "rms_planes",
-        "num_units",
-    ]
+    drop_columns = ["Params", "Train Time (s)"]
     latex_df = latex_df.drop(columns=drop_columns)
+    latex_df = latex_df.set_index("Model")
 
-    # separate into acc_noise == 0.0 and 0.1
-    latex_df_0 = latex_df[latex_df["acc_noise"] == 0.0]
-    latex_df_1 = latex_df[latex_df["acc_noise"] == 0.1]
+    save_data(latex_df, f"table_{rank}_{score}")
 
-    latex_df_0_500 = latex_df_0[latex_df_0["N_train"] == 500]
-    latex_df_0_50000 = latex_df_0[latex_df_0["N_train"] == 50000]
+    # Extract the value out of the \cellcolor{} command within the rank column
+    # use regex
+    regex = r"\\cellcolor\[rgb\]{([\d.,]+)}\s*([\d.]+)"
+    latex_df["Score"] = (
+        latex_df["Score"].str.extract(regex)[1].astype(float).astype(int)
+    )
 
-    latex_df_1_500 = latex_df_1[latex_df_1["N_train"] == 500]
-    latex_df_1_50000 = latex_df_1[latex_df_1["N_train"] == 50000]
+    # rename a column
+    latex_df = latex_df.rename(columns={r"\makecell{Error \\ (\%)}": "Error (\%)"})
 
-    save_data(latex_df, "table")
-    save_data(latex_df_0, "table_0")
-    save_data(latex_df_1, "table_1")
-    save_data(latex_df_0_500, "table_0_500")
-    save_data(latex_df_0_50000, "table_0_50000")
-    save_data(latex_df_1_500, "table_1_500")
-    save_data(latex_df_1_50000, "table_1_50000")
+    df_subset = latex_df.pivot_table(
+        index=latex_df.index,
+        columns=["N", "Error (\%)"],
+        values="Score",
+    )
+    # collapse items from the first column into the 5th column
+    poly_subset = df_subset[df_subset.columns[0]]
+    non_nan_index = poly_subset[poly_subset.notna()].index
+    desired_column = df_subset.columns[-1]
+    # load the polyhedral model rank into the desired column
+    for index in non_nan_index:
+        df_subset.at[index, desired_column] = poly_subset.loc[index]
+
+    # drop the polyhedral column
+    df_subset = df_subset.drop(columns=df_subset.columns[0])
+
+    # rank each column
+    df_subset = df_subset.rank(axis=-0, method="max")
+    rank_subset = df_subset.mean(axis=1)
+    df_subset["rank"] = rank_subset.astype(int)
+    df_subset = df_subset.sort_values(by="rank")
+    df_subset = df_subset.drop(columns="rank")
+
+    latex_df_subset = copy.deepcopy(df_subset)
+
+    for column in df_subset.columns:
+        latex_df_subset[column] = color_data(df_subset, column, int=True)
+    save_data(latex_df_subset, f"table_subset_{rank}_{score}")
 
 
 if __name__ == "__main__":
-    main()
+    main(rank=False, score="sum")
+    main(rank=True, score="sum")
+    main(rank=False, score="mean")
+    main(rank=True, score="mean")
