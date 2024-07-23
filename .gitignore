@@ -37,3 +37,5 @@ docs/source/_build/
 .eggs/*
 *.egg-info
 Scratch/*
+tmp.prof
+*.data
