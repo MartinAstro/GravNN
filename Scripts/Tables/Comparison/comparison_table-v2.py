@@ -186,7 +186,7 @@ def format_column_names(df):
         "num_params": "Params",
         "N_train": "N",
         "acc_noise": r"\makecell{Error \\ (\%)}",
-        "pos_error": r"\makecell{$\Delta X$ \\ (km)}",
+        "pos_error": r"\makecell{Traj. \\ (km)}",
         "dt": r"\makecell{$\Delta t$ \\ (s)}",
         "train_duration": "Train Time (s)",
     }
@@ -267,6 +267,8 @@ def color_metadata(df, latex_df):
 def main(rank, score):
     directory = os.path.dirname(GravNN.__file__)
     df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
+    df["pos_error"] /= 1e3
+    df["pos_error"] *= (24 * 3600 / 1000) * 1 / (24 * 3600)
     df = compute_rank(df, score)
     df = df.sort_values(by="score")
 
