@@ -8,6 +8,7 @@
 #SBATCH --partition=aa100
 #SBATCH --time=06:30:00
 #SBATCH --output=SlurmFiles/CaseStudy/case_study-%j-%a.out
+# --dependency=afterok:3970897
 
 module purge
 
@@ -30,8 +31,8 @@ echo "Running orbit search"
 
 # srun python /projects/joma5012/GravNN/Scripts/Figures/Gen-III/Ablation/hparam_ablation.py $SLURM_ARRAY_TASK_ID
 
-srun python /projects/joma5012/GravNN/Scripts/Gen-III/CaseStudy/train_case_study.py $SLURM_ARRAY_TASK_ID 0 &
-srun python /projects/joma5012/GravNN/Scripts/Gen-III/CaseStudy/train_case_study.py $SLURM_ARRAY_TASK_ID 1 &
+srun python /projects/joma5012/GravNN/Scripts/Gen-III/CaseStudy/train_case_study.py 0 &
+srun python /projects/joma5012/GravNN/Scripts/Gen-III/CaseStudy/train_case_study.py 1 &
 
 
 wait # Necessary to wait for all processes to finish
