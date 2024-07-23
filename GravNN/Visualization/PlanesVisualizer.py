@@ -88,6 +88,7 @@ class PlanesVisualizer(VisualizationBase):
         log=False,
         contour=False,
         trajectory=None,
+        **kwargs,
     ):
         # create mask for the two position coordinates
         mask = self.plane_mask(plane)

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from GravNN.Analysis.TimePredictionExperiment import TimePredictionExperiment
+from GravNN.Analysis.TimeEvaluationExperiment import TimePredictionExperiment
 from GravNN.CelestialBodies.Planets import Earth
 from GravNN.GravityModels.SphericalHarmonics import SphericalHarmonics
 from GravNN.Networks.Model import load_config_and_model

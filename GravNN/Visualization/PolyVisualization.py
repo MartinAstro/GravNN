@@ -43,13 +43,13 @@ class PolyVisualization(VisualizationBase):
 
         if surface_colors and accelerations is not None:
             cmap = plt.get_cmap(cmap)
+
             if cmap_reverse:
                 cmap = cmap.reversed()
             tri = Poly3DCollection(
                 mesh.triangles * 1000,
                 cmap=cmap,
                 alpha=alpha,
-                # shade=True,
             )
 
             if len(accelerations.shape) == 2:
@@ -59,13 +59,20 @@ class PolyVisualization(VisualizationBase):
 
             if percent:
                 # Clip the values to prescribed range
-                x_normal = np.clip(x / 100, min_percent, max_percent)
-                x_min = 0
-                x_max = np.max(x_normal) * 100
+
+                x_min = min_percent * 100
+                x_max = max_percent * 100
+                x_normal = np.clip(x, x_min, x_max)  # Units of % (0 - 100 typically)
+                x_range = np.array([[x_min, x_max]])
+
+                if log:
+                    x_normal = np.log10(x_normal)
+                    x_range = np.log10(x_range)
 
                 # scale the clipped values to 0 - 1
                 scaler = MinMaxScaler((0, 1))
-                x_normal = scaler.fit_transform(x_normal.reshape((-1, 1))).flatten()
+                scaler.fit(x_range.reshape((-1, 1)))
+                x_normal = scaler.transform(x_normal.reshape((-1, 1))).flatten()
 
                 # If all values exceed the clip bounds, ensure scalar forces to 1 rather
                 # than 0.
@@ -76,6 +83,7 @@ class PolyVisualization(VisualizationBase):
                 x_min = np.min(x) if z_min is None else z_min
                 x_max = np.max(x) if z_max is None else z_max
                 x_normal = (x - x_min) / (x_max - x_min)
+
             mesh.visual.face_colors = cmap(x_normal)
 
             # place color on the collection
@@ -102,16 +110,16 @@ class PolyVisualization(VisualizationBase):
         ax.axes.set_ylim3d(bottom=min_lim, top=max_lim)
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim)
 
+        vlim_min = x_min
+        vlim_max = x_max
+
+        if log:
+            norm = SymLogNorm(linthresh=1e-4, vmin=vlim_min, vmax=vlim_max)
+        else:
+            norm = Normalize(vmin=vlim_min, vmax=vlim_max)
+
+        arg = cm.ScalarMappable(norm=norm, cmap=cmap)
         if cbar and accelerations is not None:
-            vlim_min = x_min
-            vlim_max = x_max
-            if log:
-                norm = SymLogNorm(linthresh=1e-4, vmin=vlim_min, vmax=vlim_max)
-            else:
-                norm = Normalize(vmin=vlim_min, vmax=vlim_max)
-
-            arg = cm.ScalarMappable(norm=norm, cmap=cmap)
-
             cbformat = ticker.ScalarFormatter()
             cbformat.set_scientific("%.2e")
             cbformat.set_useMathText(True)

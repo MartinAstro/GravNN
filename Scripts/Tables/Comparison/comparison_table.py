@@ -349,6 +349,7 @@ def produce_table(
 ):
     directory = os.path.dirname(GravNN.__file__)
     # df = pd.read_pickle(directory + "/../Data/Dataframes/comparison_metrics.data")
+    # df = pd.read_pickle(directory + "/../Data/Comparison/old_comparison/all_comparisons.data")
     df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
 
     # query for noise, size, and training data

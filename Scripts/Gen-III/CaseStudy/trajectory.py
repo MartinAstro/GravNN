@@ -5,7 +5,6 @@ from GravNN.Analysis.TrajectoryExperiment import TestModel, TrajectoryExperiment
 from GravNN.CelestialBodies.Asteroids import Eros
 from GravNN.GravityModels.HeterogeneousPoly import generate_heterogeneous_model
 from GravNN.GravityModels.Polyhedral import Polyhedral
-from GravNN.Networks.Configs.Eros_Configs import get_default_eros_config
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.TrajectoryVisualizer import TrajectoryVisualizer
 from GravNN.Visualization.VisualizationBase import VisualizationBase
@@ -17,33 +16,6 @@ class TrajectoryVisualizerMod(TrajectoryVisualizer):
         self.fig_size = (self.w_tri, self.w_tri)
 
     def plot(self):
-        # self.plot_reference_trajectory()
-        # self.plot_shape_model()
-
-        # remove legend
-        # plt.gca().get_legend().remove()
-
-        # # remove ticks
-        # plt.gca().set_xticks([])
-        # plt.gca().set_yticks([])
-        # plt.gca().set_zticks([])
-
-        # # set elevation and azimuth
-        # plt.gca().view_init(elev=0, azim=-90)
-
-        # # decrease the padding / whitespace
-        # plt.gca().xaxis.set_tick_params(pad=-1)
-        # plt.gca().yaxis.set_tick_params(pad=-1)
-        # plt.gca().zaxis.set_tick_params(pad=-1)
-
-        # # decrease the whitespace outside the axes
-        # plt.gca().set_xmargin(0)
-        # plt.gca().set_ymargin(0)
-        # plt.gca().set_zmargin(0)
-
-        # remove the axes
-        # plt.gca().set_axis_off()
-
         fig, ax = self.newFig(fig_size=(self.w_tri * 2, self.w_tri))
         self.plot_position_error()
         plt.gca().yaxis.tick_left()
@@ -63,6 +35,8 @@ class TrajectoryVisualizerMod(TrajectoryVisualizer):
         # Make all lines on the twin axis dotted
         for line in ax2.get_lines():
             line.set_linestyle("--")
+        # drop grid
+        ax2.grid(False)
 
         # Make a custom legend which shows the solid lines as $\Delta R$ and dotted lines as $t_{exec}$
         plt.legend(
@@ -70,7 +44,7 @@ class TrajectoryVisualizerMod(TrajectoryVisualizer):
                 plt.Line2D((0, 1), (0, 0), color="k", linestyle="-", linewidth=1),
                 plt.Line2D((0, 1), (0, 0), color="k", linestyle="--", linewidth=1),
             ],
-            [r"$\Delta R$ (m)", r"$t_{exec}$ (s)"],
+            [r"$\Delta R$ (km)", r"$t_{exec}$ (s)"],
             loc="upper left",
             fontsize=4,
             # frameon=False,
@@ -121,7 +95,6 @@ if __name__ == "__main__":
     planet = Eros()
     obj_file = planet.obj_200k
 
-    config = get_default_eros_config()
     true_model = generate_heterogeneous_model(planet, obj_file)
     poly_model = Polyhedral(planet, obj_file)
     pinn_II_config, pinn_II_model = load_config_and_model(

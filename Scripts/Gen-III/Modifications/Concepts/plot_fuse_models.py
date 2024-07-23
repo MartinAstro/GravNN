@@ -102,7 +102,7 @@ def main():
         color="blue",
         linewidth=1,
         linestyle="--",
-        label=r"$w_{\text{Analytic}}$",
+        label=r"$w_{\text{LF}}$",
     )  # , label='$H(x)$')
     plt.ylabel("Weight [-]")
     plt.legend(loc="lower right")

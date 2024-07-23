@@ -207,14 +207,17 @@ class TrajectoryExperiment:
                 dy = test_sol.y - self.true_sol.y
                 pos_diff = np.cumsum(np.linalg.norm(dy[0:3, :], axis=0))
                 state_diff = np.cumsum(np.linalg.norm(dy, axis=0))
+                pos_diff_inst = np.linalg.norm(dy[0:3, :], axis=0)
             else:
                 # if the propagation terminated early
                 pos_diff = np.nan
                 state_diff = np.nan
+                pos_diff_inst = np.nan
 
             metrics = {
                 "pos_diff": pos_diff,
                 "state_diff": state_diff,
+                "pos_diff_inst": pos_diff_inst,
             }
             self.test_models[i].metrics = metrics
 

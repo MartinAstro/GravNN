@@ -42,11 +42,6 @@ class ExtrapolationExperiment(ExperimentBase):
 
     def get_test_data(self):
         planet = self.config["planet"][0]
-        original_max_radius = self.config["radius_max"][0]
-        augment_data = self.config.get("augment_data_config", [{}])[0]
-        extra_max_radius = augment_data.get("radius_max", [0])[0]
-        np.max([original_max_radius, extra_max_radius])
-
         self.config["radius_min"][0]
         obj_file = self.config.get("obj_file", [None])[0]
 

@@ -36,8 +36,8 @@ def plot(config, model, file_name, new_fig=True):
         linewidth=1,
         label=file_name,
     )
+    plt.legend(loc="upper right")
     plt.ylim([1e-4, 1e2])
-    plt.legend()
 
     if not new_fig:
         plt.figure(2)
@@ -49,12 +49,15 @@ def plot(config, model, file_name, new_fig=True):
         linewidth=1,
         label=file_name,
     )
+    plt.legend(loc="upper right")
     plt.ylim([1e-4, 1e2])
-    plt.legend()
     plt.tight_layout()
 
 
 def main():
+    # REMEMBER THESE ARE COMPUTED WITH SYMMETRIC HETEROGENEOUS MODEL
+    # NEED TO FORCE THIS BEFORE RUNNING.
+
     # RMS #
     df = pd.read_pickle("Data/Dataframes/pinn_III_mods_PINN_II.data")
     config, model = load_config_and_model(df, idx=-1)
