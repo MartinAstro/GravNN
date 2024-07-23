@@ -15,50 +15,44 @@ class TrajectoryVisualizerMod(TrajectoryVisualizer):
         super().__init__(*args, **kwargs)
         self.fig_size = (self.w_tri, self.w_tri)
 
+    def plot_position_error(self):
+        for model in self.experiment.test_models:
+            label = model.label
+            color = model.color
+            time = model.orbit.solution.t
+            dr = model.metrics["pos_diff_inst"]
+            plt.semilogy(time / 3600, dr, label=label, color=color)
+
+            print("Model: ", label, " dR: ", dr[-1])
+            print("Model: ", label, " dR_i: ", model.metrics["pos_diff_inst"][-1])
+
+        plt.ylabel(r"Inst. $\Delta x$ Error [m]")
+        # plt.ylabel("$\sum |\Delta x|$ Error [km]")
+        plt.xlabel("Simulated Time [hr]")
+        plt.gca().yaxis.tick_right()
+        plt.gca().yaxis.set_label_position("right")
+        plt.ylim([1e-1, 5e4])
+        # plt.ylim([1e-3, 1e4])
+
     def plot(self):
         fig, ax = self.newFig(fig_size=(self.w_tri * 2, self.w_tri))
         self.plot_position_error()
         plt.gca().yaxis.tick_left()
         plt.gca().yaxis.set_label_position("left")
         # Make a legend for the models used
-        plt.gca().legend(
-            fontsize=4,
-            loc="lower right",
-        )
+        plt.gca().legend(fontsize=4, loc="lower right")
 
-        ax2 = plt.twinx()
-        self.plot_execution_time()
-        plt.gca().yaxis.tick_right()
+        self.fig_size = (self.w_tri, self.w_tri)
+        self.plot_trajectory_projection(linewidth=0.25, frame="B")
+        plt.gca().legend(loc="lower right", fontsize=4)
+        # make lines in legend wider
+        for line in plt.gca().get_legend().get_lines():
+            line.set_linewidth(0.5)
+
+        plt.gca().yaxis.set_ticks_position("right")
+        # rotate tick labels
+        plt.setp(plt.gca().get_yticklabels(), rotation=90)
         plt.gca().yaxis.set_label_position("right")
-        ax2.set_yscale("linear")
-
-        # Make all lines on the twin axis dotted
-        for line in ax2.get_lines():
-            line.set_linestyle("--")
-        # drop grid
-        ax2.grid(False)
-
-        # Make a custom legend which shows the solid lines as $\Delta R$ and dotted lines as $t_{exec}$
-        plt.legend(
-            [
-                plt.Line2D((0, 1), (0, 0), color="k", linestyle="-", linewidth=1),
-                plt.Line2D((0, 1), (0, 0), color="k", linestyle="--", linewidth=1),
-            ],
-            [r"$\Delta R$ (km)", r"$t_{exec}$ (s)"],
-            loc="upper left",
-            fontsize=4,
-            # frameon=False,
-            # handlelength=1,
-        )
-
-        self.plot_3d_trajectory()
-        plt.gca().view_init(elev=0, azim=-90)
-        # plt.gca().view_init(elev=5, azim=-85)
-
-        # move the legend away from the edge slightly
-        plt.gca().legend(loc="upper left", fontsize=4, bbox_to_anchor=(0.10, 0.90))
-
-        # Make the 3D axes take up more of the figure size
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
 
 
@@ -120,4 +114,4 @@ if __name__ == "__main__":
 
     save_name = "primary_trajectory"
     vis.save(plt.figure(1), save_name)
-    plt.show()
+    # plt.show()
