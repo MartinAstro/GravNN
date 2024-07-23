@@ -87,7 +87,7 @@ def get_training_metrics(model):
 
 def get_time_metrics(exp):
     dt_batch = exp.dt_a_batch
-    dt_single = exp.dt_a_batch
+    dt_single = exp.dt_a_single
 
     return {
         "dt_a_batch": dt_batch,
