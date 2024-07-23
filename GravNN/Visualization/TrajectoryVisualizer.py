@@ -101,6 +101,61 @@ class TrajectoryVisualizer(VisualizationBase):
         plt.gca().set_box_aspect((1, 1, 1))
         plt.gca().view_init(elev=el, azim=az, roll=0)
 
+    def plot_orbit_projection(self, model, projection="xz", **kwargs):
+        sol = model.orbit.solution
+        omega_vec = model.orbit.omega_vec
+
+        if kwargs.get("frame", self.frame) == "B":
+            BN = compute_BN(sol.t, omega_vec)
+            X = sol.y[0:3].T
+            X = X.reshape((-1, 3, 1))
+            X = BN @ X
+            X = X.squeeze()
+            X, Y, Z = X[:, 0], X[:, 1], X[:, 2]
+        else:
+            X, Y, Z = sol.y[0:3]
+
+        projection = projection.lower()
+        if projection == "xy":
+            X, Y = X, Y
+        elif projection == "xz":
+            X, Y = X, Z
+        elif projection == "yz":
+            X, Y = Y, Z
+
+        # convert to km
+        X = X / 1000
+        Y = Y / 1000
+
+        label = model.label
+        color = model.color
+        linestyle = model.linestyle
+        linewidth = kwargs.get("linewidth", 1)
+
+        plt.plot(
+            X,
+            Y,
+            label=label,
+            color=color,
+            linestyle=linestyle,
+            linewidth=linewidth,
+        )
+        # scatter marker is a star
+        plt.gca().scatter(X[0], Y[0], c="black", s=0.5, marker="d")
+
+        plt.legend()
+
+        plt.xlabel(r" ${}^{\mathcal{" + self.frame + r"}} " + f"{projection[0]}$ [km]")
+        plt.ylabel(r" ${}^{\mathcal{" + self.frame + r"}} " + f"{projection[1]}$ [km]")
+
+        # plt.gca().set_xticklabels("")
+        # plt.gca().set_yticklabels("")
+
+        min_lim = np.min(np.concatenate([X, Y]))
+        max_lim = np.max(np.concatenate([X, Y]))
+        plt.gca().set_ylim([min_lim, max_lim])
+        plt.gca().set_xlim([min_lim, max_lim])
+
     def plot_shape_model(self):
         if self.mesh is not None:
             tri = Poly3DCollection(
@@ -118,6 +173,13 @@ class TrajectoryVisualizer(VisualizationBase):
         for model in self.experiment.test_models:
             self.plot_orbit(model, **kwargs)
         self.plot_shape_model()
+
+    def plot_trajectory_projection(self, new_fig=True, **kwargs):
+        if new_fig:
+            self.newFig()
+        self.plot_orbit_projection(self.true_model, **kwargs)
+        for model in self.experiment.test_models:
+            self.plot_orbit_projection(model, **kwargs)
 
     def plot_reference_trajectory(self, new_fig=True, **kwargs):
         if new_fig:
