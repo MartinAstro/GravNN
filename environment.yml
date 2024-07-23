@@ -1,0 +1,27 @@
+name: research
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - numba
+  - pandas
+  - tensorflow>=2.6
+  - scikit-learn
+  - plotly
+  - dash
+  - tqdm
+  - colorama
+  - rtree
+  - pooch
+  - pip
+  - seaborn
+  - sphinx
+  - sphinx_rtd_theme
+  - pre-commit
+  - pip:
+      - numpy==1.23.0
+      - trimesh==3.9.31
+      - sigfig  
+      - tensorflow_model_optimization
+      - spicepy
+      - sphinx-gallery
