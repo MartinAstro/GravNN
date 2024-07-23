@@ -29,9 +29,11 @@ venv/*
 Scripts/Scratch/*
 *-checkpoint.ipynb
 Hyperparameter Analysis*
+SlurmFiles/*
 
 docs/build/*
 docs/source/_build/
 .eggs
 .eggs/*
 *.egg-info
+Scratch/*
