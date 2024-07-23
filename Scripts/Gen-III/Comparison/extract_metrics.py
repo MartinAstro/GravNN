@@ -6,6 +6,7 @@ import pandas as pd
 from experiment_setup import (
     get_default_config,
     setup_fast_experiments,
+    setup_experiments
 )
 from interfaces import select_model
 
@@ -141,8 +142,7 @@ def load_experiment(experiment, config):
 
 
 def main():
-    # experiments = setup_experiments()
-    experiments = setup_fast_experiments()
+    experiments = setup_experiments()
 
     metrics_list = []
     for idx, exp in enumerate(experiments):
@@ -164,7 +164,7 @@ def main():
 
     df = pd.DataFrame(metrics_list)
     # save dataframe for interactive analysis
-    df.to_pickle("Data/Dataframes/comparison_metrics.data")
+    df.to_pickle("Data/Dataframes/comparison_metrics_072324.data")
 
 
 if __name__ == "__main__":
