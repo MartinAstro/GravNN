@@ -35,3 +35,5 @@ docs/source/_build/
 .eggs
 .eggs/*
 *.egg-info
+tmp.prof
+*.data
