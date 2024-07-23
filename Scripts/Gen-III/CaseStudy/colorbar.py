@@ -63,7 +63,7 @@ class StandaloneColorbar(VisualizationBase):
 
 if __name__ == "__main__":
     base_vis = VisualizationBase()
-    fig_size = (base_vis.w_full / 9, base_vis.w_tri * 2)
+    fig_size = (base_vis.w_full * 0.15, base_vis.w_tri * 1.7)
 
     vis = StandaloneColorbar(
         cmap="jet",
