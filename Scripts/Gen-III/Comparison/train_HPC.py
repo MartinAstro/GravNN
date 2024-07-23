@@ -24,7 +24,7 @@ def run(experiment, idx):
     wrapper.configure(config)
     wrapper.train(data)
     wrapper.save()
-    wrapper.evaluate(override=False)
+    wrapper.evaluate(override=True)
 
     metrics = extract_metrics(wrapper)
     save_metrics(metrics, idx)

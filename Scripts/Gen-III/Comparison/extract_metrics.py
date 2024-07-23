@@ -57,10 +57,14 @@ def get_extrap_metrics(exp):
 
 def get_traj_metrics(exp):
     test_model = exp.test_models[0]
-    pos_error = test_model.metrics["pos_diff"][-1]
-    state_error = test_model.metrics["state_diff"][-1]
-    dt = test_model.orbit.elapsed_time[-1]
-
+    try:
+        pos_error = test_model.metrics["pos_diff"][-1]
+        state_error = test_model.metrics["state_diff"][-1]
+        dt = test_model.orbit.elapsed_time[-1]
+    except Exception:
+        pos_error = np.nan
+        state_error = np.nan
+        dt = np.nan
     return {
         "pos_error": pos_error,
         "state_error": state_error,
