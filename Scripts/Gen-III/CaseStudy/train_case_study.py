@@ -1,4 +1,4 @@
-import os
+import os,sys
 from pprint import pprint
 
 from GravNN.Networks.Configs import *
@@ -12,7 +12,7 @@ os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 def get_hparams():
     hparams = {
         "N_dist": [100000],
-        "radius_max": [Eros().radius * 10],
+        "radius_max": [Eros().radius * 3],
         "N_train": [90000],
         "N_val": [4096],
         "num_units": [32],
@@ -81,5 +81,7 @@ def run(config):
 
 
 if __name__ == "__main__":
-    PINN_II_Train()
-    PINN_III_Train()
+    if int(sys.argv[1]) == 0:
+        PINN_II_Train()
+    else:
+        PINN_III_Train()

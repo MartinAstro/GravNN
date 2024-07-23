@@ -22,6 +22,18 @@ def generate_random_data(planet, obj_file):
     dt = time.time() - start_time
     print(f"Random Finished: {dt} [s]")
 
+    random_trajectory = RandomDist(
+        planet,
+        [0, planet.radius * 3],
+        points=100000,
+        obj_file=obj_file,
+    )
+    start_time = time.time()
+    model = generate_heterogeneous_model(planet, obj_file, trajectory=random_trajectory)
+    model.load()
+    dt = time.time() - start_time
+    print(f"Random Finished: {dt} [s]")
+
     R = planet.radius
     start_time = time.time()
     planes_trajectory = PlanesDist(
