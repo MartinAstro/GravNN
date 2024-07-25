@@ -110,15 +110,18 @@ class PolyVisualization(VisualizationBase):
         ax.axes.set_ylim3d(bottom=min_lim, top=max_lim)
         ax.axes.set_zlim3d(bottom=min_lim, top=max_lim)
 
-        vlim_min = x_min
-        vlim_max = x_max
+        try:
+            vlim_min = x_min
+            vlim_max = x_max
 
-        if log:
-            norm = SymLogNorm(linthresh=1e-4, vmin=vlim_min, vmax=vlim_max)
-        else:
-            norm = Normalize(vmin=vlim_min, vmax=vlim_max)
+            if log:
+                norm = SymLogNorm(linthresh=1e-4, vmin=vlim_min, vmax=vlim_max)
+            else:
+                norm = Normalize(vmin=vlim_min, vmax=vlim_max)
 
-        arg = cm.ScalarMappable(norm=norm, cmap=cmap)
+            arg = cm.ScalarMappable(norm=norm, cmap=cmap)
+        except:
+            pass
         if cbar and accelerations is not None:
             cbformat = ticker.ScalarFormatter()
             cbformat.set_scientific("%.2e")

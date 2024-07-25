@@ -163,7 +163,7 @@ class VisualizationBase(ABC):
         ax = fig.add_subplot(111)
         return fig, ax
 
-    def save(self, fig, name, directory=None):
+    def save(self, fig, name, directory=None, bbox_inches="tight"):
         if directory is None:
             GravNN_dir = os.path.abspath(GravNN.__path__[0])
             directory = os.path.join(GravNN_dir, "../Plots")
@@ -187,8 +187,8 @@ class VisualizationBase(ABC):
         # Save the figure in both PDF and PNG formats
         fig.tight_layout(pad=0.0)
         try:
-            fig.savefig(pdf_path, format="pdf", dpi=300, bbox_inches="tight")
-            fig.savefig(png_path, format="png", dpi=300, bbox_inches="tight")
+            fig.savefig(pdf_path, format="pdf", dpi=300, bbox_inches=bbox_inches)
+            fig.savefig(png_path, format="png", dpi=300, bbox_inches=bbox_inches)
             print(f"Figure saved as:\n{pdf_path}\n{png_path}")
         except Exception as e:
             print(f"Couldn't save the figure {name}\nError: {e}")
