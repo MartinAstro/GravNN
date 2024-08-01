@@ -6,6 +6,7 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def main():
     vis = VisualizationBase()
+    vis.fig_size = (vis.w_full, vis.h_full / 4)
 
     r = np.linspace(0, 3, 100)
     r_inv = 1 / r
@@ -14,8 +15,8 @@ def main():
     r_ext = np.clip(r_inv, 0, 1)
 
     vis.newFig()
-    plt.plot(r, r_int, color="blue", label="$r_i$", linewidth=1.5)
-    plt.plot(r, r_ext, color="red", label="$r_e$", linewidth=1.5)
+    plt.plot(r, r_int, color="blue", label="$r_i$", linewidth=1.0)
+    plt.plot(r, r_ext, color="red", label="$r_e$", linewidth=1.0)
 
     mask = r > 1
     mask_inv = r < 1
@@ -47,7 +48,7 @@ def main():
         1.5,
         "Exterior",
         color="black",
-        fontsize=8,
+        fontsize=6,
         bbox=dict(boxstyle="round", fc="w"),
     )
     plt.text(
@@ -55,7 +56,7 @@ def main():
         0.25,
         "Interior",
         color="black",
-        fontsize=8,
+        fontsize=6,
         bbox=dict(boxstyle="round", fc="w"),
     )
 

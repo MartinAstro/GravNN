@@ -37,7 +37,7 @@ def asymmetric_eros():
     gravity_model = generate_heterogeneous_model(planet, planet.obj_8k, symmetric=False)
 
     vis = PolyVisualization()
-    vis.fig_size = (vis.w_full, vis.h_quad)
+    vis.fig_size = (vis.h_quad, vis.h_quad)
     vis.plot_polyhedron(planet.obj_8k, None, cmap="Greys", cbar=False, alpha=0.1)
 
     offset_0 = gravity_model.offset_list[0]

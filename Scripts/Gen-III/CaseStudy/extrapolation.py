@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 from GravNN.Analysis.ExtrapolationExperiment import ExtrapolationExperiment
 from GravNN.CelestialBodies.Asteroids import Eros
@@ -7,6 +8,44 @@ from GravNN.GravityModels.Polyhedral import Polyhedral
 from GravNN.Networks.Model import load_config_and_model
 from GravNN.Visualization.ExtrapolationVisualizer import ExtrapolationVisualizer
 from GravNN.Visualization.VisualizationBase import VisualizationBase
+
+
+def shade_background():
+    y_max = 1e2
+    y_min = 1e-4
+    alpha = 0.2
+    eps = 1e-3
+    plt.fill_between(
+        [0, 1 - eps],
+        y_min,
+        y_max,
+        color="yellow",
+        alpha=alpha,
+    )
+    plt.fill_between(
+        [1, 10 - eps],
+        y_min,
+        y_max,
+        color="green",
+        alpha=alpha,
+    )
+    plt.fill_between(
+        [10, 20],
+        y_min,
+        y_max,
+        color="red",
+        alpha=alpha,
+    )
+    # add a legend for the colors in upper left
+    legend_2 = plt.legend(
+        handles=[
+            Rectangle((0, 0), 1, 1, alpha=alpha, color="yellow", label="Interior"),
+            Rectangle((0, 0), 1, 1, alpha=alpha, color="green", label="Exterior"),
+            Rectangle((0, 0), 1, 1, alpha=alpha, color="red", label="Extrapolation"),
+        ],
+        loc="upper right",
+    )
+    plt.gca().add_artist(legend_2)
 
 
 def plot_extrapolation(config, model, label, color, new_fig=True):
@@ -28,12 +67,11 @@ def plot_extrapolation(config, model, label, color, new_fig=True):
         plot_fcn=plt.semilogy,
         annotate=False,
     )
-    vis.fig_size = (vis.w_full, vis.w_half)
+    vis.fig_size = (vis.w_full, vis.h_tri * 0.9)
     if not new_fig:
         plt.figure(1)
 
-    # vis.plot_extrapolation_percent_error(
-    vis.plot_interpolation_percent_error(
+    vis.plot_extrapolation_percent_error(
         plot_std=False,
         plot_max=False,
         new_fig=new_fig,
@@ -43,7 +81,7 @@ def plot_extrapolation(config, model, label, color, new_fig=True):
         color=color,
     )
     plt.ylim([1e-4, 1e2])
-    plt.legend()
+    plt.xlim([0, 20])
     plt.tight_layout()
 
 
@@ -65,10 +103,14 @@ if __name__ == "__main__":
     plot_extrapolation(pinn_III_config, poly_model, "Polyhedral", "r")
     plot_extrapolation(pinn_III_config, pinn_II_model, "PINN II", "b", new_fig=False)
     plot_extrapolation(pinn_III_config, pinn_III_model, "PINN III", "g", new_fig=False)
+    legend_1 = plt.legend(loc="lower right")
+    plt.gca().add_artist(legend_1)
+
+    shade_background()
 
     vis = VisualizationBase()
     vis.fig_size = (vis.w_full, vis.w_half)
     save_name = "primary_extrapolation"
-    vis.save(plt.gcf(), save_name)
+    vis.save(plt.gcf(), save_name, bbox_inches=None)
 
-    # plt.show()
+    plt.show()

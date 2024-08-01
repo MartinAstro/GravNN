@@ -74,7 +74,7 @@ if __name__ == "__main__":
         figsize=fig_size,
     )
     vis.plot()
-    vis.save(plt.gcf(), "primary_colorbar")
+    vis.save(plt.gcf(), "primary_colorbar", bbox_inches=None)
 
     fig_size = (base_vis.w_full, base_vis.w_full * 0.1)
     vis = StandaloneColorbar(

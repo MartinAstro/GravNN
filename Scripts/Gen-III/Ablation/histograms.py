@@ -189,6 +189,7 @@ def noise_loss(df_file, linestyle="-"):
     plt.gca().add_artist(legend_2)
 
     vis = VisualizationBase()
+    vis.fig_size = (vis.w_full, vis.h_quad)
     vis.save(plt.gcf(), "noise_loss")
 
 
@@ -199,7 +200,7 @@ def main():
     # data_epochs("Data/Dataframes/all_ablation_data_epochs_large120323.data")
 
     vis = VisualizationBase()
-    vis.fig_size = vis.full_page_default
+    vis.fig_size = (vis.w_full, vis.h_quad)
     vis.newFig()
     noise_loss("Data/Dataframes/all_ablation_noise_loss_small.data")
     noise_loss("Data/Dataframes/all_ablation_noise_loss_large.data", linestyle="--")

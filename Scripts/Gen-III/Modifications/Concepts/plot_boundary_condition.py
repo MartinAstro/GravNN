@@ -6,6 +6,7 @@ from GravNN.Visualization.VisualizationBase import VisualizationBase
 
 def main():
     vis = VisualizationBase()
+    vis.fig_size = (vis.w_full, vis.h_full / 4)
 
     x_min, x_max = 3, 7
     x_boundary = 5
@@ -66,7 +67,7 @@ def main():
         0.5,
         "Outside Training Bounds",
         color="black",
-        fontsize=8,
+        fontsize=6,
         bbox=dict(boxstyle="round", fc="w"),
     )
     plt.text(
@@ -74,7 +75,7 @@ def main():
         0.5,
         "Inside Training Bounds",
         color="black",
-        fontsize=8,
+        fontsize=6,
         bbox=dict(boxstyle="round", fc="w"),
     )
 

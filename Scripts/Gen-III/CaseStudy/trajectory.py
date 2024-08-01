@@ -23,10 +23,18 @@ class TrajectoryVisualizerMod(TrajectoryVisualizer):
             dr = model.metrics["pos_diff_inst"]
             plt.semilogy(time / 3600, dr, label=label, color=color)
 
-            print("Model: ", label, " dR: ", dr[-1])
+            dt = time[1] - time[0]
+
+            print("Model: ", label, " dR: ", model.metrics["pos_diff"][-1])
+            print(
+                "Model: ",
+                label,
+                " dR-Avg: ",
+                model.metrics["pos_diff"][-1] * dt / time[-1],
+            )
             print("Model: ", label, " dR_i: ", model.metrics["pos_diff_inst"][-1])
 
-        plt.ylabel(r"Inst. $\Delta x$ Error [m]")
+        plt.ylabel(r"Inst. $\Delta x$ [m]")
         # plt.ylabel("$\sum |\Delta x|$ Error [km]")
         plt.xlabel("Simulated Time [hr]")
         plt.gca().yaxis.tick_right()
