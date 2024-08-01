@@ -226,16 +226,6 @@ def color_metadata(df, latex_df):
     white_hue = plt.get_cmap("Greys")(0)
     gray_hue = plt.get_cmap("Greys")(0.5)
 
-    poly_models = df[df["model_name"].str.contains("POLY")][
-        df["num_params"] > 1e3
-    ].index
-    latex_df = latex_df.drop(index=poly_models[0])
-
-    poly_models = df[df["model_name"].str.contains("POLY")][
-        df["num_params"] < 1e3
-    ].index
-    latex_df = latex_df.drop(index=poly_models[0])
-
     poly_models = df[df["model_name"].str.contains("POLY")].index
     for index in poly_models:
         df.at[index, "N_train"] = np.nan
@@ -267,11 +257,26 @@ def color_metadata(df, latex_df):
 def main(rank, score):
     directory = os.path.dirname(GravNN.__file__)
     df = pd.read_pickle(directory + "/../Data/Comparison/all_comparisons.data")
+
+    df = pd.read_pickle(
+        directory + "/../Data/Comparison/comparison_metrics_072324.data",
+    )
+
+    # drop index 20 and 21 -- duplicate polyhedral models
+    df = df.drop(index=[20, 21])
+    df = df.reset_index()
+
+    # unpack all values from list container where possible
+    for col in df.columns:
+        try:
+            df[col] = df[col].apply(lambda x: x[0] if isinstance(x, list) else x)
+        except:
+            pass
+
     df["pos_error"] /= 1e3
     df["pos_error"] *= (24 * 3600 / 1000) * 1 / (24 * 3600)
     df = compute_rank(df, score)
     df = df.sort_values(by="score")
-
     latex_df = copy.deepcopy(df)
 
     conversions = [
@@ -291,6 +296,7 @@ def main(rank, score):
         column = conversion["column"]
         if rank:
             df[column] = df[column].rank(method="max")
+
         latex_df[column] = color_data(df, **conversion)
 
     latex_df = color_metadata(df, latex_df)
@@ -320,8 +326,31 @@ def main(rank, score):
     drop_columns = ["Params", "Train Time (s)"]
     latex_df = latex_df.drop(columns=drop_columns)
     latex_df = latex_df.set_index("Model")
-
+    if rank:
+        latex_df = latex_df.rename(
+            columns={
+                "Score": r"\makecell{Score \\ (Rank)}",
+                r"\makecell{Planes \\ (\%)}": r"\makecell{Planes \\ (Rank)}",
+                r"\makecell{Interior \\ (\%)}": r"\makecell{Interior \\ (Rank)}",
+                r"\makecell{Exterior \\ (\%)}": r"\makecell{Exterior \\ (Rank)}",
+                r"\makecell{Extrap. \\ (\%)}": r"\makecell{Extrap. \\ (Rank)}",
+                r"\makecell{Surface \\ (\%)}": r"\makecell{Surface \\ (Rank)}",
+                r"\makecell{Traj. \\ (km)}": r"\makecell{Traj. \\ (Rank)}",
+            },
+        )
     save_data(latex_df, f"table_{rank}_{score}")
+    if rank:
+        latex_df = latex_df.rename(
+            columns={
+                r"\makecell{Score \\ (Rank)}": "Score",
+                r"\makecell{Planes \\ (Rank)}": r"\makecell{Planes \\ (\%)}",
+                r"\makecell{Interior \\ (Rank)}": r"\makecell{Interior \\ (\%)}",
+                r"\makecell{Exterior \\ (Rank)}": r"\makecell{Exterior \\ (\%)}",
+                r"\makecell{Extrap. \\ (Rank)}": r"\makecell{Extrap. \\ (\%)}",
+                r"\makecell{Surface \\ (Rank)}": r"\makecell{Surface \\ (\%)}",
+                r"\makecell{Traj. \\ (Rank)}": r"\makecell{Traj. \\ (km)}",
+            },
+        )
 
     # Extract the value out of the \cellcolor{} command within the rank column
     # use regex
@@ -366,5 +395,3 @@ def main(rank, score):
 if __name__ == "__main__":
     main(rank=False, score="sum")
     main(rank=True, score="sum")
-    main(rank=False, score="mean")
-    main(rank=True, score="mean")
